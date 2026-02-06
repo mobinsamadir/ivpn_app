@@ -1,0 +1,8 @@
+assets/executables/windows/*.exe
+assets/executables/windows/*.db
+*.exe
+*.dll
+build/
+.dart_tool/
+.idea/
+*.apk

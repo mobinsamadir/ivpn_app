@@ -1,0 +1,54 @@
+name: ivpn_new
+description: iVPN Client - High Performance VPN
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  dio: ^5.4.1 # آپدیت شده
+
+  # UI & State
+  provider: ^6.1.1 # آپدیت شده
+
+  # Networking
+  http: ^1.2.0 # آپدیت شده
+  connectivity_plus: ^6.0.0 # آپدیت شده (نسخه ۶ برای حل مشکل اندروید حیاتی است)
+
+  # Utilities
+  crypto: ^3.0.3
+  shared_preferences: ^2.2.2
+  file_picker: ^8.0.0 # آپدیت شده
+  path_provider: ^2.1.2
+  path: ^1.9.0
+  url_launcher: ^6.2.5
+  device_info_plus: ^10.1.0
+  webview_windows: ^0.4.0
+  webview_flutter: ^4.4.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_launcher_icons: ^0.13.1 # به این بخش منتقل شد
+  flutter_lints: ^3.0.0
+
+# تنظیمات خودکار آیکون
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon.png"
+  windows:
+    generate: true
+    image_path: "assets/icon.png"
+    icon_size: 48
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/icon.png
+    - assets/executables/windows/sing-box.exe
+    - assets/executables/windows/geoip.db
+    - assets/executables/windows/geosite.db
+    - assets/html/

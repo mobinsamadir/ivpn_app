@@ -1,0 +1,104 @@
+name: iVPN Final Build
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Cache Flutter
+        uses: actions/cache@v4
+        with:
+          path: C:\Users\runneradmin\AppData\Local\Pub\Cache
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Download Windows Assets (Sing-box & GeoIP)
+        shell: pwsh
+        run: |
+          # 1. Create Directory
+          New-Item -ItemType Directory -Force -Path assets/executables/windows
+          
+          # 2. Download Sing-box (Zip), Extract, and Move
+          Write-Host "Downloading Sing-box..."
+          $sbUrl = "https://github.com/SagerNet/sing-box/releases/download/v1.10.1/sing-box-1.10.1-windows-amd64.zip"
+          Invoke-WebRequest -Uri $sbUrl -OutFile "singbox.zip"
+          Expand-Archive -Path "singbox.zip" -DestinationPath "temp_sb"
+          Move-Item -Path "temp_sb/sing-box-*-windows-amd64/sing-box.exe" -Destination "assets/executables/windows/sing-box.exe"
+          
+          # 3. Download GeoIP
+          Write-Host "Downloading GeoIP..."
+          Invoke-WebRequest -Uri "https://github.com/v2fly/geoip/releases/latest/download/geoip.dat" -OutFile "assets/executables/windows/geoip.db"
+          
+          # 4. Download Geosite
+          Write-Host "Downloading Geosite..."
+          Invoke-WebRequest -Uri "https://github.com/v2fly/domain-list-community/releases/latest/download/dlc.dat" -OutFile "assets/executables/windows/geosite.db"
+          
+          # Cleanup
+          Remove-Item "singbox.zip"
+          Remove-Item "temp_sb" -Recurse
+
+      - name: Build iVPN Windows
+        run: |
+          flutter pub get
+          flutter build windows --release
+
+      - name: Upload Windows App
+        uses: actions/upload-artifact@v4
+        with:
+          name: iVPN-Windows
+          path: build/windows/x64/runner/Release/
+
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Cache Flutter
+        uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Setup Sing-Box Libs
+        run: |
+          mkdir -p android/app/src/main/jniLibs/arm64-v8a
+          mkdir -p android/app/src/main/jniLibs/armeabi-v7a
+          curl -L -o sb.tar.gz https://github.com/SagerNet/sing-box/releases/download/v1.10.1/sing-box-1.10.1-android-arm64.tar.gz
+          tar -xzf sb.tar.gz
+          find . -name "libbox.so" -exec cp {} android/app/src/main/jniLibs/arm64-v8a/libbox.so \;
+          find . -name "libbox.so" -exec cp {} android/app/src/main/jniLibs/armeabi-v7a/libbox.so \;
+
+      - name: Build APK
+        run: |
+          flutter pub get
+          yes | flutter doctor --android-licenses || true
+          # بیلد APK با نام جدید iVPN
+          flutter build apk --release --no-tree-shake-icons
+
+      - name: Upload iVPN APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: iVPN-Android-APK
+          path: build/app/outputs/flutter-apk/app-release.apk
