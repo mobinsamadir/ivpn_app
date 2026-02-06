@@ -37,7 +37,7 @@ void main() {
       await tester.pumpWidget(
         MultiProvider(
           providers: [
-            Provider<ConfigManager>.value(value: mockConfigManager),
+            ChangeNotifierProvider<ConfigManager>.value(value: mockConfigManager),
           ],
           child: const MaterialApp(
             home: ConnectionHomeScreen(),
@@ -75,7 +75,7 @@ void main() {
       await tester.pumpWidget(
         MultiProvider(
           providers: [
-            Provider<ConfigManager>.value(value: mockConfigManager),
+            ChangeNotifierProvider<ConfigManager>.value(value: mockConfigManager),
           ],
           child: const MaterialApp(
             home: ConnectionHomeScreen(),
@@ -112,7 +112,7 @@ void main() {
       await tester.pumpWidget(
         MultiProvider(
           providers: [
-            Provider<ConfigManager>.value(value: mockConfigManager),
+            ChangeNotifierProvider<ConfigManager>.value(value: mockConfigManager),
           ],
           child: const MaterialApp(
             home: ConnectionHomeScreen(),
@@ -149,7 +149,7 @@ void main() {
       await tester.pumpWidget(
         MultiProvider(
           providers: [
-            Provider<ConfigManager>.value(value: mockConfigManager),
+            ChangeNotifierProvider<ConfigManager>.value(value: mockConfigManager),
           ],
           child: const MaterialApp(
             home: ConnectionHomeScreen(),
@@ -181,7 +181,7 @@ void main() {
       await tester.pumpWidget(
         MultiProvider(
           providers: [
-            Provider<ConfigManager>.value(value: mockConfigManager),
+            ChangeNotifierProvider<ConfigManager>.value(value: mockConfigManager),
           ],
           child: const MaterialApp(
             home: ConnectionHomeScreen(),
@@ -225,7 +225,7 @@ void main() {
       await tester.pumpWidget(
         MultiProvider(
           providers: [
-            Provider<ConfigManager>.value(value: mockConfigManager),
+            ChangeNotifierProvider<ConfigManager>.value(value: mockConfigManager),
           ],
           child: const MaterialApp(
             home: ConnectionHomeScreen(),
@@ -261,7 +261,7 @@ void main() {
       await tester.pumpWidget(
         MultiProvider(
           providers: [
-            Provider<ConfigManager>.value(value: mockConfigManager),
+            ChangeNotifierProvider<ConfigManager>.value(value: mockConfigManager),
           ],
           child: const MaterialApp(
             home: ConnectionHomeScreen(),
@@ -296,7 +296,7 @@ void main() {
       await tester.pumpWidget(
         MultiProvider(
           providers: [
-            Provider<ConfigManager>.value(value: mockConfigManager),
+            ChangeNotifierProvider<ConfigManager>.value(value: mockConfigManager),
           ],
           child: const MaterialApp(
             home: ConnectionHomeScreen(),
