@@ -6,54 +6,15 @@ import 'package:ivpn_new/services/windows_vpn_service.dart';
 import 'package:ivpn_new/services/ad_service.dart';
 import 'package:provider/provider.dart';
 import 'package:ivpn_new/models/vpn_config_with_metrics.dart';
-import 'package:mockito/mockito.dart';
+import 'package:mockito/annotations.dart';
+import 'home_screen_comprehensive_test.mocks.dart';
 
+@GenerateNiceMocks([
+  MockSpec<ConfigManager>(),
+  MockSpec<WindowsVpnService>(),
+])
 void main() {
   group('ConnectionHomeScreen Comprehensive Tests', () {
-    // Mock classes for testing using Mockito
-    class MockConfigManager extends Mock implements ConfigManager {
-      @override
-      bool get isConnected => super.noSuchMethod(Invocation.getter(#isConnected), returnValue: false);
-      
-      @override
-      String get connectionStatus => super.noSuchMethod(Invocation.getter(#connectionStatus), returnValue: 'Disconnected');
-      
-      @override
-      List<VpnConfigWithMetrics> get allConfigs => super.noSuchMethod(Invocation.getter(#allConfigs), returnValue: <VpnConfigWithMetrics>[]);
-      
-      @override
-      bool get isRefreshing => super.noSuchMethod(Invocation.getter(#isRefreshing), returnValue: false);
-      
-      @override
-      bool get isAutoSwitchEnabled => super.noSuchMethod(Invocation.getter(#isAutoSwitchEnabled), returnValue: false);
-      
-      @override
-      VpnConfigWithMetrics? get selectedConfig => super.noSuchMethod(Invocation.getter(#selectedConfig), returnValue: null);
-
-      @override
-      Future<void> refreshAllConfigs() => super.noSuchMethod(Invocation.method(#refreshAllConfigs, []), returnValue: Future.value());
-      
-      @override
-      Future<void> addConfig(String rawConfig, String name, {String countryCode = 'US'}) => super.noSuchMethod(Invocation.method(#addConfig, [rawConfig, name, countryCode]), returnValue: Future.value());
-      
-      @override
-      void selectConfig(VpnConfigWithMetrics? config) => super.noSuchMethod(Invocation.method(#selectConfig, [config]));
-      
-      @override
-      Future<void> importFromClipboard() => super.noSuchMethod(Invocation.method(#importFromClipboard, []), returnValue: Future.value());
-    }
-
-    class MockVpnService extends Mock implements WindowsVpnService {
-      @override
-      Future<void> startVpn(String config) => super.noSuchMethod(Invocation.method(#startVpn, [config]), returnValue: Future.value());
-      
-      @override
-      Future<void> stopVpn() => super.noSuchMethod(Invocation.method(#stopVpn, []), returnValue: Future.value());
-    }
-
-    class MockAdService extends Mock {
-      Future<bool> showAd() => super.noSuchMethod(Invocation.method(#showAd, []), returnValue: Future.value(true));
-    }
 
     setUp(() {
       // Ensure we have a test binding
@@ -62,7 +23,7 @@ void main() {
 
     testWidgets('Smart Paste Button exists and triggers import', (WidgetTester tester) async {
       final mockConfigManager = MockConfigManager();
-      final mockVpnService = MockVpnService();
+      final mockVpnService = MockWindowsVpnService();
 
       // Mock the return values
       when(mockConfigManager.isConnected).thenReturn(false);
@@ -100,7 +61,7 @@ void main() {
 
     testWidgets('Update Button triggers refreshAllConfigs', (WidgetTester tester) async {
       final mockConfigManager = MockConfigManager();
-      final mockVpnService = MockVpnService();
+      final mockVpnService = MockWindowsVpnService();
 
       // Mock the return values
       when(mockConfigManager.isConnected).thenReturn(false);
@@ -137,7 +98,7 @@ void main() {
 
     testWidgets('Connect Button calls VPN service', (WidgetTester tester) async {
       final mockConfigManager = MockConfigManager();
-      final mockVpnService = MockVpnService();
+      final mockVpnService = MockWindowsVpnService();
 
       // Mock the return values
       when(mockConfigManager.isConnected).thenReturn(false);
@@ -174,7 +135,7 @@ void main() {
 
     testWidgets('UI Elements Inventory - All Key elements exist', (WidgetTester tester) async {
       final mockConfigManager = MockConfigManager();
-      final mockVpnService = MockVpnService();
+      final mockVpnService = MockWindowsVpnService();
 
       // Mock the return values
       when(mockConfigManager.isConnected).thenReturn(false);
@@ -206,7 +167,7 @@ void main() {
 
     testWidgets('Scenario A: App starts disconnected -> Tap Connect -> Verify state changes', (WidgetTester tester) async {
       final mockConfigManager = MockConfigManager();
-      final mockVpnService = MockVpnService();
+      final mockVpnService = MockWindowsVpnService();
 
       // Initially disconnected
       when(mockConfigManager.isConnected).thenReturn(false);
@@ -250,7 +211,7 @@ void main() {
 
     testWidgets('Scenario B: Tap Smart Paste -> Verify Config added', (WidgetTester tester) async {
       final mockConfigManager = MockConfigManager();
-      final mockVpnService = MockVpnService();
+      final mockVpnService = MockWindowsVpnService();
 
       // Mock the return values
       when(mockConfigManager.isConnected).thenReturn(false);
@@ -285,7 +246,7 @@ void main() {
 
     testWidgets('Traffic Stats update when VpnStatus changes', (WidgetTester tester) async {
       final mockConfigManager = MockConfigManager();
-      final mockVpnService = MockVpnService();
+      final mockVpnService = MockWindowsVpnService();
 
       // Mock the return values
       when(mockConfigManager.isConnected).thenReturn(false);
@@ -320,7 +281,7 @@ void main() {
 
     testWidgets('ConfigManager state changes trigger UI updates', (WidgetTester tester) async {
       final mockConfigManager = MockConfigManager();
-      final mockVpnService = MockVpnService();
+      final mockVpnService = MockWindowsVpnService();
 
       // Mock the return values
       when(mockConfigManager.isConnected).thenReturn(false);
