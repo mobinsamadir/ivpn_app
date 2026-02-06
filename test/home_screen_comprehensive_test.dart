@@ -55,8 +55,12 @@ void main() {
       await tester.pumpWidget(
         MultiProvider(
           providers: [
+            // Vital: Use ChangeNotifierProvider for Listenable classes
             ChangeNotifierProvider<ConfigManager>.value(value: mockConfigManager),
             ChangeNotifierProvider<HomeProvider>.value(value: mockHomeProvider),
+            
+            // Use standard Provider for Services
+            Provider<WindowsVpnService>.value(value: mockVpnService),
           ],
           child: const MaterialApp(
             home: ConnectionHomeScreen(),
@@ -91,8 +95,12 @@ void main() {
       await tester.pumpWidget(
         MultiProvider(
           providers: [
+            // Vital: Use ChangeNotifierProvider for Listenable classes
             ChangeNotifierProvider<ConfigManager>.value(value: mockConfigManager),
             ChangeNotifierProvider<HomeProvider>.value(value: mockHomeProvider),
+            
+            // Use standard Provider for Services
+            Provider<WindowsVpnService>.value(value: mockVpnService),
           ],
           child: const MaterialApp(
             home: ConnectionHomeScreen(),
@@ -126,8 +134,12 @@ void main() {
       await tester.pumpWidget(
         MultiProvider(
           providers: [
+            // Vital: Use ChangeNotifierProvider for Listenable classes
             ChangeNotifierProvider<ConfigManager>.value(value: mockConfigManager),
             ChangeNotifierProvider<HomeProvider>.value(value: mockHomeProvider),
+            
+            // Use standard Provider for Services
+            Provider<WindowsVpnService>.value(value: mockVpnService),
           ],
           child: const MaterialApp(
             home: ConnectionHomeScreen(),
@@ -161,8 +173,12 @@ void main() {
       await tester.pumpWidget(
         MultiProvider(
           providers: [
+            // Vital: Use ChangeNotifierProvider for Listenable classes
             ChangeNotifierProvider<ConfigManager>.value(value: mockConfigManager),
             ChangeNotifierProvider<HomeProvider>.value(value: mockHomeProvider),
+            
+            // Use standard Provider for Services
+            Provider<WindowsVpnService>.value(value: mockVpnService),
           ],
           child: const MaterialApp(
             home: ConnectionHomeScreen(),
@@ -191,8 +207,12 @@ void main() {
       await tester.pumpWidget(
         MultiProvider(
           providers: [
+            // Vital: Use ChangeNotifierProvider for Listenable classes
             ChangeNotifierProvider<ConfigManager>.value(value: mockConfigManager),
             ChangeNotifierProvider<HomeProvider>.value(value: mockHomeProvider),
+            
+            // Use standard Provider for Services
+            Provider<WindowsVpnService>.value(value: mockVpnService),
           ],
           child: const MaterialApp(
             home: ConnectionHomeScreen(),
@@ -233,8 +253,12 @@ void main() {
       await tester.pumpWidget(
         MultiProvider(
           providers: [
+            // Vital: Use ChangeNotifierProvider for Listenable classes
             ChangeNotifierProvider<ConfigManager>.value(value: mockConfigManager),
             ChangeNotifierProvider<HomeProvider>.value(value: mockHomeProvider),
+            
+            // Use standard Provider for Services
+            Provider<WindowsVpnService>.value(value: mockVpnService),
           ],
           child: const MaterialApp(
             home: ConnectionHomeScreen(),
@@ -267,8 +291,12 @@ void main() {
       await tester.pumpWidget(
         MultiProvider(
           providers: [
+            // Vital: Use ChangeNotifierProvider for Listenable classes
             ChangeNotifierProvider<ConfigManager>.value(value: mockConfigManager),
             ChangeNotifierProvider<HomeProvider>.value(value: mockHomeProvider),
+            
+            // Use standard Provider for Services
+            Provider<WindowsVpnService>.value(value: mockVpnService),
           ],
           child: const MaterialApp(
             home: ConnectionHomeScreen(),
@@ -300,8 +328,12 @@ void main() {
       await tester.pumpWidget(
         MultiProvider(
           providers: [
+            // Vital: Use ChangeNotifierProvider for Listenable classes
             ChangeNotifierProvider<ConfigManager>.value(value: mockConfigManager),
             ChangeNotifierProvider<HomeProvider>.value(value: mockHomeProvider),
+            
+            // Use standard Provider for Services
+            Provider<WindowsVpnService>.value(value: mockVpnService),
           ],
           child: const MaterialApp(
             home: ConnectionHomeScreen(),
