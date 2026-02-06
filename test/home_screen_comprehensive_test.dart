@@ -358,27 +358,34 @@ void main() {
   });
 }
 
-// --- BETTER FAKES ---
+// --- CORRECTED FAKES FOR PLATFORM INTERFACE ---
 
-// 1. Add this import at the top if missing:
-// import 'package:mockito/mockito.dart';
-
-class FakeWebViewPlatform extends Fake implements WebViewPlatform {
+class FakeWebViewPlatform extends WebViewPlatform { 
+  // Note: extends, NOT implements
+  
   @override
   PlatformWebViewController createPlatformWebViewController(PlatformWebViewControllerCreationParams params) {
-    return FakeWebViewController();
+    return FakeWebViewController(params);
   }
+  
   @override
   PlatformNavigationDelegate createPlatformNavigationDelegate(PlatformNavigationDelegateCreationParams params) {
-    return FakeNavigationDelegate();
+    return FakeNavigationDelegate(params);
   }
 }
 
-class FakeWebViewController extends Fake implements PlatformWebViewController {
+class FakeWebViewController extends PlatformWebViewController {
+  // Must accept params to satisfy super constructor requirements if any, 
+  // or just call super.implementation() if available.
+  // Safest way for standard PlatformInterface:
+  FakeWebViewController(PlatformWebViewControllerCreationParams params) : super.implementation(params);
+  
   @override
   Future<void> loadRequest(LoadRequestParams params) async {}
+  
   @override
   Future<void> setJavaScriptMode(JavaScriptMode mode) async {}
+  
   @override
   Future<void> setBackgroundColor(Color color) async {}
   
@@ -387,11 +394,13 @@ class FakeWebViewController extends Fake implements PlatformWebViewController {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-class FakeNavigationDelegate extends Fake implements PlatformNavigationDelegate {
+class FakeNavigationDelegate extends PlatformNavigationDelegate {
+  FakeNavigationDelegate(PlatformNavigationDelegateCreationParams params) : super.implementation(params);
+  
   @override
   Future<void> setOnPageFinished(void Function(String url) onPageFinished) async {}
   
-   // Catch-all to prevent crashes
+  // Catch-all to prevent crashes
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
