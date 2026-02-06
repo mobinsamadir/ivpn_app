@@ -50,14 +50,14 @@ void main() {
 
       // Initially no calls should have been made
       verifyNever(mockConfigManager.addConfig(any, any));
-      verifyNever(mockConfigManager.importFromClipboard());
 
       // Mock clipboard content
+      when(mockConfigManager.addConfig(any, any)).thenAnswer((_) async => null);
       await tester.tap(find.byKey(const Key('smart_paste_button')));
       await tester.pump();
 
       // Verify that the button was pressed and triggered the appropriate action
-      verify(mockConfigManager.importFromClipboard()).called(1);
+      verify(mockConfigManager.addConfig(any, any)).called(1);
     });
 
     testWidgets('Update Button triggers refreshAllConfigs', (WidgetTester tester) async {
@@ -237,12 +237,13 @@ void main() {
       when(mockConfigManager.allConfigs).thenReturn([]);
 
       // Tap smart paste button
+      when(mockConfigManager.addConfig(any, any)).thenAnswer((_) async => null);
       await tester.tap(find.byKey(const Key('smart_paste_button')));
       await tester.pump();
 
       // The actual config addition depends on clipboard content
       // This verifies the button triggers the appropriate handler
-      verify(mockConfigManager.importFromClipboard()).called(1);
+      verify(mockConfigManager.addConfig(any, any)).called(1);
     });
 
     testWidgets('Traffic Stats update when VpnStatus changes', (WidgetTester tester) async {
