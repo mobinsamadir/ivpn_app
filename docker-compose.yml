@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  build-android:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.android
+    volumes:
+      - ./build/android:/output
+  
+  build-windows:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.windows
+    volumes:
+      - ./build/windows:/output

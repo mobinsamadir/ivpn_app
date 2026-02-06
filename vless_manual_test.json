@@ -1,0 +1,33 @@
+﻿{
+  "log": {"level": "debug", "output": "stderr"},
+  "inbounds": [{
+    "type": "http",
+    "tag": "test",
+    "listen": "127.0.0.1",
+    "listen_port": 54321
+  }],
+  "outbounds": [{
+    "type": "vless",
+    "tag": "vless-out",
+    "server": "104.21.224.5",
+    "server_port": 2096,
+    "uuid": "f61a4285-7264-4d07-9408-7b9ba1922c26",
+    "flow": "",
+    "tls": {
+      "enabled": true,
+      "server_name": "gaosir.unfeeling.sbs",
+      "alpn": ["h2", "http/1.1"],
+      "utls": {
+        "enabled": true,
+        "fingerprint": "chrome"
+      }
+    },
+    "transport": {
+      "type": "ws",
+      "path": "/TelegramðŸ‡¨ðŸ‡³ @WangCai2 /?ed=2560",
+      "headers": {
+        "Host": "gaosir.unfeeling.sbs"
+      }
+    }
+  }]
+}

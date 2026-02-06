@@ -1,0 +1,40 @@
+{
+  "log": {
+    "level": "debug",
+    "output": "stderr"
+  },
+  "inbounds": [
+    {
+      "type": "http",
+      "tag": "http-in",
+      "listen": "127.0.0.1",
+      "listen_port": 53182
+    }
+  ],
+  "outbounds": [
+    {
+      "type": "vless",
+      "tag": "vless-out",
+      "server": "162.159.152.53",
+      "server_port": 443,
+      "uuid": "29187857-4a1f-4d1e-88eb-0016771e0dbb",
+      "flow": "",
+      "tls": {
+        "enabled": true,
+        "server_name": "vless.hubp.de",
+        "alpn": ["h3"],
+        "utls": {
+          "enabled": true,
+          "fingerprint": "random"
+        }
+      },
+      "transport": {
+        "type": "ws",
+        "path": "/?ed=2560---PLANB_NET---Join---PLANB_NET---Join---PLANB_NET---Join---PLANB_NET",
+        "headers": {
+          "Host": "vless.hubp.de"
+        }
+      }
+    }
+  ]
+}
