@@ -399,7 +399,10 @@ class FakeNavigationDelegate extends PlatformNavigationDelegate {
   
   @override
   Future<void> setOnPageFinished(void Function(String url) onPageFinished) async {}
-  
+
+  @override
+  Future<void> setOnWebResourceError(void Function(WebResourceError error) onWebResourceError) async {}
+
   // Catch-all to prevent crashes
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
