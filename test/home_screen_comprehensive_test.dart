@@ -18,392 +18,342 @@ import 'home_screen_comprehensive_test.mocks.dart';
   MockSpec<HomeProvider>(),
 ])
 void main() {
-  group('ConnectionHomeScreen Comprehensive Tests', () {
-    late MockConfigManager mockConfigManager;
-    late MockWindowsVpnService mockVpnService;
-    late MockHomeProvider mockHomeProvider;
+  // 1. FIX SCOPE: Declare variables here, reachable by all tests
+  late MockConfigManager mockConfigManager;
+  late MockWindowsVpnService mockVpnService;
+  late MockHomeProvider mockHomeProvider;
 
-    setUp(() {
-      TestWidgetsFlutterBinding.ensureInitialized();
-      
-      mockConfigManager = MockConfigManager();
-      mockVpnService = MockWindowsVpnService();
-      mockHomeProvider = MockHomeProvider();
-      
-      // Use Manual Fakes instead of Mocks for WebView
-      final fakeWebViewPlatform = FakeWebViewPlatform();
-      WebViewPlatform.instance = fakeWebViewPlatform;
-      
-      // Setup ConfigManager Mock (Keep this)
-      when(mockConfigManager.isConnected).thenReturn(false);
-      when(mockConfigManager.connectionStatus).thenReturn('Disconnected');
-      when(mockConfigManager.allConfigs).thenReturn([]);
-      when(mockConfigManager.isRefreshing).thenReturn(false);
-      when(mockConfigManager.isAutoSwitchEnabled).thenReturn(false);
-      when(mockConfigManager.selectedConfig).thenReturn(null);
-    });
+  setUp(() {
+    print('DEBUG: Starting setUp...'); // LOGGING
+    TestWidgetsFlutterBinding.ensureInitialized();
+    
+    // Initialize Mocks
+    mockConfigManager = MockConfigManager();
+    mockVpnService = MockWindowsVpnService();
+    mockHomeProvider = MockHomeProvider();
+    
+    // Setup WebView Fake
+    WebViewPlatform.instance = FakeWebViewPlatform();
+    
+    // Default Stubs
+    when(mockConfigManager.isConnected).thenReturn(false);
+    when(mockConfigManager.connectionStatus).thenReturn('Disconnected');
+    when(mockConfigManager.allConfigs).thenReturn([]);
+    when(mockConfigManager.isRefreshing).thenReturn(false);
+    when(mockConfigManager.isAutoSwitchEnabled).thenReturn(false);
+    when(mockConfigManager.selectedConfig).thenReturn(null);
+    print('DEBUG: setUp completed successfully.');
+  });
 
-    testWidgets('Smart Paste Button exists and triggers import', (WidgetTester tester) async {
-      // Mock the return values
-      when(mockConfigManager.isConnected).thenReturn(false);
-      when(mockConfigManager.connectionStatus).thenReturn('Disconnected');
-      when(mockConfigManager.allConfigs).thenReturn([]);
-      when(mockConfigManager.isRefreshing).thenReturn(false);
-      when(mockConfigManager.isAutoSwitchEnabled).thenReturn(false);
-      when(mockConfigManager.selectedConfig).thenReturn(null);
+  testWidgets('Smart Paste Button exists and triggers import', (WidgetTester tester) async {
+    print('DEBUG: Starting Smart Paste Test');
+    
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<ConfigManager>.value(value: mockConfigManager),
+          ChangeNotifierProvider<HomeProvider>.value(value: mockHomeProvider),
+          Provider<WindowsVpnService>.value(value: mockVpnService),
+        ],
+        child: const MaterialApp(home: ConnectionHomeScreen()),
+      ),
+    );
+    print('DEBUG: Widget Pumped');
+    await tester.pumpAndSettle();
+    
+    // Verify Smart Paste button exists
+    expect(find.byKey(const Key('smart_paste_button')), findsOneWidget);
+    print('DEBUG: Smart Paste Button found');
 
-      await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            // Vital: Use ChangeNotifierProvider for Listenable classes
-            ChangeNotifierProvider<ConfigManager>.value(value: mockConfigManager),
-            ChangeNotifierProvider<HomeProvider>.value(value: mockHomeProvider),
-            
-            // Use standard Provider for Services
-            Provider<WindowsVpnService>.value(value: mockVpnService),
-          ],
-          child: const MaterialApp(
-            home: ConnectionHomeScreen(),
-          ),
-        ),
-      );
+    // Initially no calls should have been made
+    verifyNever(mockConfigManager.addConfig(any, any));
+    print('DEBUG: Verified no prior calls to addConfig');
 
-      // Verify Smart Paste button exists
-      expect(find.byKey(const Key('smart_paste_button')), findsOneWidget);
+    // Mock clipboard content
+    when(mockConfigManager.addConfig(any, any)).thenAnswer((_) async => null);
+    await tester.tap(find.byKey(const Key('smart_paste_button')));
+    await tester.pumpAndSettle();
 
-      // Initially no calls should have been made
-      verifyNever(mockConfigManager.addConfig(any, any));
+    // Verify that the button was pressed and triggered the appropriate action
+    verify(mockConfigManager.addConfig(any, any)).called(1);
+    print('DEBUG: Smart Paste Test Finished');
+  });
 
-      // Mock clipboard content
-      when(mockConfigManager.addConfig(any, any)).thenAnswer((_) async => null);
-      await tester.tap(find.byKey(const Key('smart_paste_button')));
-      await tester.pump();
+  testWidgets('Update Button triggers refreshAllConfigs', (WidgetTester tester) async {
+    print('DEBUG: Starting Update Button Test');
+    
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<ConfigManager>.value(value: mockConfigManager),
+          ChangeNotifierProvider<HomeProvider>.value(value: mockHomeProvider),
+          Provider<WindowsVpnService>.value(value: mockVpnService),
+        ],
+        child: const MaterialApp(home: ConnectionHomeScreen()),
+      ),
+    );
+    print('DEBUG: Widget Pumped');
+    await tester.pumpAndSettle();
 
-      // Verify that the button was pressed and triggered the appropriate action
-      verify(mockConfigManager.addConfig(any, any)).called(1);
-    });
+    // Verify Refresh button exists
+    expect(find.byKey(const Key('refresh_button')), findsOneWidget);
+    print('DEBUG: Refresh Button found');
 
-    testWidgets('Update Button triggers refreshAllConfigs', (WidgetTester tester) async {
-      // Mock the return values
-      when(mockConfigManager.isConnected).thenReturn(false);
-      when(mockConfigManager.connectionStatus).thenReturn('Disconnected');
-      when(mockConfigManager.allConfigs).thenReturn([]);
-      when(mockConfigManager.isRefreshing).thenReturn(false);
-      when(mockConfigManager.isAutoSwitchEnabled).thenReturn(false);
-      when(mockConfigManager.selectedConfig).thenReturn(null);
+    // Initially no refresh calls
+    verifyNever(mockConfigManager.refreshAllConfigs());
+    print('DEBUG: Verified no prior calls to refreshAllConfigs');
 
-      await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            // Vital: Use ChangeNotifierProvider for Listenable classes
-            ChangeNotifierProvider<ConfigManager>.value(value: mockConfigManager),
-            ChangeNotifierProvider<HomeProvider>.value(value: mockHomeProvider),
-            
-            // Use standard Provider for Services
-            Provider<WindowsVpnService>.value(value: mockVpnService),
-          ],
-          child: const MaterialApp(
-            home: ConnectionHomeScreen(),
-          ),
-        ),
-      );
+    // Tap the refresh button
+    await tester.tap(find.byKey(const Key('refresh_button')));
+    await tester.pumpAndSettle();
 
-      // Verify Refresh button exists
-      expect(find.byKey(const Key('refresh_button')), findsOneWidget);
+    // Verify refreshAllConfigs was called
+    verify(mockConfigManager.refreshAllConfigs()).called(1);
+    print('DEBUG: Update Button Test Finished');
+  });
 
-      // Initially no refresh calls
-      verifyNever(mockConfigManager.refreshAllConfigs());
+  testWidgets('Connect Button calls VPN service', (WidgetTester tester) async {
+    print('DEBUG: Starting Connect Button Test');
+    
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<ConfigManager>.value(value: mockConfigManager),
+          ChangeNotifierProvider<HomeProvider>.value(value: mockHomeProvider),
+          Provider<WindowsVpnService>.value(value: mockVpnService),
+        ],
+        child: const MaterialApp(home: ConnectionHomeScreen()),
+      ),
+    );
+    print('DEBUG: Widget Pumped');
+    await tester.pumpAndSettle();
 
-      // Tap the refresh button
-      await tester.tap(find.byKey(const Key('refresh_button')));
-      await tester.pump();
+    // Verify Connect button exists
+    expect(find.byKey(const Key('connect_button')), findsOneWidget);
+    print('DEBUG: Connect Button found');
 
-      // Verify refreshAllConfigs was called
-      verify(mockConfigManager.refreshAllConfigs()).called(1);
-    });
+    // Initially no connection calls
+    verifyNever(mockVpnService.startVpn(any));
+    print('DEBUG: Verified no prior calls to startVpn');
 
-    testWidgets('Connect Button calls VPN service', (WidgetTester tester) async {
-      // Mock the return values
-      when(mockConfigManager.isConnected).thenReturn(false);
-      when(mockConfigManager.connectionStatus).thenReturn('Disconnected');
-      when(mockConfigManager.allConfigs).thenReturn([]);
-      when(mockConfigManager.isRefreshing).thenReturn(false);
-      when(mockConfigManager.isAutoSwitchEnabled).thenReturn(false);
-      when(mockConfigManager.selectedConfig).thenReturn(null);
+    // Tap the connect button
+    await tester.tap(find.byKey(const Key('connect_button')));
+    await tester.pumpAndSettle();
 
-      await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            // Vital: Use ChangeNotifierProvider for Listenable classes
-            ChangeNotifierProvider<ConfigManager>.value(value: mockConfigManager),
-            ChangeNotifierProvider<HomeProvider>.value(value: mockHomeProvider),
-            
-            // Use standard Provider for Services
-            Provider<WindowsVpnService>.value(value: mockVpnService),
-          ],
-          child: const MaterialApp(
-            home: ConnectionHomeScreen(),
-          ),
-        ),
-      );
+    print('DEBUG: Connect Button Test Finished');
+  });
 
-      // Verify Connect button exists
-      expect(find.byKey(const Key('connect_button')), findsOneWidget);
+  testWidgets('UI Elements Inventory - All Key elements exist', (WidgetTester tester) async {
+    print('DEBUG: Starting UI Elements Test');
+    
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<ConfigManager>.value(value: mockConfigManager),
+          ChangeNotifierProvider<HomeProvider>.value(value: mockHomeProvider),
+          Provider<WindowsVpnService>.value(value: mockVpnService),
+        ],
+        child: const MaterialApp(home: ConnectionHomeScreen()),
+      ),
+    );
+    print('DEBUG: Widget Pumped');
+    await tester.pumpAndSettle();
 
-      // Initially no connection calls
-      verifyNever(mockVpnService.startVpn(any));
+    // Verify all key UI elements exist
+    expect(find.byKey(const Key('connect_button')), findsOneWidget);
+    expect(find.byKey(const Key('top_banner_webview')), findsOneWidget);
+    expect(find.byKey(const Key('native_ad_banner')), findsOneWidget);
+    expect(find.byKey(const Key('smart_paste_button')), findsOneWidget);
+    expect(find.byKey(const Key('refresh_button')), findsOneWidget);
+    expect(find.byKey(const Key('server_list_view')), findsOneWidget);
+    print('DEBUG: All UI Elements Test Finished');
+  });
 
-      // Tap the connect button
-      await tester.tap(find.byKey(const Key('connect_button')));
-      await tester.pump();
+  testWidgets('Scenario A: App starts disconnected -> Tap Connect -> Verify state changes', (WidgetTester tester) async {
+    print('DEBUG: Starting Scenario A Test');
+    
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<ConfigManager>.value(value: mockConfigManager),
+          ChangeNotifierProvider<HomeProvider>.value(value: mockHomeProvider),
+          Provider<WindowsVpnService>.value(value: mockVpnService),
+        ],
+        child: const MaterialApp(home: ConnectionHomeScreen()),
+      ),
+    );
+    print('DEBUG: Widget Pumped');
+    await tester.pumpAndSettle();
 
-      // The connection logic is complex, but we can verify the state changes
-      // The actual VPN connection would be tested in integration tests
-    });
+    // Verify initial state
+    expect(find.text('Disconnected'), findsWidgets); // Connection status text
+    print('DEBUG: Initial disconnected state verified');
 
-    testWidgets('UI Elements Inventory - All Key elements exist', (WidgetTester tester) async {
-      // Mock the return values
-      when(mockConfigManager.isConnected).thenReturn(false);
-      when(mockConfigManager.connectionStatus).thenReturn('Disconnected');
-      when(mockConfigManager.allConfigs).thenReturn([]);
-      when(mockConfigManager.isRefreshing).thenReturn(false);
-      when(mockConfigManager.isAutoSwitchEnabled).thenReturn(false);
-      when(mockConfigManager.selectedConfig).thenReturn(null);
+    // Add a mock config to enable connection
+    final mockConfig = VpnConfigWithMetrics(
+      id: 'test-config-id',
+      name: 'Test Server',
+      rawConfig: 'vmess://test-config',
+      countryCode: 'US',
+    );
+    when(mockConfigManager.allConfigs).thenReturn([mockConfig]);
+    when(mockConfigManager.selectedConfig).thenReturn(mockConfig);
 
-      await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            // Vital: Use ChangeNotifierProvider for Listenable classes
-            ChangeNotifierProvider<ConfigManager>.value(value: mockConfigManager),
-            ChangeNotifierProvider<HomeProvider>.value(value: mockHomeProvider),
-            
-            // Use standard Provider for Services
-            Provider<WindowsVpnService>.value(value: mockVpnService),
-          ],
-          child: const MaterialApp(
-            home: ConnectionHomeScreen(),
-          ),
-        ),
-      );
+    // Tap the connect button
+    await tester.tap(find.byKey(const Key('connect_button')));
+    await tester.pumpAndSettle();
 
-      // Verify all key UI elements exist
-      expect(find.byKey(const Key('connect_button')), findsOneWidget);
-      expect(find.byKey(const Key('top_banner_webview')), findsOneWidget);
-      expect(find.byKey(const Key('native_ad_banner')), findsOneWidget);
-      expect(find.byKey(const Key('smart_paste_button')), findsOneWidget);
-      expect(find.byKey(const Key('refresh_button')), findsOneWidget);
-      expect(find.byKey(const Key('server_list_view')), findsOneWidget);
-    });
+    print('DEBUG: Scenario A Test Finished');
+  });
 
-    testWidgets('Scenario A: App starts disconnected -> Tap Connect -> Verify state changes', (WidgetTester tester) async {
-      // Initially disconnected
-      when(mockConfigManager.isConnected).thenReturn(false);
-      when(mockConfigManager.connectionStatus).thenReturn('Disconnected');
-      when(mockConfigManager.allConfigs).thenReturn([]);
-      when(mockConfigManager.isRefreshing).thenReturn(false);
-      when(mockConfigManager.isAutoSwitchEnabled).thenReturn(false);
-      when(mockConfigManager.selectedConfig).thenReturn(null);
+  testWidgets('Scenario B: Tap Smart Paste -> Verify Config added', (WidgetTester tester) async {
+    print('DEBUG: Starting Scenario B Test');
+    
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<ConfigManager>.value(value: mockConfigManager),
+          ChangeNotifierProvider<HomeProvider>.value(value: mockHomeProvider),
+          Provider<WindowsVpnService>.value(value: mockVpnService),
+        ],
+        child: const MaterialApp(home: ConnectionHomeScreen()),
+      ),
+    );
+    print('DEBUG: Widget Pumped');
+    await tester.pumpAndSettle();
 
-      await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            // Vital: Use ChangeNotifierProvider for Listenable classes
-            ChangeNotifierProvider<ConfigManager>.value(value: mockConfigManager),
-            ChangeNotifierProvider<HomeProvider>.value(value: mockHomeProvider),
-            
-            // Use standard Provider for Services
-            Provider<WindowsVpnService>.value(value: mockVpnService),
-          ],
-          child: const MaterialApp(
-            home: ConnectionHomeScreen(),
-          ),
-        ),
-      );
+    // Initially no configs
+    when(mockConfigManager.allConfigs).thenReturn([]);
 
-      // Verify initial state
-      expect(find.text('Disconnected'), findsWidgets); // Connection status text
+    // Tap smart paste button
+    when(mockConfigManager.addConfig(any, any)).thenAnswer((_) async => null);
+    await tester.tap(find.byKey(const Key('smart_paste_button')));
+    await tester.pumpAndSettle();
 
-      // Add a mock config to enable connection
-      final mockConfig = VpnConfigWithMetrics(
-        id: 'test-config-id',
-        name: 'Test Server',
-        rawConfig: 'vmess://test-config',
-        countryCode: 'US',
-      );
-      when(mockConfigManager.allConfigs).thenReturn([mockConfig]);
-      when(mockConfigManager.selectedConfig).thenReturn(mockConfig);
+    // The actual config addition depends on clipboard content
+    // This verifies the button triggers the appropriate handler
+    verify(mockConfigManager.addConfig(any, any)).called(1);
+    print('DEBUG: Scenario B Test Finished');
+  });
 
-      // Tap the connect button
-      await tester.tap(find.byKey(const Key('connect_button')));
-      await tester.pump();
+  testWidgets('Traffic Stats update when VpnStatus changes', (WidgetTester tester) async {
+    print('DEBUG: Starting Traffic Stats Test');
+    
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<ConfigManager>.value(value: mockConfigManager),
+          ChangeNotifierProvider<HomeProvider>.value(value: mockHomeProvider),
+          Provider<WindowsVpnService>.value(value: mockVpnService),
+        ],
+        child: const MaterialApp(home: ConnectionHomeScreen()),
+      ),
+    );
+    print('DEBUG: Widget Pumped');
+    await tester.pumpAndSettle();
 
-      // Verify state changes occurred (would happen asynchronously)
-      // In a real test, we'd wait for the connection to complete
-    });
+    // Initially disconnected
+    when(mockConfigManager.connectionStatus).thenReturn('Disconnected');
 
-    testWidgets('Scenario B: Tap Smart Paste -> Verify Config added', (WidgetTester tester) async {
-      // Mock the return values
-      when(mockConfigManager.isConnected).thenReturn(false);
-      when(mockConfigManager.connectionStatus).thenReturn('Disconnected');
-      when(mockConfigManager.allConfigs).thenReturn([]);
-      when(mockConfigManager.isRefreshing).thenReturn(false);
-      when(mockConfigManager.isAutoSwitchEnabled).thenReturn(false);
-      when(mockConfigManager.selectedConfig).thenReturn(null);
+    // Simulate connection status change
+    when(mockConfigManager.connectionStatus).thenReturn('Connected to Server');
 
-      await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            // Vital: Use ChangeNotifierProvider for Listenable classes
-            ChangeNotifierProvider<ConfigManager>.value(value: mockConfigManager),
-            ChangeNotifierProvider<HomeProvider>.value(value: mockHomeProvider),
-            
-            // Use standard Provider for Services
-            Provider<WindowsVpnService>.value(value: mockVpnService),
-          ],
-          child: const MaterialApp(
-            home: ConnectionHomeScreen(),
-          ),
-        ),
-      );
+    await tester.pumpAndSettle();
 
-      // Initially no configs
-      when(mockConfigManager.allConfigs).thenReturn([]);
+    // Verify UI updates to reflect new status
+    expect(find.text('Connected to Server'), findsWidgets);
+    print('DEBUG: Traffic Stats Test Finished');
+  });
 
-      // Tap smart paste button
-      when(mockConfigManager.addConfig(any, any)).thenAnswer((_) async => null);
-      await tester.tap(find.byKey(const Key('smart_paste_button')));
-      await tester.pump();
+  testWidgets('ConfigManager state changes trigger UI updates', (WidgetTester tester) async {
+    print('DEBUG: Starting ConfigManager State Test');
+    
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<ConfigManager>.value(value: mockConfigManager),
+          ChangeNotifierProvider<HomeProvider>.value(value: mockHomeProvider),
+          Provider<WindowsVpnService>.value(value: mockVpnService),
+        ],
+        child: const MaterialApp(home: ConnectionHomeScreen()),
+      ),
+    );
+    print('DEBUG: Widget Pumped');
+    await tester.pumpAndSettle();
 
-      // The actual config addition depends on clipboard content
-      // This verifies the button triggers the appropriate handler
-      verify(mockConfigManager.addConfig(any, any)).called(1);
-    });
+    // Add a config and verify UI updates
+    final mockConfig = VpnConfigWithMetrics(
+      id: 'test-config-id',
+      name: 'Test Server',
+      rawConfig: 'vmess://test-config',
+      countryCode: 'US',
+    );
+    when(mockConfigManager.allConfigs).thenReturn([mockConfig]);
 
-    testWidgets('Traffic Stats update when VpnStatus changes', (WidgetTester tester) async {
-      // Mock the return values
-      when(mockConfigManager.isConnected).thenReturn(false);
-      when(mockConfigManager.connectionStatus).thenReturn('Disconnected');
-      when(mockConfigManager.allConfigs).thenReturn([]);
-      when(mockConfigManager.isRefreshing).thenReturn(false);
-      when(mockConfigManager.isAutoSwitchEnabled).thenReturn(false);
-      when(mockConfigManager.selectedConfig).thenReturn(null);
+    await tester.pumpAndSettle();
 
-      await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            // Vital: Use ChangeNotifierProvider for Listenable classes
-            ChangeNotifierProvider<ConfigManager>.value(value: mockConfigManager),
-            ChangeNotifierProvider<HomeProvider>.value(value: mockHomeProvider),
-            
-            // Use standard Provider for Services
-            Provider<WindowsVpnService>.value(value: mockVpnService),
-          ],
-          child: const MaterialApp(
-            home: ConnectionHomeScreen(),
-          ),
-        ),
-      );
-
-      // Initially disconnected
-      when(mockConfigManager.connectionStatus).thenReturn('Disconnected');
-
-      // Simulate connection status change
-      when(mockConfigManager.connectionStatus).thenReturn('Connected to Server');
-
-      await tester.pump();
-
-      // Verify UI updates to reflect new status
-      expect(find.text('Connected to Server'), findsWidgets);
-    });
-
-    testWidgets('ConfigManager state changes trigger UI updates', (WidgetTester tester) async {
-      // Mock the return values
-      when(mockConfigManager.isConnected).thenReturn(false);
-      when(mockConfigManager.connectionStatus).thenReturn('Disconnected');
-      when(mockConfigManager.allConfigs).thenReturn([]);
-      when(mockConfigManager.isRefreshing).thenReturn(false);
-      when(mockConfigManager.isAutoSwitchEnabled).thenReturn(false);
-      when(mockConfigManager.selectedConfig).thenReturn(null);
-
-      await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            // Vital: Use ChangeNotifierProvider for Listenable classes
-            ChangeNotifierProvider<ConfigManager>.value(value: mockConfigManager),
-            ChangeNotifierProvider<HomeProvider>.value(value: mockHomeProvider),
-            
-            // Use standard Provider for Services
-            Provider<WindowsVpnService>.value(value: mockVpnService),
-          ],
-          child: const MaterialApp(
-            home: ConnectionHomeScreen(),
-          ),
-        ),
-      );
-
-      // Add a config and verify UI updates
-      final mockConfig = VpnConfigWithMetrics(
-        id: 'test-config-id',
-        name: 'Test Server',
-        rawConfig: 'vmess://test-config',
-        countryCode: 'US',
-      );
-      when(mockConfigManager.allConfigs).thenReturn([mockConfig]);
-
-      await tester.pump();
-
-      // Verify that the config list UI updates
-      expect(mockConfigManager.allConfigs.length, 1);
-    });
+    // Verify that the config list UI updates
+    expect(mockConfigManager.allConfigs.length, 1);
+    print('DEBUG: ConfigManager State Test Finished');
   });
 }
 
-// --- CORRECTED FAKES FOR PLATFORM INTERFACE ---
-
-class FakeWebViewPlatform extends WebViewPlatform { 
-  // Note: extends, NOT implements
-  
+// --- FAKE CLASSES WITH LOGGING ---
+class FakeWebViewPlatform extends WebViewPlatform {
   @override
   PlatformWebViewController createPlatformWebViewController(PlatformWebViewControllerCreationParams params) {
+    print('DEBUG: FakeWebViewPlatform.createPlatformWebViewController called');
     return FakeWebViewController(params);
   }
   
   @override
   PlatformNavigationDelegate createPlatformNavigationDelegate(PlatformNavigationDelegateCreationParams params) {
+    print('DEBUG: FakeWebViewPlatform.createPlatformNavigationDelegate called');
     return FakeNavigationDelegate(params);
   }
 }
 
 class FakeWebViewController extends PlatformWebViewController {
-  // Must accept params to satisfy super constructor requirements if any, 
-  // or just call super.implementation() if available.
-  // Safest way for standard PlatformInterface:
   FakeWebViewController(PlatformWebViewControllerCreationParams params) : super.implementation(params);
+
+  @override
+  Future<void> loadRequest(LoadRequestParams params) async {
+    print('DEBUG: FakeWebViewController.loadRequest called with ${params.uri}');
+  }
   
   @override
-  Future<void> loadRequest(LoadRequestParams params) async {}
+  Future<void> setJavaScriptMode(JavaScriptMode mode) async {
+    print('DEBUG: FakeWebViewController.setJavaScriptMode called with $mode');
+  }
   
   @override
-  Future<void> setJavaScriptMode(JavaScriptMode mode) async {}
+  Future<void> setBackgroundColor(Color color) async {
+    print('DEBUG: FakeWebViewController.setBackgroundColor called with $color');
+  }
   
   @override
-  Future<void> setBackgroundColor(Color color) async {}
-  
-  // Catch-all to prevent crashes
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+  dynamic noSuchMethod(Invocation invocation) {
+    print('DEBUG: FakeWebViewController handled missing method: ${invocation.memberName}');
+    return super.noSuchMethod(invocation);
+  }
 }
 
 class FakeNavigationDelegate extends PlatformNavigationDelegate {
   FakeNavigationDelegate(PlatformNavigationDelegateCreationParams params) : super.implementation(params);
   
   @override
-  Future<void> setOnPageFinished(void Function(String url) onPageFinished) async {}
+  Future<void> setOnPageFinished(void Function(String url) onPageFinished) async {
+    print('DEBUG: FakeNavigationDelegate.setOnPageFinished called');
+  }
 
   @override
-  Future<void> setOnWebResourceError(void Function(WebResourceError error) onWebResourceError) async {}
+  Future<void> setOnWebResourceError(void Function(WebResourceError error) onWebResourceError) async {
+    print('DEBUG: FakeNavigationDelegate.setOnWebResourceError called');
+  }
 
-  // Catch-all to prevent crashes
   @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+  dynamic noSuchMethod(Invocation invocation) {
+    print('DEBUG: FakeNavigationDelegate handled missing method: ${invocation.memberName}');
+    return super.noSuchMethod(invocation);
+  }
 }
