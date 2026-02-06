@@ -7,6 +7,7 @@ import 'package:ivpn_new/services/ad_service.dart';
 import 'package:ivpn_new/providers/home_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:ivpn_new/models/vpn_config_with_metrics.dart';
+import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
 import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
 import 'home_screen_comprehensive_test.mocks.dart';
@@ -15,13 +16,29 @@ import 'home_screen_comprehensive_test.mocks.dart';
   MockSpec<ConfigManager>(),
   MockSpec<WindowsVpnService>(),
   MockSpec<HomeProvider>(),
+  MockSpec<WebViewPlatform>(),
+  MockSpec<PlatformWebViewController>(),
+  MockSpec<PlatformNavigationDelegate>(),
 ])
 void main() {
   group('ConnectionHomeScreen Comprehensive Tests', () {
-
     setUp(() {
-      // Ensure we have a test binding
       TestWidgetsFlutterBinding.ensureInitialized();
+      final mockWebViewPlatform = MockWebViewPlatform();
+      final mockWebViewController = MockPlatformWebViewController();
+      final mockNavigationDelegate = MockPlatformNavigationDelegate();
+
+      WebViewPlatform.instance = mockWebViewPlatform;
+      
+      when(mockWebViewPlatform.createPlatformWebViewController(any))
+          .thenReturn(mockWebViewController);
+      when(mockWebViewPlatform.createPlatformNavigationDelegate(any))
+          .thenReturn(mockNavigationDelegate);
+      
+      // Prevent null errors on common calls
+      when(mockWebViewController.loadRequest(any)).thenAnswer((_) async {});
+      when(mockWebViewController.setJavaScriptMode(any)).thenAnswer((_) async {});
+      when(mockWebViewController.setBackgroundColor(any)).thenAnswer((_) async {});
     });
 
     testWidgets('Smart Paste Button exists and triggers import', (WidgetTester tester) async {
