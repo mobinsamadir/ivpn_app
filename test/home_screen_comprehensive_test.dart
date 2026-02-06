@@ -358,30 +358,40 @@ void main() {
   });
 }
 
-// --- Manual Fakes for WebView (Bypasses "implements" assertion error) ---
+// --- BETTER FAKES ---
 
-class FakeWebViewPlatform extends WebViewPlatform {
+// 1. Add this import at the top if missing:
+// import 'package:mockito/mockito.dart';
+
+class FakeWebViewPlatform extends Fake implements WebViewPlatform {
   @override
   PlatformWebViewController createPlatformWebViewController(PlatformWebViewControllerCreationParams params) {
-    return FakeWebViewController(params);
+    return FakeWebViewController();
   }
   @override
   PlatformNavigationDelegate createPlatformNavigationDelegate(PlatformNavigationDelegateCreationParams params) {
-    return FakeNavigationDelegate(params);
+    return FakeNavigationDelegate();
   }
 }
 
-class FakeWebViewController extends PlatformWebViewController {
-  FakeWebViewController(PlatformWebViewControllerCreationParams params) : super.implementation(params);
-  
+class FakeWebViewController extends Fake implements PlatformWebViewController {
   @override
   Future<void> loadRequest(LoadRequestParams params) async {}
   @override
   Future<void> setJavaScriptMode(JavaScriptMode mode) async {}
   @override
   Future<void> setBackgroundColor(Color color) async {}
+  
+  // Catch-all to prevent crashes
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-class FakeNavigationDelegate extends PlatformNavigationDelegate {
-  FakeNavigationDelegate(PlatformNavigationDelegateCreationParams params) : super.implementation(params);
+class FakeNavigationDelegate extends Fake implements PlatformNavigationDelegate {
+  @override
+  Future<void> setOnPageFinished(void Function(String url) onPageFinished) async {}
+  
+   // Catch-all to prevent crashes
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
