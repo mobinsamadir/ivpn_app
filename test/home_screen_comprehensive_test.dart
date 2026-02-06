@@ -6,111 +6,53 @@ import 'package:ivpn_new/services/windows_vpn_service.dart';
 import 'package:ivpn_new/services/ad_service.dart';
 import 'package:provider/provider.dart';
 import 'package:ivpn_new/models/vpn_config_with_metrics.dart';
+import 'package:mockito/mockito.dart';
 
 void main() {
   group('ConnectionHomeScreen Comprehensive Tests', () {
-    // Mock classes for testing
-    class MockConfigManager extends ConfigManager {
-      bool _isConnected = false;
-      String _connectionStatus = 'Disconnected';
-      List<VpnConfigWithMetrics> _allConfigs = [];
-      bool _isRefreshing = false;
-      bool _isAutoSwitchEnabled = false;
-      VpnConfigWithMetrics? _selectedConfig;
+    // Mock classes for testing using Mockito
+    class MockConfigManager extends Mock implements ConfigManager {
+      @override
+      bool get isConnected => super.noSuchMethod(Invocation.getter(#isConnected), returnValue: false);
+      
+      @override
+      String get connectionStatus => super.noSuchMethod(Invocation.getter(#connectionStatus), returnValue: 'Disconnected');
+      
+      @override
+      List<VpnConfigWithMetrics> get allConfigs => super.noSuchMethod(Invocation.getter(#allConfigs), returnValue: <VpnConfigWithMetrics>[]);
+      
+      @override
+      bool get isRefreshing => super.noSuchMethod(Invocation.getter(#isRefreshing), returnValue: false);
+      
+      @override
+      bool get isAutoSwitchEnabled => super.noSuchMethod(Invocation.getter(#isAutoSwitchEnabled), returnValue: false);
+      
+      @override
+      VpnConfigWithMetrics? get selectedConfig => super.noSuchMethod(Invocation.getter(#selectedConfig), returnValue: null);
 
       @override
-      bool get isConnected => _isConnected;
-
+      Future<void> refreshAllConfigs() => super.noSuchMethod(Invocation.method(#refreshAllConfigs, []), returnValue: Future.value());
+      
       @override
-      String get connectionStatus => _connectionStatus;
-
+      Future<void> addConfig(String rawConfig, String name, {String countryCode = 'US'}) => super.noSuchMethod(Invocation.method(#addConfig, [rawConfig, name, countryCode]), returnValue: Future.value());
+      
       @override
-      List<VpnConfigWithMetrics> get allConfigs => _allConfigs;
-
+      void selectConfig(VpnConfigWithMetrics? config) => super.noSuchMethod(Invocation.method(#selectConfig, [config]));
+      
       @override
-      bool get isRefreshing => _isRefreshing;
-
-      @override
-      bool get isAutoSwitchEnabled => _isAutoSwitchEnabled;
-
-      @override
-      VpnConfigWithMetrics? get selectedConfig => _selectedConfig;
-
-      void setConnectedState(bool connected, {String status = ''}) {
-        _isConnected = connected;
-        _connectionStatus = status.isEmpty 
-          ? (connected ? 'Connected' : 'Disconnected') 
-          : status;
-        notifyListeners();
-      }
-
-      void addMockConfig(VpnConfigWithMetrics config) {
-        _allConfigs.add(config);
-        notifyListeners();
-      }
-
-      void setRefreshing(bool refreshing) {
-        _isRefreshing = refreshing;
-        notifyListeners();
-      }
-
-      void setSelectedConfig(VpnConfigWithMetrics? config) {
-        _selectedConfig = config;
-        notifyListeners();
-      }
-
-      // Track calls to methods for verification
-      int refreshCallCount = 0;
-      int addConfigCallCount = 0;
-
-      @override
-      Future<void> refreshAllConfigs() async {
-        refreshCallCount++;
-        setRefreshing(true);
-        await Future.delayed(const Duration(milliseconds: 100)); // Simulate async work
-        setRefreshing(false);
-      }
-
-      @override
-      Future<void> addConfig(String rawConfig, String name, {String countryCode = 'US'}) async {
-        addConfigCallCount++;
-        final config = VpnConfigWithMetrics(
-          id: 'mock-${DateTime.now().millisecondsSinceEpoch}',
-          name: name,
-          rawConfig: rawConfig,
-          countryCode: countryCode,
-        );
-        _allConfigs.add(config);
-        notifyListeners();
-      }
+      Future<void> importFromClipboard() => super.noSuchMethod(Invocation.method(#importFromClipboard, []), returnValue: Future.value());
     }
 
-    class MockVpnService extends WindowsVpnService {
-      int connectCallCount = 0;
-      int disconnectCallCount = 0;
-      String lastStartedConfig = '';
-
+    class MockVpnService extends Mock implements WindowsVpnService {
       @override
-      Future<void> startVpn(String config) async {
-        connectCallCount++;
-        lastStartedConfig = config;
-      }
-
+      Future<void> startVpn(String config) => super.noSuchMethod(Invocation.method(#startVpn, [config]), returnValue: Future.value());
+      
       @override
-      Future<void> stopVpn() async {
-        disconnectCallCount++;
-      }
+      Future<void> stopVpn() => super.noSuchMethod(Invocation.method(#stopVpn, []), returnValue: Future.value());
     }
 
-    class MockAdService {
-      bool adShown = false;
-      int adShowCount = 0;
-
-      Future<bool> showAd() async {
-        adShown = true;
-        adShowCount++;
-        return true; // Assume ad was watched successfully
-      }
+    class MockAdService extends Mock {
+      Future<bool> showAd() => super.noSuchMethod(Invocation.method(#showAd, []), returnValue: Future.value(true));
     }
 
     setUp(() {
@@ -121,6 +63,14 @@ void main() {
     testWidgets('Smart Paste Button exists and triggers import', (WidgetTester tester) async {
       final mockConfigManager = MockConfigManager();
       final mockVpnService = MockVpnService();
+
+      // Mock the return values
+      when(mockConfigManager.isConnected).thenReturn(false);
+      when(mockConfigManager.connectionStatus).thenReturn('Disconnected');
+      when(mockConfigManager.allConfigs).thenReturn([]);
+      when(mockConfigManager.isRefreshing).thenReturn(false);
+      when(mockConfigManager.isAutoSwitchEnabled).thenReturn(false);
+      when(mockConfigManager.selectedConfig).thenReturn(null);
 
       await tester.pumpWidget(
         MultiProvider(
@@ -137,19 +87,28 @@ void main() {
       expect(find.byKey(const Key('smart_paste_button')), findsOneWidget);
 
       // Initially no calls should have been made
-      expect(mockConfigManager.addConfigCallCount, 0);
+      verifyNever(mockConfigManager.addConfig(any, any));
+      verifyNever(mockConfigManager.importFromClipboard());
 
       // Mock clipboard content
       await tester.tap(find.byKey(const Key('smart_paste_button')));
       await tester.pump();
 
       // Verify that the button was pressed and triggered the appropriate action
-      // (Note: The actual clipboard interaction would be tested separately)
+      verify(mockConfigManager.importFromClipboard()).called(1);
     });
 
     testWidgets('Update Button triggers refreshAllConfigs', (WidgetTester tester) async {
       final mockConfigManager = MockConfigManager();
       final mockVpnService = MockVpnService();
+
+      // Mock the return values
+      when(mockConfigManager.isConnected).thenReturn(false);
+      when(mockConfigManager.connectionStatus).thenReturn('Disconnected');
+      when(mockConfigManager.allConfigs).thenReturn([]);
+      when(mockConfigManager.isRefreshing).thenReturn(false);
+      when(mockConfigManager.isAutoSwitchEnabled).thenReturn(false);
+      when(mockConfigManager.selectedConfig).thenReturn(null);
 
       await tester.pumpWidget(
         MultiProvider(
@@ -166,29 +125,27 @@ void main() {
       expect(find.byKey(const Key('refresh_button')), findsOneWidget);
 
       // Initially no refresh calls
-      expect(mockConfigManager.refreshCallCount, 0);
+      verifyNever(mockConfigManager.refreshAllConfigs());
 
       // Tap the refresh button
       await tester.tap(find.byKey(const Key('refresh_button')));
       await tester.pump();
 
       // Verify refreshAllConfigs was called
-      expect(mockConfigManager.refreshCallCount, 1);
+      verify(mockConfigManager.refreshAllConfigs()).called(1);
     });
 
     testWidgets('Connect Button calls VPN service', (WidgetTester tester) async {
       final mockConfigManager = MockConfigManager();
       final mockVpnService = MockVpnService();
 
-      // Add a mock config to enable connection
-      final mockConfig = VpnConfigWithMetrics(
-        id: 'test-config-id',
-        name: 'Test Server',
-        rawConfig: 'vmess://test-config',
-        countryCode: 'US',
-      );
-      mockConfigManager.addMockConfig(mockConfig);
-      mockConfigManager.setSelectedConfig(mockConfig);
+      // Mock the return values
+      when(mockConfigManager.isConnected).thenReturn(false);
+      when(mockConfigManager.connectionStatus).thenReturn('Disconnected');
+      when(mockConfigManager.allConfigs).thenReturn([]);
+      when(mockConfigManager.isRefreshing).thenReturn(false);
+      when(mockConfigManager.isAutoSwitchEnabled).thenReturn(false);
+      when(mockConfigManager.selectedConfig).thenReturn(null);
 
       await tester.pumpWidget(
         MultiProvider(
@@ -205,7 +162,7 @@ void main() {
       expect(find.byKey(const Key('connect_button')), findsOneWidget);
 
       // Initially no connection calls
-      expect(mockVpnService.connectCallCount, 0);
+      verifyNever(mockVpnService.startVpn(any));
 
       // Tap the connect button
       await tester.tap(find.byKey(const Key('connect_button')));
@@ -218,6 +175,14 @@ void main() {
     testWidgets('UI Elements Inventory - All Key elements exist', (WidgetTester tester) async {
       final mockConfigManager = MockConfigManager();
       final mockVpnService = MockVpnService();
+
+      // Mock the return values
+      when(mockConfigManager.isConnected).thenReturn(false);
+      when(mockConfigManager.connectionStatus).thenReturn('Disconnected');
+      when(mockConfigManager.allConfigs).thenReturn([]);
+      when(mockConfigManager.isRefreshing).thenReturn(false);
+      when(mockConfigManager.isAutoSwitchEnabled).thenReturn(false);
+      when(mockConfigManager.selectedConfig).thenReturn(null);
 
       await tester.pumpWidget(
         MultiProvider(
@@ -244,7 +209,12 @@ void main() {
       final mockVpnService = MockVpnService();
 
       // Initially disconnected
-      expect(mockConfigManager.isConnected, false);
+      when(mockConfigManager.isConnected).thenReturn(false);
+      when(mockConfigManager.connectionStatus).thenReturn('Disconnected');
+      when(mockConfigManager.allConfigs).thenReturn([]);
+      when(mockConfigManager.isRefreshing).thenReturn(false);
+      when(mockConfigManager.isAutoSwitchEnabled).thenReturn(false);
+      when(mockConfigManager.selectedConfig).thenReturn(null);
 
       await tester.pumpWidget(
         MultiProvider(
@@ -267,8 +237,8 @@ void main() {
         rawConfig: 'vmess://test-config',
         countryCode: 'US',
       );
-      mockConfigManager.addMockConfig(mockConfig);
-      mockConfigManager.setSelectedConfig(mockConfig);
+      when(mockConfigManager.allConfigs).thenReturn([mockConfig]);
+      when(mockConfigManager.selectedConfig).thenReturn(mockConfig);
 
       // Tap the connect button
       await tester.tap(find.byKey(const Key('connect_button')));
@@ -282,6 +252,14 @@ void main() {
       final mockConfigManager = MockConfigManager();
       final mockVpnService = MockVpnService();
 
+      // Mock the return values
+      when(mockConfigManager.isConnected).thenReturn(false);
+      when(mockConfigManager.connectionStatus).thenReturn('Disconnected');
+      when(mockConfigManager.allConfigs).thenReturn([]);
+      when(mockConfigManager.isRefreshing).thenReturn(false);
+      when(mockConfigManager.isAutoSwitchEnabled).thenReturn(false);
+      when(mockConfigManager.selectedConfig).thenReturn(null);
+
       await tester.pumpWidget(
         MultiProvider(
           providers: [
@@ -294,7 +272,7 @@ void main() {
       );
 
       // Initially no configs
-      expect(mockConfigManager.allConfigs.length, 0);
+      when(mockConfigManager.allConfigs).thenReturn([]);
 
       // Tap smart paste button
       await tester.tap(find.byKey(const Key('smart_paste_button')));
@@ -302,11 +280,20 @@ void main() {
 
       // The actual config addition depends on clipboard content
       // This verifies the button triggers the appropriate handler
+      verify(mockConfigManager.importFromClipboard()).called(1);
     });
 
     testWidgets('Traffic Stats update when VpnStatus changes', (WidgetTester tester) async {
       final mockConfigManager = MockConfigManager();
       final mockVpnService = MockVpnService();
+
+      // Mock the return values
+      when(mockConfigManager.isConnected).thenReturn(false);
+      when(mockConfigManager.connectionStatus).thenReturn('Disconnected');
+      when(mockConfigManager.allConfigs).thenReturn([]);
+      when(mockConfigManager.isRefreshing).thenReturn(false);
+      when(mockConfigManager.isAutoSwitchEnabled).thenReturn(false);
+      when(mockConfigManager.selectedConfig).thenReturn(null);
 
       await tester.pumpWidget(
         MultiProvider(
@@ -320,10 +307,10 @@ void main() {
       );
 
       // Initially disconnected
-      expect(mockConfigManager.connectionStatus, 'Disconnected');
+      when(mockConfigManager.connectionStatus).thenReturn('Disconnected');
 
       // Simulate connection status change
-      mockConfigManager.setConnectedState(true, status: 'Connected to Server');
+      when(mockConfigManager.connectionStatus).thenReturn('Connected to Server');
 
       await tester.pump();
 
@@ -334,6 +321,14 @@ void main() {
     testWidgets('ConfigManager state changes trigger UI updates', (WidgetTester tester) async {
       final mockConfigManager = MockConfigManager();
       final mockVpnService = MockVpnService();
+
+      // Mock the return values
+      when(mockConfigManager.isConnected).thenReturn(false);
+      when(mockConfigManager.connectionStatus).thenReturn('Disconnected');
+      when(mockConfigManager.allConfigs).thenReturn([]);
+      when(mockConfigManager.isRefreshing).thenReturn(false);
+      when(mockConfigManager.isAutoSwitchEnabled).thenReturn(false);
+      when(mockConfigManager.selectedConfig).thenReturn(null);
 
       await tester.pumpWidget(
         MultiProvider(
@@ -353,7 +348,7 @@ void main() {
         rawConfig: 'vmess://test-config',
         countryCode: 'US',
       );
-      mockConfigManager.addMockConfig(mockConfig);
+      when(mockConfigManager.allConfigs).thenReturn([mockConfig]);
 
       await tester.pump();
 

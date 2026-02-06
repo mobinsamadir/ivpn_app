@@ -22,27 +22,35 @@ jobs:
           channel: 'stable'
           cache: true
 
+      - name: Cache Windows Assets
+        id: assets-cache
+        uses: actions/cache@v4
+        with:
+          path: assets/executables/windows
+          key: windows-assets-v1
+
       - name: Download Windows Assets (Sing-box & GeoIP)
+        if: steps.assets-cache.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           # 1. Create Directory
           New-Item -ItemType Directory -Force -Path assets/executables/windows
-          
+
           # 2. Download Sing-box (Zip), Extract, and Move
           Write-Host "Downloading Sing-box..."
           $sbUrl = "https://github.com/SagerNet/sing-box/releases/download/v1.10.1/sing-box-1.10.1-windows-amd64.zip"
           Invoke-WebRequest -Uri $sbUrl -OutFile "singbox.zip"
           Expand-Archive -Path "singbox.zip" -DestinationPath "temp_sb"
           Move-Item -Path "temp_sb/sing-box-*-windows-amd64/sing-box.exe" -Destination "assets/executables/windows/sing-box.exe" -Force
-          
+
           # 3. Download GeoIP
           Write-Host "Downloading GeoIP..."
           Invoke-WebRequest -Uri "https://github.com/v2fly/geoip/releases/latest/download/geoip.dat" -OutFile "assets/executables/windows/geoip.db"
-          
+
           # 4. Download Geosite
           Write-Host "Downloading Geosite..."
           Invoke-WebRequest -Uri "https://github.com/v2fly/domain-list-community/releases/latest/download/dlc.dat" -OutFile "assets/executables/windows/geosite.db"
-          
+
           # Cleanup
           Remove-Item "singbox.zip"
           Remove-Item "temp_sb" -Recurse

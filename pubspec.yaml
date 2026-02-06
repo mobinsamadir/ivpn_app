@@ -33,6 +33,8 @@ dev_dependencies:
     sdk: flutter
   flutter_launcher_icons: ^0.13.1 # به این بخش منتقل شد
   flutter_lints: ^3.0.0
+  mockito: ^5.4.4
+  build_runner: ^2.4.7
 
 # تنظیمات خودکار آیکون
 flutter_launcher_icons:
