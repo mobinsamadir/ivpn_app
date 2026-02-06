@@ -16,29 +16,23 @@ import 'home_screen_comprehensive_test.mocks.dart';
   MockSpec<ConfigManager>(),
   MockSpec<WindowsVpnService>(),
   MockSpec<HomeProvider>(),
-  MockSpec<WebViewPlatform>(),
-  MockSpec<PlatformWebViewController>(),
-  MockSpec<PlatformNavigationDelegate>(),
 ])
 void main() {
   group('ConnectionHomeScreen Comprehensive Tests', () {
     setUp(() {
       TestWidgetsFlutterBinding.ensureInitialized();
-      final mockWebViewPlatform = MockWebViewPlatform();
-      final mockWebViewController = MockPlatformWebViewController();
-      final mockNavigationDelegate = MockPlatformNavigationDelegate();
-
-      WebViewPlatform.instance = mockWebViewPlatform;
       
-      when(mockWebViewPlatform.createPlatformWebViewController(any))
-          .thenReturn(mockWebViewController);
-      when(mockWebViewPlatform.createPlatformNavigationDelegate(any))
-          .thenReturn(mockNavigationDelegate);
+      // Use Manual Fakes instead of Mocks for WebView
+      final fakeWebViewPlatform = FakeWebViewPlatform();
+      WebViewPlatform.instance = fakeWebViewPlatform;
       
-      // Prevent null errors on common calls
-      when(mockWebViewController.loadRequest(any)).thenAnswer((_) async {});
-      when(mockWebViewController.setJavaScriptMode(any)).thenAnswer((_) async {});
-      when(mockWebViewController.setBackgroundColor(any)).thenAnswer((_) async {});
+      // Setup ConfigManager Mock (Keep this)
+      when(mockConfigManager.isConnected).thenReturn(false);
+      when(mockConfigManager.connectionStatus).thenReturn('Disconnected');
+      when(mockConfigManager.allConfigs).thenReturn([]);
+      when(mockConfigManager.isRefreshing).thenReturn(false);
+      when(mockConfigManager.isAutoSwitchEnabled).thenReturn(false);
+      when(mockConfigManager.selectedConfig).thenReturn(null);
     });
 
     testWidgets('Smart Paste Button exists and triggers import', (WidgetTester tester) async {
@@ -354,4 +348,32 @@ void main() {
       expect(mockConfigManager.allConfigs.length, 1);
     });
   });
+}
+
+// --- Manual Fakes for WebView (Bypasses "implements" assertion error) ---
+
+class FakeWebViewPlatform extends WebViewPlatform {
+  @override
+  PlatformWebViewController createPlatformWebViewController(PlatformWebViewControllerCreationParams params) {
+    return FakeWebViewController(params);
+  }
+  @override
+  PlatformNavigationDelegate createPlatformNavigationDelegate(PlatformNavigationDelegateCreationParams params) {
+    return FakeNavigationDelegate(params);
+  }
+}
+
+class FakeWebViewController extends PlatformWebViewController {
+  FakeWebViewController(super.params);
+  
+  @override
+  Future<void> loadRequest(LoadRequestParams params) async {}
+  @override
+  Future<void> setJavaScriptMode(JavaScriptMode mode) async {}
+  @override
+  Future<void> setBackgroundColor(Color color) async {}
+}
+
+class FakeNavigationDelegate extends PlatformNavigationDelegate {
+  FakeNavigationDelegate(super.params);
 }
