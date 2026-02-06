@@ -6,6 +6,7 @@ import 'package:ivpn_new/services/windows_vpn_service.dart';
 import 'package:ivpn_new/services/ad_service.dart';
 import 'package:provider/provider.dart';
 import 'package:ivpn_new/models/vpn_config_with_metrics.dart';
+import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
 import 'home_screen_comprehensive_test.mocks.dart';
 
