@@ -33,7 +33,7 @@ jobs:
           $sbUrl = "https://github.com/SagerNet/sing-box/releases/download/v1.10.1/sing-box-1.10.1-windows-amd64.zip"
           Invoke-WebRequest -Uri $sbUrl -OutFile "singbox.zip"
           Expand-Archive -Path "singbox.zip" -DestinationPath "temp_sb"
-          Move-Item -Path "temp_sb/sing-box-*-windows-amd64/sing-box.exe" -Destination "assets/executables/windows/sing-box.exe"
+          Move-Item -Path "temp_sb/sing-box-*-windows-amd64/sing-box.exe" -Destination "assets/executables/windows/sing-box.exe" -Force
           
           # 3. Download GeoIP
           Write-Host "Downloading GeoIP..."
