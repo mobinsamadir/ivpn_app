@@ -19,8 +19,16 @@ import 'home_screen_comprehensive_test.mocks.dart';
 ])
 void main() {
   group('ConnectionHomeScreen Comprehensive Tests', () {
+    late MockConfigManager mockConfigManager;
+    late MockWindowsVpnService mockVpnService;
+    late MockHomeProvider mockHomeProvider;
+
     setUp(() {
       TestWidgetsFlutterBinding.ensureInitialized();
+      
+      mockConfigManager = MockConfigManager();
+      mockVpnService = MockWindowsVpnService();
+      mockHomeProvider = MockHomeProvider();
       
       // Use Manual Fakes instead of Mocks for WebView
       final fakeWebViewPlatform = FakeWebViewPlatform();
@@ -36,10 +44,6 @@ void main() {
     });
 
     testWidgets('Smart Paste Button exists and triggers import', (WidgetTester tester) async {
-      final mockConfigManager = MockConfigManager();
-      final mockVpnService = MockWindowsVpnService();
-      final mockHomeProvider = MockHomeProvider();
-
       // Mock the return values
       when(mockConfigManager.isConnected).thenReturn(false);
       when(mockConfigManager.connectionStatus).thenReturn('Disconnected');
@@ -76,10 +80,6 @@ void main() {
     });
 
     testWidgets('Update Button triggers refreshAllConfigs', (WidgetTester tester) async {
-      final mockConfigManager = MockConfigManager();
-      final mockVpnService = MockWindowsVpnService();
-      final mockHomeProvider = MockHomeProvider();
-
       // Mock the return values
       when(mockConfigManager.isConnected).thenReturn(false);
       when(mockConfigManager.connectionStatus).thenReturn('Disconnected');
@@ -115,10 +115,6 @@ void main() {
     });
 
     testWidgets('Connect Button calls VPN service', (WidgetTester tester) async {
-      final mockConfigManager = MockConfigManager();
-      final mockVpnService = MockWindowsVpnService();
-      final mockHomeProvider = MockHomeProvider();
-
       // Mock the return values
       when(mockConfigManager.isConnected).thenReturn(false);
       when(mockConfigManager.connectionStatus).thenReturn('Disconnected');
@@ -154,10 +150,6 @@ void main() {
     });
 
     testWidgets('UI Elements Inventory - All Key elements exist', (WidgetTester tester) async {
-      final mockConfigManager = MockConfigManager();
-      final mockVpnService = MockWindowsVpnService();
-      final mockHomeProvider = MockHomeProvider();
-
       // Mock the return values
       when(mockConfigManager.isConnected).thenReturn(false);
       when(mockConfigManager.connectionStatus).thenReturn('Disconnected');
@@ -188,10 +180,6 @@ void main() {
     });
 
     testWidgets('Scenario A: App starts disconnected -> Tap Connect -> Verify state changes', (WidgetTester tester) async {
-      final mockConfigManager = MockConfigManager();
-      final mockVpnService = MockWindowsVpnService();
-      final mockHomeProvider = MockHomeProvider();
-
       // Initially disconnected
       when(mockConfigManager.isConnected).thenReturn(false);
       when(mockConfigManager.connectionStatus).thenReturn('Disconnected');
@@ -234,10 +222,6 @@ void main() {
     });
 
     testWidgets('Scenario B: Tap Smart Paste -> Verify Config added', (WidgetTester tester) async {
-      final mockConfigManager = MockConfigManager();
-      final mockVpnService = MockWindowsVpnService();
-      final mockHomeProvider = MockHomeProvider();
-
       // Mock the return values
       when(mockConfigManager.isConnected).thenReturn(false);
       when(mockConfigManager.connectionStatus).thenReturn('Disconnected');
@@ -272,10 +256,6 @@ void main() {
     });
 
     testWidgets('Traffic Stats update when VpnStatus changes', (WidgetTester tester) async {
-      final mockConfigManager = MockConfigManager();
-      final mockVpnService = MockWindowsVpnService();
-      final mockHomeProvider = MockHomeProvider();
-
       // Mock the return values
       when(mockConfigManager.isConnected).thenReturn(false);
       when(mockConfigManager.connectionStatus).thenReturn('Disconnected');
@@ -309,10 +289,6 @@ void main() {
     });
 
     testWidgets('ConfigManager state changes trigger UI updates', (WidgetTester tester) async {
-      final mockConfigManager = MockConfigManager();
-      final mockVpnService = MockWindowsVpnService();
-      final mockHomeProvider = MockHomeProvider();
-
       // Mock the return values
       when(mockConfigManager.isConnected).thenReturn(false);
       when(mockConfigManager.connectionStatus).thenReturn('Disconnected');
@@ -364,7 +340,7 @@ class FakeWebViewPlatform extends WebViewPlatform {
 }
 
 class FakeWebViewController extends PlatformWebViewController {
-  FakeWebViewController(super.params);
+  FakeWebViewController(PlatformWebViewControllerCreationParams params) : super.implementation(params);
   
   @override
   Future<void> loadRequest(LoadRequestParams params) async {}
@@ -375,5 +351,5 @@ class FakeWebViewController extends PlatformWebViewController {
 }
 
 class FakeNavigationDelegate extends PlatformNavigationDelegate {
-  FakeNavigationDelegate(super.params);
+  FakeNavigationDelegate(PlatformNavigationDelegateCreationParams params) : super.implementation(params);
 }
