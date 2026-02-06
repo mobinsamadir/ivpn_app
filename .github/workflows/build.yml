@@ -47,6 +47,9 @@ jobs:
           Remove-Item "singbox.zip"
           Remove-Item "temp_sb" -Recurse
 
+      - name: Run Tests
+        run: flutter test test/home_screen_comprehensive_test.dart
+
       - name: Build iVPN Windows
         run: |
           flutter pub get
@@ -89,6 +92,9 @@ jobs:
           tar -xzf sb.tar.gz
           find . -name "libbox.so" -exec cp {} android/app/src/main/jniLibs/arm64-v8a/libbox.so \;
           find . -name "libbox.so" -exec cp {} android/app/src/main/jniLibs/armeabi-v7a/libbox.so \;
+
+      - name: Run Tests
+        run: flutter test test/home_screen_comprehensive_test.dart
 
       - name: Build APK
         run: |
