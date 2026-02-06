@@ -1,0 +1,12 @@
+FROM cirrusci/flutter:3.19.5 AS builder
+
+WORKDIR /app
+COPY . .
+
+RUN flutter pub get
+RUN flutter config --enable-windows-desktop
+RUN flutter build windows --release
+
+FROM scratch
+COPY --from=builder /app/build/windows/runner/Release/ /output/
+CMD ["echo", "Windows build files are in /output"]

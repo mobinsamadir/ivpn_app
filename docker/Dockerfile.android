@@ -1,0 +1,11 @@
+FROM cirrusci/flutter:3.19.5 AS builder
+
+WORKDIR /app
+COPY . .
+
+RUN flutter pub get
+RUN flutter build apk --release --target-platform android-arm64,android-arm
+
+FROM alpine:latest
+COPY --from=builder /app/build/app/outputs/flutter-apk/app-release.apk /app.apk
+CMD ["echo", "Android build complete"]

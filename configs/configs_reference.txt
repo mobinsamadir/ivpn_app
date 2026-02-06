@@ -1,0 +1,38 @@
+=== VMESS CONFIG ===
+URI: vmess://eyJhZGQiOiI4NS4xOTUuMTAxLjEyMiIsImFpZCI6IjAiLCJhbHBuIjoiIiwiZnAiOiIiLCJob3N0IjoiIiwiaWQiOiJmM2Q0MTY3ZS1iMTVlLTRlNDYtODJlOS05Mjg2ZWY5M2ZkYTciLCJuZXQiOiJ0Y3AiLCJwYXRoIjoiIiwicG9ydCI6IjQwODc4IiwicHMiOiJJUi1ASVJBTl9WMlJBWTEiLCJzY3kiOiJhdXRvIiwic25pIjoiIiwidGxzIjoiIiwidHlwZSI6Im5vbmUiLCJ2IjoiMiJ9
+
+Decoded:
+{
+  "add": "85.195.101.122",
+  "aid": "0",
+  "id": "f3d4167e-b15e-4e46-82e9-9286ef93fda7",
+  "net": "tcp",
+  "port": "40878",
+  "ps": "IR-@IRAN_V2RAY1",
+  "scy": "auto",
+  "tls": "",
+  "type": "none",
+  "v": "2"
+}
+
+=== SHADOWSOCKS CONFIG ===
+URI: ss://Y2hhY2hhMjAtaWV0Zi1wb2x5MTMwNTpKSWhONnJCS2thRWJvTE5YVlN2NXJx@142.4.216.225:80#All-%40IRAN_V2RAY1
+
+Decoded:
+Method: chacha20-ietf-poly1305
+Password: JIhN6rBKkaEboLNXVSv5rq
+Server: 142.4.216.225:80
+
+=== VLESS CONFIG ===
+URI: vless://29187857-4a1f-4d1e-88eb-0016771e0dbb@162.159.152.53:443?path=%2F%3Fed%3D2560---PLANB_NET---Join---PLANB_NET---Join---PLANB_NET---Join---PLANB_NET&security=tls&alpn=h3&encryption=none&host=vless.hubp.de&fp=random&type=ws&sni=vless.hubp.de#%2540IRAN_V2RAY1
+
+Decoded:
+UUID: 29187857-4a1f-4d1e-88eb-0016771e0dbb
+Server: 162.159.152.53:443
+Security: tls
+Transport: ws
+Path: /?ed=2560---PLANB_NET---Join---PLANB_NET---Join---PLANB_NET---Join---PLANB_NET
+Host: vless.hubp.de
+SNI: vless.hubp.de
+ALPN: h3
+Fingerprint: random

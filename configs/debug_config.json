@@ -1,0 +1,32 @@
+{
+  "log": {
+    "level": "debug",
+    "output": "stderr",
+    "timestamp": true
+  },
+  "inbounds": [
+    {
+      "type": "http",
+      "tag": "http-in",
+      "listen": "127.0.0.1",
+      "listen_port": 53180,
+      "sniff": false
+    },
+    {
+        "type": "socks",
+        "tag": "socks-in",
+        "listen": "127.0.0.1",
+        "listen_port": 53181,
+        "sniff": false
+    }
+  ],
+  "outbounds": [
+    {
+      "type": "direct",
+      "tag": "direct"
+    }
+  ],
+  "route": {
+     "auto_detect_interface": true
+  }
+}
