@@ -4,6 +4,7 @@ import 'package:ivpn_new/screens/connection_home_screen.dart';
 import 'package:ivpn_new/services/config_manager.dart';
 import 'package:ivpn_new/services/windows_vpn_service.dart';
 import 'package:ivpn_new/services/ad_service.dart';
+import 'package:ivpn_new/providers/home_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:ivpn_new/models/vpn_config_with_metrics.dart';
 import 'package:mockito/mockito.dart';
@@ -13,6 +14,7 @@ import 'home_screen_comprehensive_test.mocks.dart';
 @GenerateNiceMocks([
   MockSpec<ConfigManager>(),
   MockSpec<WindowsVpnService>(),
+  MockSpec<HomeProvider>(),
 ])
 void main() {
   group('ConnectionHomeScreen Comprehensive Tests', () {
@@ -25,6 +27,7 @@ void main() {
     testWidgets('Smart Paste Button exists and triggers import', (WidgetTester tester) async {
       final mockConfigManager = MockConfigManager();
       final mockVpnService = MockWindowsVpnService();
+      final mockHomeProvider = MockHomeProvider();
 
       // Mock the return values
       when(mockConfigManager.isConnected).thenReturn(false);
@@ -38,6 +41,7 @@ void main() {
         MultiProvider(
           providers: [
             ChangeNotifierProvider<ConfigManager>.value(value: mockConfigManager),
+            ChangeNotifierProvider<HomeProvider>.value(value: mockHomeProvider),
           ],
           child: const MaterialApp(
             home: ConnectionHomeScreen(),
@@ -63,6 +67,7 @@ void main() {
     testWidgets('Update Button triggers refreshAllConfigs', (WidgetTester tester) async {
       final mockConfigManager = MockConfigManager();
       final mockVpnService = MockWindowsVpnService();
+      final mockHomeProvider = MockHomeProvider();
 
       // Mock the return values
       when(mockConfigManager.isConnected).thenReturn(false);
@@ -76,6 +81,7 @@ void main() {
         MultiProvider(
           providers: [
             ChangeNotifierProvider<ConfigManager>.value(value: mockConfigManager),
+            ChangeNotifierProvider<HomeProvider>.value(value: mockHomeProvider),
           ],
           child: const MaterialApp(
             home: ConnectionHomeScreen(),
@@ -100,6 +106,7 @@ void main() {
     testWidgets('Connect Button calls VPN service', (WidgetTester tester) async {
       final mockConfigManager = MockConfigManager();
       final mockVpnService = MockWindowsVpnService();
+      final mockHomeProvider = MockHomeProvider();
 
       // Mock the return values
       when(mockConfigManager.isConnected).thenReturn(false);
@@ -113,6 +120,7 @@ void main() {
         MultiProvider(
           providers: [
             ChangeNotifierProvider<ConfigManager>.value(value: mockConfigManager),
+            ChangeNotifierProvider<HomeProvider>.value(value: mockHomeProvider),
           ],
           child: const MaterialApp(
             home: ConnectionHomeScreen(),
@@ -137,6 +145,7 @@ void main() {
     testWidgets('UI Elements Inventory - All Key elements exist', (WidgetTester tester) async {
       final mockConfigManager = MockConfigManager();
       final mockVpnService = MockWindowsVpnService();
+      final mockHomeProvider = MockHomeProvider();
 
       // Mock the return values
       when(mockConfigManager.isConnected).thenReturn(false);
@@ -150,6 +159,7 @@ void main() {
         MultiProvider(
           providers: [
             ChangeNotifierProvider<ConfigManager>.value(value: mockConfigManager),
+            ChangeNotifierProvider<HomeProvider>.value(value: mockHomeProvider),
           ],
           child: const MaterialApp(
             home: ConnectionHomeScreen(),
@@ -169,6 +179,7 @@ void main() {
     testWidgets('Scenario A: App starts disconnected -> Tap Connect -> Verify state changes', (WidgetTester tester) async {
       final mockConfigManager = MockConfigManager();
       final mockVpnService = MockWindowsVpnService();
+      final mockHomeProvider = MockHomeProvider();
 
       // Initially disconnected
       when(mockConfigManager.isConnected).thenReturn(false);
@@ -182,6 +193,7 @@ void main() {
         MultiProvider(
           providers: [
             ChangeNotifierProvider<ConfigManager>.value(value: mockConfigManager),
+            ChangeNotifierProvider<HomeProvider>.value(value: mockHomeProvider),
           ],
           child: const MaterialApp(
             home: ConnectionHomeScreen(),
@@ -213,6 +225,7 @@ void main() {
     testWidgets('Scenario B: Tap Smart Paste -> Verify Config added', (WidgetTester tester) async {
       final mockConfigManager = MockConfigManager();
       final mockVpnService = MockWindowsVpnService();
+      final mockHomeProvider = MockHomeProvider();
 
       // Mock the return values
       when(mockConfigManager.isConnected).thenReturn(false);
@@ -226,6 +239,7 @@ void main() {
         MultiProvider(
           providers: [
             ChangeNotifierProvider<ConfigManager>.value(value: mockConfigManager),
+            ChangeNotifierProvider<HomeProvider>.value(value: mockHomeProvider),
           ],
           child: const MaterialApp(
             home: ConnectionHomeScreen(),
@@ -249,6 +263,7 @@ void main() {
     testWidgets('Traffic Stats update when VpnStatus changes', (WidgetTester tester) async {
       final mockConfigManager = MockConfigManager();
       final mockVpnService = MockWindowsVpnService();
+      final mockHomeProvider = MockHomeProvider();
 
       // Mock the return values
       when(mockConfigManager.isConnected).thenReturn(false);
@@ -262,6 +277,7 @@ void main() {
         MultiProvider(
           providers: [
             ChangeNotifierProvider<ConfigManager>.value(value: mockConfigManager),
+            ChangeNotifierProvider<HomeProvider>.value(value: mockHomeProvider),
           ],
           child: const MaterialApp(
             home: ConnectionHomeScreen(),
@@ -284,6 +300,7 @@ void main() {
     testWidgets('ConfigManager state changes trigger UI updates', (WidgetTester tester) async {
       final mockConfigManager = MockConfigManager();
       final mockVpnService = MockWindowsVpnService();
+      final mockHomeProvider = MockHomeProvider();
 
       // Mock the return values
       when(mockConfigManager.isConnected).thenReturn(false);
@@ -297,6 +314,7 @@ void main() {
         MultiProvider(
           providers: [
             ChangeNotifierProvider<ConfigManager>.value(value: mockConfigManager),
+            ChangeNotifierProvider<HomeProvider>.value(value: mockHomeProvider),
           ],
           child: const MaterialApp(
             home: ConnectionHomeScreen(),
