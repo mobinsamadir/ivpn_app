@@ -1743,7 +1743,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
         }
 
         // Find next best server
-        final nextBest = _configManager.getBestConfig();
+        final nextBest = await _configManager.getBestConfig();
         if (nextBest != null && nextBest.id != currentConfig.id) {
           _showToast('Connection to ${currentConfig.name} failed. Trying ${nextBest.name}...');
           currentConfig = nextBest;
@@ -2091,18 +2091,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     _showToast('Refreshing configs from GitHub...');
 
     try {
-      final stats = await _configManager.fetchStartupConfigs();
-      final added = stats['added'] ?? 0;
-      final skipped = stats['skipped'] ?? 0;
-      final total = stats['total'] ?? 0;
-
-      if (added > 0) {
-        _showToast("✅ Updated! Added $added new servers.");
-      } else if (skipped > 0) {
-        _showToast("ℹ️ No new servers found (Skipped $skipped duplicates).");
-      } else {
-        _showToast("⚠️ Check internet or source link.");
-      }
+      await _configManager.fetchStartupConfigs();
+      _showToast('Refresh check completed');
     } catch (e) {
       _showToast('Failed to refresh configs: $e');
       AdvancedLogger.error('[HomeScreen] Failed to refresh configs: $e');
