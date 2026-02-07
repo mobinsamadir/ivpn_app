@@ -78,47 +78,37 @@ class ConfigManager extends ChangeNotifier {
       String content = '';
       bool downloadSuccess = false;
 
-      // 1. Direct GitHub URL (No Proxy)
-      try {
-        const directUrl = 'https://raw.githubusercontent.com/mobinsamadir/ivpn-servers/main/servers.txt';
-        AdvancedLogger.info('[ConfigManager] Trying direct URL: $directUrl');
-        
-        final response = await http.get(Uri.parse(directUrl)).timeout(const Duration(seconds: 30));
-        
-        if (response.statusCode == 200) {
-           if (_isHtmlResponse(response.body)) {
-             AdvancedLogger.warn('[ConfigManager] Direct URL returned HTML (Proxy/Firewall issue)');
-           } else {
-             content = response.body;
-             downloadSuccess = true;
-             AdvancedLogger.info('📥 Downloaded ${content.length} bytes from Direct URL');
-           }
-        } else {
-           AdvancedLogger.warn('[ConfigManager] Direct download HTTP error: ${response.statusCode}');
-        }
-      } catch (e) {
-        AdvancedLogger.warn('[ConfigManager] Direct download failed: $e');
-      }
+      // List of mirrors to try in sequence
+      final mirrors = [
+        'https://raw.githubusercontent.com/mobinsamadir/ivpn-servers/main/servers.txt',
+        'https://fastly.jsdelivr.net/gh/mobinsamadir/ivpn-servers@main/servers.txt',
+        'https://cdn.jsdelivr.net/gh/mobinsamadir/ivpn-servers@main/servers.txt',
+        'https://raw.gitmirror.com/mobinsamadir/ivpn-servers/main/servers.txt',
+        'https://ghproxy.com/https://raw.githubusercontent.com/mobinsamadir/ivpn-servers/main/servers.txt',
+      ];
 
-      // 2. Fallback Mirror (JSDelivr)
-      if (!downloadSuccess) {
+      // Try each mirror in sequence
+      for (int i = 0; i < mirrors.length && !downloadSuccess; i++) {
+        final url = mirrors[i];
+        AdvancedLogger.info('[ConfigManager] Trying mirror ${i + 1}/${mirrors.length}: $url');
+
         try {
-          const fallbackUrl = 'https://fastly.jsdelivr.net/gh/mobinsamadir/ivpn-servers@main/servers.txt';
-          AdvancedLogger.info('[ConfigManager] Trying fallback URL: $fallbackUrl');
-          
-          final response = await http.get(Uri.parse(fallbackUrl)).timeout(const Duration(seconds: 30));
-          
+          final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 30));
+
           if (response.statusCode == 200) {
              if (_isHtmlResponse(response.body)) {
-                AdvancedLogger.warn('[ConfigManager] Fallback URL returned HTML');
+               AdvancedLogger.warn('[ConfigManager] Mirror $url returned HTML (Proxy/Firewall issue)');
              } else {
-                content = response.body;
-                downloadSuccess = true;
-                AdvancedLogger.info('📥 Downloaded ${content.length} bytes from Fallback URL');
+               content = response.body;
+               downloadSuccess = true;
+               AdvancedLogger.info('📥 Downloaded ${content.length} bytes from Mirror $url');
+               break; // Success, exit the loop
              }
+          } else {
+             AdvancedLogger.warn('[ConfigManager] Mirror $url returned HTTP ${response.statusCode}');
           }
         } catch (e) {
-          AdvancedLogger.error('[ConfigManager] Fallback failed: $e');
+          AdvancedLogger.warn('[ConfigManager] Mirror $url failed: $e');
         }
       }
 
