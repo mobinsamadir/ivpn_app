@@ -1690,17 +1690,63 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
         return;
       }
 
-      AdvancedLogger.info('[ConnectionHomeScreen] Attempting to connect to: ${targetConfig.name}');
+      // Attempt to connect with auto-failover
+      await _connectWithFailover(targetConfig);
+    }
+  }
 
+  /// Connect to a server with automatic failover to the next best server
+  Future<void> _connectWithFailover(VpnConfigWithMetrics initialConfig) async {
+    VpnConfigWithMetrics? currentConfig = initialConfig;
+    int attempts = 0;
+    const maxAttempts = 3;
+
+    while (attempts < maxAttempts) {
       try {
-        AdvancedLogger.info('[ConnectionHomeScreen] Calling _windowsVpnService.startVpn with config: ${targetConfig.name}');
-        await _windowsVpnService.startVpn(targetConfig.rawConfig);
-        AdvancedLogger.info('[ConnectionHomeScreen] Successfully initiated VPN connection to: ${targetConfig.name}');
+        setState(() {
+          _configManager.setConnected(false, status: 'Connecting to ${currentConfig!.name} (Attempt ${attempts + 1}/$maxAttempts)...');
+        });
+
+        AdvancedLogger.info('[ConnectionHomeScreen] Calling _windowsVpnService.startVpn with config: ${currentConfig.name}');
+        await _windowsVpnService.startVpn(currentConfig.rawConfig);
+
+        // Update metrics
+        _configManager.updateConfigMetrics(
+          currentConfig.id,
+          connectionSuccess: true,
+        );
+
+        // Mark success
+        await _configManager.markSuccess(currentConfig.id);
+
+        AdvancedLogger.info('[ConnectionHomeScreen] Successfully initiated VPN connection to: ${currentConfig.name}');
+        return; // Success, exit the loop
+
       } catch (e, stackTrace) {
-        AdvancedLogger.error('[ConnectionHomeScreen] Connection failed with error: $e', error: e, stackTrace: stackTrace);
-        _showToast("Connection failed: $e");
-        // Reset status if connection failed
-        _configManager.setConnected(false, status: 'Ready');
+        AdvancedLogger.error('[ConnectionHomeScreen] Connection failed: $e', error: e, stackTrace: stackTrace);
+        
+        // Mark failure for the current config
+        await _configManager.markFailure(currentConfig.id);
+
+        attempts++;
+        if (attempts >= maxAttempts) {
+          // No more attempts, show error
+          _showToast('Connection failed after $maxAttempts attempts: $e');
+          _configManager.setConnected(false, status: 'Connection failed');
+          return;
+        }
+
+        // Find next best server
+        final nextBest = _configManager.findBestServer();
+        if (nextBest != null && nextBest.id != currentConfig.id) {
+          _showToast('Connection to ${currentConfig.name} failed. Trying ${nextBest.name}...');
+          currentConfig = nextBest;
+        } else {
+          // No other servers available, show error
+          _showToast('Connection failed: $e');
+          _configManager.setConnected(false, status: 'Connection failed');
+          return;
+        }
       }
     }
   }

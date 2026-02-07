@@ -870,6 +870,127 @@ class ConfigManager extends ChangeNotifier {
     return allConfigs.toList();
   }
 
+  // NEW: Parse mixed content including both configs and subscription links
+  static Future<List<String>> parseMixedContent(String text) async {
+    final allConfigs = <String>{};
+
+    // Step 1: Extract direct configs using existing logic
+    final directConfigs = parseConfigText(text);
+    allConfigs.addAll(directConfigs);
+
+    // Step 2: Extract subscription links (both http and https)
+    final subLinkRegex = RegExp(
+      r"(https?://[^\s\"'<>\n\r`{}|\[\]]+)",
+      caseSensitive: false,
+    );
+    final subLinks = subLinkRegex.allMatches(text)
+        .map((match) => match.group(0)!)
+        .where((link) => _isValidSubscriptionLink(link))
+        .toSet();
+
+    // Step 3: Fetch configs from each subscription link
+    for (final link in subLinks) {
+      try {
+        AdvancedLogger.info('[ConfigManager] Attempting to fetch configs from subscription link: $link');
+        
+        final response = await http.get(Uri.parse(link));
+        if (response.statusCode == 200) {
+          final responseBody = utf8.decode(response.bodyBytes); // Handle encoding properly
+          final fetchedConfigs = parseConfigText(responseBody);
+          
+          AdvancedLogger.info('[ConfigManager] Fetched ${fetchedConfigs.length} configs from $link');
+          
+          // Add fetched configs to the main list
+          allConfigs.addAll(fetchedConfigs);
+        } else {
+          AdvancedLogger.warn('[ConfigManager] Failed to fetch from $link, status: ${response.statusCode}');
+        }
+      } catch (e) {
+        AdvancedLogger.error('[ConfigManager] Error fetching subscription from $link: $e');
+      }
+    }
+
+    return allConfigs.toList();
+  }
+
+  // Helper to validate subscription links
+  static bool _isValidSubscriptionLink(String link) {
+    try {
+      final uri = Uri.parse(link);
+      // Check if it's a valid URL and not a direct config
+      return uri.hasScheme && 
+             (uri.scheme == 'http' || uri.scheme == 'https') &&
+             !link.contains('vmess://') && 
+             !link.contains('vless://') && 
+             !link.contains('ss://') && 
+             !link.contains('trojan://');
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // NEW: Find the best server based on calculated score
+  VpnConfigWithMetrics? findBestServer() {
+    if (allConfigs.isEmpty) return null;
+    
+    // Sort by score (descending) and return the top one
+    final sortedConfigs = List.from(allConfigs)..sort((a, b) => b.score.compareTo(a.score));
+    
+    // Return the first config that is alive and has a positive score
+    return sortedConfigs.firstWhere(
+      (config) => config.isAlive && config.score > 0,
+      orElse: () => sortedConfigs.firstWhere(
+        (config) => config.isAlive,
+        orElse: () => sortedConfigs.first,
+      ),
+    );
+  }
+
+  // NEW: Mark a server as failed
+  Future<void> markFailure(String configId) async {
+    final index = allConfigs.indexWhere((c) => c.id == configId);
+    if (index == -1) return;
+
+    // Increment failure count
+    final updatedConfig = allConfigs[index].copyWith(
+      failureCount: allConfigs[index].failureCount + 1,
+      lastSuccessfulConnectionTime: allConfigs[index].lastSuccessfulConnectionTime,
+      isAlive: false, // Mark as not alive on failure
+    );
+
+    // Update the config in the list
+    allConfigs[index] = updatedConfig;
+    
+    _updateLists();
+    await _saveAllConfigs();
+    notifyListeners();
+    
+    AdvancedLogger.info('[ConfigManager] Marked failure for ${updatedConfig.name}');
+  }
+
+  // NEW: Mark a server as successful
+  Future<void> markSuccess(String configId) async {
+    final index = allConfigs.indexWhere((c) => c.id == configId);
+    if (index == -1) return;
+
+    // Reset failure count and update last successful connection time
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final updatedConfig = allConfigs[index].copyWith(
+      failureCount: 0,
+      lastSuccessfulConnectionTime: now,
+      isAlive: true, // Mark as alive on success
+    );
+
+    // Update the config in the list
+    allConfigs[index] = updatedConfig;
+    
+    _updateLists();
+    await _saveAllConfigs();
+    notifyListeners();
+    
+    AdvancedLogger.info('[ConfigManager] Marked success for ${updatedConfig.name}');
+  }
+
   // Method to properly disconnect VPN
   Future<void> disconnectVpn() async {
     // In a real implementation, this would call the actual VPN service

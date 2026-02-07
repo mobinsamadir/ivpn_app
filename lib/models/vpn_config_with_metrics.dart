@@ -22,6 +22,27 @@ class VpnConfigWithMetrics {
   })  : addedDate = addedDate ?? DateTime.now(),
         deviceMetrics = deviceMetrics ?? {};
   
+  // New fields for advanced server testing
+  final int failureCount;
+  final int lastSuccessfulConnectionTime;
+  final bool isAlive;
+  final int tier; // 0=Untested, 1=Alive, 2=LowLatency, 3=Stable/HighSpeed
+
+  VpnConfigWithMetrics({
+    required this.id,
+    required this.rawConfig,
+    required this.name,
+    this.countryCode,
+    this.isFavorite = false,
+    DateTime? addedDate,
+    Map<String, DeviceMetrics>? deviceMetrics,
+    this.failureCount = 0,
+    this.lastSuccessfulConnectionTime = 0,
+    this.isAlive = true,
+    this.tier = 0,
+  })  : addedDate = addedDate ?? DateTime.now(),
+        deviceMetrics = deviceMetrics ?? {};
+
   // Computed property getters (using current device ID)
   int get currentPing => _getPingForDevice(ConfigManager().currentDeviceId);
 
@@ -30,6 +51,20 @@ class VpnConfigWithMetrics {
   double get calculatedScore => _calculateScore(ConfigManager().currentDeviceId);
 
   double get successRate => _getSuccessRate(ConfigManager().currentDeviceId);
+
+  // Advanced scoring algorithm with penalties and bonuses
+  double get score {
+    double score = 100.0;
+    // Penalty for failures
+    score -= (failureCount * 20); 
+    // Bonus for recent success (last 24 hours)
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (now - lastSuccessfulConnectionTime < 86400000) score += 50;
+    // Penalty for high latency
+    if (currentPing > 0) score -= (currentPing / 20); 
+    if (!isAlive) score = -1000;
+    return score;
+  }
 
   // Private helper methods
   int _getPingForDevice(String deviceId) {
@@ -113,6 +148,10 @@ class VpnConfigWithMetrics {
     'isFavorite': isFavorite,
     'addedDate': addedDate.toIso8601String(),
     'deviceMetrics': deviceMetrics.map((k, v) => MapEntry(k, v.toJson())),
+    'failureCount': failureCount,
+    'lastSuccessfulConnectionTime': lastSuccessfulConnectionTime,
+    'isAlive': isAlive,
+    'tier': tier,
   };
   
   // Copy with method for creating updated instances
@@ -124,6 +163,10 @@ class VpnConfigWithMetrics {
     bool? isFavorite,
     DateTime? addedDate,
     Map<String, DeviceMetrics>? deviceMetrics,
+    int? failureCount,
+    int? lastSuccessfulConnectionTime,
+    bool? isAlive,
+    int? tier,
   }) {
     return VpnConfigWithMetrics(
       id: id ?? this.id,
@@ -133,6 +176,10 @@ class VpnConfigWithMetrics {
       isFavorite: isFavorite ?? this.isFavorite,
       addedDate: addedDate ?? this.addedDate,
       deviceMetrics: deviceMetrics ?? this.deviceMetrics,
+      failureCount: failureCount ?? this.failureCount,
+      lastSuccessfulConnectionTime: lastSuccessfulConnectionTime ?? this.lastSuccessfulConnectionTime,
+      isAlive: isAlive ?? this.isAlive,
+      tier: tier ?? this.tier,
     );
   }
 
@@ -147,6 +194,10 @@ class VpnConfigWithMetrics {
       deviceMetrics: (json['deviceMetrics'] as Map?)?.map(
         (k, v) => MapEntry(k.toString(), DeviceMetrics.fromJson(Map<String, dynamic>.from(v))),
       ) ?? {},
+      failureCount: json['failureCount'] ?? 0,
+      lastSuccessfulConnectionTime: json['lastSuccessfulConnectionTime'] ?? 0,
+      isAlive: json['isAlive'] ?? true,
+      tier: json['tier'] ?? 0,
     );
   }
 }
