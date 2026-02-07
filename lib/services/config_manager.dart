@@ -874,47 +874,58 @@ class ConfigManager extends ChangeNotifier {
     return allConfigs.toList();
   }
 
-  // NEW: Parse mixed content including both configs and subscription links
+  // NEW: Parse mixed content including both configs and subscription links using robust "Split & Validate" approach
   static Future<List<String>> parseMixedContent(String text) async {
     final allConfigs = <String>{};
+    
+    // 1. Clean the text: Replace commas/tabs with newlines to ensure separation
+    final cleanedText = text.replaceAll(',', '\n').replaceAll('\t', '\n');
+    
+    // 2. Split by whitespace/newline to get potential tokens
+    final lines = cleanedText.split(RegExp(r'\s+'));
 
-    // Step 1: Extract direct configs using existing logic
-    final directConfigs = parseConfigText(text);
-    allConfigs.addAll(directConfigs);
+    // 3. Process each token
+    for (var line in lines) {
+      line = line.trim();
+      if (line.isEmpty) continue;
 
-    // Safe Regex for URLs avoiding quotes/brackets issues
-    final subLinkRegex = RegExp(
-      r'''https?:\/\/[^\s"\'<>\n\r`{}|\[\]]+''', 
-      caseSensitive: false,
-    );
-    final subLinks = subLinkRegex.allMatches(text)
-        .map((match) => match.group(0)!)
-        .where((link) => _isValidSubscriptionLink(link))
-        .toSet();
+      // Check for Subscription Links (http/https)
+      if (line.startsWith('http://') || line.startsWith('https://')) {
+         if (_isValidSubscriptionLink(line)) {
+            // Fetch logic (keep existing fetch logic here)
+            try {
+               final response = await http.get(Uri.parse(line));
+               if (response.statusCode == 200) {
+                  final body = utf8.decode(response.bodyBytes);
+                  // Recursively parse the body content
+                  final fetched = await parseMixedContent(body); 
+                  allConfigs.addAll(fetched);
+               }
+            } catch (e) {
+               AdvancedLogger.warn('Failed to fetch sub: $line');
+            }
+         }
+         continue; 
+      }
 
-    // Step 3: Fetch configs from each subscription link
-    for (final link in subLinks) {
-      try {
-        AdvancedLogger.info('[ConfigManager] Attempting to fetch configs from subscription link: $link');
-        
-        final response = await http.get(Uri.parse(link));
-        if (response.statusCode == 200) {
-          final responseBody = utf8.decode(response.bodyBytes); // Handle encoding properly
-          final fetchedConfigs = parseConfigText(responseBody);
-          
-          AdvancedLogger.info('[ConfigManager] Fetched ${fetchedConfigs.length} configs from $link');
-          
-          // Add fetched configs to the main list
-          allConfigs.addAll(fetchedConfigs);
-        } else {
-          AdvancedLogger.warn('[ConfigManager] Failed to fetch from $link, status: ${response.statusCode}');
-        }
-      } catch (e) {
-        AdvancedLogger.error('[ConfigManager] Error fetching subscription from $link: $e');
+      // Check for Direct Configs (ss://, vless://, etc.)
+      if (_isValidConfigScheme(line)) {
+         allConfigs.add(line);
       }
     }
 
     return allConfigs.toList();
+  }
+
+  // Helper: Simple check for valid config schemes
+  static bool _isValidConfigScheme(String text) {
+    return text.startsWith('ss://') || 
+           text.startsWith('vmess://') || 
+           text.startsWith('vless://') || 
+           text.startsWith('trojan://') ||
+           text.startsWith('tuic://') ||
+           text.startsWith('hysteria://') ||
+           text.startsWith('hysteria2://');
   }
 
   // Helper to validate subscription links
@@ -922,12 +933,9 @@ class ConfigManager extends ChangeNotifier {
     try {
       final uri = Uri.parse(link);
       // Check if it's a valid URL and not a direct config
-      return uri.hasScheme && 
+      return uri.hasScheme &&
              (uri.scheme == 'http' || uri.scheme == 'https') &&
-             !link.contains('vmess://') && 
-             !link.contains('vless://') && 
-             !link.contains('ss://') && 
-             !link.contains('trojan://');
+             !_isValidConfigScheme(link); // Ensure it's not a config scheme
     } catch (e) {
       return false;
     }
