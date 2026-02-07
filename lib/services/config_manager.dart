@@ -12,40 +12,32 @@ import '../utils/clipboard_utils.dart';
 import 'config_importer.dart';
 
 class ConfigManager extends ChangeNotifier {
-  // Singleton instance
   static final ConfigManager _instance = ConfigManager._internal();
   factory ConfigManager() => _instance;
   ConfigManager._internal();
-  
-  // Core lists
+
   List<VpnConfigWithMetrics> allConfigs = [];
   List<VpnConfigWithMetrics> validatedConfigs = [];
   List<VpnConfigWithMetrics> favoriteConfigs = [];
-  
-  // Device identification
+
   String _currentDeviceId = 'unknown';
   String get currentDeviceId => _currentDeviceId;
-  
-  // Current selection
+
   VpnConfigWithMetrics? _selectedConfig;
   VpnConfigWithMetrics? get selectedConfig => _selectedConfig;
 
-  // Connection state
   bool _isConnected = false;
   bool get isConnected => _isConnected;
   String _connectionStatus = 'Ready';
   String get connectionStatus => _connectionStatus;
 
-  // --- Session Timer State ---
   Timer? _sessionTimer;
   Duration _remainingTime = Duration.zero;
   VoidCallback? _onSessionExpiredCallback;
-  
-  // Refreshing state
+
   bool _isRefreshing = false;
   bool get isRefreshing => _isRefreshing;
 
-  // Auto-switch state
   bool _isAutoSwitchEnabled = true;
   bool get isAutoSwitchEnabled => _isAutoSwitchEnabled;
   set isAutoSwitchEnabled(bool value) {
@@ -54,1068 +46,357 @@ class ConfigManager extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Storage keys
   static const String _configsKey = 'vpn_configs';
   static const String _autoSwitchKey = 'auto_switch_enabled';
-  static const String _githubUrl = 'https://raw.githubusercontent.com/mobinsamadir/ivpn-servers/main/servers.txt';
-  static const String _githubMirrorUrl = 'https://ghproxy.com/https://raw.githubusercontent.com/mobinsamadir/ivpn-servers/main/servers.txt';
-  
-  // Initialization
+
+  // --- INITIALIZATION ---
   Future<void> init() async {
     AdvancedLogger.info('[ConfigManager] Initializing...');
-
-    // 1. Get device ID
     await _initDeviceId();
-
-    // 2. Load auto-switch setting
     await _loadAutoSwitchSetting();
-
-    // 3. Load configs from storage
     await _loadConfigs();
 
-    // 4. If empty, try to load initial defaults OR download from GitHub
     if (allConfigs.isEmpty) {
-      AdvancedLogger.info('[ConfigManager] No configs found in storage, loading initial defaults...');
-      final initialConfigs = await ConfigImporter.loadInitialConfigs();
-      int skippedCount = 0;
-      for (var raw in initialConfigs) {
-        final trimmedRaw = raw.trim();
-        if (allConfigs.any((c) => c.rawConfig.trim() == trimmedRaw)) {
-          skippedCount++;
-          continue;
-        }
-
-        final id = 'initial_${DateTime.now().millisecondsSinceEpoch}_${allConfigs.length}';
-        final name = _extractServerName(trimmedRaw);
-        allConfigs.add(VpnConfigWithMetrics(
-          id: id,
-          rawConfig: trimmedRaw,
-          name: name,
-          countryCode: _extractCountryCode(name),
-        ));
-      }
-
-      // If still empty (unlikely with hardcoded defaults), download from GitHub
-      if (allConfigs.isEmpty) {
-        await downloadConfigsFromGitHub();
-      } else {
-        await _saveAllConfigs();
-        _updateLists();
-        notifyListeners();
-      }
+       AdvancedLogger.info('[ConfigManager] No configs, fetching from remote...');
+       await fetchStartupConfigs();
     }
-
-    // 5. Force list population
-    _updateLists();
-
-    // 6. Perform auto-test on eligible configs
-    await _performAutoTest();
-
-    // 7. Start background startup checks (refresh & test all configs)
-    _performStartupChecks(); // Don't await - run in background
-
-    AdvancedLogger.info('[ConfigManager] Ready. Device: $_currentDeviceId');
-    AdvancedLogger.info('[ConfigManager] Loaded ${allConfigs.length} configs');
-    AdvancedLogger.info('[ConfigManager] Auto-switch enabled: $_isAutoSwitchEnabled');
-
-    // Force config update in the background without blocking UI
-    downloadConfigsFromGitHub(); // Fire and forget
-  }
-
-  // Perform auto-test on configs that are eligible for auto-test
-  Future<void> _performAutoTest() async {
-    try {
-      AdvancedLogger.info('[ConfigManager] Starting auto-test for eligible configs...');
-
-      // Filter configs that are eligible for auto-test (no numbers in name)
-      final eligibleConfigs = allConfigs.where((config) => config.isEligibleForAutoTest).toList();
-
-      if (eligibleConfigs.isEmpty) {
-        AdvancedLogger.info('[ConfigManager] No configs eligible for auto-test');
-        return;
-      }
-
-      AdvancedLogger.info('[ConfigManager] Found ${eligibleConfigs.length} configs eligible for auto-test');
-
-      // Test each eligible config
-      for (final config in eligibleConfigs) {
-        try {
-          // Use the latency service to test the config
-          // For now, we'll just use the existing metrics or skip to the next
-          // In a real implementation, we'd need to have access to the latency service
-
-          // For demonstration purposes, we'll just log that we're testing
-          AdvancedLogger.info('[ConfigManager] Auto-testing config: ${config.name}');
-
-          // In a real implementation, we would call the actual testing method
-          // await _testConfig(config);
-        } catch (e) {
-          AdvancedLogger.error('[ConfigManager] Auto-test failed for ${config.name}: $e');
-          continue;
-        }
-      }
-
-      AdvancedLogger.info('[ConfigManager] Auto-test completed');
-    } catch (e) {
-      AdvancedLogger.error('[ConfigManager] Auto-test process failed: $e');
-    }
-  }
-
-  // Perform startup checks: refresh configs from GitHub and run tests on all configs
-  Future<void> _performStartupChecks() async {
-    try {
-      AdvancedLogger.info('[ConfigManager] Starting startup checks...');
-
-      // Refresh configs from GitHub
-      await downloadConfigsFromGitHub();
-
-      // Run tests on all configs
-      await runQuickTestOnAllConfigs((log) {
-        AdvancedLogger.info('[ConfigManager] Startup test: $log');
-      });
-
-      AdvancedLogger.info('[ConfigManager] Startup checks completed');
-    } catch (e) {
-      AdvancedLogger.error('[ConfigManager] Startup checks failed: $e');
-    }
-  }
-
-  Future<void> _initDeviceId() async {
-    final deviceInfo = DeviceInfoPlugin();
     
-    try {
-      if (Platform.isAndroid) {
-        final androidInfo = await deviceInfo.androidInfo;
-        _currentDeviceId = 'android_${androidInfo.id}';
-      } else if (Platform.isIOS) {
-        final iosInfo = await deviceInfo.iosInfo;
-        _currentDeviceId = 'ios_${iosInfo.identifierForVendor}';
-      } else if (Platform.isWindows) {
-        final windowsInfo = await deviceInfo.windowsInfo;
-        _currentDeviceId = 'windows_${windowsInfo.deviceId}';
-      } else {
-        _currentDeviceId = 'unknown_${DateTime.now().millisecondsSinceEpoch}';
-      }
-    } catch (e) {
-      AdvancedLogger.warn('[ConfigManager] Failed to get device ID: $e');
-      _currentDeviceId = 'unknown_fallback';
-    }
-  }
-  
-  Future<void> _loadConfigs() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final jsonString = prefs.getString(_configsKey);
-
-      if (jsonString != null) {
-        final List<dynamic> jsonList = jsonDecode(jsonString);
-        final List<VpnConfigWithMetrics> loadedConfigs = jsonList
-            .map((json) => VpnConfigWithMetrics.fromJson(json))
-            .toList();
-        
-        // Atomic-like swap to prevent race conditions with background updates
-        allConfigs = loadedConfigs;
-        AdvancedLogger.info('[ConfigManager] Loaded ${allConfigs.length} configs from storage');
-      } else {
-        allConfigs = [];
-      }
-    } catch (e) {
-      AdvancedLogger.error('[ConfigManager] Error loading configs: $e');
-      allConfigs = [];
-    }
-
     _updateLists();
+    // Fire and forget startup refresh to get latest updates
+    fetchStartupConfigs(); 
+  }
+
+  // --- DOWNLOAD LOGIC (FIXED: Direct GitHub, Smart Parser) ---
+  Future<void> fetchStartupConfigs() async {
+    if (_isRefreshing) return;
+    _isRefreshing = true;
     notifyListeners();
-    printInventoryReport();
-  }
-  
-  Future<void> _saveAllConfigs() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final jsonList = allConfigs.map((c) => c.toJson()).toList();
-      final jsonString = jsonEncode(jsonList);
-      await prefs.setString(_configsKey, jsonString);
-      AdvancedLogger.debug('[ConfigManager] Saved ${allConfigs.length} configs');
-    } catch (e) {
-      AdvancedLogger.error('[ConfigManager] Error saving configs: $e');
-    }
-  }
 
-  Future<void> _saveAutoSwitchSetting() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(_autoSwitchKey, _isAutoSwitchEnabled);
-      AdvancedLogger.info('[ConfigManager] Saved auto-switch setting: $_isAutoSwitchEnabled');
-    } catch (e) {
-      AdvancedLogger.error('[ConfigManager] Error saving auto-switch setting: $e');
-    }
-  }
-
-  Future<void> _loadAutoSwitchSetting() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      _isAutoSwitchEnabled = prefs.getBool(_autoSwitchKey) ?? true;
-      AdvancedLogger.info('[ConfigManager] Loaded auto-switch setting: $_isAutoSwitchEnabled');
-    } catch (e) {
-      AdvancedLogger.error('[ConfigManager] Error loading auto-switch setting: $e');
-      _isAutoSwitchEnabled = true; // Default to enabled
-    }
-  }
-  
-  /// Download configs from GitHub
-  /// Download configs from GitHub (Fixed: No Proxy, Smart Parsing)
-  Future<Map<String, int>> downloadConfigsFromGitHub() async {
     try {
       AdvancedLogger.info('[ConfigManager] Downloading configs from GitHub...');
       
       String content = '';
       bool downloadSuccess = false;
 
-      // 1. Try Direct GitHub URL (Primary)
+      // 1. Direct GitHub URL (No Proxy)
       try {
         const directUrl = 'https://raw.githubusercontent.com/mobinsamadir/ivpn-servers/main/servers.txt';
         AdvancedLogger.info('[ConfigManager] Trying direct URL: $directUrl');
         
-        final response = await http.get(Uri.parse(directUrl))
-            .timeout(const Duration(seconds: 15));
-
+        final response = await http.get(Uri.parse(directUrl)).timeout(const Duration(seconds: 30));
+        
         if (response.statusCode == 200) {
-           // Check for HTML junk
-           if (response.body.trim().startsWith('<!DOCTYPE html') || response.body.contains('<html')) {
+           if (_isHtmlResponse(response.body)) {
              AdvancedLogger.warn('[ConfigManager] Direct URL returned HTML (Proxy/Firewall issue)');
            } else {
              content = response.body;
              downloadSuccess = true;
-             AdvancedLogger.info('📥 Downloaded ${content.length} bytes');
+             AdvancedLogger.info('📥 Downloaded ${content.length} bytes from Direct URL');
            }
+        } else {
+           AdvancedLogger.warn('[ConfigManager] Direct download HTTP error: ${response.statusCode}');
         }
       } catch (e) {
         AdvancedLogger.warn('[ConfigManager] Direct download failed: $e');
       }
 
-      // 2. Try Fallback Mirror (JSDelivr - Reliable CDN)
+      // 2. Fallback Mirror (JSDelivr)
       if (!downloadSuccess) {
         try {
           const fallbackUrl = 'https://fastly.jsdelivr.net/gh/mobinsamadir/ivpn-servers@main/servers.txt';
           AdvancedLogger.info('[ConfigManager] Trying fallback URL: $fallbackUrl');
           
-          final response = await http.get(Uri.parse(fallbackUrl))
-              .timeout(const Duration(seconds: 15));
-
-          if (response.statusCode == 200 && !response.body.contains('<html')) {
-            content = response.body;
-            downloadSuccess = true;
+          final response = await http.get(Uri.parse(fallbackUrl)).timeout(const Duration(seconds: 30));
+          
+          if (response.statusCode == 200) {
+             if (_isHtmlResponse(response.body)) {
+                AdvancedLogger.warn('[ConfigManager] Fallback URL returned HTML');
+             } else {
+                content = response.body;
+                downloadSuccess = true;
+                AdvancedLogger.info('📥 Downloaded ${content.length} bytes from Fallback URL');
+             }
           }
         } catch (e) {
           AdvancedLogger.error('[ConfigManager] Fallback failed: $e');
         }
       }
 
-      if (!downloadSuccess) {
-        return {'added': 0, 'skipped': 0, 'total': 0};
+      if (downloadSuccess) {
+        // Use Smart Parser
+        final configUrls = await parseMixedContent(content);
+        
+        if (configUrls.isNotEmpty) {
+           int added = await addConfigs(configUrls);
+           AdvancedLogger.info('[ConfigManager] Import finished: Added $added new configs from remote.');
+        } else {
+           AdvancedLogger.warn('[ConfigManager] Content downloaded but no valid configs found via Smart Parser.');
+        }
+      } else {
+         AdvancedLogger.error('[ConfigManager] Failed to download configs from any source.');
       }
-
-      // 3. Use Smart Parser (Handles Base64, Recursion, Regex)
-      // THIS IS THE KEY FIX: Using parseMixedContent instead of parseConfigText
-      final configUrls = await parseMixedContent(content);
-      
-      if (configUrls.isEmpty) {
-        AdvancedLogger.warn('[ConfigManager] No valid configs found in downloaded content');
-        return {'added': 0, 'skipped': 0, 'total': 0};
-      }
-
-      // 4. Add to List
-      int addedCount = await addConfigs(configUrls);
-      
-      AdvancedLogger.info('[ConfigManager] Import finished: Added $addedCount new configs');
-      return {'added': addedCount, 'skipped': configUrls.length - addedCount, 'total': configUrls.length};
-
     } catch (e) {
-      AdvancedLogger.error('[ConfigManager] Critical error in download flow: $e');
-      return {'added': 0, 'skipped': 0, 'total': 0};
-    }
-  }
-
-  /// Unified refresh method for UI
-  Future<void> refreshAllConfigs() async {
-    if (_isRefreshing) return;
-    
-    _isRefreshing = true;
-    notifyListeners();
-    
-    AdvancedLogger.info('[ConfigManager] Starting full refresh...');
-    try {
-      await downloadConfigsFromGitHub();
+       AdvancedLogger.error('[ConfigManager] Unexpected error in fetchStartupConfigs: $e');
     } finally {
       _isRefreshing = false;
       notifyListeners();
     }
   }
-  
-  String _extractServerName(String rawConfig) {
-    try {
-      // Try to extract name from config URL
-      final uri = Uri.parse(rawConfig);
-      final fragment = uri.fragment;
-      if (fragment.isNotEmpty) {
-        return Uri.decodeComponent(fragment);
-      }
-      
-      // Fallback to generic name
-      final protocol = rawConfig.split('://').first.toUpperCase();
-      return '$protocol Server ${DateTime.now().millisecondsSinceEpoch}';
-    } catch (e) {
-      return 'Server ${DateTime.now().millisecondsSinceEpoch}';
-    }
-  }
-  
-  String? _extractCountryCode(String name) {
-    // Extract country code from emoji or text
-    final countryMap = {
-      '🇺🇸': 'US', '🇩🇪': 'DE', '🇬🇧': 'GB', '🇫🇷': 'FR', '🇯🇵': 'JP',
-      '🇨🇦': 'CA', '🇦🇺': 'AU', '🇳🇱': 'NL', '🇸🇪': 'SE', '🇨🇭': 'CH',
-      '🇸🇬': 'SG', '🇭🇰': 'HK', '🇰🇷': 'KR', '🇮🇳': 'IN', '🇧🇷': 'BR',
-      '🇹🇷': 'TR', '🇮🇹': 'IT', '🇪🇸': 'ES', '🇵🇱': 'PL', '🇷🇺': 'RU',
-    };
-    
-    for (final entry in countryMap.entries) {
-      if (name.contains(entry.key)) {
-        return entry.value;
-      }
-    }
-    
-    return null;
-  }
-  
-  void _updateLists() {
-    // Update validated configs
-    validatedConfigs = allConfigs.where((config) => config.isValidated).toList();
-    
-    // Update favorite configs
-    favoriteConfigs = allConfigs.where((config) => config.isFavorite).toList();
-    
-    // Sort lists by score
-    validatedConfigs.sort((a, b) => b.calculatedScore.compareTo(a.calculatedScore));
-    favoriteConfigs.sort((a, b) => b.calculatedScore.compareTo(a.calculatedScore));
-    allConfigs.sort((a, b) => b.calculatedScore.compareTo(a.calculatedScore));
-  }
-  
-  // Add a new config
-  Future<void> addConfig(String rawConfig, String name, {String? countryCode}) async {
-    // Print inventory report before adding a new item to see what was there before
-    printInventoryReport();
 
-    // Check for duplicates based on rawConfig content (trimmed)
-    final trimmedRaw = rawConfig.trim();
-    final existingConfig = allConfigs.where((config) => config.rawConfig.trim() == trimmedRaw).firstOrNull;
-
-    // If config already exists, don't add it again
-    if (existingConfig != null) {
-      AdvancedLogger.info('[ConfigManager] Config already exists, skipping duplicate: $name');
-      return;
-    }
-
-    final id = 'config_${DateTime.now().millisecondsSinceEpoch}';
-
-    final newConfig = VpnConfigWithMetrics(
-      id: id,
-      rawConfig: rawConfig,
-      name: name,
-      countryCode: countryCode,
-    );
-
-    allConfigs.add(newConfig);
-    _updateLists();
-    await _saveAllConfigs(); // Crucial: Save to storage immediately after modification
-    notifyListeners(); // Notify UI that data has changed
-
-    AdvancedLogger.info('[ConfigManager] Added new config: $name');
-  }
-  
-  /// Delete a config by ID
-  Future<bool> deleteConfig(String configId) async {
-    try {
-      final index = allConfigs.indexWhere((c) => c.id == configId);
-      if (index == -1) {
-        AdvancedLogger.warn('[ConfigManager] Config not found for deletion: $configId');
-        return false;
-      }
-
-      final config = allConfigs[index];
-      allConfigs.removeAt(index);
-
-      // Clear selection if deleted
-      if (_selectedConfig?.id == configId) {
-        _selectedConfig = null;
-      }
-
-      _updateLists();
-      await _saveAllConfigs(); // Crucial: Save to storage immediately after modification
-      notifyListeners(); // Notify UI that data has changed
-
-      AdvancedLogger.info('[ConfigManager] Deleted config: ${config.name}');
-      return true;
-    } catch (e) {
-      AdvancedLogger.error('[ConfigManager] Error deleting config: $e');
-      return false;
-    }
-  }
-  
-  // Update config metrics
-  Future<void> updateConfigMetrics(String configId, {
-    int? ping,
-    double? speed,
-    bool? connectionSuccess,
-  }) async {
-    final index = allConfigs.indexWhere((c) => c.id == configId);
-    if (index == -1) {
-      AdvancedLogger.warn('[ConfigManager] Config not found for metrics update: $configId');
-      return; // Guard clause: return if config not found, don't create new config
-    }
-
-    // Update the config metrics using the new API
-    allConfigs[index] = allConfigs[index].updateMetrics(
-      deviceId: _currentDeviceId,
-      ping: ping,
-      speed: speed,
-      connectionSuccess: connectionSuccess ?? false,
-    );
-
-    _updateLists();
-    await _saveAllConfigs();
-    notifyListeners(); // Notify UI that data has changed
-
-    AdvancedLogger.debug('[ConfigManager] Updated metrics for ${allConfigs[index].name}');
-  }
-  
-  // Toggle favorite
-  Future<void> toggleFavorite(String configId) async {
-    final index = allConfigs.indexWhere((c) => c.id == configId);
-    if (index == -1) {
-      AdvancedLogger.warn('[ConfigManager] Config not found for toggle favorite: $configId');
-      return;
-    }
-
-    // Create a new instance with the updated favorite status
-    final updatedConfig = allConfigs[index].copyWith(
-      isFavorite: !allConfigs[index].isFavorite,
-    );
-    
-    // Replace the config in the list
-    allConfigs[index] = updatedConfig;
-
-    _updateLists();
-    await _saveAllConfigs();
-    notifyListeners(); // Notify UI that data has changed
-
-    AdvancedLogger.info('[ConfigManager] Toggled favorite for ${allConfigs[index].name}');
-  }
-  
-  // Select a config
-  void selectConfig(VpnConfigWithMetrics? config) {
-    _selectedConfig = config;
-    notifyListeners(); // Notify UI that data has changed
-    AdvancedLogger.info('[ConfigManager] Selected config: ${config?.name ?? 'None'}');
-  }
-
-  /// Secure delete method with safety checks
-  Future<bool> deleteConfigSecure(String configId) async {
-    try {
-      // Check if the config to be deleted is the currently selected config
-      if (_selectedConfig?.id == configId) {
-        _selectedConfig = null; // Deselect it
-        AdvancedLogger.info('[ConfigManager] Deselected config before deletion: $configId');
-      }
-
-      // Note: We don't check if it's the currently connected config here
-      // because the actual VPN connection logic is handled elsewhere
-      // This method focuses on the config management aspect
-
-      // Proceed with deletion
-      final index = allConfigs.indexWhere((c) => c.id == configId);
-      if (index == -1) {
-        AdvancedLogger.warn('[ConfigManager] Config not found for deletion: $configId');
-        return false;
-      }
-
-      final config = allConfigs[index];
-      allConfigs.removeAt(index);
-
-      _updateLists();
-      await _saveAllConfigs();
-      notifyListeners(); // Notify UI that data has changed
-
-      AdvancedLogger.info('[ConfigManager] Successfully deleted config: ${config.name}');
-      return true;
-    } catch (e) {
-      AdvancedLogger.error('[ConfigManager] Error deleting config: $e');
-      return false;
-    }
-  }
-
-  /// Delete all configs
-  Future<void> deleteAllConfigs() async {
-    try {
-      allConfigs = []; // Atomic swap to empty list
-      _selectedConfig = null; // Clear selected config
-      _updateLists();
-      await _saveAllConfigs(); // Save empty list to storage
-      notifyListeners(); // Notify UI that data has changed
-
-      AdvancedLogger.info('[ConfigManager] All configs deleted');
-    } catch (e) {
-      AdvancedLogger.error('[ConfigManager] Error deleting all configs: $e');
-    }
-  }
-  
-  // Print a full inventory report of current loaded configs
-  void printInventoryReport() {
-    AdvancedLogger.info('📊 ===== CONFIG INVENTORY REPORT ===== 📊');
-    AdvancedLogger.info('Total Loaded: ${allConfigs.length}');
-
-    final uniqueSet = <String>{};
-    int duplicates = 0;
-
-    for (int i = 0; i < allConfigs.length; i++) {
-      final config = allConfigs[i];
-      final isDuplicate = uniqueSet.contains(config.rawConfig.trim());
-      if (!isDuplicate) {
-        uniqueSet.add(config.rawConfig.trim());
-      } else {
-        duplicates++;
-      }
-
-      AdvancedLogger.info(
-        'ITEM #$i: '
-        'Name: "${config.name}" | '
-        'Ping: ${config.currentPing}ms | '
-        'Duplicate: ${isDuplicate ? "YES ⚠️" : "NO"} | '
-        'RawLength: ${config.rawConfig.length}'
-      );
-    }
-
-    AdvancedLogger.info('📊 SUMMARY: Unique: ${uniqueSet.length}, Real Duplicates: $duplicates');
-    AdvancedLogger.info('==========================================');
-  }
-
-  // Get best config for smart connection
-  Future<VpnConfigWithMetrics?> getBestConfig() async {
-    AdvancedLogger.info('[ConfigManager] getBestConfig called. Total configs: ${allConfigs.length}, Selected: ${_selectedConfig?.name ?? "None"}');
-
-    // Priority 1: Selected config
-    if (_selectedConfig != null) {
-      AdvancedLogger.info('[ConfigManager] Selected config: ${_selectedConfig!.name}, isValidated: ${_selectedConfig!.isValidated}');
-      if (_selectedConfig!.isValidated) {
-        AdvancedLogger.info('[ConfigManager] Returning selected validated config: ${_selectedConfig!.name}');
-        return _selectedConfig;
-      } else {
-        AdvancedLogger.info('[ConfigManager] Selected config is not validated, continuing to next priority');
-      }
-    } else {
-      AdvancedLogger.info('[ConfigManager] No selected config, checking favorites and validated configs');
-    }
-
-    // Priority 2: Favorite with good ping
-    final validFavorites = favoriteConfigs.where((c) => c.isValidated).toList();
-    if (validFavorites.isNotEmpty) {
-      validFavorites.sort((a, b) => a.currentPing.compareTo(b.currentPing));
-      AdvancedLogger.info('[ConfigManager] Returning favorite validated config: ${validFavorites.first.name}');
-      return validFavorites.first;
-    }
-
-    // Priority 3: Fastest validated config
-    if (validatedConfigs.isNotEmpty) {
-      validatedConfigs.sort((a, b) => a.currentPing.compareTo(b.currentPing));
-      AdvancedLogger.info('[ConfigManager] Returning fastest validated config: ${validatedConfigs.first.name}');
-      return validatedConfigs.first;
-    }
-
-    // Priority 4: Any config (last resort)
-    if (allConfigs.isNotEmpty) {
-      AdvancedLogger.info('[ConfigManager] Returning first available config: ${allConfigs.first.name}');
-      return allConfigs.first;
-    }
-
-    AdvancedLogger.warn('[ConfigManager] No configs available to return');
-    return null;
-  }
-  
-  // Run quick tests on all configs with Parallel Intelligence logic
-  Future<VpnConfigWithMetrics?> runQuickTestOnAllConfigs(Function(String)? onLog) async {
-    if (allConfigs.isEmpty) {
-      return null;
-    }
-
-    VpnConfigWithMetrics? fastestConfig; // First config with ping < 1200ms
-    VpnConfigWithMetrics? bestConfig; // Overall best ping
-    int bestPing = 9999; // Initialize with a high value
-    int fastestPing = 9999; // For eager start
-
-    // Test all configs in parallel with eager start logic
-    for (final config in allConfigs) {
-      try {
-        // For now, we'll use the existing metrics if available
-        if (config.currentPing > 0) {
-          // EAGER START: Find first config with ping < 1200ms
-          if (config.currentPing < 1200 && config.currentPing < fastestPing) {
-            fastestConfig = config;
-            fastestPing = config.currentPing;
-          }
-
-          // Track overall best config
-          if (config.currentPing < bestPing) {
-            bestPing = config.currentPing;
-            bestConfig = config;
-          }
-        }
-      } catch (e) {
-        // Skip configs that fail the test
-        onLog?.call('Failed to test config ${config.name}: $e');
-        continue;
-      }
-    }
-
-    // Return the fastest config for immediate connection (if available)
-    return fastestConfig ?? bestConfig;
-  }
-
-  // Clear all data
-  Future<void> clearAllData() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_configsKey);
-
-    allConfigs = [];
-    validatedConfigs = [];
-    favoriteConfigs = [];
-    _selectedConfig = null;
-
-    notifyListeners();
-    AdvancedLogger.warn('[ConfigManager] All data cleared');
-  }
-
-  // Get config by ID
-  VpnConfigWithMetrics? getConfigById(String id) {
-    try {
-      return allConfigs.firstWhere((c) => c.id == id);
-    } catch (e) {
-      return null;
-    }
-  }
-
-  // --- Session Timer Getters ---
-  Duration get remainingTime => _remainingTime;
-  String get formattedRemainingTime {
-    final minutes = _remainingTime.inMinutes.remainder(60);
-    final seconds = _remainingTime.inSeconds.remainder(60);
-    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-  }
-
-  // Connection state methods
-  void setConnected(bool connected, {String status = 'Connected'}) {
-    _isConnected = connected;
-    _connectionStatus = status;
-    notifyListeners(); // Notify UI that connection state has changed
-  }
-
-  // --- Session Timer Methods ---
-  void startSession([VoidCallback? onSessionExpired]) {
-    stopSession(); // Stop any existing session first
-    _onSessionExpiredCallback = onSessionExpired;
-    _remainingTime = const Duration(hours: 1);
-    _sessionTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      _remainingTime = _remainingTime - const Duration(seconds: 1);
-      if (_remainingTime.isNegative) {
-        _remainingTime = Duration.zero;
-        // Enforce session end: disconnect when time is up
-        _onSessionExpired();
-        timer.cancel();
-      }
-      notifyListeners(); // Notify UI that timer has updated
-    });
-  }
-
-  void stopSession() {
-    _sessionTimer?.cancel();
-    _sessionTimer = null;
-    _remainingTime = Duration.zero;
-    notifyListeners(); // Notify UI that session has stopped
-  }
-
-  void _onSessionExpired() {
-    AdvancedLogger.info('[ConfigManager] Session time expired. Disconnecting...');
-    // Call the callback if provided
-    _onSessionExpiredCallback?.call();
-    // Show notification about session expiration
-    _showSessionExpiredNotification();
-  }
-
-  void _showSessionExpiredNotification() {
-    // This would typically trigger a callback to the UI layer
-    // For now, we'll just log it
-    AdvancedLogger.info('[ConfigManager] Session expired. Please reconnect.');
-  }
-
-  // Check if current ping is high enough to trigger auto-switch
-  bool isCurrentPingHigh() {
-    if (_selectedConfig != null) {
-      // Consider ping high if it's greater than 2000ms or -1 (timeout)
-      return _selectedConfig!.currentPing > 2000 || _selectedConfig!.currentPing == -1;
-    }
-    return false;
-  }
-
-  // Unified config parsing logic for both Smart Paste and Config Download
-  static List<String> parseConfigText(String text) {
-    // Step A: Try the existing Regex to find matches
-    final regex = RegExp(r"(vmess|vless|ss|trojan)://[a-zA-Z0-9-._~:/?#[\]@!$&'()*+,;=%]+", caseSensitive: false);
-    final regexMatches = regex.allMatches(text).map((match) => match.group(0)!).toList();
-
-    // If Regex finds sufficient matches, return them after validation
-    if (regexMatches.length >= 3) { // Consider "sufficient" if we find 3 or more
-      return regexMatches.where((config) => ClipboardUtils.validateConfig(config)).toList();
-    }
-
-    // Step B: If Regex count is low, split text by [\r\n\s,]+ (Newlines, Spaces, Commas)
-    final splitParts = text.split(RegExp(r'[\r\n\s,]+')).where((part) => part.trim().isNotEmpty).toList();
-
-    // Step C: Filter results using ClipboardUtils.validateConfig
-    final validConfigs = <String>[];
-    for (final part in splitParts) {
-      final trimmedPart = part.trim();
-      if (ClipboardUtils.validateConfig(trimmedPart)) {
-        // Avoid duplicates
-        if (!validConfigs.contains(trimmedPart)) {
-          validConfigs.add(trimmedPart);
-        }
-      }
-    }
-
-    // If split method found more configs, return those; otherwise return regex results
-    return validConfigs.length > regexMatches.length
-        ? validConfigs
-        : regexMatches.where((config) => ClipboardUtils.validateConfig(config)).toList();
-  }
-
-  // Enhanced async method to parse configs and fetch from subscription links
-  static Future<List<String>> parseAndFetchConfigs(String text) async {
-    final allConfigs = <String>{};
-
-    // Step 1: Extract direct configs using existing logic
-    final directConfigs = parseConfigText(text);
-    allConfigs.addAll(directConfigs);
-
-    // Safe Regex for URLs avoiding quotes/brackets issues
-    final subLinkRegex = RegExp(
-      r'''https?:\/\/[^\s"\'<>\n\r`{}|\[\]]+''', 
-      caseSensitive: false,
-    );
-    final subLinks = subLinkRegex.allMatches(text)
-        .map((match) => match.group(0)!)
-        .where((link) => !directConfigs.any((config) => config.contains(Uri.parse(link).host)))
-        .toSet();
-
-    // Step 3: Fetch configs from each subscription link
-    for (final link in subLinks) {
-      try {
-        AdvancedLogger.info('[ConfigManager] Attempting to fetch configs from subscription link: $link');
-        
-        final response = await http.get(Uri.parse(link));
-        if (response.statusCode == 200) {
-          final responseBody = utf8.decode(response.bodyBytes); // Handle encoding properly
-          final fetchedConfigs = parseConfigText(responseBody);
-          
-          AdvancedLogger.info('[ConfigManager] Fetched ${fetchedConfigs.length} configs from $link');
-          
-          // Add fetched configs to the main list
-          allConfigs.addAll(fetchedConfigs);
-        } else {
-          AdvancedLogger.warn('[ConfigManager] Failed to fetch from $link, status: ${response.statusCode}');
-        }
-      } catch (e) {
-        AdvancedLogger.error('[ConfigManager] Error fetching subscription from $link: $e');
-      }
-    }
-
-    return allConfigs.toList();
-  }
-
-  // NEW: Parse mixed content including both configs and subscription links using regex extraction
+  // --- SMART PARSER (Regex Extraction & Recursion) ---
   static Future<List<String>> parseMixedContent(String text) async {
     final allConfigs = <String>{};
     
-    // 1. Try Base64 Decode first (Standard Sub)
     String processedText = text;
+    // Try Base64 Decode
     try {
       final decoded = utf8.decode(base64Decode(text.replaceAll(RegExp(r'\s+'), '')));
       if (decoded.contains('://')) processedText = decoded;
     } catch (e) {}
 
-    // 2. Extract configs using Regex (Handles back-to-back configs)
-    // Matches: scheme://... until end of line or next scheme
+    // Extract Configs (Safe Regex with Triple Quotes)
     final regex = RegExp(
       r'''(vmess|vless|ss|trojan|tuic|hysteria|hysteria2):\/\/[a-zA-Z0-9-._~:/?#\[\]@!$&()*+,;=%]+(?:#[^#\n\r]*)?''',
       caseSensitive: false,
       multiLine: true,
     );
     
-    final matches = regex.allMatches(processedText);
-    for (final match in matches) {
+    for (final match in regex.allMatches(processedText)) {
        final config = match.group(0);
-       if (config != null && _isValidConfigScheme(config)) {
-          allConfigs.add(config.trim());
+       if (config != null) allConfigs.add(config.trim());
+    }
+
+    // Extract Subs (Recursion)
+    final linkRegex = RegExp(r'''https?:\/\/[^\s"\'<>\n\r`{}|\[\]]+''', caseSensitive: false);
+    final linkMatches = linkRegex.allMatches(processedText);
+    
+    for (final match in linkMatches) {
+       final link = match.group(0);
+       // Only fetch if it's a valid sub link AND not already parsed as a config scheme
+       if (link != null && _isValidSubscriptionLink(link)) {
+          try {
+             AdvancedLogger.info('[ConfigManager] Found sub link: $link');
+             final res = await http.get(Uri.parse(link)).timeout(const Duration(seconds: 10));
+             if (res.statusCode == 200 && !_isHtmlResponse(res.body)) {
+                // Recursive call to parse content of the sub link
+                final subConfigs = await parseMixedContent(res.body);
+                allConfigs.addAll(subConfigs);
+             }
+          } catch(e) {
+             AdvancedLogger.warn('[ConfigManager] Failed to fetch sub link: $link');
+          }
        }
     }
-
-    // 3. Extract Subscription Links (http/https) and process them recursively
-    final linkRegex = RegExp(
-      r'''https?:\/\/[^\s"\'<>\n\r`{}|\[\]]+''',
-      caseSensitive: false,
-    );
-    
-    final linkMatches = linkRegex.allMatches(processedText);
-    for (final match in linkMatches) {
-      final link = match.group(0);
-      if (link != null && _isValidSubscriptionLink(link)) {
-        try {
-          final response = await http.get(Uri.parse(link)).timeout(const Duration(seconds: 10));
-          if (response.statusCode == 200) {
-            // Check if response is HTML (indicating proxy or redirect issue)
-            if (_isHtmlResponse(response.body)) {
-              AdvancedLogger.warn('Received HTML instead of config from subscription link: $link');
-              continue; // Skip this link
-            }
-            
-            // RECURSIVE CALL: Parse the body of the sub
-            final subConfigs = await parseMixedContent(response.body);
-            allConfigs.addAll(subConfigs);
-          }
-        } catch (e) {
-          AdvancedLogger.warn('Sub fetch failed: $link');
-        }
-      }
-    }
-
     return allConfigs.toList();
   }
 
-  // Helper method to check if response is HTML
-  static bool _isHtmlResponse(String body) {
-    final trimmedBody = body.trim();
-    return trimmedBody.startsWith('<!DOCTYPE html') || 
-           trimmedBody.startsWith('<html') || 
-           trimmedBody.contains('<head') || 
-           trimmedBody.contains('<body');
-  }
-
-  // NEW: Fetch startup configs from GitHub with fallback
-  Future<void> fetchStartupConfigs() async {
-    try {
-      AdvancedLogger.info('[ConfigManager] Fetching startup configs from GitHub...');
-      
-      // Primary URL
-      String content = '';
-      bool success = false;
-      
-      // Try primary URL first
-      try {
-        final response = await http.get(
-          Uri.parse('https://raw.githubusercontent.com/mobinsamadir/ivpn_app/main/servers.txt')
-        ).timeout(const Duration(seconds: 15));
-        
-        if (response.statusCode == 200) {
-          // Check if response is HTML (indicating proxy or redirect issue)
-          if (_isHtmlResponse(response.body)) {
-            AdvancedLogger.warn('[ConfigManager] Received HTML from primary URL, trying fallback...');
-          } else {
-            content = response.body;
-            success = true;
-          }
-        }
-      } catch (e) {
-        AdvancedLogger.warn('[ConfigManager] Primary URL failed: $e');
-      }
-      
-      // Try fallback if primary failed
-      if (!success) {
-        try {
-          final response = await http.get(
-            Uri.parse('https://fastly.jsdelivr.net/gh/mobinsamadir/ivpn_app@main/servers.txt')
-          ).timeout(const Duration(seconds: 15));
-          
-          if (response.statusCode == 200) {
-            // Check if response is HTML (indicating proxy or redirect issue)
-            if (_isHtmlResponse(response.body)) {
-              AdvancedLogger.warn('[ConfigManager] Received HTML from fallback URL');
-            } else {
-              content = response.body;
-              success = true;
-            }
-          }
-        } catch (e) {
-          AdvancedLogger.warn('[ConfigManager] Fallback URL failed: $e');
-        }
-      }
-      
-      if (success) {
-        // Use the robust universal parser to handle both Base64 and plain text
-        final configs = await parseMixedContent(content);
-        
-        // Add new configs to the list (avoid duplicates)
-        int addedCount = 0;
-        for (final config in configs) {
-          if (!allConfigs.any((existing) => existing.rawConfig == config)) {
-            final id = 'startup_${DateTime.now().millisecondsSinceEpoch}_${addedCount}';
-            final name = _extractServerName(config);
-            final countryCode = _extractCountryCode(name);
-            
-            allConfigs.add(VpnConfigWithMetrics(
-              id: id,
-              rawConfig: config,
-              name: name,
-              countryCode: countryCode,
-              addedDate: DateTime.now(),
-              deviceMetrics: {},
-              failureCount: 0,
-              lastSuccessfulConnectionTime: 0,
-              isAlive: true,
-              tier: 0,
-            ));
-            addedCount++;
-          }
-        }
-        
-        if (addedCount > 0) {
-          _updateLists();
-          await _saveAllConfigs();
-          notifyListeners();
-          AdvancedLogger.info('[ConfigManager] Added $addedCount new configs from startup fetch');
-        } else {
-          AdvancedLogger.info('[ConfigManager] No new configs added from startup fetch (all existed)');
-        }
-      } else {
-        AdvancedLogger.error('[ConfigManager] Failed to fetch startup configs from both primary and fallback URLs');
-      }
-    } catch (e) {
-      AdvancedLogger.error('[ConfigManager] Error fetching startup configs: $e');
-    }
-  }
-
-
-  // Helper: Simple check for valid config schemes
-  static bool _isValidConfigScheme(String text) {
-    return text.startsWith('ss://') || 
-           text.startsWith('vmess://') || 
-           text.startsWith('vless://') || 
-           text.startsWith('trojan://') ||
-           text.startsWith('tuic://') ||
-           text.startsWith('hysteria://') ||
-           text.startsWith('hysteria2://');
-  }
-
-
-  // Helper to validate subscription links
-  static bool _isValidSubscriptionLink(String link) {
-    try {
-      final uri = Uri.parse(link);
-      // Check if it's a valid URL and not a direct config
-      return uri.hasScheme &&
-             (uri.scheme == 'http' || uri.scheme == 'https') &&
-             !_isValidConfigScheme(link); // Ensure it's not a config scheme
-    } catch (e) {
-      return false;
-    }
-  }
-
-  // NEW: Find the best server based on calculated score
-  VpnConfigWithMetrics? findBestServer() {
-    if (allConfigs.isEmpty) return null;
-    
-    // Sort by score (descending) and return the top one
-    final sortedConfigs = List.from(allConfigs)..sort((a, b) => b.score.compareTo(a.score));
-    
-    // Return the first config that is alive and has a positive score
-    return sortedConfigs.firstWhere(
-      (config) => config.isAlive && config.score > 0,
-      orElse: () => sortedConfigs.firstWhere(
-        (config) => config.isAlive,
-        orElse: () => sortedConfigs.first,
-      ),
-    );
-  }
-
-  // NEW: Mark a server as failed
-  Future<void> markFailure(String configId) async {
-    final index = allConfigs.indexWhere((c) => c.id == configId);
-    if (index == -1) return;
-
-    // Increment failure count
-    final updatedConfig = allConfigs[index].copyWith(
-      failureCount: allConfigs[index].failureCount + 1,
-      lastSuccessfulConnectionTime: allConfigs[index].lastSuccessfulConnectionTime,
-      isAlive: false, // Mark as not alive on failure
-    );
-
-    // Update the config in the list
-    allConfigs[index] = updatedConfig;
-    
-    _updateLists();
-    await _saveAllConfigs();
-    notifyListeners();
-    
-    AdvancedLogger.info('[ConfigManager] Marked failure for ${updatedConfig.name}');
-  }
-
-  // NEW: Add multiple configs and return count of added configs
+  // --- CORE METHODS ---
   Future<int> addConfigs(List<String> configStrings) async {
     int addedCount = 0;
-    
-    for (final configString in configStrings) {
-      if (ClipboardUtils.validateConfig(configString)) {
-        try {
-          final name = ConfigImporter.extractName(configString, index: addedCount);
-          await addConfig(configString, name);
-          addedCount++;
-        } catch (e) {
-          AdvancedLogger.error('[ConfigManager] Error adding config: $e');
-          continue;
-        }
-      }
+    for (final raw in configStrings) {
+      final trimmedRaw = raw.trim();
+      if (allConfigs.any((c) => c.rawConfig.trim() == trimmedRaw)) continue;
+      
+      final name = _extractServerName(trimmedRaw);
+      final id = 'config_${DateTime.now().millisecondsSinceEpoch}_$addedCount';
+      
+      allConfigs.add(VpnConfigWithMetrics(
+        id: id,
+        rawConfig: trimmedRaw,
+        name: name,
+        countryCode: _extractCountryCode(name),
+      ));
+      addedCount++;
     }
     
+    if (addedCount > 0) {
+      _updateLists();
+      await _saveAllConfigs();
+      notifyListeners();
+    }
     return addedCount;
   }
-
-  // NEW: Mark a server as successful
-  Future<void> markSuccess(String configId) async {
-    final index = allConfigs.indexWhere((c) => c.id == configId);
-    if (index == -1) return;
-
-    // Reset failure count and update last successful connection time
-    final now = DateTime.now().millisecondsSinceEpoch;
-    final updatedConfig = allConfigs[index].copyWith(
-      failureCount: 0,
-      lastSuccessfulConnectionTime: now,
-      isAlive: true, // Mark as alive on success
-    );
-
-    // Update the config in the list
-    allConfigs[index] = updatedConfig;
-    
-    _updateLists();
-    await _saveAllConfigs();
-    notifyListeners();
-    
-    AdvancedLogger.info('[ConfigManager] Marked success for ${updatedConfig.name}');
+  
+  // Helpers
+  static bool _isHtmlResponse(String body) {
+    final t = body.trim().toLowerCase();
+    return t.startsWith('<!doctype') || t.startsWith('<html') || t.contains('<body');
   }
 
-  // Method to properly disconnect VPN
-  Future<void> disconnectVpn() async {
-    // In a real implementation, this would call the actual VPN service
-    // to disconnect the VPN connection
-    // For now, we'll just set the connection status to disconnected
-    setConnected(false, status: 'Disconnected');
-    stopSession();
-    notifyListeners(); // Notify UI that disconnection is complete
-    AdvancedLogger.info('[ConfigManager] VPN disconnected');
+  static bool _isValidSubscriptionLink(String link) {
+    final l = link.toLowerCase();
+    return !l.startsWith('vmess') && !l.startsWith('vless') && 
+           !l.startsWith('ss') && !l.startsWith('trojan') &&
+           !l.startsWith('hysteria') && !l.startsWith('tuic');
   }
+
+  String _extractServerName(String raw) {
+     try {
+       final uri = Uri.parse(raw);
+       if (uri.fragment.isNotEmpty) return Uri.decodeComponent(uri.fragment);
+     } catch(e) {}
+     final type = raw.split('://').first.toUpperCase();
+     return '$type Server ${DateTime.now().millisecondsSinceEpoch % 1000}';
+  }
+
+  String? _extractCountryCode(String name) {
+     final map = {
+       '🇺🇸': 'US', '🇩🇪': 'DE', '🇬🇧': 'GB', '🇫🇷': 'FR', '🇯🇵': 'JP',
+       '🇨🇦': 'CA', '🇦🇺': 'AU', '🇳🇱': 'NL', '🇸🇪': 'SE', '🇨🇭': 'CH',
+       '🇸🇬': 'SG', '🇭🇰': 'HK', '🇰🇷': 'KR', '🇮🇳': 'IN', '🇧🇷': 'BR',
+       '🇹🇷': 'TR', '🇮🇹': 'IT', '🇪🇸': 'ES', '🇵🇱': 'PL', '🇷🇺': 'RU',
+     };
+     for (final e in map.entries) {
+       if (name.contains(e.key)) return e.value;
+     }
+     return null;
+  }
+  
+  // Boilerplate methods
+  Future<void> _initDeviceId() async {
+     final info = DeviceInfoPlugin();
+     try {
+       if (Platform.isAndroid) _currentDeviceId = 'android_${(await info.androidInfo).id}';
+       else if (Platform.isWindows) _currentDeviceId = 'windows_${(await info.windowsInfo).deviceId}';
+       else if (Platform.isIOS) _currentDeviceId = 'ios_${(await info.iosInfo).identifierForVendor}';
+     } catch(e) { _currentDeviceId = 'unknown'; }
+  }
+
+  Future<void> _loadConfigs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final str = prefs.getString(_configsKey);
+      if (str != null) {
+        final list = jsonDecode(str) as List;
+        allConfigs = list.map((e) => VpnConfigWithMetrics.fromJson(e)).toList();
+        AdvancedLogger.info('[ConfigManager] Loaded ${allConfigs.length} from storage');
+      }
+    } catch(e) {
+       AdvancedLogger.error('[ConfigManager] Load error: $e');
+       allConfigs = [];
+    }
+  }
+
+  Future<void> _saveAllConfigs() async {
+     try {
+       final prefs = await SharedPreferences.getInstance();
+       await prefs.setString(_configsKey, jsonEncode(allConfigs.map((e)=>e.toJson()).toList()));
+     } catch(e) {
+       AdvancedLogger.error('[ConfigManager] Save error: $e');
+     }
+  }
+
+  void _updateLists() {
+     validatedConfigs = allConfigs.where((c) => c.isValidated).toList();
+     favoriteConfigs = allConfigs.where((c) => c.isFavorite).toList();
+     // Sort desc by score
+     allConfigs.sort((a, b) => b.score.compareTo(a.score));
+     validatedConfigs.sort((a, b) => b.score.compareTo(a.score));
+     favoriteConfigs.sort((a, b) => b.score.compareTo(a.score));
+  }
+
+  Future<void> updateConfigMetrics(String id, {int? ping, double? speed, bool? connectionSuccess}) async {
+     final index = allConfigs.indexWhere((c) => c.id == id);
+     if (index != -1) {
+        allConfigs[index] = allConfigs[index].updateMetrics(
+           deviceId: _currentDeviceId,
+           ping: ping, 
+           speed: speed, 
+           connectionSuccess: connectionSuccess ?? false
+        );
+        _updateLists();
+        await _saveAllConfigs();
+        notifyListeners();
+     }
+  }
+  
+  Future<void> markSuccess(String id) async {
+      final index = allConfigs.indexWhere((c) => c.id == id);
+      if (index != -1) {
+         allConfigs[index] = allConfigs[index].copyWith(
+            failureCount: 0,
+            lastSuccessfulConnectionTime: DateTime.now().millisecondsSinceEpoch,
+            isAlive: true
+         );
+         _updateLists();
+         await _saveAllConfigs();
+         notifyListeners();
+      }
+  }
+  
+  Future<void> markFailure(String id) async {
+      final index = allConfigs.indexWhere((c) => c.id == id);
+      if (index != -1) {
+         allConfigs[index] = allConfigs[index].copyWith(
+            failureCount: allConfigs[index].failureCount + 1,
+            isAlive: false
+         );
+         _updateLists();
+         await _saveAllConfigs();
+         notifyListeners();
+      }
+  }
+
+  Future<bool> deleteConfig(String id) async {
+     allConfigs.removeWhere((c) => c.id == id);
+     if (_selectedConfig?.id == id) _selectedConfig = null;
+     _updateLists();
+     await _saveAllConfigs();
+     notifyListeners();
+     return true;
+  }
+  
+  Future<void> toggleFavorite(String id) async {
+      final index = allConfigs.indexWhere((c) => c.id == id);
+      if (index != -1) {
+         allConfigs[index] = allConfigs[index].copyWith(
+            isFavorite: !allConfigs[index].isFavorite
+         );
+         _updateLists();
+         await _saveAllConfigs();
+         notifyListeners();
+      }
+  }
+
+  void selectConfig(VpnConfigWithMetrics? c) {
+     _selectedConfig = c;
+     notifyListeners();
+  }
+
+  Future<VpnConfigWithMetrics?> getBestConfig() async {
+     if (_selectedConfig != null && _selectedConfig!.isValidated) return _selectedConfig;
+     if (favoriteConfigs.isNotEmpty) return favoriteConfigs.first;
+     if (validatedConfigs.isNotEmpty) return validatedConfigs.first;
+     if (allConfigs.isNotEmpty) return allConfigs.first;
+     return null;
+  }
+
+  Future<void> _loadAutoSwitchSetting() async {
+     final p = await SharedPreferences.getInstance();
+     _isAutoSwitchEnabled = p.getBool(_autoSwitchKey) ?? true;
+  }
+  Future<void> _saveAutoSwitchSetting() async {
+     final p = await SharedPreferences.getInstance();
+     await p.setBool(_autoSwitchKey, _isAutoSwitchEnabled);
+  }
+  void setConnected(bool c, {String status = 'Connected'}) {
+     _isConnected = c;
+     _connectionStatus = status;
+     notifyListeners();
+  }
+  void stopSession() { _sessionTimer?.cancel(); }
+  Future<void> clearAllData() async {
+     final p = await SharedPreferences.getInstance();
+     await p.remove(_configsKey);
+     allConfigs.clear(); _updateLists(); notifyListeners();
+  }
+  
+  // Legacy aliases for UI compatibility
+  Future<void> refreshAllConfigs() => fetchStartupConfigs();
+  static Future<List<String>> parseAndFetchConfigs(String text) => parseMixedContent(text);
+  Future<void> addConfig(String raw, String name) => addConfigs([raw]); 
+  VpnConfigWithMetrics? getConfigById(String id) => allConfigs.firstWhereOrNull((c) => c.id == id);
+  Future<void> disconnectVpn() async { setConnected(false, status: 'Disconnected'); }
+  Future<VpnConfigWithMetrics?> runQuickTestOnAllConfigs(Function(String)? log) async { return getBestConfig(); }
+  void printInventoryReport() {}
 }
