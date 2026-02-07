@@ -888,7 +888,7 @@ class ConfigManager extends ChangeNotifier {
     // 2. Extract configs using Regex (Handles back-to-back configs)
     // Matches: scheme://... until end of line or next scheme
     final regex = RegExp(
-      r'(vmess|vless|ss|trojan|tuic|hysteria|hysteria2):\/\/[a-zA-Z0-9-._~:/?#\[\]@!$&()*+,;=%]+(?:#[^#\n\r]*)?',
+      r'''(vmess|vless|ss|trojan|tuic|hysteria|hysteria2):\/\/[a-zA-Z0-9-._~:/?#\[\]@!$&()*+,;=%]+(?:#[^#\n\r]*)?''',
       caseSensitive: false,
       multiLine: true,
     );
