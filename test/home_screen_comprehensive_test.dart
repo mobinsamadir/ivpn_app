@@ -254,21 +254,26 @@ void main() {
   });
 }
 
-// --- ROBUST FAKES (Catches ALL methods) ---
+// --- VALID FAKES (Must use 'extends', NOT 'implements') ---
 
-class FakeWebViewPlatform extends Fake implements WebViewPlatform {
+class FakeWebViewPlatform extends WebViewPlatform {
+  // Override without using Mockito's Fake
+  
   @override
   PlatformWebViewController createPlatformWebViewController(PlatformWebViewControllerCreationParams params) {
-    return FakeWebViewController();
+    return FakeWebViewController(params);
   }
 
   @override
   PlatformNavigationDelegate createPlatformNavigationDelegate(PlatformNavigationDelegateCreationParams params) {
-    return FakeNavigationDelegate();
+    return FakeNavigationDelegate(params);
   }
 }
 
-class FakeWebViewController extends Fake implements PlatformWebViewController {
+class FakeWebViewController extends PlatformWebViewController {
+  // Pass params to super to satisfy the PlatformInterface constraints
+  FakeWebViewController(PlatformWebViewControllerCreationParams params) : super.implementation(params);
+
   @override
   Future<void> loadRequest(LoadRequestParams params) async {}
 
@@ -277,18 +282,26 @@ class FakeWebViewController extends Fake implements PlatformWebViewController {
 
   @override
   Future<void> setBackgroundColor(Color color) async {}
-
-  // MAGIC BULLET: Handles any other method call without crashing
+  
   @override
-  dynamic noSuchMethod(Invocation invocation) {
-    return Future.value(null);
-  }
+  Future<void> clearCache() async {}
+
+  // Swallow other calls to prevent UnimplementedError
+  @override
+  dynamic noSuchMethod(Invocation invocation) => Future.value(null);
 }
 
-class FakeNavigationDelegate extends Fake implements PlatformNavigationDelegate {
-  // MAGIC BULLET: Handles setOnPageFinished, setOnWebResourceError, and everything else
+class FakeNavigationDelegate extends PlatformNavigationDelegate {
+  // Pass params to super
+  FakeNavigationDelegate(PlatformNavigationDelegateCreationParams params) : super.implementation(params);
+
   @override
-  dynamic noSuchMethod(Invocation invocation) {
-    return Future.value(null);
-  }
+  Future<void> setOnPageFinished(void Function(String url) onPageFinished) async {}
+  
+  @override
+  Future<void> setOnWebResourceError(void Function(WebResourceError error) onWebResourceError) async {}
+
+  // Swallow other calls
+  @override
+  dynamic noSuchMethod(Invocation invocation) => Future.value(null);
 }
