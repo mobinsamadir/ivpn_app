@@ -263,110 +263,75 @@ class ConfigManager extends ChangeNotifier {
   }
   
   /// Download configs from GitHub
+  /// Download configs from GitHub (Fixed: No Proxy, Smart Parsing)
   Future<Map<String, int>> downloadConfigsFromGitHub() async {
     try {
       AdvancedLogger.info('[ConfigManager] Downloading configs from GitHub...');
-
-      // Try mirror/proxy first
+      
       String content = '';
       bool downloadSuccess = false;
 
-      // Try primary URL (mirror/proxy)
+      // 1. Try Direct GitHub URL (Primary)
       try {
-        AdvancedLogger.info('[ConfigManager] Trying primary mirror URL: $_githubMirrorUrl');
-        final response = await http.get(Uri.parse(_githubMirrorUrl)).timeout(
-          const Duration(seconds: 30),
-        );
+        const directUrl = 'https://raw.githubusercontent.com/mobinsamadir/ivpn-servers/main/servers.txt';
+        AdvancedLogger.info('[ConfigManager] Trying direct URL: $directUrl');
+        
+        final response = await http.get(Uri.parse(directUrl))
+            .timeout(const Duration(seconds: 15));
 
         if (response.statusCode == 200) {
-          try {
-            content = utf8.decode(base64Decode(response.body));
-            AdvancedLogger.info('[ConfigManager] Successfully decoded Base64 content from mirror');
-          } catch (e) {
-            content = response.body; // USE ORIGINAL TEXT
-            AdvancedLogger.info('[ConfigManager] Used plain text configs (not Base64)');
-          }
-          downloadSuccess = true;
-          // Debug log to see what content is being downloaded
-          AdvancedLogger.info('📥 Content Preview: ${content.length > 200 ? content.substring(0, 200) : content}');
-        } else {
-          AdvancedLogger.warn('[ConfigManager] Mirror failed: HTTP ${response.statusCode}, trying backup...');
+           // Check for HTML junk
+           if (response.body.trim().startsWith('<!DOCTYPE html') || response.body.contains('<html')) {
+             AdvancedLogger.warn('[ConfigManager] Direct URL returned HTML (Proxy/Firewall issue)');
+           } else {
+             content = response.body;
+             downloadSuccess = true;
+             AdvancedLogger.info('📥 Downloaded ${content.length} bytes');
+           }
         }
       } catch (e) {
-        AdvancedLogger.warn('[ConfigManager] Mirror download failed: $e, trying backup...');
+        AdvancedLogger.warn('[ConfigManager] Direct download failed: $e');
       }
 
-      // If mirror failed, try backup URL
+      // 2. Try Fallback Mirror (JSDelivr - Reliable CDN)
       if (!downloadSuccess) {
         try {
-          AdvancedLogger.info('[ConfigManager] Trying backup URL: $_githubUrl');
-          final response = await http.get(Uri.parse(_githubUrl)).timeout(
-            const Duration(seconds: 30),
-          );
+          const fallbackUrl = 'https://fastly.jsdelivr.net/gh/mobinsamadir/ivpn-servers@main/servers.txt';
+          AdvancedLogger.info('[ConfigManager] Trying fallback URL: $fallbackUrl');
+          
+          final response = await http.get(Uri.parse(fallbackUrl))
+              .timeout(const Duration(seconds: 15));
 
-          if (response.statusCode == 200) {
-            try {
-              content = utf8.decode(base64Decode(response.body));
-              AdvancedLogger.info('[ConfigManager] Successfully decoded Base64 content from backup');
-            } catch (e) {
-              content = response.body; // USE ORIGINAL TEXT
-              AdvancedLogger.info('[ConfigManager] Used plain text configs (not Base64)');
-            }
+          if (response.statusCode == 200 && !response.body.contains('<html')) {
+            content = response.body;
             downloadSuccess = true;
-            // Debug log to see what content is being downloaded
-            AdvancedLogger.info('📥 Content Preview: ${content.length > 200 ? content.substring(0, 200) : content}');
-          } else {
-            AdvancedLogger.error('[ConfigManager] Backup failed: HTTP ${response.statusCode}');
           }
         } catch (e) {
-          AdvancedLogger.error('[ConfigManager] Backup download failed: $e');
+          AdvancedLogger.error('[ConfigManager] Fallback failed: $e');
         }
       }
 
       if (!downloadSuccess) {
-        AdvancedLogger.error('[ConfigManager] Both mirror and backup URLs failed');
         return {'added': 0, 'skipped': 0, 'total': 0};
       }
 
-      // Use the unified parser to extract configs
-      final configUrls = parseConfigText(content);
-
-      int addedCount = 0;
-      int skippedCount = 0;
-
-      // Create a copy of current configs to modify
-      final List<VpnConfigWithMetrics> newConfigs = List.from(allConfigs);
-
-      for (final configUrl in configUrls) {
-        if (!newConfigs.any((config) => config.rawConfig == configUrl)) {
-          final id = 'config_${DateTime.now().millisecondsSinceEpoch}_$addedCount';
-          final name = _extractServerName(configUrl);
-          final countryCode = _extractCountryCode(name);
-
-          newConfigs.add(VpnConfigWithMetrics(
-            id: id,
-            rawConfig: configUrl,
-            name: name,
-            countryCode: countryCode,
-          ));
-          addedCount++;
-        } else {
-          skippedCount++;
-        }
+      // 3. Use Smart Parser (Handles Base64, Recursion, Regex)
+      // THIS IS THE KEY FIX: Using parseMixedContent instead of parseConfigText
+      final configUrls = await parseMixedContent(content);
+      
+      if (configUrls.isEmpty) {
+        AdvancedLogger.warn('[ConfigManager] No valid configs found in downloaded content');
+        return {'added': 0, 'skipped': 0, 'total': 0};
       }
 
-      if (addedCount > 0) {
-        // Atomic swap
-        allConfigs = newConfigs;
-        await _saveAllConfigs();
-        _updateLists();
-        notifyListeners();
-        AdvancedLogger.info('[ConfigManager] Import finished: Added $addedCount new configs');
-      }
+      // 4. Add to List
+      int addedCount = await addConfigs(configUrls);
+      
+      AdvancedLogger.info('[ConfigManager] Import finished: Added $addedCount new configs');
+      return {'added': addedCount, 'skipped': configUrls.length - addedCount, 'total': configUrls.length};
 
-      return {'added': addedCount, 'skipped': skippedCount, 'total': configUrls.length};
     } catch (e) {
-      AdvancedLogger.error('[ConfigManager] Error downloading configs: $e');
+      AdvancedLogger.error('[ConfigManager] Critical error in download flow: $e');
       return {'added': 0, 'skipped': 0, 'total': 0};
     }
   }
