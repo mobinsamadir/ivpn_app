@@ -394,7 +394,7 @@ class _ConfigListTabsState extends State<ConfigListTabs>
                           
                           if (widget.testingIds.contains(config.id) || config.currentPing > 0 || config.currentPing == -1)
                             const SizedBox(width: 6),
-                          
+
                           if (config.currentSpeed > 0)
                             Container(
                               padding: const EdgeInsets.symmetric(
@@ -417,7 +417,7 @@ class _ConfigListTabsState extends State<ConfigListTabs>
                                 ),
                               ),
                             ),
-                          
+
                           // Tier indicator
                           Container(
                             width: 8,

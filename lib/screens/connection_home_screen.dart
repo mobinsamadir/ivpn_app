@@ -1706,15 +1706,17 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
   }
 
   /// Connect to a server with automatic failover to the next best server
-  Future<void> _connectWithFailover(VpnConfigWithMetrics initialConfig) async {
-    VpnConfigWithMetrics? currentConfig = initialConfig;
+  Future<void> _connectWithFailover(VpnConfigWithMetrics? initialConfig) async {
+    if (initialConfig == null) return; // Add this check!
+
+    VpnConfigWithMetrics currentConfig = initialConfig; // Now safe
     int attempts = 0;
     const maxAttempts = 3;
 
     while (attempts < maxAttempts) {
       try {
         setState(() {
-          _configManager.setConnected(false, status: 'Connecting to ${currentConfig!.name} (Attempt ${attempts + 1}/$maxAttempts)...');
+          _configManager.setConnected(false, status: 'Connecting to ${currentConfig.name} (Attempt ${attempts + 1}/$maxAttempts)...');
         });
 
         AdvancedLogger.info('[ConnectionHomeScreen] Calling _windowsVpnService.startVpn with config: ${currentConfig.name}');

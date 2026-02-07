@@ -1,5 +1,4 @@
-﻿import 'package:ivpn_new/models/vpn_config.dart';
-
+﻿
 class DeviceMetrics {
   final int latestPing;
   final double latestSpeed;
@@ -28,7 +27,7 @@ class DeviceMetrics {
 
 class VpnConfigWithMetrics {
   final String id;
-  final VpnConfig rawConfig;
+  final String rawConfig;  // Changed from VpnConfig to String
   final String name;
   final String? countryCode;
   final bool isFavorite;
@@ -75,9 +74,22 @@ class VpnConfigWithMetrics {
     return score;
   }
 
+  // Add missing getters to match old API
+  double get calculatedScore => score; // Alias for score
+
+  double get currentSpeed {
+    if (deviceMetrics.isEmpty) return 0.0;
+    return deviceMetrics.values.first.latestSpeed;
+  }
+
+  double get successRate {
+    // Placeholder implementation - adjust based on your actual metrics
+    return 0.0; // Placeholder to fix build
+  }
+
   VpnConfigWithMetrics copyWith({
     String? id,
-    VpnConfig? rawConfig,
+    String? rawConfig,
     String? name,
     String? countryCode,
     bool? isFavorite,
@@ -105,12 +117,12 @@ class VpnConfigWithMetrics {
 
   Map<String, dynamic> toJson() => {
     'id': id,
-    'rawConfig': rawConfig.toJson(),
+    'rawConfig': rawConfig,
     'name': name,
     'countryCode': countryCode,
     'isFavorite': isFavorite,
     'addedDate': addedDate.toIso8601String(),
-    'deviceMetrics': deviceMetrics.map((k, v) => MapEntry(k, v.toJson())),
+    'deviceMetrics': deviceMetrics.map((k, v) => MapEntry<String, dynamic>(k, v.toJson())),
     'failureCount': failureCount,
     'lastSuccessfulConnectionTime': lastSuccessfulConnectionTime,
     'isAlive': isAlive,
@@ -120,13 +132,13 @@ class VpnConfigWithMetrics {
   factory VpnConfigWithMetrics.fromJson(Map<String, dynamic> json) {
     return VpnConfigWithMetrics(
       id: json['id'] as String,
-      rawConfig: VpnConfig.fromJson(json['rawConfig'] as Map<String, dynamic>),
+      rawConfig: json['rawConfig'] as String,
       name: json['name'] as String,
       countryCode: json['countryCode'] as String?,
       isFavorite: json['isFavorite'] as bool? ?? false,
       addedDate: DateTime.parse(json['addedDate'] as String),
       deviceMetrics: (json['deviceMetrics'] as Map<String, dynamic>?)?.map(
-        (k, v) => MapEntry(k, DeviceMetrics.fromJson(v as Map<String, dynamic>)),
+        (k, v) => MapEntry<String, DeviceMetrics>(k, DeviceMetrics.fromJson(v as Map<String, dynamic>)),
       ) ?? {},
       failureCount: json['failureCount'] as int? ?? 0,
       lastSuccessfulConnectionTime: json['lastSuccessfulConnectionTime'] as int? ?? 0,
