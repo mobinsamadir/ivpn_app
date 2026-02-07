@@ -839,7 +839,7 @@ class ConfigManager extends ChangeNotifier {
     allConfigs.addAll(directConfigs);
 
     // Step 2: Extract subscription links
-    final subLinkRegex = RegExp(r"https?://[^\s\"'<>\n\r`{}|\[\]]+", caseSensitive: false);
+    final subLinkRegex = RegExp(r'https?://[^\s"\'<>\n\r`{}|\[\]]+', caseSensitive: false);
     final subLinks = subLinkRegex.allMatches(text)
         .map((match) => match.group(0)!)
         .where((link) => !directConfigs.any((config) => config.contains(Uri.parse(link).host)))
@@ -880,7 +880,7 @@ class ConfigManager extends ChangeNotifier {
 
     // Step 2: Extract subscription links (both http and https)
     final subLinkRegex = RegExp(
-      r"(https?://[^\s\"'<>\n\r`{}|\[\]]+)",
+      r'(https?://[^\s"\'<>\n\r`{}|\[\]]+)',
       caseSensitive: false,
     );
     final subLinks = subLinkRegex.allMatches(text)
