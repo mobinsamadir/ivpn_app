@@ -1324,18 +1324,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
       final configs = await ConfigManager.parseAndFetchConfigs(clipboardText);
 
       if (configs.isNotEmpty) {
-        // Count added configs
-        int importedCount = 0;
-        for (final config in configs) {
-          try {
-            final name = ConfigImporter.extractName(config, index: importedCount);
-            await _configManager.addConfig(config, name);
-            importedCount++;
-          } catch (e) {
-            AdvancedLogger.error('[HomeScreen] Error adding config: $e');
-            continue;
-          }
-        }
+        // Use the new addConfigs method that returns the count of added configs
+        final importedCount = await _configManager.addConfigs(configs);
 
         if (importedCount > 0) {
           _showToast('$importedCount servers added successfully');

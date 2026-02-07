@@ -874,55 +874,50 @@ class ConfigManager extends ChangeNotifier {
     return allConfigs.toList();
   }
 
-  // NEW: Parse mixed content including both configs and subscription links using robust "Split & Validate" approach
+  // NEW: Parse mixed content including both configs and subscription links using robust universal parser
   static Future<List<String>> parseMixedContent(String text) async {
     final allConfigs = <String>{};
     
-    // 1. Clean the text: Replace commas/tabs with newlines to ensure separation
-    final cleanedText = text.replaceAll(',', '\n').replaceAll('\t', '\n');
-    
-    // 2. Split by whitespace/newline to get potential tokens
-    final lines = cleanedText.split(RegExp(r'\s+'));
+    // 1. Try Base64 Decode first (if it looks like base64)
+    String processedText = text;
+    try {
+      final decoded = utf8.decode(base64Decode(text.replaceAll(RegExp(r'\s+'), '')));
+      if (decoded.contains('://')) { 
+        processedText = decoded; // It was base64!
+      }
+    } catch (e) {
+      // Not base64, proceed with original text
+    }
 
-    // 3. Process each token
+    // 2. Clean & Split
+    final lines = processedText.replaceAll(',', '\n').replaceAll('\t', '\n').split('\n');
+
     for (var line in lines) {
       line = line.trim();
       if (line.isEmpty) continue;
 
-      // Check for Subscription Links (http/https)
+      // 3. Handle Subscription Links (Recursion)
       if (line.startsWith('http://') || line.startsWith('https://')) {
          if (_isValidSubscriptionLink(line)) {
-            // Fetch logic with Base64 decoding support
             try {
-               final response = await http.get(Uri.parse(line));
+               final response = await http.get(Uri.parse(line)).timeout(const Duration(seconds: 10));
                if (response.statusCode == 200) {
-                  var body = utf8.decode(response.bodyBytes);
-                  
-                  // Try to decode as Base64 if it looks like it might be encoded
-                  try {
-                     body = utf8.decode(base64Decode(body.trim()));
-                  } catch (e) {
-                     // If Base64 decode fails, use original body
-                     AdvancedLogger.info('[ConfigManager] Content not Base64 encoded, using original');
-                  }
-                  
-                  // Recursively parse the body content
-                  final fetched = await parseMixedContent(body); 
-                  allConfigs.addAll(fetched);
+                  // RECURSIVE CALL: Parse the body of the sub
+                  final subConfigs = await parseMixedContent(response.body);
+                  allConfigs.addAll(subConfigs);
                }
             } catch (e) {
-               AdvancedLogger.warn('Failed to fetch sub: $line');
+               AdvancedLogger.warn('Sub fetch failed: $line');
             }
          }
-         continue; 
+         continue;
       }
 
-      // Check for Direct Configs (ss://, vless://, etc.)
+      // 4. Handle Direct Configs
       if (_isValidConfigScheme(line)) {
          allConfigs.add(line);
       }
     }
-
     return allConfigs.toList();
   }
 
@@ -933,20 +928,11 @@ class ConfigManager extends ChangeNotifier {
       
       final response = await http.get(
         Uri.parse('https://raw.githubusercontent.com/mobinsamadir/ivpn_app/main/servers.txt')
-      );
+      ).timeout(const Duration(seconds: 15));
       
       if (response.statusCode == 200) {
-        var content = utf8.decode(response.bodyBytes);
-        
-        // Try to decode as Base64 if it looks like it might be encoded
-        try {
-          content = utf8.decode(base64Decode(content.trim()));
-        } catch (e) {
-          // If Base64 decode fails, use original content
-          AdvancedLogger.info('[ConfigManager] Startup content not Base64 encoded, using original');
-        }
-        
-        final configs = parseConfigText(content);
+        // Use the robust universal parser to handle both Base64 and plain text
+        final configs = await parseMixedContent(response.body);
         
         // Add new configs to the list (avoid duplicates)
         int addedCount = 0;
@@ -1077,6 +1063,26 @@ class ConfigManager extends ChangeNotifier {
     notifyListeners();
     
     AdvancedLogger.info('[ConfigManager] Marked failure for ${updatedConfig.name}');
+  }
+
+  // NEW: Add multiple configs and return count of added configs
+  Future<int> addConfigs(List<String> configStrings) async {
+    int addedCount = 0;
+    
+    for (final configString in configStrings) {
+      if (ClipboardUtils.validateConfig(configString)) {
+        try {
+          final name = ConfigImporter.extractName(configString, index: addedCount);
+          await addConfig(configString, name);
+          addedCount++;
+        } catch (e) {
+          AdvancedLogger.error('[ConfigManager] Error adding config: $e');
+          continue;
+        }
+      }
+    }
+    
+    return addedCount;
   }
 
   // NEW: Mark a server as successful
