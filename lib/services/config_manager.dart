@@ -874,56 +874,62 @@ class ConfigManager extends ChangeNotifier {
     return allConfigs.toList();
   }
 
-  // NEW: Parse mixed content including both configs and subscription links using robust universal parser
+  // NEW: Parse mixed content including both configs and subscription links using regex extraction
   static Future<List<String>> parseMixedContent(String text) async {
     final allConfigs = <String>{};
     
-    // 1. Try Base64 Decode first (if it looks like base64)
+    // 1. Try Base64 Decode first (Standard Sub)
     String processedText = text;
     try {
       final decoded = utf8.decode(base64Decode(text.replaceAll(RegExp(r'\s+'), '')));
-      if (decoded.contains('://')) { 
-        processedText = decoded; // It was base64!
-      }
-    } catch (e) {
-      // Not base64, proceed with original text
+      if (decoded.contains('://')) processedText = decoded;
+    } catch (e) {}
+
+    // 2. Extract configs using Regex (Handles back-to-back configs)
+    // Matches: scheme://... until end of line or next scheme
+    final regex = RegExp(
+      r'(vmess|vless|ss|trojan|tuic|hysteria|hysteria2):\/\/[a-zA-Z0-9-._~:/?#\[\]@!$&()*+,;=%]+(?:#[^#\n\r]*)?',
+      caseSensitive: false,
+      multiLine: true,
+    );
+    
+    final matches = regex.allMatches(processedText);
+    for (final match in matches) {
+       final config = match.group(0);
+       if (config != null && _isValidConfigScheme(config)) {
+          allConfigs.add(config.trim());
+       }
     }
 
-    // 2. Clean & Split
-    final lines = processedText.replaceAll(',', '\n').replaceAll('\t', '\n').split('\n');
-
-    for (var line in lines) {
-      line = line.trim();
-      if (line.isEmpty) continue;
-
-      // 3. Handle Subscription Links (Recursion)
-      if (line.startsWith('http://') || line.startsWith('https://')) {
-         if (_isValidSubscriptionLink(line)) {
-            try {
-               final response = await http.get(Uri.parse(line)).timeout(const Duration(seconds: 10));
-               if (response.statusCode == 200) {
-                  // Check if response is HTML (indicating proxy or redirect issue)
-                  if (_isHtmlResponse(response.body)) {
-                    AdvancedLogger.warn('Received HTML instead of config from subscription link: $line');
-                    continue; // Skip this link
-                  }
-                  
-                  // RECURSIVE CALL: Parse the body of the sub
-                  final subConfigs = await parseMixedContent(response.body);
-                  allConfigs.addAll(subConfigs);
-               }
-            } catch (e) {
-               AdvancedLogger.warn('Sub fetch failed: $line');
+    // 3. Extract Subscription Links (http/https) and process them recursively
+    final linkRegex = RegExp(
+      r'https?:\/\/[^\s"\'<>\n\r`{}|\[\]]+',
+      caseSensitive: false,
+    );
+    
+    final linkMatches = linkRegex.allMatches(processedText);
+    for (final match in linkMatches) {
+      final link = match.group(0);
+      if (link != null && _isValidSubscriptionLink(link)) {
+        try {
+          final response = await http.get(Uri.parse(link)).timeout(const Duration(seconds: 10));
+          if (response.statusCode == 200) {
+            // Check if response is HTML (indicating proxy or redirect issue)
+            if (_isHtmlResponse(response.body)) {
+              AdvancedLogger.warn('Received HTML instead of config from subscription link: $link');
+              continue; // Skip this link
             }
-         }
-         continue;
-      }
-
-      // 4. Handle Direct Configs
-      if (_isValidConfigScheme(line)) {
-         allConfigs.add(line);
+            
+            // RECURSIVE CALL: Parse the body of the sub
+            final subConfigs = await parseMixedContent(response.body);
+            allConfigs.addAll(subConfigs);
+          }
+        } catch (e) {
+          AdvancedLogger.warn('Sub fetch failed: $link');
+        }
       }
     }
+
     return allConfigs.toList();
   }
 
