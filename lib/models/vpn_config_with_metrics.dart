@@ -3,17 +3,20 @@ class DeviceMetrics {
   final int latestPing;
   final double latestSpeed;
   final DateTime lastUpdated;
+  final int usageCount; // Added usageCount field
 
   DeviceMetrics({
     required this.latestPing,
     required this.latestSpeed,
     required this.lastUpdated,
+    this.usageCount = 0, // Added default value
   });
 
   Map<String, dynamic> toJson() => {
     'latestPing': latestPing,
     'latestSpeed': latestSpeed,
     'lastUpdated': lastUpdated.toIso8601String(),
+    'usageCount': usageCount, // Added to JSON
   };
 
   factory DeviceMetrics.fromJson(Map<String, dynamic> json) {
@@ -21,6 +24,7 @@ class DeviceMetrics {
       latestPing: json['latestPing'] as int? ?? -1,
       latestSpeed: (json['latestSpeed'] as num?)?.toDouble() ?? 0.0,
       lastUpdated: DateTime.parse(json['lastUpdated'] as String),
+      usageCount: json['usageCount'] as int? ?? 0, // Added from JSON
     );
   }
 }

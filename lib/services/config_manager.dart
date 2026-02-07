@@ -838,8 +838,11 @@ class ConfigManager extends ChangeNotifier {
     final directConfigs = parseConfigText(text);
     allConfigs.addAll(directConfigs);
 
-    // Step 2: Extract subscription links
-    final subLinkRegex = RegExp(r'https?://[^\s"\'<>\n\r`{}|\[\]]+', caseSensitive: false);
+    // Safe Regex for URLs avoiding quotes/brackets issues
+    final subLinkRegex = RegExp(
+      r'''https?:\/\/[^\s"\'<>\n\r`{}|\[\]]+''', 
+      caseSensitive: false,
+    );
     final subLinks = subLinkRegex.allMatches(text)
         .map((match) => match.group(0)!)
         .where((link) => !directConfigs.any((config) => config.contains(Uri.parse(link).host)))
@@ -878,9 +881,9 @@ class ConfigManager extends ChangeNotifier {
     final directConfigs = parseConfigText(text);
     allConfigs.addAll(directConfigs);
 
-    // Step 2: Extract subscription links (both http and https)
+    // Safe Regex for URLs avoiding quotes/brackets issues
     final subLinkRegex = RegExp(
-      r'(https?://[^\s"\'<>\n\r`{}|\[\]]+)',
+      r'''https?:\/\/[^\s"\'<>\n\r`{}|\[\]]+''', 
       caseSensitive: false,
     );
     final subLinks = subLinkRegex.allMatches(text)
