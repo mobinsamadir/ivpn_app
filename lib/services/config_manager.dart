@@ -985,33 +985,6 @@ class ConfigManager extends ChangeNotifier {
            text.startsWith('hysteria2://');
   }
 
-  // Helper to extract server name from config
-  static String _extractServerName(String config) {
-    try {
-      // Try to extract name from fragment or use a default
-      final uri = Uri.parse(config);
-      if (uri.fragment.isNotEmpty) {
-        return Uri.decodeComponent(uri.fragment);
-      }
-      
-      // If no fragment, try to extract from query parameters
-      if (uri.queryParameters.containsKey('remark')) {
-        return uri.queryParameters['remark']!;
-      }
-      
-      // Default name based on host
-      return 'Server ${uri.host}:${uri.port}';
-    } catch (e) {
-      return 'Server ${DateTime.now().millisecondsSinceEpoch}';
-    }
-  }
-
-  // Helper to extract country code from name
-  static String? _extractCountryCode(String name) {
-    // Try to extract country code from name (e.g., "US-Server" -> "US")
-    final match = RegExp(r'^([A-Z]{2})[-_]').firstMatch(name);
-    return match?.group(1);
-  }
 
   // Helper to validate subscription links
   static bool _isValidSubscriptionLink(String link) {
