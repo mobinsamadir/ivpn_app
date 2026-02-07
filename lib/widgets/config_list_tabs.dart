@@ -418,8 +418,23 @@ class _ConfigListTabsState extends State<ConfigListTabs>
                               ),
                             ),
                           
+                          // Tier indicator
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: _getTierColor(config.tier),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: _getTierBorderColor(config.tier),
+                                width: 1,
+                              ),
+                            ),
+                            margin: const EdgeInsets.only(right: 8),
+                          ),
+
                           const Spacer(),
-                          
+
                           Text(
                             'Score: ${config.calculatedScore.toStringAsFixed(1)}',
                             style: TextStyle(
@@ -773,5 +788,33 @@ class _ConfigListTabsState extends State<ConfigListTabs>
         ],
       ),
     ) ?? false;
+  }
+
+  // Helper method to get color based on tier
+  Color _getTierColor(int tier) {
+    switch (tier) {
+      case 3: // Stable/HighSpeed
+        return Colors.green; // Green for Tier 3
+      case 2: // LowLatency
+        return Colors.yellow; // Yellow for Tier 2
+      case 1: // Alive
+        return Colors.grey; // Grey for Tier 1
+      default:
+        return Colors.red; // Red for untested/failed
+    }
+  }
+
+  // Helper method to get border color based on tier
+  Color _getTierBorderColor(int tier) {
+    switch (tier) {
+      case 3: // Stable/HighSpeed
+        return Colors.green.shade700; // Darker green for border
+      case 2: // LowLatency
+        return Colors.yellow.shade700; // Darker yellow for border
+      case 1: // Alive
+        return Colors.grey.shade700; // Darker grey for border
+      default:
+        return Colors.red.shade700; // Darker red for border
+    }
   }
 }

@@ -311,7 +311,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     if (_configManager.allConfigs.isEmpty) return;
 
     AdvancedLogger.info("🚀 [Startup] Running Smart Auto-Test...");
-    await _testAllConfigsInternal(_configManager.allConfigs);
+    await _runFunnelTest(_configManager.allConfigs);
     
     _configManager.allConfigs.sort((a, b) {
         final pingA = a.currentPing > 0 ? a.currentPing : 999999;
@@ -1464,7 +1464,16 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
 
   void _testAllConfigs() {
     _showToast('Testing all configurations...');
-    _testAllConfigsInternal(_configManager.allConfigs);
+    _runFunnelTest(_configManager.allConfigs);
+  }
+
+  // NEW: Run the advanced funnel test using ServerTesterService
+  Future<void> _runFunnelTest(List<VpnConfigWithMetrics> configs) async {
+    if (configs.isEmpty) return;
+
+    // Use the new ServerTesterService for advanced funnel testing
+    final tester = ServerTesterService(_windowsVpnService);
+    await tester.runFunnelTest(configs);
   }
 
   Future<void> _testAllConfigsInternal(List<VpnConfigWithMetrics> configs) async {
