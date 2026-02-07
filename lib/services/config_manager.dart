@@ -902,6 +902,12 @@ class ConfigManager extends ChangeNotifier {
             try {
                final response = await http.get(Uri.parse(line)).timeout(const Duration(seconds: 10));
                if (response.statusCode == 200) {
+                  // Check if response is HTML (indicating proxy or redirect issue)
+                  if (_isHtmlResponse(response.body)) {
+                    AdvancedLogger.warn('Received HTML instead of config from subscription link: $line');
+                    continue; // Skip this link
+                  }
+                  
                   // RECURSIVE CALL: Parse the body of the sub
                   final subConfigs = await parseMixedContent(response.body);
                   allConfigs.addAll(subConfigs);
@@ -921,18 +927,67 @@ class ConfigManager extends ChangeNotifier {
     return allConfigs.toList();
   }
 
-  // NEW: Fetch startup configs from GitHub
+  // Helper method to check if response is HTML
+  static bool _isHtmlResponse(String body) {
+    final trimmedBody = body.trim();
+    return trimmedBody.startsWith('<!DOCTYPE html') || 
+           trimmedBody.startsWith('<html') || 
+           trimmedBody.contains('<head') || 
+           trimmedBody.contains('<body');
+  }
+
+  // NEW: Fetch startup configs from GitHub with fallback
   Future<void> fetchStartupConfigs() async {
     try {
       AdvancedLogger.info('[ConfigManager] Fetching startup configs from GitHub...');
       
-      final response = await http.get(
-        Uri.parse('https://raw.githubusercontent.com/mobinsamadir/ivpn_app/main/servers.txt')
-      ).timeout(const Duration(seconds: 15));
+      // Primary URL
+      String content = '';
+      bool success = false;
       
-      if (response.statusCode == 200) {
+      // Try primary URL first
+      try {
+        final response = await http.get(
+          Uri.parse('https://raw.githubusercontent.com/mobinsamadir/ivpn_app/main/servers.txt')
+        ).timeout(const Duration(seconds: 15));
+        
+        if (response.statusCode == 200) {
+          // Check if response is HTML (indicating proxy or redirect issue)
+          if (_isHtmlResponse(response.body)) {
+            AdvancedLogger.warn('[ConfigManager] Received HTML from primary URL, trying fallback...');
+          } else {
+            content = response.body;
+            success = true;
+          }
+        }
+      } catch (e) {
+        AdvancedLogger.warn('[ConfigManager] Primary URL failed: $e');
+      }
+      
+      // Try fallback if primary failed
+      if (!success) {
+        try {
+          final response = await http.get(
+            Uri.parse('https://fastly.jsdelivr.net/gh/mobinsamadir/ivpn_app@main/servers.txt')
+          ).timeout(const Duration(seconds: 15));
+          
+          if (response.statusCode == 200) {
+            // Check if response is HTML (indicating proxy or redirect issue)
+            if (_isHtmlResponse(response.body)) {
+              AdvancedLogger.warn('[ConfigManager] Received HTML from fallback URL');
+            } else {
+              content = response.body;
+              success = true;
+            }
+          }
+        } catch (e) {
+          AdvancedLogger.warn('[ConfigManager] Fallback URL failed: $e');
+        }
+      }
+      
+      if (success) {
         // Use the robust universal parser to handle both Base64 and plain text
-        final configs = await parseMixedContent(response.body);
+        final configs = await parseMixedContent(content);
         
         // Add new configs to the list (avoid duplicates)
         int addedCount = 0;
@@ -967,11 +1022,20 @@ class ConfigManager extends ChangeNotifier {
           AdvancedLogger.info('[ConfigManager] No new configs added from startup fetch (all existed)');
         }
       } else {
-        AdvancedLogger.error('[ConfigManager] Failed to fetch startup configs: HTTP ${response.statusCode}');
+        AdvancedLogger.error('[ConfigManager] Failed to fetch startup configs from both primary and fallback URLs');
       }
     } catch (e) {
       AdvancedLogger.error('[ConfigManager] Error fetching startup configs: $e');
     }
+  }
+
+  // Helper method to check if response is HTML
+  bool _isHtmlResponse(String body) {
+    final trimmedBody = body.trim();
+    return trimmedBody.startsWith('<!DOCTYPE html') || 
+           trimmedBody.startsWith('<html') || 
+           trimmedBody.contains('<head') || 
+           trimmedBody.contains('<body');
   }
 
   // Helper: Simple check for valid config schemes
