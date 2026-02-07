@@ -424,7 +424,7 @@ class ConfigManager extends ChangeNotifier {
   
   void _updateLists() {
     // Update validated configs
-    validatedConfigs = allConfigs.where((config) => config.isValidated(_currentDeviceId)).toList();
+    validatedConfigs = allConfigs.where((config) => config.isValidated).toList();
     
     // Update favorite configs
     favoriteConfigs = allConfigs.where((config) => config.isFavorite).toList();
@@ -508,17 +508,12 @@ class ConfigManager extends ChangeNotifier {
       return; // Guard clause: return if config not found, don't create new config
     }
 
-    // Update the config metrics
-    allConfigs[index].updateMetrics(
-      _currentDeviceId,
+    // Update the config metrics using the new API
+    allConfigs[index] = allConfigs[index].updateMetrics(
+      deviceId: _currentDeviceId,
       ping: ping,
       speed: speed,
-      success: connectionSuccess,
-    );
-
-    // Atomic update: replace the config in the list to ensure UI updates
-    allConfigs[index] = allConfigs[index].copyWith(
-      isFavorite: allConfigs[index].isFavorite, // Preserve current favorite status
+      connectionSuccess: connectionSuccess,
     );
 
     _updateLists();
@@ -644,8 +639,8 @@ class ConfigManager extends ChangeNotifier {
 
     // Priority 1: Selected config
     if (_selectedConfig != null) {
-      AdvancedLogger.info('[ConfigManager] Selected config: ${_selectedConfig!.name}, isValidated: ${_selectedConfig!.isValidated(_currentDeviceId)}');
-      if (_selectedConfig!.isValidated(_currentDeviceId)) {
+      AdvancedLogger.info('[ConfigManager] Selected config: ${_selectedConfig!.name}, isValidated: ${_selectedConfig!.isValidated}');
+      if (_selectedConfig!.isValidated) {
         AdvancedLogger.info('[ConfigManager] Returning selected validated config: ${_selectedConfig!.name}');
         return _selectedConfig;
       } else {
@@ -656,7 +651,7 @@ class ConfigManager extends ChangeNotifier {
     }
 
     // Priority 2: Favorite with good ping
-    final validFavorites = favoriteConfigs.where((c) => c.isValidated(ConfigManager().currentDeviceId)).toList();
+    final validFavorites = favoriteConfigs.where((c) => c.isValidated).toList();
     if (validFavorites.isNotEmpty) {
       validFavorites.sort((a, b) => a.currentPing.compareTo(b.currentPing));
       AdvancedLogger.info('[ConfigManager] Returning favorite validated config: ${validFavorites.first.name}');
