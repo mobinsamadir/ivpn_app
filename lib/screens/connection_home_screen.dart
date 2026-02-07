@@ -59,12 +59,15 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
 
     _initialize();
     WidgetsBinding.instance.addObserver(this);
-    
+
     // AccessManager Listener
     AccessManager().init().then((_) {
       if (mounted) setState(() {});
     });
     AccessManager().addListener(_onTimeChanged);
+
+    // Fire and forget: fetch startup configs from GitHub
+    _configManager.fetchStartupConfigs();
 
     // VPN Connection Status Listener
     _windowsVpnService.statusStream.listen((status) {
@@ -1321,6 +1324,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
       final configs = await ConfigManager.parseAndFetchConfigs(clipboardText);
 
       if (configs.isNotEmpty) {
+        // Use the new addConfigs method that returns the count of added configs
         int importedCount = 0;
         for (final config in configs) {
           try {
@@ -1334,7 +1338,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
         }
 
         if (importedCount > 0) {
-          _showToast('$importedCount configs imported successfully');
+          _showToast('$importedCount servers added successfully');
           setState(() {});
           await _configManager.refreshAllConfigs();
         } else {

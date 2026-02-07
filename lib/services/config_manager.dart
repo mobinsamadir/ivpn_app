@@ -892,11 +892,20 @@ class ConfigManager extends ChangeNotifier {
       // Check for Subscription Links (http/https)
       if (line.startsWith('http://') || line.startsWith('https://')) {
          if (_isValidSubscriptionLink(line)) {
-            // Fetch logic (keep existing fetch logic here)
+            // Fetch logic with Base64 decoding support
             try {
                final response = await http.get(Uri.parse(line));
                if (response.statusCode == 200) {
-                  final body = utf8.decode(response.bodyBytes);
+                  var body = utf8.decode(response.bodyBytes);
+                  
+                  // Try to decode as Base64 if it looks like it might be encoded
+                  try {
+                     body = utf8.decode(base64Decode(body.trim()));
+                  } catch (e) {
+                     // If Base64 decode fails, use original body
+                     AdvancedLogger.info('[ConfigManager] Content not Base64 encoded, using original');
+                  }
+                  
                   // Recursively parse the body content
                   final fetched = await parseMixedContent(body); 
                   allConfigs.addAll(fetched);
@@ -917,6 +926,68 @@ class ConfigManager extends ChangeNotifier {
     return allConfigs.toList();
   }
 
+  // NEW: Fetch startup configs from GitHub
+  Future<void> fetchStartupConfigs() async {
+    try {
+      AdvancedLogger.info('[ConfigManager] Fetching startup configs from GitHub...');
+      
+      final response = await http.get(
+        Uri.parse('https://raw.githubusercontent.com/mobinsamadir/ivpn-servers/main/servers.txt')
+      );
+      
+      if (response.statusCode == 200) {
+        var content = utf8.decode(response.bodyBytes);
+        
+        // Try to decode as Base64 if it looks like it might be encoded
+        try {
+          content = utf8.decode(base64Decode(content.trim()));
+        } catch (e) {
+          // If Base64 decode fails, use original content
+          AdvancedLogger.info('[ConfigManager] Startup content not Base64 encoded, using original');
+        }
+        
+        final configs = parseConfigText(content);
+        
+        // Add new configs to the list (avoid duplicates)
+        int addedCount = 0;
+        for (final config in configs) {
+          if (!allConfigs.any((existing) => existing.rawConfig == config)) {
+            final id = 'startup_${DateTime.now().millisecondsSinceEpoch}_${addedCount}';
+            final name = _extractServerName(config);
+            final countryCode = _extractCountryCode(name);
+            
+            allConfigs.add(VpnConfigWithMetrics(
+              id: id,
+              rawConfig: config,
+              name: name,
+              countryCode: countryCode,
+              addedDate: DateTime.now(),
+              deviceMetrics: {},
+              failureCount: 0,
+              lastSuccessfulConnectionTime: 0,
+              isAlive: true,
+              tier: 0,
+            ));
+            addedCount++;
+          }
+        }
+        
+        if (addedCount > 0) {
+          _updateLists();
+          await _saveAllConfigs();
+          notifyListeners();
+          AdvancedLogger.info('[ConfigManager] Added $addedCount new configs from startup fetch');
+        } else {
+          AdvancedLogger.info('[ConfigManager] No new configs added from startup fetch (all existed)');
+        }
+      } else {
+        AdvancedLogger.error('[ConfigManager] Failed to fetch startup configs: HTTP ${response.statusCode}');
+      }
+    } catch (e) {
+      AdvancedLogger.error('[ConfigManager] Error fetching startup configs: $e');
+    }
+  }
+
   // Helper: Simple check for valid config schemes
   static bool _isValidConfigScheme(String text) {
     return text.startsWith('ss://') || 
@@ -926,6 +997,34 @@ class ConfigManager extends ChangeNotifier {
            text.startsWith('tuic://') ||
            text.startsWith('hysteria://') ||
            text.startsWith('hysteria2://');
+  }
+
+  // Helper to extract server name from config
+  static String _extractServerName(String config) {
+    try {
+      // Try to extract name from fragment or use a default
+      final uri = Uri.parse(config);
+      if (uri.fragment.isNotEmpty) {
+        return Uri.decodeComponent(uri.fragment);
+      }
+      
+      // If no fragment, try to extract from query parameters
+      if (uri.queryParameters.containsKey('remark')) {
+        return uri.queryParameters['remark']!;
+      }
+      
+      // Default name based on host
+      return 'Server ${uri.host}:${uri.port}';
+    } catch (e) {
+      return 'Server ${DateTime.now().millisecondsSinceEpoch}';
+    }
+  }
+
+  // Helper to extract country code from name
+  static String? _extractCountryCode(String name) {
+    // Try to extract country code from name (e.g., "US-Server" -> "US")
+    final match = RegExp(r'^([A-Z]{2})[-_]').firstMatch(name);
+    return match?.group(1);
   }
 
   // Helper to validate subscription links

@@ -32,38 +32,38 @@ class ServerTesterService {
     AdvancedLogger.info('[ServerTesterService] Funnel Test completed');
   }
 
-  /// Phase 1: Quick connectivity check on ALL configs concurrently (batch size 20)
+  /// Phase 1: Quick connectivity check on ALL configs concurrently (batch size 20, timeout 2s)
   Future<void> _runSievePhase(List<VpnConfigWithMetrics> configs) async {
     AdvancedLogger.info('[ServerTesterService] Phase 1: Sieve - Connectivity Check');
 
-    // Process configs in batches of 20
+    // Process configs in batches of 20 with timeout
     for (int i = 0; i < configs.length; i += 20) {
       final endIndex = (i + 20 < configs.length) ? i + 20 : configs.length;
       final batch = configs.sublist(i, endIndex);
 
-      // Run connectivity checks concurrently for this batch
+      // Run connectivity checks concurrently for this batch with timeout
       final futures = batch.map((config) async {
         try {
-          final isAlive = await _quickConnectivityCheck(config);
+          final isAlive = await _quickConnectivityCheck(config).timeout(const Duration(seconds: 2));
           // Update config properties
           final updatedConfig = config.copyWith(
             isAlive: isAlive,
             tier: isAlive ? 1 : 0,
           );
-          
+
           // Update in the original list
           final index = configs.indexOf(config);
           if (index != -1) {
             configs[index] = updatedConfig;
           }
-          
+
           // Save to storage
           if (!isAlive) {
             await _configManager.updateConfigMetrics(config.id, connectionSuccess: false);
           }
         } catch (e) {
           AdvancedLogger.error('[ServerTesterService] Error in sieve phase for ${config.name}: $e');
-          // Mark as dead on error
+          // Mark as dead on error or timeout
           final index = configs.indexOf(config);
           if (index != -1) {
             configs[index] = config.copyWith(
@@ -82,7 +82,7 @@ class ServerTesterService {
     AdvancedLogger.info('[ServerTesterService] Phase 1 completed');
   }
 
-  /// Phase 2: Detailed latency testing on alive configs
+  /// Phase 2: Detailed latency testing on alive configs (batch size 5, timeout 5s)
   Future<void> _runBenchmarkPhase(List<VpnConfigWithMetrics> configs) async {
     AdvancedLogger.info('[ServerTesterService] Phase 2: Benchmark - Latency Testing');
 
@@ -93,35 +93,44 @@ class ServerTesterService {
       return;
     }
 
-    // Test latency for each alive config
-    for (final config in aliveConfigs) {
-      try {
-        final result = await _latencyService.getAdvancedLatency(config.rawConfig);
-        final latency = result.health.averageLatency;
+    // Process alive configs in batches of 5 with timeout
+    for (int i = 0; i < aliveConfigs.length; i += 5) {
+      final endIndex = (i + 5 < aliveConfigs.length) ? i + 5 : aliveConfigs.length;
+      final batch = aliveConfigs.sublist(i, endIndex);
 
-        // Update metrics
-        await _configManager.updateConfigMetrics(
-          config.id,
-          ping: latency,
-          connectionSuccess: latency > 0,
-        );
+      // Test latency concurrently for this batch with timeout
+      final futures = batch.map((config) async {
+        try {
+          final result = await _latencyService.getAdvancedLatency(config.rawConfig)
+              .timeout(const Duration(seconds: 5));
+          final latency = result.health.averageLatency;
 
-        // Update tier based on latency (if low latency, promote to tier 2)
-        final updatedTier = latency > 0 && latency < 500 ? 2 : 1;
-        final index = configs.indexOf(config);
-        if (index != -1) {
-          configs[index] = config.copyWith(tier: updatedTier);
-        }
-      } catch (e) {
-        AdvancedLogger.error('[ServerTesterService] Error in benchmark phase for ${config.name}: $e');
-        final index = configs.indexOf(config);
-        if (index != -1) {
-          configs[index] = config.copyWith(
-            isAlive: false,
-            tier: 0,
+          // Update metrics
+          await _configManager.updateConfigMetrics(
+            config.id,
+            ping: latency,
+            connectionSuccess: latency > 0,
           );
+
+          // Update tier based on latency (if low latency, promote to tier 2)
+          final updatedTier = latency > 0 && latency < 500 ? 2 : 1;
+          final index = configs.indexOf(config);
+          if (index != -1) {
+            configs[index] = config.copyWith(tier: updatedTier);
+          }
+        } catch (e) {
+          AdvancedLogger.error('[ServerTesterService] Error in benchmark phase for ${config.name}: $e');
+          final index = configs.indexOf(config);
+          if (index != -1) {
+            configs[index] = config.copyWith(
+              isAlive: false,
+              tier: 0,
+            );
+          }
         }
-      }
+      }).toList();
+
+      await Future.wait(futures);
     }
 
     // Sort alive configs by latency and promote top 50% to tier 2
