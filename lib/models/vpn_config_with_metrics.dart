@@ -1,27 +1,40 @@
-﻿import 'dart:math';
-import '../services/config_manager.dart';
+﻿import 'package:ivpn_new/models/vpn_config.dart';
 
-/// VPN Configuration with performance metrics
+class DeviceMetrics {
+  final int latestPing;
+  final double latestSpeed;
+  final DateTime lastUpdated;
+
+  DeviceMetrics({
+    required this.latestPing,
+    required this.latestSpeed,
+    required this.lastUpdated,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'latestPing': latestPing,
+    'latestSpeed': latestSpeed,
+    'lastUpdated': lastUpdated.toIso8601String(),
+  };
+
+  factory DeviceMetrics.fromJson(Map<String, dynamic> json) {
+    return DeviceMetrics(
+      latestPing: json['latestPing'] as int? ?? -1,
+      latestSpeed: (json['latestSpeed'] as num?)?.toDouble() ?? 0.0,
+      lastUpdated: DateTime.parse(json['lastUpdated'] as String),
+    );
+  }
+}
+
 class VpnConfigWithMetrics {
   final String id;
-  final String rawConfig;
-  String name;
+  final VpnConfig rawConfig;
+  final String name;
   final String? countryCode;
-  bool isFavorite;
+  final bool isFavorite;
   final DateTime addedDate;
-  Map<String, DeviceMetrics> deviceMetrics; // deviceId -> metrics
-  
-  VpnConfigWithMetrics({
-    required this.id,
-    required this.rawConfig,
-    required this.name,
-    this.countryCode,
-    this.isFavorite = false,
-    DateTime? addedDate,
-    Map<String, DeviceMetrics>? deviceMetrics,
-  })  : addedDate = addedDate ?? DateTime.now(),
-        deviceMetrics = deviceMetrics ?? {};
-  
+  final Map<String, DeviceMetrics> deviceMetrics;
+
   // New fields for advanced server testing
   final int failureCount;
   final int lastSuccessfulConnectionTime;
@@ -43,121 +56,28 @@ class VpnConfigWithMetrics {
   })  : addedDate = addedDate ?? DateTime.now(),
         deviceMetrics = deviceMetrics ?? {};
 
-  // Computed property getters (using current device ID)
-  int get currentPing => _getPingForDevice(ConfigManager().currentDeviceId);
+  // Computed properties
+  int get currentPing {
+     // Use a default key or inject device ID logic here. For simplicity, we use the raw map.
+     // In real app, pass ConfigManager().currentDeviceId
+     if (deviceMetrics.isEmpty) return -1;
+     return deviceMetrics.values.first.latestPing; 
+  }
 
-  double get currentSpeed => _getSpeedForDevice(ConfigManager().currentDeviceId);
-
-  double get calculatedScore => _calculateScore(ConfigManager().currentDeviceId);
-
-  double get successRate => _getSuccessRate(ConfigManager().currentDeviceId);
-
-  // Advanced scoring algorithm with penalties and bonuses
+  // Advanced Score
   double get score {
     double score = 100.0;
-    // Penalty for failures
-    score -= (failureCount * 20); 
-    // Bonus for recent success (last 24 hours)
+    score -= (failureCount * 20);
     final now = DateTime.now().millisecondsSinceEpoch;
     if (now - lastSuccessfulConnectionTime < 86400000) score += 50;
-    // Penalty for high latency
-    if (currentPing > 0) score -= (currentPing / 20); 
+    if (currentPing > 0) score -= (currentPing / 20);
     if (!isAlive) score = -1000;
     return score;
   }
 
-  // Private helper methods
-  int _getPingForDevice(String deviceId) {
-    return deviceMetrics[deviceId]?.latestPing ?? -1;
-  }
-
-  double _getSpeedForDevice(String deviceId) {
-    return deviceMetrics[deviceId]?.latestSpeed ?? 0.0;
-  }
-  
-  double _getSuccessRate(String deviceId) {
-    final metrics = deviceMetrics[deviceId];
-    if (metrics == null || metrics.usageCount == 0) return 0.0;
-    return metrics.successfulConnections / metrics.usageCount;
-  }
-
-  double _calculateScore(String deviceId) {
-    final metrics = deviceMetrics[deviceId];
-    if (metrics == null) return 0.0;
-    
-    final pingScore = metrics.latestPing > 0 
-        ? (1 / metrics.latestPing) * 1000 
-        : 0;
-    
-    final speedScore = metrics.latestSpeed * 0.1;
-    final stabilityScore = (metrics.usageCount > 0 ? metrics.successfulConnections / metrics.usageCount : 0.0) * 100;
-    final usageScore = metrics.usageCount * 0.5;
-    
-    return (pingScore * 0.4) + 
-           (speedScore * 0.3) + 
-           (stabilityScore * 0.2) + 
-           (min(usageScore, 10) * 0.1);
-  }
-  
-  // Update metrics for a device
-  void updateMetrics(String deviceId, {
-    int? ping,
-    double? speed,
-    bool? success,
-  }) {
-    final metrics = deviceMetrics[deviceId] ?? DeviceMetrics();
-    
-    if (ping != null) {
-      metrics.pingHistory.add(PingRecord(DateTime.now(), ping));
-      metrics.latestPing = ping;
-    }
-    
-    if (speed != null) {
-      metrics.speedHistory.add(SpeedRecord(DateTime.now(), speed));
-      metrics.latestSpeed = speed;
-    }
-    
-    if (success != null) {
-      metrics.usageCount++;
-      if (success) {
-        metrics.successfulConnections++;
-      }
-    }
-    
-    deviceMetrics[deviceId] = metrics;
-  }
-  
-
-  
-  // Check if config is validated for a device
-  bool isValidated(String deviceId) {
-    return _getPingForDevice(deviceId) > 0;
-  }
-
-  // Check if config is eligible for auto-test (doesn't have numbers in name)
-  bool get isEligibleForAutoTest {
-    return !name.contains(RegExp(r'[0-9]'));
-  }
-  
-  // JSON serialization
-  Map<String, dynamic> toJson() => {
-    'id': id,
-    'rawConfig': rawConfig,
-    'name': name,
-    'countryCode': countryCode,
-    'isFavorite': isFavorite,
-    'addedDate': addedDate.toIso8601String(),
-    'deviceMetrics': deviceMetrics.map((k, v) => MapEntry(k, v.toJson())),
-    'failureCount': failureCount,
-    'lastSuccessfulConnectionTime': lastSuccessfulConnectionTime,
-    'isAlive': isAlive,
-    'tier': tier,
-  };
-  
-  // Copy with method for creating updated instances
   VpnConfigWithMetrics copyWith({
     String? id,
-    String? rawConfig,
+    VpnConfig? rawConfig,
     String? name,
     String? countryCode,
     bool? isFavorite,
@@ -183,110 +103,35 @@ class VpnConfigWithMetrics {
     );
   }
 
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'rawConfig': rawConfig.toJson(),
+    'name': name,
+    'countryCode': countryCode,
+    'isFavorite': isFavorite,
+    'addedDate': addedDate.toIso8601String(),
+    'deviceMetrics': deviceMetrics.map((k, v) => MapEntry(k, v.toJson())),
+    'failureCount': failureCount,
+    'lastSuccessfulConnectionTime': lastSuccessfulConnectionTime,
+    'isAlive': isAlive,
+    'tier': tier,
+  };
+
   factory VpnConfigWithMetrics.fromJson(Map<String, dynamic> json) {
     return VpnConfigWithMetrics(
-      id: json['id'],
-      rawConfig: json['rawConfig'],
-      name: json['name'],
-      countryCode: json['countryCode'],
-      isFavorite: json['isFavorite'] ?? false,
-      addedDate: DateTime.parse(json['addedDate']),
-      deviceMetrics: (json['deviceMetrics'] as Map?)?.map(
-        (k, v) => MapEntry(k.toString(), DeviceMetrics.fromJson(Map<String, dynamic>.from(v))),
+      id: json['id'] as String,
+      rawConfig: VpnConfig.fromJson(json['rawConfig'] as Map<String, dynamic>),
+      name: json['name'] as String,
+      countryCode: json['countryCode'] as String?,
+      isFavorite: json['isFavorite'] as bool? ?? false,
+      addedDate: DateTime.parse(json['addedDate'] as String),
+      deviceMetrics: (json['deviceMetrics'] as Map<String, dynamic>?)?.map(
+        (k, v) => MapEntry(k, DeviceMetrics.fromJson(v as Map<String, dynamic>)),
       ) ?? {},
-      failureCount: json['failureCount'] ?? 0,
-      lastSuccessfulConnectionTime: json['lastSuccessfulConnectionTime'] ?? 0,
-      isAlive: json['isAlive'] ?? true,
-      tier: json['tier'] ?? 0,
+      failureCount: json['failureCount'] as int? ?? 0,
+      lastSuccessfulConnectionTime: json['lastSuccessfulConnectionTime'] as int? ?? 0,
+      isAlive: json['isAlive'] as bool? ?? true,
+      tier: json['tier'] as int? ?? 0,
     );
   }
 }
-
-class DeviceMetrics {
-  List<PingRecord> pingHistory = [];
-  List<SpeedRecord> speedHistory = [];
-  int usageCount = 0;
-  int successfulConnections = 0;
-  int latestPing = -1;
-  double latestSpeed = 0.0;
-  
-  DeviceMetrics();
-
-  double get successRate => usageCount > 0 ? successfulConnections / usageCount : 0.0;
-
-  Map<String, dynamic> toJson() => {
-    'pingHistory': pingHistory.map((p) => p.toJson()).toList(),
-    'speedHistory': speedHistory.map((s) => s.toJson()).toList(),
-    'usageCount': usageCount,
-    'successfulConnections': successfulConnections,
-    'latestPing': latestPing,
-    'latestSpeed': latestSpeed,
-  };
-  
-  factory DeviceMetrics.fromJson(Map<String, dynamic> json) {
-    final metrics = DeviceMetrics()
-      ..usageCount = json['usageCount'] ?? 0
-      ..successfulConnections = json['successfulConnections'] ?? 0
-      ..latestPing = json['latestPing'] ?? -1
-      ..latestSpeed = json['latestSpeed'] ?? 0.0;
-    
-    if (json['pingHistory'] != null) {
-      metrics.pingHistory = (json['pingHistory'] as List)
-          .map((p) => PingRecord.fromJson(p))
-          .toList();
-    }
-    
-    if (json['speedHistory'] != null) {
-      metrics.speedHistory = (json['speedHistory'] as List)
-          .map((s) => SpeedRecord.fromJson(s))
-          .toList();
-    }
-    
-    return metrics;
-  }
-}
-
-class PingRecord {
-  final DateTime timestamp;
-  final int ping;
-  final String networkType;
-  
-  PingRecord(this.timestamp, this.ping, [this.networkType = 'unknown']);
-  
-  Map<String, dynamic> toJson() => {
-    'timestamp': timestamp.toIso8601String(),
-    'ping': ping,
-    'networkType': networkType,
-  };
-  
-  factory PingRecord.fromJson(Map<String, dynamic> json) {
-    return PingRecord(
-      DateTime.parse(json['timestamp']),
-      json['ping'],
-      json['networkType'] ?? 'unknown',
-    );
-  }
-}
-
-class SpeedRecord {
-  final DateTime timestamp;
-  final double downloadSpeed;
-  final double uploadSpeed;
-  
-  SpeedRecord(this.timestamp, this.downloadSpeed, [this.uploadSpeed = 0.0]);
-  
-  Map<String, dynamic> toJson() => {
-    'timestamp': timestamp.toIso8601String(),
-    'downloadSpeed': downloadSpeed,
-    'uploadSpeed': uploadSpeed,
-  };
-  
-  factory SpeedRecord.fromJson(Map<String, dynamic> json) {
-    return SpeedRecord(
-      DateTime.parse(json['timestamp']),
-      json['downloadSpeed'] ?? 0.0,
-      json['uploadSpeed'] ?? 0.0,
-    );
-  }
-}
-

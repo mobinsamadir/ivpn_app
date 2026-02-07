@@ -18,6 +18,7 @@ import 'log_viewer_screen.dart';
 import '../services/access_manager.dart';
 import '../widgets/ad_dialog.dart';
 import '../widgets/native_ad_banner.dart';
+import '../services/server_tester_service.dart';
 
 class ConnectionHomeScreen extends StatefulWidget {
   const ConnectionHomeScreen({super.key});
