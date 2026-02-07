@@ -1313,31 +1313,62 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
         return;
       }
 
-      if (ClipboardUtils.validateConfig(clipboardText)) {
-        final name = ConfigImporter.extractName(clipboardText);
-        await _configManager.addConfig(clipboardText, name);
-        _showToast('Config imported successfully');
-        setState(() {});
-        await _configManager.refreshAllConfigs();
+      // Show loading indicator while processing
+      _showToast('Processing clipboard content...');
+      
+      // Use the enhanced method that handles both configs and subscription links
+      final configs = await ConfigManager.parseAndFetchConfigs(clipboardText);
+
+      if (configs.isNotEmpty) {
+        int importedCount = 0;
+        for (final config in configs) {
+          try {
+            final name = ConfigImporter.extractName(config, index: importedCount);
+            await _configManager.addConfig(config, name);
+            importedCount++;
+          } catch (e) {
+            AdvancedLogger.error('[HomeScreen] Error adding config: $e');
+            continue;
+          }
+        }
+
+        if (importedCount > 0) {
+          _showToast('$importedCount configs imported successfully');
+          setState(() {});
+          await _configManager.refreshAllConfigs();
+        } else {
+          _showToast('No valid configs found in clipboard content');
+        }
       } else {
-        await _tryParseMultipleConfigs(clipboardText);
+        // If no configs were found via the enhanced method, try the old single config approach
+        if (ClipboardUtils.validateConfig(clipboardText)) {
+          final name = ConfigImporter.extractName(clipboardText);
+          await _configManager.addConfig(clipboardText, name);
+          _showToast('Config imported successfully');
+          setState(() {});
+          await _configManager.refreshAllConfigs();
+        } else {
+          _showToast('No valid configs found in clipboard content');
+        }
       }
     } catch (e) {
-      _showToast('Error reading clipboard: $e');
+      _showToast('Error processing clipboard: $e');
       AdvancedLogger.error('[HomeScreen] Smart Paste Error: $e');
     }
   }
 
   Future<void> _tryParseMultipleConfigs(String text) async {
-    final validConfigs = ConfigManager.parseConfigText(text);
+    // Use the enhanced method that handles both configs and subscription links
+    final configs = await ConfigManager.parseAndFetchConfigs(text);
 
     int importedCount = 0;
-    for (final config in validConfigs) {
+    for (final config in configs) {
       try {
         final name = ConfigImporter.extractName(config, index: importedCount);
         await _configManager.addConfig(config, name);
         importedCount++;
       } catch (e) {
+        AdvancedLogger.error('[HomeScreen] Error adding config in _tryParseMultipleConfigs: $e');
         continue;
       }
     }

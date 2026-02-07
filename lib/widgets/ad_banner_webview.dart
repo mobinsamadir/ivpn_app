@@ -84,11 +84,8 @@ class _WindowsWebViewAdState extends State<WindowsWebViewAd> {
           : await _getDisconnectedAdContent();
 
       try {
-        // Load a neutral URL first to establish a valid origin, then inject content
-        await _controller.loadUrl('https://www.example.com');
-        // Wait a moment for the page to load, then inject the content
-        await Future.delayed(const Duration(milliseconds: 500));
-        await _injectHtmlContent(htmlContent);
+        // Load content directly using loadStringContent to avoid injection issues
+        await _controller.loadStringContent(htmlContent);
       } catch (e) {
         debugPrint('Error reloading Windows WebView: $e');
         if (mounted) setState(() { _showFallback = true; });
@@ -100,7 +97,7 @@ class _WindowsWebViewAdState extends State<WindowsWebViewAd> {
     try {
       await _controller.initialize();
       await _controller.setBackgroundColor(Colors.transparent);
-      
+
       // FIX: Clear cache and Spoof UA to bypass ad blockers
       await _controller.clearCache();
       await _controller.clearCookies();
@@ -118,11 +115,8 @@ class _WindowsWebViewAdState extends State<WindowsWebViewAd> {
         }
       });
 
-      // Load a neutral URL first to establish a valid origin, then inject content
-      await _controller.loadUrl('https://www.example.com');
-      // Wait a moment for the page to load, then inject the content
-      await Future.delayed(const Duration(milliseconds: 500));
-      await _injectHtmlContent(htmlContent);
+      // Load content directly using loadStringContent to avoid injection issues
+      await _controller.loadStringContent(htmlContent);
 
       _controller.loadingState.listen((state) {
         if (state == LoadingState.navigationCompleted && !_webViewLoaded && mounted) {
@@ -151,16 +145,12 @@ class _WindowsWebViewAdState extends State<WindowsWebViewAd> {
   }
 
   // Load fallback content when remote ad fails
-  // Helper method to inject HTML content via JavaScript
-  Future<void> _injectHtmlContent(String htmlContent) async {
+  // Helper method to reload HTML content via loadStringContent
+  Future<void> _reloadHtmlContent(String htmlContent) async {
     try {
-      // Escape the HTML content to be safe inside a JS string
-      final escapedContent = htmlContent.replaceAll(r"'", r"\'").replaceAll('\n', r'\n').replaceAll('\r', r'\r');
-      await _controller.executeScript(
-        "document.body.innerHTML = '$escapedContent'; document.body.style.backgroundColor = 'transparent';"
-      );
+      await _controller.loadStringContent(htmlContent);
     } catch (e) {
-      debugPrint('Error injecting HTML content: $e');
+      debugPrint('Error reloading HTML content: $e');
     }
   }
 
@@ -173,11 +163,7 @@ class _WindowsWebViewAdState extends State<WindowsWebViewAd> {
       // Also try to load the local placeholder content directly
       String fallbackContent = await _getDisconnectedAdContent();
       try {
-        // Load a neutral URL first to establish a valid origin, then inject content
-        await _controller.loadUrl('https://www.example.com');
-        // Wait a moment for the page to load, then inject the content
-        await Future.delayed(const Duration(milliseconds: 500));
-        await _injectHtmlContent(fallbackContent);
+        await _controller.loadStringContent(fallbackContent);
       } catch (e) {
         debugPrint('Error loading fallback content: $e');
       }
@@ -362,11 +348,7 @@ class _WindowsWebViewAdState extends State<WindowsWebViewAd> {
     String adContent = await _getEffectiveGateAdContent();
 
     try {
-      // Load a neutral URL first to establish a valid origin, then inject content
-      await _controller.loadUrl('https://www.example.com');
-      // Wait a moment for the page to load, then inject the content
-      await Future.delayed(const Duration(milliseconds: 500));
-      await _injectHtmlContent(adContent);
+      await _controller.loadStringContent(adContent);
       setState(() {
         _showFallback = false;
         _webViewLoaded = true;

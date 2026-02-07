@@ -830,6 +830,46 @@ class ConfigManager extends ChangeNotifier {
         : regexMatches.where((config) => ClipboardUtils.validateConfig(config)).toList();
   }
 
+  // Enhanced async method to parse configs and fetch from subscription links
+  static Future<List<String>> parseAndFetchConfigs(String text) async {
+    final allConfigs = <String>{};
+
+    // Step 1: Extract direct configs using existing logic
+    final directConfigs = parseConfigText(text);
+    allConfigs.addAll(directConfigs);
+
+    // Step 2: Extract subscription links
+    final subLinkRegex = RegExp(r"https?://[^\s\"'<>\n\r`{}|\[\]]+", caseSensitive: false);
+    final subLinks = subLinkRegex.allMatches(text)
+        .map((match) => match.group(0)!)
+        .where((link) => !directConfigs.any((config) => config.contains(Uri.parse(link).host)))
+        .toSet();
+
+    // Step 3: Fetch configs from each subscription link
+    for (final link in subLinks) {
+      try {
+        AdvancedLogger.info('[ConfigManager] Attempting to fetch configs from subscription link: $link');
+        
+        final response = await http.get(Uri.parse(link));
+        if (response.statusCode == 200) {
+          final responseBody = utf8.decode(response.bodyBytes); // Handle encoding properly
+          final fetchedConfigs = parseConfigText(responseBody);
+          
+          AdvancedLogger.info('[ConfigManager] Fetched ${fetchedConfigs.length} configs from $link');
+          
+          // Add fetched configs to the main list
+          allConfigs.addAll(fetchedConfigs);
+        } else {
+          AdvancedLogger.warn('[ConfigManager] Failed to fetch from $link, status: ${response.statusCode}');
+        }
+      } catch (e) {
+        AdvancedLogger.error('[ConfigManager] Error fetching subscription from $link: $e');
+      }
+    }
+
+    return allConfigs.toList();
+  }
+
   // Method to properly disconnect VPN
   Future<void> disconnectVpn() async {
     // In a real implementation, this would call the actual VPN service
