@@ -903,7 +903,7 @@ class ConfigManager extends ChangeNotifier {
 
     // 3. Extract Subscription Links (http/https) and process them recursively
     final linkRegex = RegExp(
-      r'https?:\/\/[^\s"\'<>\n\r`{}|\[\]]+',
+      r'''https?:\/\/[^\s"\'<>\n\r`{}|\[\]]+''',
       caseSensitive: false,
     );
     
