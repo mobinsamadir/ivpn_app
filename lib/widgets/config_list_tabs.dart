@@ -80,7 +80,7 @@ class _ConfigListTabsState extends State<ConfigListTabs>
 
     if (confirm == true && mounted) {
       // Call the delete all configs method
-      await _configManager.deleteAllConfigs();
+      await _configManager.clearAllData();
       setState(() {}); // Refresh the UI
     }
   }
@@ -521,7 +521,7 @@ class _ConfigListTabsState extends State<ConfigListTabs>
                       onPressed: () async {
                         final confirm = await _showDeleteConfirmationDialog(config);
                         if (confirm && mounted) {
-                          final success = await _configManager.deleteConfigSecure(config.id);
+                          final success = await _configManager.deleteConfig(config.id);
                           if (success) {
                             setState(() {
                               // The config will be removed from the list automatically

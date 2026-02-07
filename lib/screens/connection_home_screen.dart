@@ -125,7 +125,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     }
 
     // Check if current ping is high
-    if (_configManager.isCurrentPingHigh()) {
+    if (_configManager.selectedConfig != null && _configManager.selectedConfig!.currentPing > 2000) {
       _highPingCounter++;
       AdvancedLogger.info('[ConnectionHomeScreen] High ping detected. Counter: $_highPingCounter');
 
@@ -1743,7 +1743,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
         }
 
         // Find next best server
-        final nextBest = _configManager.findBestServer();
+        final nextBest = _configManager.getBestConfig();
         if (nextBest != null && nextBest.id != currentConfig.id) {
           _showToast('Connection to ${currentConfig.name} failed. Trying ${nextBest.name}...');
           currentConfig = nextBest;
@@ -2091,7 +2091,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     _showToast('Refreshing configs from GitHub...');
 
     try {
-      final stats = await _configManager.downloadConfigsFromGitHub();
+      final stats = await _configManager.fetchStartupConfigs();
       final added = stats['added'] ?? 0;
       final skipped = stats['skipped'] ?? 0;
       final total = stats['total'] ?? 0;
