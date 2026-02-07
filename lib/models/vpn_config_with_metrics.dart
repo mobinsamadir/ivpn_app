@@ -91,6 +91,46 @@ class VpnConfigWithMetrics {
     return 0.0; // Placeholder to fix build
   }
 
+  // NEW: Update metrics for a specific device
+  VpnConfigWithMetrics updateMetrics({
+    required String deviceId,
+    int? ping,
+    double? speed,
+    bool connectionSuccess = false,
+  }) {
+    final currentMetrics = deviceMetrics[deviceId] ?? 
+        DeviceMetrics(
+          latestPing: -1, 
+          latestSpeed: 0.0, 
+          lastUpdated: DateTime.now(),
+          usageCount: 0,
+        );
+    
+    final updatedMetrics = DeviceMetrics(
+      latestPing: ping ?? currentMetrics.latestPing,
+      latestSpeed: speed ?? currentMetrics.latestSpeed,
+      lastUpdated: DateTime.now(),
+      usageCount: currentMetrics.usageCount + (connectionSuccess ? 1 : 0),
+    );
+
+    final newDeviceMetrics = Map<String, DeviceMetrics>.from(deviceMetrics);
+    newDeviceMetrics[deviceId] = updatedMetrics;
+
+    return copyWith(deviceMetrics: newDeviceMetrics);
+  }
+
+  // NEW: Check if config is validated
+  bool get isValidated {
+    // Logic: A config is validated if it has successful connection history OR recent low ping
+    return (currentPing > 0 && currentPing < 2000) || lastSuccessfulConnectionTime > 0;
+  }
+
+  // NEW: Check if config is eligible for auto-test
+  bool get isEligibleForAutoTest {
+    // Logic: Not failed recently, or verified alive
+    return isAlive && failureCount < 5;
+  }
+
   VpnConfigWithMetrics copyWith({
     String? id,
     String? rawConfig,

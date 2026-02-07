@@ -536,7 +536,13 @@ class ConfigManager extends ChangeNotifier {
       return;
     }
 
-    allConfigs[index].isFavorite = !allConfigs[index].isFavorite;
+    // Create a new instance with the updated favorite status
+    final updatedConfig = allConfigs[index].copyWith(
+      isFavorite: !allConfigs[index].isFavorite,
+    );
+    
+    // Replace the config in the list
+    allConfigs[index] = updatedConfig;
 
     _updateLists();
     await _saveAllConfigs();
