@@ -932,7 +932,7 @@ class ConfigManager extends ChangeNotifier {
       AdvancedLogger.info('[ConfigManager] Fetching startup configs from GitHub...');
       
       final response = await http.get(
-        Uri.parse('https://raw.githubusercontent.com/mobinsamadir/ivpn-servers/main/servers.txt')
+        Uri.parse('https://raw.githubusercontent.com/mobinsamadir/ivpn_app/main/servers.txt')
       );
       
       if (response.statusCode == 200) {

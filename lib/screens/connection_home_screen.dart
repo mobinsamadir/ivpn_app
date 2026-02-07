@@ -1324,7 +1324,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
       final configs = await ConfigManager.parseAndFetchConfigs(clipboardText);
 
       if (configs.isNotEmpty) {
-        // Use the new addConfigs method that returns the count of added configs
+        // Count added configs
         int importedCount = 0;
         for (final config in configs) {
           try {
