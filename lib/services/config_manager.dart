@@ -513,7 +513,7 @@ class ConfigManager extends ChangeNotifier {
       deviceId: _currentDeviceId,
       ping: ping,
       speed: speed,
-      connectionSuccess: connectionSuccess,
+      connectionSuccess: connectionSuccess ?? false,
     );
 
     _updateLists();
