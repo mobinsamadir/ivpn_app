@@ -1029,14 +1029,6 @@ class ConfigManager extends ChangeNotifier {
     }
   }
 
-  // Helper method to check if response is HTML
-  bool _isHtmlResponse(String body) {
-    final trimmedBody = body.trim();
-    return trimmedBody.startsWith('<!DOCTYPE html') || 
-           trimmedBody.startsWith('<html') || 
-           trimmedBody.contains('<head') || 
-           trimmedBody.contains('<body');
-  }
 
   // Helper: Simple check for valid config schemes
   static bool _isValidConfigScheme(String text) {
