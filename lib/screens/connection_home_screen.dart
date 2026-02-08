@@ -125,7 +125,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     }
 
     // Check if current ping is high
-    if (_configManager.selectedConfig != null && _configManager.selectedConfig!.currentPing > 2000) {
+    // Increased threshold to 3000ms to prevent loop
+    if (_configManager.selectedConfig != null && _configManager.selectedConfig!.currentPing > 3000) {
       _highPingCounter++;
       AdvancedLogger.info('[ConnectionHomeScreen] High ping detected. Counter: $_highPingCounter');
 

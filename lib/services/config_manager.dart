@@ -66,7 +66,6 @@ class ConfigManager extends ChangeNotifier {
     fetchStartupConfigs(); 
   }
 
-  // --- DOWNLOAD LOGIC (FIXED: Direct GitHub, Smart Parser) ---
   Future<void> fetchStartupConfigs() async {
     if (_isRefreshing) return;
     _isRefreshing = true;
@@ -75,13 +74,10 @@ class ConfigManager extends ChangeNotifier {
     try {
       AdvancedLogger.info('[ConfigManager] Downloading configs...');
       
-      // Mirrors List (Priority: Google Drive -> Fallbacks)
+      // MIRRORS: Priority 1 is Google Drive Direct Link
       final mirrors = [
-        // Primary: Google Drive Direct Link (Converted from view link)
-        'https://drive.google.com/uc?export=download&id=1S7CI5xq4bbnERZ1i1eGuYn5bhluh2LaW',
-        
-        // Fallback: Fastly CDN
-        'https://fastly.jsdelivr.net/gh/mobinsamadir/ivpn-servers@main/servers.txt',
+        'https://drive.google.com/uc?export=download&id=1S7CI5xq4bbnERZ1i1eGuYn5bhluh2LaW', // Primary
+        'https://fastly.jsdelivr.net/gh/mobinsamadir/ivpn-servers@main/servers.txt', // Backup
       ];
 
       String content = '';
@@ -89,72 +85,41 @@ class ConfigManager extends ChangeNotifier {
 
       for (final url in mirrors) {
         if (downloadSuccess) break;
-        
-        // Define variable outside try block to be accessible in catch
-        String requestUrl = url;
-        // Add cache-busting parameter for non-Google Drive URLs
-        if (!url.contains('drive.google.com')) {
-          requestUrl = '$url?t=${DateTime.now().millisecondsSinceEpoch}';
-        }
-        
         try {
           AdvancedLogger.info('[ConfigManager] Trying mirror: $url');
+          // 60s timeout for slow networks
+          final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 60));
           
-          // Retry up to 3 times for each mirror
-          int attempts = 0;
-          const maxAttempts = 3;
-          
-          while (attempts < maxAttempts && !downloadSuccess) {
-            attempts++;
-            
-            try {
-              AdvancedLogger.info('[ConfigManager] Attempt $attempts for $requestUrl');
-              final response = await http.get(Uri.parse(requestUrl)).timeout(const Duration(seconds: 60));
-              
-              if (response.statusCode == 200) {
-                // Check for HTML junk (Proxy block pages or standard Drive view page)
-                if (_isHtmlResponse(response.body)) {
-                   AdvancedLogger.warn('[ConfigManager] Mirror returned HTML (Blocked/Wrong Link): $requestUrl');
-                } else {
-                   content = response.body;
-                   downloadSuccess = true;
-                   AdvancedLogger.info('✅ Downloaded ${content.length} bytes from $requestUrl');
-                   break; // Success, exit the retry loop
-                }
-              } else {
-                 AdvancedLogger.warn('[ConfigManager] HTTP error ${response.statusCode} from $requestUrl (Attempt $attempts)');
-              }
-            } catch (e) {
-              AdvancedLogger.warn('[ConfigManager] Failed to fetch from $requestUrl (Attempt $attempts): $e');
-              if (attempts >= maxAttempts) {
-                AdvancedLogger.warn('[ConfigManager] Mirror $requestUrl exhausted after $maxAttempts attempts');
-              }
+          if (response.statusCode == 200) {
+            if (_isHtmlResponse(response.body)) {
+               AdvancedLogger.warn('[ConfigManager] Mirror returned HTML (Blocked): $url');
+            } else {
+               content = response.body;
+               downloadSuccess = true;
+               AdvancedLogger.info('✅ Downloaded ${content.length} bytes from $url');
             }
           }
         } catch (e) {
-          AdvancedLogger.warn('[ConfigManager] Mirror $url failed: $e');
+          AdvancedLogger.warn('[ConfigManager] Failed to fetch from $url: $e');
         }
       }
 
       if (downloadSuccess) {
-        // 1. Parse content
+        // 1. Smart Parse
         final configUrls = await parseMixedContent(content);
         
         if (configUrls.isNotEmpty) {
-           // 2. SANITIZE: Remove "spider_x" field to prevent core crash
-           // This regex removes "spider_x": "...", or "spider_x": ...,
-           final sanitizedConfigs = configUrls.map((c) {
+           // 2. SANITIZE: Remove "spider_x" to prevent core crash
+           final cleanedConfigs = configUrls.map((c) {
              return c.replaceAll(RegExp(r'"spider_x":\s*("[^"]*"|[^,{}]+),?'), '');
            }).toList();
            
            // 3. Add to list
-           int added = await addConfigs(sanitizedConfigs);
+           int added = await addConfigs(cleanedConfigs);
            AdvancedLogger.info('[ConfigManager] Import finished: Added $added new configs.');
         } else {
            AdvancedLogger.warn('[ConfigManager] No valid configs found in downloaded content.');
         }
-      } else {
-         AdvancedLogger.error('[ConfigManager] All mirrors failed to download configs.');
       }
     } catch (e) {
        AdvancedLogger.error('[ConfigManager] Critical error in fetchStartupConfigs: $e');
@@ -214,22 +179,27 @@ class ConfigManager extends ChangeNotifier {
   // --- CORE METHODS ---
   Future<int> addConfigs(List<String> configStrings) async {
     int addedCount = 0;
+    
+    // Create a set of existing configs for faster lookup
+    final existingConfigs = allConfigs.map((c) => c.rawConfig.trim()).toSet();
+    
     for (final raw in configStrings) {
       final trimmedRaw = raw.trim();
-      if (allConfigs.any((c) => c.rawConfig.trim() == trimmedRaw)) continue;
-      
+      if (existingConfigs.contains(trimmedRaw)) continue;
+
       final name = _extractServerName(trimmedRaw);
       final id = 'config_${DateTime.now().millisecondsSinceEpoch}_$addedCount';
-      
+
       allConfigs.add(VpnConfigWithMetrics(
         id: id,
         rawConfig: trimmedRaw,
         name: name,
         countryCode: _extractCountryCode(name),
       ));
+      existingConfigs.add(trimmedRaw); // Add to set to prevent duplicates in same batch
       addedCount++;
     }
-    
+
     if (addedCount > 0) {
       _updateLists();
       await _saveAllConfigs();
