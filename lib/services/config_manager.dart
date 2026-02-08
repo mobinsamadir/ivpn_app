@@ -89,6 +89,14 @@ class ConfigManager extends ChangeNotifier {
 
       for (final url in mirrors) {
         if (downloadSuccess) break;
+        
+        // Define variable outside try block to be accessible in catch
+        String requestUrl = url;
+        // Add cache-busting parameter for non-Google Drive URLs
+        if (!url.contains('drive.google.com')) {
+          requestUrl = '$url?t=${DateTime.now().millisecondsSinceEpoch}';
+        }
+        
         try {
           AdvancedLogger.info('[ConfigManager] Trying mirror: $url');
           
@@ -100,12 +108,6 @@ class ConfigManager extends ChangeNotifier {
             attempts++;
             
             try {
-              String requestUrl = url;
-              // Add cache-busting parameter for non-Google Drive URLs
-              if (!url.contains('drive.google.com')) {
-                requestUrl = '$url?t=${DateTime.now().millisecondsSinceEpoch}';
-              }
-              
               AdvancedLogger.info('[ConfigManager] Attempt $attempts for $requestUrl');
               final response = await http.get(Uri.parse(requestUrl)).timeout(const Duration(seconds: 60));
               
