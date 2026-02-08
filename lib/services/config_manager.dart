@@ -73,39 +73,61 @@ class ConfigManager extends ChangeNotifier {
     notifyListeners();
 
     try {
-      AdvancedLogger.info('[ConfigManager] Downloading configs from GitHub...');
+      AdvancedLogger.info('[ConfigManager] Downloading configs...');
       
+      // Mirrors List (Priority: Google Drive -> Fallbacks)
+      final mirrors = [
+        // Primary: Google Drive Direct Link (Converted from view link)
+        'https://drive.google.com/uc?export=download&id=1S7CI5xq4bbnERZ1i1eGuYn5bhluh2LaW',
+        
+        // Fallback: Fastly CDN
+        'https://fastly.jsdelivr.net/gh/mobinsamadir/ivpn-servers@main/servers.txt',
+      ];
+
       String content = '';
       bool downloadSuccess = false;
 
-      // List of mirrors to try in sequence
-      final mirrors = [
-        'https://raw.githubusercontent.com/mobinsamadir/ivpn-servers/main/servers.txt',
-        'https://fastly.jsdelivr.net/gh/mobinsamadir/ivpn-servers@main/servers.txt',
-        'https://cdn.jsdelivr.net/gh/mobinsamadir/ivpn-servers@main/servers.txt',
-        'https://raw.gitmirror.com/mobinsamadir/ivpn-servers/main/servers.txt',
-        'https://ghproxy.com/https://raw.githubusercontent.com/mobinsamadir/ivpn-servers/main/servers.txt',
-      ];
-
-      // Try each mirror in sequence
-      for (int i = 0; i < mirrors.length && !downloadSuccess; i++) {
-        final url = mirrors[i];
-        AdvancedLogger.info('[ConfigManager] Trying mirror ${i + 1}/${mirrors.length}: $url');
-
+      for (final url in mirrors) {
+        if (downloadSuccess) break;
         try {
-          final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 30));
-
-          if (response.statusCode == 200) {
-             if (_isHtmlResponse(response.body)) {
-               AdvancedLogger.warn('[ConfigManager] Mirror $url returned HTML (Proxy/Firewall issue)');
-             } else {
-               content = response.body;
-               downloadSuccess = true;
-               AdvancedLogger.info('📥 Downloaded ${content.length} bytes from Mirror $url');
-               break; // Success, exit the loop
-             }
-          } else {
-             AdvancedLogger.warn('[ConfigManager] Mirror $url returned HTTP ${response.statusCode}');
+          AdvancedLogger.info('[ConfigManager] Trying mirror: $url');
+          
+          // Retry up to 3 times for each mirror
+          int attempts = 0;
+          const maxAttempts = 3;
+          
+          while (attempts < maxAttempts && !downloadSuccess) {
+            attempts++;
+            
+            try {
+              String requestUrl = url;
+              // Add cache-busting parameter for non-Google Drive URLs
+              if (!url.contains('drive.google.com')) {
+                requestUrl = '$url?t=${DateTime.now().millisecondsSinceEpoch}';
+              }
+              
+              AdvancedLogger.info('[ConfigManager] Attempt $attempts for $requestUrl');
+              final response = await http.get(Uri.parse(requestUrl)).timeout(const Duration(seconds: 60));
+              
+              if (response.statusCode == 200) {
+                // Check for HTML junk (Proxy block pages or standard Drive view page)
+                if (_isHtmlResponse(response.body)) {
+                   AdvancedLogger.warn('[ConfigManager] Mirror returned HTML (Blocked/Wrong Link): $requestUrl');
+                } else {
+                   content = response.body;
+                   downloadSuccess = true;
+                   AdvancedLogger.info('✅ Downloaded ${content.length} bytes from $requestUrl');
+                   break; // Success, exit the retry loop
+                }
+              } else {
+                 AdvancedLogger.warn('[ConfigManager] HTTP error ${response.statusCode} from $requestUrl (Attempt $attempts)');
+              }
+            } catch (e) {
+              AdvancedLogger.warn('[ConfigManager] Failed to fetch from $requestUrl (Attempt $attempts): $e');
+              if (attempts >= maxAttempts) {
+                AdvancedLogger.warn('[ConfigManager] Mirror $requestUrl exhausted after $maxAttempts attempts');
+              }
+            }
           }
         } catch (e) {
           AdvancedLogger.warn('[ConfigManager] Mirror $url failed: $e');
@@ -113,20 +135,27 @@ class ConfigManager extends ChangeNotifier {
       }
 
       if (downloadSuccess) {
-        // Use Smart Parser
+        // 1. Parse content
         final configUrls = await parseMixedContent(content);
         
         if (configUrls.isNotEmpty) {
-           int added = await addConfigs(configUrls);
-           AdvancedLogger.info('[ConfigManager] Import finished: Added $added new configs from remote.');
+           // 2. SANITIZE: Remove "spider_x" field to prevent core crash
+           // This regex removes "spider_x": "...", or "spider_x": ...,
+           final sanitizedConfigs = configUrls.map((c) {
+             return c.replaceAll(RegExp(r'"spider_x":\s*("[^"]*"|[^,{}]+),?'), '');
+           }).toList();
+           
+           // 3. Add to list
+           int added = await addConfigs(sanitizedConfigs);
+           AdvancedLogger.info('[ConfigManager] Import finished: Added $added new configs.');
         } else {
-           AdvancedLogger.warn('[ConfigManager] Content downloaded but no valid configs found via Smart Parser.');
+           AdvancedLogger.warn('[ConfigManager] No valid configs found in downloaded content.');
         }
       } else {
-         AdvancedLogger.error('[ConfigManager] Failed to download configs from any source.');
+         AdvancedLogger.error('[ConfigManager] All mirrors failed to download configs.');
       }
     } catch (e) {
-       AdvancedLogger.error('[ConfigManager] Unexpected error in fetchStartupConfigs: $e');
+       AdvancedLogger.error('[ConfigManager] Critical error in fetchStartupConfigs: $e');
     } finally {
       _isRefreshing = false;
       notifyListeners();
