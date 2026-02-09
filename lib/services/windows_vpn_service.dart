@@ -21,122 +21,123 @@ class WindowsVpnService {
   Stream<String> get statusStream => _statusController.stream;
 
   Future<String> getExecutablePath() async {
-    // Check in the current directory
-    final localPath = p.join(Directory.current.path, 'assets', 'executables', 'windows', 'sing-box.exe');
-    debugPrint('Checking for Sing-box at local path: $localPath');
-    if (File(localPath).existsSync()) {
-      debugPrint('Found Sing-box at local path: $localPath');
-      return localPath;
+    // 1. Check in the current directory
+    try {
+      final localPath = p.join(Directory.current.path, 'assets', 'executables', 'windows', 'sing-box.exe');
+      AdvancedLogger.debug('Checking for Sing-box at local path: $localPath');
+      if (await File(localPath).exists()) {
+        AdvancedLogger.info('Found Sing-box at local path: $localPath');
+        return localPath;
+      }
+    } catch (e) {
+      AdvancedLogger.warn('Error checking local path: $e');
     }
 
-    // Check in the app's installation directory (for release builds)
-    final exeDir = p.dirname(Platform.resolvedExecutable);
-    final bundledPath = p.join(exeDir, 'data', 'flutter_assets', 'assets', 'executables', 'windows', 'sing-box.exe');
-    debugPrint('Checking for Sing-box at bundled path: $bundledPath');
-    if (File(bundledPath).existsSync()) {
-      debugPrint('Found Sing-box at bundled path: $bundledPath');
-      return bundledPath;
+    String exeDir;
+    try {
+      exeDir = p.dirname(Platform.resolvedExecutable);
+    } catch (e) {
+      AdvancedLogger.error('Failed to resolve executable directory: $e');
+      throw Exception('Failed to resolve executable directory: $e');
     }
 
-    // Check in the parent directory of the executable (alternative location for release builds)
-    final altPath = p.join(exeDir, 'assets', 'executables', 'windows', 'sing-box.exe');
-    debugPrint('Checking for Sing-box at alternative path: $altPath');
-    if (File(altPath).existsSync()) {
-      debugPrint('Found Sing-box at alternative path: $altPath');
-      return altPath;
+    // 2. Check in the app's installation directory (for release builds)
+    try {
+      final bundledPath = p.join(exeDir, 'data', 'flutter_assets', 'assets', 'executables', 'windows', 'sing-box.exe');
+      AdvancedLogger.debug('Checking for Sing-box at bundled path: $bundledPath');
+      if (await File(bundledPath).exists()) {
+        AdvancedLogger.info('Found Sing-box at bundled path: $bundledPath');
+        return bundledPath;
+      }
+    } catch (e) {
+       AdvancedLogger.warn('Error checking bundled path: $e');
     }
 
-    // Check in the Resources directory (common for packaged apps)
-    final resourcesPath = p.join(exeDir, 'Resources', 'assets', 'executables', 'windows', 'sing-box.exe');
-    debugPrint('Checking for Sing-box at resources path: $resourcesPath');
-    if (File(resourcesPath).existsSync()) {
-      debugPrint('Found Sing-box at resources path: $resourcesPath');
-      return resourcesPath;
+    // 3. Check in the parent directory of the executable
+    try {
+      final altPath = p.join(exeDir, 'assets', 'executables', 'windows', 'sing-box.exe');
+      AdvancedLogger.debug('Checking for Sing-box at alternative path: $altPath');
+      if (await File(altPath).exists()) {
+        AdvancedLogger.info('Found Sing-box at alternative path: $altPath');
+        return altPath;
+      }
+    } catch (e) {
+       AdvancedLogger.warn('Error checking alt path: $e');
     }
 
-    // CRITICAL: Add a fallback check for development mode
-    final projectRootPath = p.join(Directory.current.path, 'assets', 'executables', 'windows', 'sing-box.exe');
-    debugPrint('Checking for Sing-box at project root path (development): $projectRootPath');
-    if (File(projectRootPath).existsSync()) {
-      debugPrint('Found Sing-box at project root path: $projectRootPath');
-      return projectRootPath;
+    // 4. Check in the Resources directory
+    try {
+      final resourcesPath = p.join(exeDir, 'Resources', 'assets', 'executables', 'windows', 'sing-box.exe');
+      AdvancedLogger.debug('Checking for Sing-box at resources path: $resourcesPath');
+      if (await File(resourcesPath).exists()) {
+        AdvancedLogger.info('Found Sing-box at resources path: $resourcesPath');
+        return resourcesPath;
+      }
+    } catch (e) {
+       AdvancedLogger.warn('Error checking resources path: $e');
     }
 
-    throw Exception("Sing-box executable not found. Checked:\n- $localPath\n- $bundledPath\n- $altPath\n- $resourcesPath\n- $projectRootPath");
+    // 5. CRITICAL: Add a fallback check for development mode (Project Root)
+    try {
+       // This assumes we are running from the project root in dev mode
+       final projectRootPath = p.join(Directory.current.path, 'assets', 'executables', 'windows', 'sing-box.exe');
+       AdvancedLogger.debug('Checking for Sing-box at project root path: $projectRootPath');
+       if (await File(projectRootPath).exists()) {
+         AdvancedLogger.info('Found Sing-box at project root path: $projectRootPath');
+         return projectRootPath;
+       }
+    } catch (e) {
+       AdvancedLogger.warn('Error checking project root path: $e');
+    }
+
+    throw Exception("Sing-box executable not found in any expected location.");
   }
 
   Future<String> getGeoIpPath() async {
-    // Check in the current directory
-    final localPath = p.join(Directory.current.path, 'assets', 'executables', 'windows', 'geoip.db');
-    debugPrint('Checking for geoip.db at local path: $localPath');
-    if (File(localPath).existsSync()) {
-      debugPrint('Found geoip.db at local path: $localPath');
-      return localPath;
-    }
-
-    // Check in the app's installation directory (for release builds)
-    final exeDir = p.dirname(Platform.resolvedExecutable);
-    final bundledPath = p.join(exeDir, 'data', 'flutter_assets', 'assets', 'executables', 'windows', 'geoip.db');
-    debugPrint('Checking for geoip.db at bundled path: $bundledPath');
-    if (File(bundledPath).existsSync()) {
-      debugPrint('Found geoip.db at bundled path: $bundledPath');
-      return bundledPath;
-    }
-
-    // Check in the parent directory of the executable (alternative location for release builds)
-    final altPath = p.join(exeDir, 'assets', 'executables', 'windows', 'geoip.db');
-    debugPrint('Checking for geoip.db at alternative path: $altPath');
-    if (File(altPath).existsSync()) {
-      debugPrint('Found geoip.db at alternative path: $altPath');
-      return altPath;
-    }
-
-    // Check in the Resources directory (common for packaged apps)
-    final resourcesPath = p.join(exeDir, 'Resources', 'assets', 'executables', 'windows', 'geoip.db');
-    debugPrint('Checking for geoip.db at resources path: $resourcesPath');
-    if (File(resourcesPath).existsSync()) {
-      debugPrint('Found geoip.db at resources path: $resourcesPath');
-      return resourcesPath;
-    }
-
-    throw Exception("geoip.db not found. Checked:\n- $localPath\n- $bundledPath\n- $altPath\n- $resourcesPath");
+     return _findAsset('geoip.db');
   }
 
   Future<String> getGeoSitePath() async {
-    // Check in the current directory
-    final localPath = p.join(Directory.current.path, 'assets', 'executables', 'windows', 'geosite.db');
-    debugPrint('Checking for geosite.db at local path: $localPath');
-    if (File(localPath).existsSync()) {
-      debugPrint('Found geosite.db at local path: $localPath');
-      return localPath;
+     return _findAsset('geosite.db');
+  }
+
+  Future<String> _findAsset(String filename) async {
+    // 1. Local path
+    try {
+      final localPath = p.join(Directory.current.path, 'assets', 'executables', 'windows', filename);
+      AdvancedLogger.debug('Checking for $filename at local path: $localPath');
+      if (await File(localPath).exists()) return localPath;
+    } catch (_) {}
+
+    String exeDir;
+    try {
+      exeDir = p.dirname(Platform.resolvedExecutable);
+    } catch (e) {
+      throw Exception('Failed to resolve executable directory: $e');
     }
 
-    // Check in the app's installation directory (for release builds)
-    final exeDir = p.dirname(Platform.resolvedExecutable);
-    final bundledPath = p.join(exeDir, 'data', 'flutter_assets', 'assets', 'executables', 'windows', 'geosite.db');
-    debugPrint('Checking for geosite.db at bundled path: $bundledPath');
-    if (File(bundledPath).existsSync()) {
-      debugPrint('Found geosite.db at bundled path: $bundledPath');
-      return bundledPath;
-    }
+    // 2. Bundled path
+    try {
+      final bundledPath = p.join(exeDir, 'data', 'flutter_assets', 'assets', 'executables', 'windows', filename);
+      AdvancedLogger.debug('Checking for $filename at bundled path: $bundledPath');
+      if (await File(bundledPath).exists()) return bundledPath;
+    } catch (_) {}
 
-    // Check in the parent directory of the executable (alternative location for release builds)
-    final altPath = p.join(exeDir, 'assets', 'executables', 'windows', 'geosite.db');
-    debugPrint('Checking for geosite.db at alternative path: $altPath');
-    if (File(altPath).existsSync()) {
-      debugPrint('Found geosite.db at alternative path: $altPath');
-      return altPath;
-    }
+    // 3. Alt path
+    try {
+      final altPath = p.join(exeDir, 'assets', 'executables', 'windows', filename);
+      AdvancedLogger.debug('Checking for $filename at alternative path: $altPath');
+      if (await File(altPath).exists()) return altPath;
+    } catch (_) {}
 
-    // Check in the Resources directory (common for packaged apps)
-    final resourcesPath = p.join(exeDir, 'Resources', 'assets', 'executables', 'windows', 'geosite.db');
-    debugPrint('Checking for geosite.db at resources path: $resourcesPath');
-    if (File(resourcesPath).existsSync()) {
-      debugPrint('Found geosite.db at resources path: $resourcesPath');
-      return resourcesPath;
-    }
+    // 4. Resources path
+    try {
+      final resourcesPath = p.join(exeDir, 'Resources', 'assets', 'executables', 'windows', filename);
+      AdvancedLogger.debug('Checking for $filename at resources path: $resourcesPath');
+      if (await File(resourcesPath).exists()) return resourcesPath;
+    } catch (_) {}
 
-    throw Exception("geosite.db not found. Checked:\n- $localPath\n- $bundledPath\n- $altPath\n- $resourcesPath");
+    throw Exception("$filename not found in any expected location.");
   }
 
   Future<bool> checkRequiredAssets() async {
@@ -146,7 +147,7 @@ class WindowsVpnService {
       await getGeoSitePath();
       return true;
     } catch (e) {
-      debugPrint('Missing required assets: $e');
+      AdvancedLogger.error('Missing required assets: $e');
       return false;
     }
   }
@@ -437,4 +438,3 @@ class WindowsVpnService {
     AdvancedLogger.info('[WindowsVpnService] VPN stopped, status set to DISCONNECTED');
   }
 }
-

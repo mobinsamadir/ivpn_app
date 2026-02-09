@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -22,7 +23,11 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _initialize();
+    // Use addPostFrameCallback to ensure build context is ready if needed,
+    // though initState is safe for starting async work.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initialize();
+    });
   }
 
   Future<void> _initialize() async {
@@ -34,17 +39,39 @@ class _SplashScreenState extends State<SplashScreen> {
 
     try {
       // 1. Initialize Loggers (Critical for debugging, idempotent)
-      // We do this first so any subsequent errors are logged properly.
-      await AdvancedLogger.init();
-      await FileLogger.init();
-      AdvancedLogger.info('🚀 [Splash] Initialization started');
+      // We wrap this in a try-catch and timeout because if logging fails,
+      // the app should still try to run.
+      try {
+        await AdvancedLogger.init().timeout(const Duration(seconds: 2));
+        await FileLogger.init().timeout(const Duration(seconds: 2));
+        AdvancedLogger.info('🚀 [Splash] Initialization started');
+      } catch (e) {
+        debugPrint("Logger initialization failed or timed out: $e");
+        // Continue anyway
+      }
 
       // 2. Asset Check (Critical for VPN functionality)
       // On Windows, we verify sing-box.exe and databases are accessible.
       if (Platform.isWindows) {
         AdvancedLogger.info('[Splash] Checking required assets...');
         final windowsService = WindowsVpnService();
-        final assetsExist = await windowsService.checkRequiredAssets();
+
+        bool assetsExist = false;
+        try {
+           assetsExist = await windowsService.checkRequiredAssets().timeout(
+             const Duration(seconds: 5),
+             onTimeout: () {
+               AdvancedLogger.warn('[Splash] Asset check timed out');
+               throw TimeoutException('Asset check timed out');
+             }
+           );
+        } catch (e) {
+           AdvancedLogger.error('[Splash] Asset check failed', error: e);
+           // If asset check fails, we might still want to let the user in,
+           // but they won't be able to connect.
+           // Better to show error here.
+           rethrow;
+        }
 
         if (!assetsExist) {
           throw Exception(
@@ -57,12 +84,20 @@ class _SplashScreenState extends State<SplashScreen> {
 
       // 3. Initialize Storage & ConfigManager
       AdvancedLogger.info('[Splash] Loading preferences & configs...');
-      final prefs = await SharedPreferences.getInstance();
+      final prefs = await SharedPreferences.getInstance().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () => throw TimeoutException('SharedPreferences init timed out'),
+      );
       final storageService = StorageService(prefs: prefs);
 
       // Initialize ConfigManager with local data first (fast)
       // fetchRemote: false prevents blocking on network
-      await ConfigManager().init(fetchRemote: false);
+      await ConfigManager().init(fetchRemote: false).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          AdvancedLogger.warn('[Splash] ConfigManager init timed out, skipping');
+        }
+      );
 
       // 4. Trigger Background Fetch (Non-blocking)
       // We don't await this; it updates the ConfigManager state asynchronously.
@@ -73,11 +108,19 @@ class _SplashScreenState extends State<SplashScreen> {
 
       // 5. Complete Initialization
       AdvancedLogger.info('[Splash] Initialization complete, navigating to Home');
+
+      // Artificial delay to prevent flicker if everything was too fast?
+      // No, fast is good.
+
       if (mounted) {
         widget.onInitializationComplete(storageService);
       }
     } catch (e, stackTrace) {
-      AdvancedLogger.error('[Splash] Initialization failed', error: e, stackTrace: stackTrace);
+      debugPrint("SPLASH INITIALIZATION ERROR: $e");
+      try {
+        AdvancedLogger.error('[Splash] Initialization failed', error: e, stackTrace: stackTrace);
+      } catch (_) {}
+
       if (mounted) {
         setState(() {
           _errorMessage = e.toString();

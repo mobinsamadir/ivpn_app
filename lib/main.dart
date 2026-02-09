@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
@@ -10,26 +11,65 @@ import 'providers/home_provider.dart';
 import 'screens/connection_home_screen.dart';
 import 'screens/splash_screen.dart';
 import 'services/background_ad_service.dart';
+import 'screens/emergency_screen.dart';
 
 void main() {
-  // Minimize work in main() to prevent launch timeouts (Grey Screen)
-  WidgetsFlutterBinding.ensureInitialized();
-  
-  // Setup Global Crash Recovery (Safe to call early as long as loggers handle uninitialized state)
-  FlutterError.onError = (details) {
-    FlutterError.presentError(details);
-    // AdvancedLogger handles uninitialized state gracefully
-    AdvancedLogger.error("GLOBAL FLUTTER ERROR", error: details.exception, stackTrace: details.stack);
-    CleanupUtils.emergencyCleanup();
-  };
+  runZonedGuarded(() {
+    try {
+      // Minimize work in main() to prevent launch timeouts (Grey Screen)
+      WidgetsFlutterBinding.ensureInitialized();
 
-  PlatformDispatcher.instance.onError = (error, stack) {
-    AdvancedLogger.error("GLOBAL PLATFORM ERROR", error: error, stackTrace: stack);
-    CleanupUtils.emergencyCleanup();
-    return true; // Handle error
-  };
+      // Setup Custom Error Widget for Release Mode to prevent Grey Screen
+      ErrorWidget.builder = (FlutterErrorDetails details) {
+        Zone.current.handleUncaughtError(details.exception, details.stack ?? StackTrace.empty);
+        return Material(
+          color: Colors.red.shade900,
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Text(
+                'UI Rendering Error:\n${details.exception}',
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+        );
+      };
 
-  runApp(const MyApp());
+      // Setup Global Crash Recovery (Safe to call early as long as loggers handle uninitialized state)
+      FlutterError.onError = (details) {
+        FlutterError.presentError(details);
+        // AdvancedLogger handles uninitialized state gracefully
+        AdvancedLogger.error("GLOBAL FLUTTER ERROR", error: details.exception, stackTrace: details.stack);
+        CleanupUtils.emergencyCleanup();
+      };
+
+      PlatformDispatcher.instance.onError = (error, stack) {
+        AdvancedLogger.error("GLOBAL PLATFORM ERROR", error: error, stackTrace: stack);
+        CleanupUtils.emergencyCleanup();
+        return true; // Handle error
+      };
+
+      runApp(const MyApp());
+    } catch (e, stack) {
+      // Catch synchronous errors during initialization (e.g., ensureInitialized failure)
+      // Use print as AdvancedLogger might not be initialized or might be the cause
+      debugPrint("FATAL STARTUP ERROR: $e");
+      try {
+        AdvancedLogger.error("FATAL STARTUP ERROR", error: e, stackTrace: stack);
+      } catch (_) {}
+
+      runApp(EmergencyApp(error: e.toString()));
+    }
+  }, (error, stack) {
+    // Catch asynchronous errors
+    debugPrint("UNCAUGHT ASYNC ERROR: $error");
+    try {
+      AdvancedLogger.error("UNCAUGHT ASYNC ERROR", error: error, stackTrace: stack);
+      CleanupUtils.emergencyCleanup();
+    } catch (_) {}
+  });
 }
 
 class MyApp extends StatefulWidget {
@@ -41,35 +81,53 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   StorageService? _storageService;
+  bool _hasError = false;
+  String _errorMessage = '';
 
   @override
   Widget build(BuildContext context) {
-    // Phase 1: Show Splash Screen & Initialize
-    if (_storageService == null) {
-      return MaterialApp(
-        title: 'iVPN Splash',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData.dark(useMaterial3: true), // Dark theme for splash
-        home: SplashScreen(
-          onInitializationComplete: (storage) {
-            setState(() {
-              _storageService = storage;
-            });
-          },
-        ),
-      );
+    if (_hasError) {
+       return EmergencyApp(error: _errorMessage, onRetry: () {
+         setState(() {
+           _hasError = false;
+           _errorMessage = '';
+         });
+       });
     }
 
-    // Phase 2: Show Main App with Providers injected
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => ThemeProvider()),
-        ChangeNotifierProvider(
-          create: (_) => HomeProvider(storageService: _storageService!),
-        ),
-      ],
-      child: const ThemedApp(),
-    );
+    try {
+      // Phase 1: Show Splash Screen & Initialize
+      if (_storageService == null) {
+        return MaterialApp(
+          title: 'iVPN Splash',
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData.dark(useMaterial3: true), // Dark theme for splash
+          home: SplashScreen(
+            onInitializationComplete: (storage) {
+              if (mounted) {
+                setState(() {
+                  _storageService = storage;
+                });
+              }
+            },
+          ),
+        );
+      }
+
+      // Phase 2: Show Main App with Providers injected
+      return MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => ThemeProvider()),
+          ChangeNotifierProvider(
+            create: (_) => HomeProvider(storageService: _storageService!),
+          ),
+        ],
+        child: const ThemedApp(),
+      );
+    } catch (e, stack) {
+      AdvancedLogger.error("MyApp Build Error", error: e, stackTrace: stack);
+      return EmergencyApp(error: e.toString());
+    }
   }
 }
 
@@ -79,18 +137,27 @@ class ThemedApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Now we can safely access ThemeProvider
-    final themeProvider = context.watch<ThemeProvider>();
+    try {
+      final themeProvider = context.watch<ThemeProvider>();
 
-    return MaterialApp(
-      title: 'iVPN',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData.light(useMaterial3: true),
-      darkTheme: ThemeData.dark(useMaterial3: true),
-      themeMode: themeProvider.themeMode,
-      builder: (context, child) {
-        return BackgroundAdService(child: child!);
-      },
-      home: const ConnectionHomeScreen(),
-    );
+      return MaterialApp(
+        title: 'iVPN',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData.light(useMaterial3: true),
+        darkTheme: ThemeData.dark(useMaterial3: true),
+        themeMode: themeProvider.themeMode,
+        builder: (context, child) {
+          try {
+            return BackgroundAdService(child: child!);
+          } catch (e) {
+             AdvancedLogger.error("BackgroundAdService Error", error: e);
+             return child!;
+          }
+        },
+        home: const ConnectionHomeScreen(),
+      );
+    } catch (e) {
+      return EmergencyApp(error: "ThemedApp Error: $e");
+    }
   }
 }
