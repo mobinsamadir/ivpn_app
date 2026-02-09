@@ -1,4 +1,5 @@
-﻿import 'dart:io';
+﻿import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -14,52 +15,61 @@ import 'providers/theme_provider.dart';
 import 'providers/home_provider.dart';
 import 'screens/connection_home_screen.dart';
 import 'services/background_ad_service.dart';
+import 'screens/splash_screen.dart'; // Ensure this import exists
 
-void main() async {
-  print('ðŸš€ IVPN App Started - ${DateTime.now()}');
-  stdout.writeln('=== Debug Mode Active ===');
-  WidgetsFlutterBinding.ensureInitialized();
-  
-  // Initialize advanced logger with full debug info
-  await AdvancedLogger.init();
-  AdvancedLogger.info('ðŸš€ IVPN App Initialized', metadata: {
-    'platform': Platform.operatingSystem,
-    'version': Platform.operatingSystemVersion,
+void main() {
+  runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
+
+    // Initialize Loggers
+    await AdvancedLogger.init();
+    AdvancedLogger.info('🚀 IVPN App Initialized', metadata: {
+      'platform': Platform.operatingSystem,
+      'version': Platform.operatingSystemVersion,
+    });
+    
+    await FileLogger.init();
+    FileLogger.log("Application starting...");
+
+    // Setup Global Crash Recovery
+    FlutterError.onError = (details) {
+      FlutterError.presentError(details);
+      AdvancedLogger.error("GLOBAL FLUTTER ERROR", error: details.exception, stackTrace: details.stack);
+      CleanupUtils.emergencyCleanup();
+    };
+
+    // Initialize Core Services Globally
+    final prefs = await SharedPreferences.getInstance();
+    final storageService = StorageService(prefs: prefs);
+    final configManager = ConfigManager(); // Create Global Instance Here
+
+    runApp(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (context) => ThemeProvider()),
+          // Inject StorageService
+          Provider<StorageService>.value(value: storageService),
+          // Inject Global ConfigManager (Critical Fix)
+          ChangeNotifierProvider.value(value: configManager),
+          // Inject HomeProvider dependent on StorageService
+          ChangeNotifierProvider(
+            create: (context) => HomeProvider(storageService: storageService),
+          ),
+        ],
+        child: const MyApp(),
+      ),
+    );
+  }, (error, stack) {
+    // Catch-all for async errors
+    if (kDebugMode) {
+      print('CRITICAL STARTUP ERROR: $error');
+    }
+    // Simple error logging to prevent total crash
+    try {
+      AdvancedLogger.error("UNCAUGHT ASYNC ERROR", error: error, stackTrace: stack);
+      CleanupUtils.emergencyCleanup();
+    } catch (_) {}
   });
-  
-  await FileLogger.init();
-  FileLogger.log("Application starting...");
-
-  // Setup Global Crash Recovery
-  FlutterError.onError = (details) {
-    FlutterError.presentError(details);
-    AdvancedLogger.error("GLOBAL FLUTTER ERROR", error: details.exception, stackTrace: details.stack);
-    CleanupUtils.emergencyCleanup();
-  };
-
-  PlatformDispatcher.instance.onError = (error, stack) {
-    AdvancedLogger.error("GLOBAL PLATFORM ERROR", error: error, stackTrace: stack);
-    CleanupUtils.emergencyCleanup();
-    return true; // Handle error
-  };
-
-  final prefs = await SharedPreferences.getInstance();
-  final storageService = StorageService(prefs: prefs);
-
-  // Initialize Config Manager
-  await ConfigManager().init();
-
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (context) => ThemeProvider()),
-        ChangeNotifierProvider(
-          create: (context) => HomeProvider(storageService: storageService),
-        ),
-      ],
-      child: const MyApp(),
-    ),
-  );
 }
 
 class MyApp extends StatelessWidget {
@@ -67,7 +77,9 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Watch ThemeProvider safely
     final themeProvider = context.watch<ThemeProvider>();
+    
     return MaterialApp(
       title: 'iVPN',
       debugShowCheckedModeBanner: false,
@@ -77,8 +89,8 @@ class MyApp extends StatelessWidget {
       builder: (context, child) {
         return BackgroundAdService(child: child!);
       },
-      home: const ConnectionHomeScreen(),
+      // Start with Splash Screen to handle async init safely
+      home: const SplashScreen(),
     );
   }
 }
-

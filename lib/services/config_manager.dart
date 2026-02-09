@@ -8,14 +8,13 @@ import 'package:http/http.dart' as http;
 import 'package:collection/collection.dart';
 import '../models/vpn_config_with_metrics.dart';
 import '../utils/advanced_logger.dart';
-import '../utils/clipboard_utils.dart';
-import 'config_importer.dart';
 
 class ConfigManager extends ChangeNotifier {
   static final ConfigManager _instance = ConfigManager._internal();
   factory ConfigManager() => _instance;
   ConfigManager._internal();
 
+  // --- STATE VARIABLES ---
   List<VpnConfigWithMetrics> allConfigs = [];
   List<VpnConfigWithMetrics> validatedConfigs = [];
   List<VpnConfigWithMetrics> favoriteConfigs = [];
@@ -28,13 +27,11 @@ class ConfigManager extends ChangeNotifier {
 
   bool _isConnected = false;
   bool get isConnected => _isConnected;
+  
   String _connectionStatus = 'Ready';
   String get connectionStatus => _connectionStatus;
 
   Timer? _sessionTimer;
-  Duration _remainingTime = Duration.zero;
-  VoidCallback? _onSessionExpiredCallback;
-
   bool _isRefreshing = false;
   bool get isRefreshing => _isRefreshing;
 
@@ -46,6 +43,7 @@ class ConfigManager extends ChangeNotifier {
     notifyListeners();
   }
 
+  // --- CONSTANTS ---
   static const String _configsKey = 'vpn_configs';
   static const String _autoSwitchKey = 'auto_switch_enabled';
 
@@ -55,29 +53,23 @@ class ConfigManager extends ChangeNotifier {
     await _initDeviceId();
     await _loadAutoSwitchSetting();
     await _loadConfigs();
-
-    if (allConfigs.isEmpty) {
-       AdvancedLogger.info('[ConfigManager] No configs, fetching from remote...');
-       await fetchStartupConfigs();
-    }
-    
     _updateLists();
-    // Fire and forget startup refresh to get latest updates
-    fetchStartupConfigs(); 
+    AdvancedLogger.info('[ConfigManager] Initialization complete. Loaded ${allConfigs.length} configs.');
   }
 
+  // --- CORE: FETCH & PARSE ---
   Future<void> fetchStartupConfigs() async {
     if (_isRefreshing) return;
     _isRefreshing = true;
     notifyListeners();
 
     try {
-      AdvancedLogger.info('[ConfigManager] Downloading configs...');
+      AdvancedLogger.info('[ConfigManager] Downloading configs from Google Drive...');
       
-      // MIRRORS: Priority 1 is Google Drive Direct Link
+      // لیست میرورها (لینک گوگل درایو اولویت دارد)
       final mirrors = [
-        'https://drive.google.com/uc?export=download&id=1S7CI5xq4bbnERZ1i1eGuYn5bhluh2LaW', // Primary
-        'https://fastly.jsdelivr.net/gh/mobinsamadir/ivpn-servers@main/servers.txt', // Backup
+        'https://drive.google.com/uc?export=download&id=1S7CI5xq4bbnERZ1i1eGuYn5bhluh2LaW', 
+        'https://raw.githubusercontent.com/mobinsamadir/ivpn-servers/main/servers.txt', // Backup URL (Example)
       ];
 
       String content = '';
@@ -86,18 +78,28 @@ class ConfigManager extends ChangeNotifier {
       for (final url in mirrors) {
         if (downloadSuccess) break;
         try {
-          AdvancedLogger.info('[ConfigManager] Trying mirror: $url');
-          // 60s timeout for slow networks
-          final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 60));
+          AdvancedLogger.info('[ConfigManager] Attempting fetch from: $url');
+          
+          // FIX: Added User-Agent to bypass Google Drive HTML block
+          final response = await http.get(
+            Uri.parse(url),
+            headers: {
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+              "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+              "Accept-Language": "en-US,en;q=0.5",
+            },
+          ).timeout(const Duration(seconds: 30));
           
           if (response.statusCode == 200) {
             if (_isHtmlResponse(response.body)) {
-               AdvancedLogger.warn('[ConfigManager] Mirror returned HTML (Blocked): $url');
+               AdvancedLogger.warn('[ConfigManager] Drive returned HTML (Blocked): $url');
             } else {
                content = response.body;
                downloadSuccess = true;
-               AdvancedLogger.info('✅ Downloaded ${content.length} bytes from $url');
+               AdvancedLogger.info('✅ Downloaded ${content.length} bytes successfully.');
             }
+          } else {
+             AdvancedLogger.warn('[ConfigManager] HTTP Error ${response.statusCode} from $url');
           }
         } catch (e) {
           AdvancedLogger.warn('[ConfigManager] Failed to fetch from $url: $e');
@@ -105,21 +107,23 @@ class ConfigManager extends ChangeNotifier {
       }
 
       if (downloadSuccess) {
-        // 1. Smart Parse
+        // 1. Parse Mixed Content (Configs + Sub Links)
         final configUrls = await parseMixedContent(content);
         
         if (configUrls.isNotEmpty) {
-           // 2. SANITIZE: Remove "spider_x" to prevent core crash
+           // 2. SANITIZE: Remove malicious fields
            final cleanedConfigs = configUrls.map((c) {
              return c.replaceAll(RegExp(r'"spider_x":\s*("[^"]*"|[^,{}]+),?'), '');
            }).toList();
            
-           // 3. Add to list
+           // 3. Add to Database
            int added = await addConfigs(cleanedConfigs);
            AdvancedLogger.info('[ConfigManager] Import finished: Added $added new configs.');
         } else {
-           AdvancedLogger.warn('[ConfigManager] No valid configs found in downloaded content.');
+           AdvancedLogger.warn('[ConfigManager] No valid configs found in content.');
         }
+      } else {
+        AdvancedLogger.error('[ConfigManager] All attempts to fetch configs failed.');
       }
     } catch (e) {
        AdvancedLogger.error('[ConfigManager] Critical error in fetchStartupConfigs: $e');
@@ -131,16 +135,16 @@ class ConfigManager extends ChangeNotifier {
 
   // --- SMART PARSER (Regex Extraction & Recursion) ---
   static Future<List<String>> parseMixedContent(String text) async {
-    final allConfigs = <String>{};
+    final collectedConfigs = <String>{};
     
     String processedText = text;
-    // Try Base64 Decode
+    // Try Base64 Decode first
     try {
       final decoded = utf8.decode(base64Decode(text.replaceAll(RegExp(r'\s+'), '')));
       if (decoded.contains('://')) processedText = decoded;
     } catch (e) {}
 
-    // Extract Configs (Safe Regex with Triple Quotes)
+    // Extract Standard Configs
     final regex = RegExp(
       r'''(vmess|vless|ss|trojan|tuic|hysteria|hysteria2):\/\/[a-zA-Z0-9-._~:/?#\[\]@!$&()*+,;=%]+(?:#[^#\n\r]*)?''',
       caseSensitive: false,
@@ -149,43 +153,47 @@ class ConfigManager extends ChangeNotifier {
     
     for (final match in regex.allMatches(processedText)) {
        final config = match.group(0);
-       if (config != null) allConfigs.add(config.trim());
+       if (config != null) collectedConfigs.add(config.trim());
     }
 
-    // Extract Subs (Recursion)
+    // Extract Subscription Links (Recursion)
     final linkRegex = RegExp(r'''https?:\/\/[^\s"\'<>\n\r`{}|\[\]]+''', caseSensitive: false);
     final linkMatches = linkRegex.allMatches(processedText);
     
     for (final match in linkMatches) {
        final link = match.group(0);
-       // Only fetch if it's a valid sub link AND not already parsed as a config scheme
+       // Fetch only if it looks like a sub link and NOT a config protocol
        if (link != null && _isValidSubscriptionLink(link)) {
           try {
-             AdvancedLogger.info('[ConfigManager] Found sub link: $link');
+             // Avoid recursive loops with simple check (not robust but helpful)
+             if (link.contains('google.com') || link.length < 15) continue;
+
+             AdvancedLogger.info('[ConfigManager] Found sub link, fetching: $link');
              final res = await http.get(Uri.parse(link)).timeout(const Duration(seconds: 10));
+             
              if (res.statusCode == 200 && !_isHtmlResponse(res.body)) {
-                // Recursive call to parse content of the sub link
+                // Recursive call
                 final subConfigs = await parseMixedContent(res.body);
-                allConfigs.addAll(subConfigs);
+                collectedConfigs.addAll(subConfigs);
              }
           } catch(e) {
              AdvancedLogger.warn('[ConfigManager] Failed to fetch sub link: $link');
           }
        }
     }
-    return allConfigs.toList();
+    return collectedConfigs.toList();
   }
 
-  // --- CORE METHODS ---
+  // --- DATABASE OPERATIONS ---
   Future<int> addConfigs(List<String> configStrings) async {
     int addedCount = 0;
     
-    // Create a set of existing configs for faster lookup
+    // Use Set for faster lookup of existing configs
     final existingConfigs = allConfigs.map((c) => c.rawConfig.trim()).toSet();
     
     for (final raw in configStrings) {
       final trimmedRaw = raw.trim();
-      if (existingConfigs.contains(trimmedRaw)) continue;
+      if (trimmedRaw.isEmpty || existingConfigs.contains(trimmedRaw)) continue;
 
       final name = _extractServerName(trimmedRaw);
       final id = 'config_${DateTime.now().millisecondsSinceEpoch}_$addedCount';
@@ -196,7 +204,8 @@ class ConfigManager extends ChangeNotifier {
         name: name,
         countryCode: _extractCountryCode(name),
       ));
-      existingConfigs.add(trimmedRaw); // Add to set to prevent duplicates in same batch
+      
+      existingConfigs.add(trimmedRaw);
       addedCount++;
     }
 
@@ -206,84 +215,6 @@ class ConfigManager extends ChangeNotifier {
       notifyListeners();
     }
     return addedCount;
-  }
-  
-  // Helpers
-  static bool _isHtmlResponse(String body) {
-    final t = body.trim().toLowerCase();
-    return t.startsWith('<!doctype') || t.startsWith('<html') || t.contains('<body');
-  }
-
-  static bool _isValidSubscriptionLink(String link) {
-    final l = link.toLowerCase();
-    return !l.startsWith('vmess') && !l.startsWith('vless') && 
-           !l.startsWith('ss') && !l.startsWith('trojan') &&
-           !l.startsWith('hysteria') && !l.startsWith('tuic');
-  }
-
-  String _extractServerName(String raw) {
-     try {
-       final uri = Uri.parse(raw);
-       if (uri.fragment.isNotEmpty) return Uri.decodeComponent(uri.fragment);
-     } catch(e) {}
-     final type = raw.split('://').first.toUpperCase();
-     return '$type Server ${DateTime.now().millisecondsSinceEpoch % 1000}';
-  }
-
-  String? _extractCountryCode(String name) {
-     final map = {
-       '🇺🇸': 'US', '🇩🇪': 'DE', '🇬🇧': 'GB', '🇫🇷': 'FR', '🇯🇵': 'JP',
-       '🇨🇦': 'CA', '🇦🇺': 'AU', '🇳🇱': 'NL', '🇸🇪': 'SE', '🇨🇭': 'CH',
-       '🇸🇬': 'SG', '🇭🇰': 'HK', '🇰🇷': 'KR', '🇮🇳': 'IN', '🇧🇷': 'BR',
-       '🇹🇷': 'TR', '🇮🇹': 'IT', '🇪🇸': 'ES', '🇵🇱': 'PL', '🇷🇺': 'RU',
-     };
-     for (final e in map.entries) {
-       if (name.contains(e.key)) return e.value;
-     }
-     return null;
-  }
-  
-  // Boilerplate methods
-  Future<void> _initDeviceId() async {
-     final info = DeviceInfoPlugin();
-     try {
-       if (Platform.isAndroid) _currentDeviceId = 'android_${(await info.androidInfo).id}';
-       else if (Platform.isWindows) _currentDeviceId = 'windows_${(await info.windowsInfo).deviceId}';
-       else if (Platform.isIOS) _currentDeviceId = 'ios_${(await info.iosInfo).identifierForVendor}';
-     } catch(e) { _currentDeviceId = 'unknown'; }
-  }
-
-  Future<void> _loadConfigs() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final str = prefs.getString(_configsKey);
-      if (str != null) {
-        final list = jsonDecode(str) as List;
-        allConfigs = list.map((e) => VpnConfigWithMetrics.fromJson(e)).toList();
-        AdvancedLogger.info('[ConfigManager] Loaded ${allConfigs.length} from storage');
-      }
-    } catch(e) {
-       AdvancedLogger.error('[ConfigManager] Load error: $e');
-       allConfigs = [];
-    }
-  }
-
-  Future<void> _saveAllConfigs() async {
-     try {
-       final prefs = await SharedPreferences.getInstance();
-       await prefs.setString(_configsKey, jsonEncode(allConfigs.map((e)=>e.toJson()).toList()));
-     } catch(e) {
-       AdvancedLogger.error('[ConfigManager] Save error: $e');
-     }
-  }
-
-  void _updateLists() {
-     validatedConfigs = allConfigs.where((c) => c.isValidated).toList();
-     favoriteConfigs = allConfigs.where((c) => c.isFavorite).toList();
-     // Sort desc by score
-     allConfigs.sort((a, b) => b.score.compareTo(a.score));
-     validatedConfigs.sort((a, b) => b.score.compareTo(a.score));
-     favoriteConfigs.sort((a, b) => b.score.compareTo(a.score));
   }
 
   Future<void> updateConfigMetrics(String id, {int? ping, double? speed, bool? connectionSuccess}) async {
@@ -354,12 +285,85 @@ class ConfigManager extends ChangeNotifier {
      notifyListeners();
   }
 
-  Future<VpnConfigWithMetrics?> getBestConfig() async {
-     if (_selectedConfig != null && _selectedConfig!.isValidated) return _selectedConfig;
-     if (favoriteConfigs.isNotEmpty) return favoriteConfigs.first;
-     if (validatedConfigs.isNotEmpty) return validatedConfigs.first;
-     if (allConfigs.isNotEmpty) return allConfigs.first;
+  // --- HELPERS ---
+  static bool _isHtmlResponse(String body) {
+    final t = body.trim().toLowerCase();
+    return t.startsWith('<!doctype') || t.startsWith('<html') || t.contains('virus scan warning');
+  }
+
+  static bool _isValidSubscriptionLink(String link) {
+    final l = link.toLowerCase();
+    return !l.startsWith('vmess') && !l.startsWith('vless') && 
+           !l.startsWith('ss') && !l.startsWith('trojan') &&
+           !l.startsWith('hysteria') && !l.startsWith('tuic');
+  }
+
+  String _extractServerName(String raw) {
+     try {
+       final uri = Uri.parse(raw);
+       if (uri.fragment.isNotEmpty) return Uri.decodeComponent(uri.fragment);
+     } catch(e) {}
+     
+     // Fallback name
+     final type = raw.split('://').first.toUpperCase();
+     return '$type Server ${DateTime.now().millisecondsSinceEpoch % 1000}';
+  }
+
+  String? _extractCountryCode(String name) {
+     final map = {
+       '🇺🇸': 'US', '🇩🇪': 'DE', '🇬🇧': 'GB', '🇫🇷': 'FR', '🇯🇵': 'JP',
+       '🇨🇦': 'CA', '🇦🇺': 'AU', '🇳🇱': 'NL', '🇸🇪': 'SE', '🇨🇭': 'CH',
+       '🇸🇬': 'SG', '🇭🇰': 'HK', '🇰🇷': 'KR', '🇮🇳': 'IN', '🇧🇷': 'BR',
+       '🇹🇷': 'TR', '🇮🇹': 'IT', '🇪🇸': 'ES', '🇵🇱': 'PL', '🇷🇺': 'RU', '🇮🇷': 'IR',
+     };
+     for (final e in map.entries) {
+       if (name.contains(e.key)) return e.value;
+     }
      return null;
+  }
+  
+  // --- PERSISTENCE ---
+  Future<void> _initDeviceId() async {
+     final info = DeviceInfoPlugin();
+     try {
+       if (Platform.isAndroid) _currentDeviceId = 'android_${(await info.androidInfo).id}';
+       else if (Platform.isWindows) _currentDeviceId = 'windows_${(await info.windowsInfo).deviceId}';
+       else if (Platform.isIOS) _currentDeviceId = 'ios_${(await info.iosInfo).identifierForVendor}';
+     } catch(e) { _currentDeviceId = 'unknown'; }
+  }
+
+  Future<void> _loadConfigs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final str = prefs.getString(_configsKey);
+      if (str != null) {
+        final list = jsonDecode(str) as List;
+        allConfigs = list.map((e) => VpnConfigWithMetrics.fromJson(e)).toList();
+        AdvancedLogger.info('[ConfigManager] Loaded ${allConfigs.length} from storage');
+      }
+    } catch(e) {
+       AdvancedLogger.error('[ConfigManager] Load error: $e');
+       allConfigs = [];
+    }
+  }
+
+  Future<void> _saveAllConfigs() async {
+     try {
+       final prefs = await SharedPreferences.getInstance();
+       await prefs.setString(_configsKey, jsonEncode(allConfigs.map((e)=>e.toJson()).toList()));
+     } catch(e) {
+       AdvancedLogger.error('[ConfigManager] Save error: $e');
+     }
+  }
+
+  void _updateLists() {
+     validatedConfigs = allConfigs.where((c) => c.isValidated).toList();
+     favoriteConfigs = allConfigs.where((c) => c.isFavorite).toList();
+     
+     // Sorting Logic: Priority to Validated & High Score
+     allConfigs.sort((a, b) => b.score.compareTo(a.score));
+     validatedConfigs.sort((a, b) => b.score.compareTo(a.score));
+     favoriteConfigs.sort((a, b) => b.score.compareTo(a.score));
   }
 
   Future<void> _loadAutoSwitchSetting() async {
@@ -370,24 +374,40 @@ class ConfigManager extends ChangeNotifier {
      final p = await SharedPreferences.getInstance();
      await p.setBool(_autoSwitchKey, _isAutoSwitchEnabled);
   }
+
+  // --- UI & LEGACY COMPATIBILITY METHODS ---
+  Future<VpnConfigWithMetrics?> getBestConfig() async {
+     if (_selectedConfig != null && _selectedConfig!.isValidated) return _selectedConfig;
+     if (favoriteConfigs.isNotEmpty) return favoriteConfigs.first;
+     if (validatedConfigs.isNotEmpty) return validatedConfigs.first;
+     if (allConfigs.isNotEmpty) return allConfigs.first;
+     return null;
+  }
+
   void setConnected(bool c, {String status = 'Connected'}) {
      _isConnected = c;
      _connectionStatus = status;
      notifyListeners();
   }
+  
   void stopSession() { _sessionTimer?.cancel(); }
+  
   Future<void> clearAllData() async {
      final p = await SharedPreferences.getInstance();
      await p.remove(_configsKey);
      allConfigs.clear(); _updateLists(); notifyListeners();
   }
   
-  // Legacy aliases for UI compatibility
+  // Aliases for compatibility
   Future<void> refreshAllConfigs() => fetchStartupConfigs();
   static Future<List<String>> parseAndFetchConfigs(String text) => parseMixedContent(text);
   Future<void> addConfig(String raw, String name) => addConfigs([raw]); 
   VpnConfigWithMetrics? getConfigById(String id) => allConfigs.firstWhereOrNull((c) => c.id == id);
   Future<void> disconnectVpn() async { setConnected(false, status: 'Disconnected'); }
   Future<VpnConfigWithMetrics?> runQuickTestOnAllConfigs(Function(String)? log) async { return getBestConfig(); }
-  void printInventoryReport() {}
+  
+  // Dummy implementations for Hot-Swap to prevent compilation errors (can be implemented later)
+  Future<void> considerCandidate(VpnConfigWithMetrics c) async {} 
+  void startHotSwap() {} 
+  void stopHotSwap() {} 
 }
