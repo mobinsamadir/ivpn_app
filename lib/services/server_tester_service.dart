@@ -227,7 +227,7 @@ class ServerTesterService {
     try {
       final uri = Uri.parse(configUrl);
       final host = uri.host;
-      final port = uri.effectivePort;
+      final protocol = uri.scheme; 
       
       // Heuristic for TLS
       bool isTls = false;
