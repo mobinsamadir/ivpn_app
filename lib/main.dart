@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import 'utils/advanced_logger.dart'; // Corrected import
 import 'services/storage_service.dart';
+import 'services/config_manager.dart';
 import 'utils/cleanup_utils.dart';
 import 'providers/theme_provider.dart';
 import 'providers/home_provider.dart';
@@ -51,7 +52,17 @@ void main() {
         return true; // Handle error
       };
 
-      runApp(const MyApp());
+      // Initialize Global State
+      final configManager = ConfigManager();
+
+      runApp(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: configManager),
+          ],
+          child: const MyApp(),
+        ),
+      );
     } catch (e, stack) {
       // Catch synchronous errors during initialization (e.g., ensureInitialized failure)
       // Use print as AdvancedLogger might not be initialized or might be the cause

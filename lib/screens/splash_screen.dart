@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/advanced_logger.dart'; // Corrected import
 import '../services/file_logger.dart';
@@ -90,19 +91,23 @@ class _SplashScreenState extends State<SplashScreen> {
       );
       final storageService = StorageService(prefs: prefs);
 
+      if (!mounted) return;
+
       // Initialize ConfigManager with local data first (fast)
       // fetchRemote: false prevents blocking on network
-      await ConfigManager().init(fetchRemote: false).timeout(
+      await context.read<ConfigManager>().init(fetchRemote: false).timeout(
         const Duration(seconds: 10),
         onTimeout: () {
           AdvancedLogger.warn('[Splash] ConfigManager init timed out, skipping');
         }
       );
 
+      if (!mounted) return;
+
       // 4. Trigger Background Fetch (Non-blocking)
       // We don't await this; it updates the ConfigManager state asynchronously.
       // ConnectionHomeScreen will react to changes via Listeners.
-      ConfigManager().fetchStartupConfigs().catchError((e) {
+      context.read<ConfigManager>().fetchStartupConfigs().catchError((e) {
         AdvancedLogger.warn('[Splash] Background config fetch warning: $e');
       });
 
