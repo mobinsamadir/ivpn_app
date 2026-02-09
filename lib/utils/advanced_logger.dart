@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
@@ -18,6 +19,9 @@ class AdvancedLogger {
   static final List<String> _logHistory = [];
   static final ValueNotifier<List<String>> logNotifier = ValueNotifier([]);
   static const int _maxLogEntries = 1000; // Keep last 1000 log entries
+  static Timer? _uiUpdateTimer;
+  static bool _updatePending = false;
+  static const Duration _uiUpdateInterval = Duration(milliseconds: 100);
 
   /// Initialize the logger
   static Future<void> init({LogLevel minLevel = LogLevel.DEBUG}) async {
@@ -89,6 +93,18 @@ class AdvancedLogger {
     });
   }
 
+  /// Schedule UI update with throttling
+  static void _scheduleUiUpdate() {
+    if (_updatePending) return;
+    _updatePending = true;
+
+    _uiUpdateTimer?.cancel();
+    _uiUpdateTimer = Timer(_uiUpdateInterval, () {
+      logNotifier.value = List.from(_logHistory);
+      _updatePending = false;
+    });
+  }
+
   /// Get the current log file path
   static Future<String> getLogPath() async {
     if (_logFile != null) return _logFile!.path;
@@ -127,9 +143,8 @@ class AdvancedLogger {
       _logHistory.removeAt(0); // Remove oldest entry
     }
 
-    // Update notifier for UI
-    logNotifier.value = List.from(_logHistory);
-    logNotifier.notifyListeners();
+    // Update notifier for UI with throttling
+    _scheduleUiUpdate();
 
     // Add to file buffer
     _buffer.add(jsonEncode(entry));
