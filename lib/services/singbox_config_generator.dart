@@ -11,6 +11,35 @@ class SingboxConfigGenerator {
   static final List<String> FINGERPRINTS = ['chrome', 'firefox', 'edge', 'safari', '360', 'qq'];
   static final Random _rng = Random();
 
+  // Optimization: Reuse regex to avoid recompilation
+  static final RegExp _whitespaceRegex = RegExp(r'\s+');
+
+  // Optimization: Static list to prevent allocation on every config generation (hundreds of strings)
+  static const List<String> _adDomains = [
+    "adsterra.com", "google.com", "doubleclick.net", "googlesyndication.com", "googletagmanager.com",
+    "facebook.com", "fbcdn.net", "twitter.com", "youtube.com", "ytimg.com", "googleadservices.com",
+    "googletagservices.com", "google-analytics.com", "analytics.google.com", "googleapis.com",
+    "gstatic.com", "gvt1.com", "gvt2.com", "2mdn.net", "googlesyndication.com", "doubleclickbygoogle.com",
+    "googleoptimize.com", "googledomains.com", "googletraveladservices.com", "googlevads.com",
+    "googleusercontent.com", "googlevideo.com", "googleweblight.com", "googlezip.net", "g.co", "goo.gl",
+    "youtube-nocookie.com", "youtubeeducation.com", "youtubekids.com", "yt.be", "googlemail.com",
+    "gmail.com", "google-analytics.com", "googleadservices.com", "googlecommerce.com", "googlecode.com",
+    "googlebot.com", "blogspot.com", "blogspot.ae", "blogspot.al", "blogspot.am", "blogspot.ba",
+    "blogspot.be", "blogspot.bg", "blogspot.bj", "blogspot.ca", "blogspot.cf", "blogspot.ch",
+    "blogspot.cl", "blogspot.co.at", "blogspot.co.id", "blogspot.co.il", "blogspot.co.ke",
+    "blogspot.co.nz", "blogspot.co.uk", "blogspot.co.za", "blogspot.com", "blogspot.com.ar",
+    "blogspot.com.au", "blogspot.com.br", "blogspot.com.by", "blogspot.com.co", "blogspot.com.cy",
+    "blogspot.com.ee", "blogspot.com.eg", "blogspot.com.es", "blogspot.com.mt", "blogspot.com.ng",
+    "blogspot.com.tr", "blogspot.com.uy", "blogspot.cv", "blogspot.cz", "blogspot.de", "blogspot.dk",
+    "blogspot.fi", "blogspot.fr", "blogspot.gr", "blogspot.hk", "blogspot.hr", "blogspot.hu",
+    "blogspot.ie", "blogspot.in", "blogspot.is", "blogspot.it", "blogspot.jp", "blogspot.kr",
+    "blogspot.li", "blogspot.lt", "blogspot.lu", "blogspot.lv", "blogspot.md", "blogspot.mk",
+    "blogspot.mx", "blogspot.my", "blogspot.nl", "blogspot.no", "blogspot.pe", "blogspot.pt",
+    "blogspot.qa", "blogspot.re", "blogspot.ro", "blogspot.rs", "blogspot.ru", "blogspot.se",
+    "blogspot.sg", "blogspot.si", "blogspot.sk", "blogspot.sn", "blogspot.td", "blogspot.tw",
+    "blogspot.ug", "blogspot.vn"
+  ];
+
   static String generateConfig(String rawLink, {int listenPort = 10808, bool isTest = false}) {
     final socksPort = listenPort;
     final httpPort = listenPort + 1;
@@ -39,7 +68,8 @@ class SingboxConfigGenerator {
   }
 
   static String _parseVmess(String link, {required int socksPort, required int httpPort, required bool isTest}) {
-    String encoded = link.substring(8).replaceAll(RegExp(r'\s+'), '');
+    // Optimization: Use pre-compiled regex
+    String encoded = link.substring(8).replaceAll(_whitespaceRegex, '');
     int mod = encoded.length % 4;
     if (mod > 0) encoded += '=' * (4 - mod);
 
@@ -245,7 +275,8 @@ class SingboxConfigGenerator {
       if (uri == null) return null;
 
       if (link.toLowerCase().startsWith('vmess://')) {
-        String encoded = link.substring(8).replaceAll(RegExp(r'\s+'), '');
+        // Optimization: Use pre-compiled regex
+        String encoded = link.substring(8).replaceAll(_whitespaceRegex, '');
         int mod = encoded.length % 4;
         if (mod > 0) encoded += '=' * (4 - mod);
         final String decoded = utf8.decode(base64Decode(encoded));
@@ -393,7 +424,7 @@ class SingboxConfigGenerator {
           {"protocol": "dns", "outbound": "dns-out"},
           // Route ad domains through proxy to bypass censorship in restricted regions
           {
-            "domain_suffix": ["adsterra.com", "google.com", "doubleclick.net", "googlesyndication.com", "googletagmanager.com", "facebook.com", "fbcdn.net", "twitter.com", "youtube.com", "ytimg.com", "googleadservices.com", "googletagservices.com", "google-analytics.com", "analytics.google.com", "googleapis.com", "gstatic.com", "gvt1.com", "gvt2.com", "2mdn.net", "googlesyndication.com", "doubleclickbygoogle.com", "googleoptimize.com", "googledomains.com", "googletraveladservices.com", "googlevads.com", "googleusercontent.com", "googlevideo.com", "googleweblight.com", "googlezip.net", "g.co", "goo.gl", "youtube-nocookie.com", "youtubeeducation.com", "youtubekids.com", "yt.be", "googlemail.com", "gmail.com", "google-analytics.com", "googleadservices.com", "googlecommerce.com", "googlecode.com", "googlebot.com", "blogspot.com", "blogspot.ae", "blogspot.al", "blogspot.am", "blogspot.ba", "blogspot.be", "blogspot.bg", "blogspot.bj", "blogspot.ca", "blogspot.cf", "blogspot.ch", "blogspot.cl", "blogspot.co.at", "blogspot.co.id", "blogspot.co.il", "blogspot.co.ke", "blogspot.co.nz", "blogspot.co.uk", "blogspot.co.za", "blogspot.com", "blogspot.com.ar", "blogspot.com.au", "blogspot.com.br", "blogspot.com.by", "blogspot.com.co", "blogspot.com.cy", "blogspot.com.ee", "blogspot.com.eg", "blogspot.com.es", "blogspot.com.mt", "blogspot.com.ng", "blogspot.com.tr", "blogspot.com.uy", "blogspot.cv", "blogspot.cz", "blogspot.de", "blogspot.dk", "blogspot.fi", "blogspot.fr", "blogspot.gr", "blogspot.hk", "blogspot.hr", "blogspot.hu", "blogspot.ie", "blogspot.in", "blogspot.is", "blogspot.it", "blogspot.jp", "blogspot.kr", "blogspot.li", "blogspot.lt", "blogspot.lu", "blogspot.lv", "blogspot.md", "blogspot.mk", "blogspot.mx", "blogspot.my", "blogspot.nl", "blogspot.no", "blogspot.pe", "blogspot.pt", "blogspot.qa", "blogspot.re", "blogspot.ro", "blogspot.rs", "blogspot.ru", "blogspot.se", "blogspot.sg", "blogspot.si", "blogspot.sk", "blogspot.sn", "blogspot.td", "blogspot.tw", "blogspot.ug", "blogspot.vn"],
+            "domain_suffix": _adDomains,
             "outbound": "proxy"
           },
           // Use IP ranges instead of geoip for Iran and private networks to avoid DB issues
