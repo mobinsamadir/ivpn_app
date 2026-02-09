@@ -66,6 +66,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     });
     AccessManager().addListener(_onTimeChanged);
 
+    // Set up Hot-Swap Callback
+    _configManager.onHotSwap = _handleHotSwap;
+
     // Fire and forget: fetch startup configs from GitHub
     _configManager.fetchStartupConfigs();
 
@@ -141,6 +144,35 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     }
   }
 
+  // Handle Hot-Swap event from ConfigManager
+  Future<void> _handleHotSwap(VpnConfigWithMetrics newConfig) async {
+    if (!mounted) return;
+
+    AdvancedLogger.info('[ConnectionHomeScreen] Hot-Swap triggered for: ${newConfig.name}');
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Found faster server: ${newConfig.name} (${newConfig.currentPing}ms). Switching..."),
+        backgroundColor: Colors.green[700],
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+
+    _configManager.selectConfig(newConfig);
+
+    // Switch Connection
+    try {
+      if (_configManager.isConnected) {
+         await _windowsVpnService.stopVpn();
+         await Future.delayed(const Duration(milliseconds: 500));
+      }
+      await _connectWithFailover(newConfig);
+    } catch (e) {
+      AdvancedLogger.error('[ConnectionHomeScreen] Hot-Swap failed: $e');
+    }
+  }
+
   // Perform auto-switch to best server
   Future<void> _performAutoSwitch() async {
     AdvancedLogger.info('[ConnectionHomeScreen] Initiating auto-switch due to high ping');
@@ -161,7 +193,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
         _configManager.selectConfig(newConfig);
 
         // Reconnect with the new config
-        await _handleConnection();
+        await _connectWithFailover(newConfig);
       } else {
         _showToast("Could not find a better server to switch to");
       }
@@ -438,6 +470,35 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
                           _buildSubscriptionCard(), 
                           const SizedBox(height: 16),
                           _buildConnectionStatus(),
+                          const SizedBox(height: 8),
+                          // Real-time Config Status Log
+                          Consumer<ConfigManager>(
+                            builder: (context, configManager, child) {
+                              final total = configManager.allConfigs.length;
+                              // "Processed" = Tested (tier > 0) OR Failed (failureCount > 0 or not alive)
+                              final processed = configManager.allConfigs.where((c) => c.tier > 0 || c.failureCount > 0 || !c.isAlive).length;
+                              final valid = configManager.validatedConfigs.length;
+
+                              if (total == 0) return const SizedBox.shrink();
+
+                              return Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.3),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                                ),
+                                child: Text(
+                                  "Log: Processed $processed/$total configs. Valid: $valid.",
+                                  style: TextStyle(
+                                    color: Colors.grey[400],
+                                    fontSize: 11,
+                                    fontFamily: 'monospace',
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
                           const SizedBox(height: 12),
 
                           _buildConnectButton(),
@@ -609,8 +670,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
   }
 
   Widget _buildAdBannerSection() {
+    // AdBannerWebView now handles its own height (collapses to 0 on failure)
+    // We wrap it in a SafeArea or similar if needed, but not fixed height container
     return const SizedBox(
-      height: 80,
       width: double.infinity,
       child: AdBannerWebView(key: Key('top_banner_webview')),
     );

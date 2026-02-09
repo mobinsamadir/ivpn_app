@@ -115,7 +115,6 @@ class AdaptiveSpeedTester {
     
     client.findProxy = (uri) => "PROXY 127.0.0.1:$httpPort;";
     client.connectionTimeout = TestTimeouts.tcpHandshake;
-    client.badCertificateCallback = (cert, host, port) => true;
 
     final stopwatch = Stopwatch();
     

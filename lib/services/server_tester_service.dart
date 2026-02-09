@@ -1,6 +1,6 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 import 'package:http/http.dart' as http;
 import '../utils/extensions.dart';
 import '../models/vpn_config_with_metrics.dart';
@@ -13,227 +13,232 @@ class ServerTesterService {
   final LatencyService _latencyService;
   final ConfigManager _configManager;
 
-  ServerTesterService(WindowsVpnService vpnService)
-      : _latencyService = LatencyService(vpnService),
-        _configManager = ConfigManager();
+  ServerTesterService(WindowsVpnService vpnService, {LatencyService? latencyService, ConfigManager? configManager})
+      : _latencyService = latencyService ?? LatencyService(vpnService),
+        _configManager = configManager ?? ConfigManager();
 
-  /// Runs the 3-phase funnel test on a list of configs
+  /// Runs the "Smart Cascade" pipeline on a list of configs
   Future<void> runFunnelTest(List<VpnConfigWithMetrics> configs) async {
-    AdvancedLogger.info('[ServerTesterService] Starting Funnel Test for ${configs.length} configs');
+    AdvancedLogger.info('[ServerTesterService] Starting Smart Cascade Test for ${configs.length} configs');
 
-    // Phase 1: The Sieve - Quick TCP/HTTP Head check
-    await _runSievePhase(configs);
+    // Reset best config candidate tracking
+    _resetBestConfigTracking();
 
-    // Phase 2: The Benchmark - Detailed latency testing
-    await _runBenchmarkPhase(configs);
+    // Start Hot-Swap Mode in ConfigManager
+    _configManager.startHotSwap();
 
-    // Phase 3: The Stress Test - Stability/speed testing (top 5)
-    await _runStressPhase(configs);
+    // Stage 1: The Sieve (TCP + TLS)
+    // We process survivors of Stage 1 immediately into Stage 2 & 3
+    await _runCascadePipeline(configs);
 
-    AdvancedLogger.info('[ServerTesterService] Funnel Test completed');
+    // Stop Hot-Swap Mode
+    _configManager.stopHotSwap();
+
+    AdvancedLogger.info('[ServerTesterService] Smart Cascade Test completed');
   }
 
-  /// Phase 1: Quick connectivity check on ALL configs concurrently (batch size 20, timeout 2s)
-  Future<void> _runSievePhase(List<VpnConfigWithMetrics> configs) async {
-    AdvancedLogger.info('[ServerTesterService] Phase 1: Sieve - Connectivity Check');
-
-    // Process configs in batches of 20 with timeout
-    for (int i = 0; i < configs.length; i += 20) {
-      final endIndex = (i + 20 < configs.length) ? i + 20 : configs.length;
-      final batch = configs.sublist(i, endIndex);
-
-      // Run connectivity checks concurrently for this batch with timeout
-      final futures = batch.map((config) async {
-        try {
-          final isAlive = await _quickConnectivityCheck(config).timeout(const Duration(seconds: 2));
-          // Update config properties
-          final updatedConfig = config.copyWith(
-            isAlive: isAlive,
-            tier: isAlive ? 1 : 0,
-          );
-
-          // Update in the original list
-          final index = configs.indexOf(config);
-          if (index != -1) {
-            configs[index] = updatedConfig;
-          }
-
-          // Save to storage
-          if (!isAlive) {
-            await _configManager.updateConfigMetrics(config.id, connectionSuccess: false);
-          }
-        } catch (e) {
-          AdvancedLogger.error('[ServerTesterService] Error in sieve phase for ${config.name}: $e');
-          // Mark as dead on error or timeout
-          final index = configs.indexOf(config);
-          if (index != -1) {
-            configs[index] = config.copyWith(
-              isAlive: false,
-              tier: 0,
-            );
-          }
-        }
-      }).toList();
-
-      await Future.wait(futures);
-    }
-
-    // Save all updates after Phase 1
-    await _saveBatchUpdates(configs);
-    AdvancedLogger.info('[ServerTesterService] Phase 1 completed');
+  void _resetBestConfigTracking() {
+    // Handled by ConfigManager.startHotSwap()
   }
 
-  /// Phase 2: Detailed latency testing on alive configs (batch size 5, timeout 5s)
-  Future<void> _runBenchmarkPhase(List<VpnConfigWithMetrics> configs) async {
-    AdvancedLogger.info('[ServerTesterService] Phase 2: Benchmark - Latency Testing');
+  /// The Main Pipeline: Sieve -> Latency -> Stability
+  Future<void> _runCascadePipeline(List<VpnConfigWithMetrics> allConfigs) async {
+    // Process in batches to avoid resource exhaustion
+    const int batchSize = 50;
 
-    // Get only alive configs
-    final aliveConfigs = configs.where((config) => config.isAlive).toList();
-    if (aliveConfigs.isEmpty) {
-      AdvancedLogger.info('[ServerTesterService] No alive configs to benchmark');
-      return;
-    }
+    for (int i = 0; i < allConfigs.length; i += batchSize) {
+      final endIndex = (i + batchSize < allConfigs.length) ? i + batchSize : allConfigs.length;
+      final batch = allConfigs.sublist(i, endIndex);
 
-    // Process alive configs in batches of 5 with timeout
-    for (int i = 0; i < aliveConfigs.length; i += 5) {
-      final endIndex = (i + 5 < aliveConfigs.length) ? i + 5 : aliveConfigs.length;
-      final batch = aliveConfigs.sublist(i, endIndex);
+      AdvancedLogger.info('[ServerTesterService] Processing batch ${i ~/ batchSize + 1} (${batch.length} configs)');
 
-      // Test latency concurrently for this batch with timeout
-      final futures = batch.map((config) async {
-        try {
-          final result = await _latencyService.getAdvancedLatency(config.rawConfig)
-              .timeout(const Duration(seconds: 5));
-          final latency = result.health.averageLatency;
+      // STAGE 1: The Sieve (TCP + Generic TLS)
+      final sieveSurvivors = await _runSieveStage(batch);
 
-          // Update metrics
-          await _configManager.updateConfigMetrics(
-            config.id,
-            ping: latency,
-            connectionSuccess: latency > 0,
-          );
-
-          // Update tier based on latency (if low latency, promote to tier 2)
-          final updatedTier = latency > 0 && latency < 500 ? 2 : 1;
-          final index = configs.indexOf(config);
-          if (index != -1) {
-            configs[index] = config.copyWith(tier: updatedTier);
-          }
-        } catch (e) {
-          AdvancedLogger.error('[ServerTesterService] Error in benchmark phase for ${config.name}: $e');
-          final index = configs.indexOf(config);
-          if (index != -1) {
-            configs[index] = config.copyWith(
-              isAlive: false,
-              tier: 0,
-            );
-          }
-        }
-      }).toList();
-
-      await Future.wait(futures);
-    }
-
-    // Sort alive configs by latency and promote top 50% to tier 2
-    final sortedAlive = configs
-        .where((config) => config.isAlive && config.tier >= 1)
-        .toList()
-        ..sort((a, b) => a.currentPing.compareTo(b.currentPing));
-
-    final topHalfCount = (sortedAlive.length / 2).ceil();
-    for (int i = 0; i < sortedAlive.length; i++) {
-      final config = sortedAlive[i];
-      final newTier = i < topHalfCount ? 2 : 1; // Top 50% get tier 2
-      final index = configs.indexOf(config);
-      if (index != -1) {
-        configs[index] = config.copyWith(tier: newTier);
+      if (sieveSurvivors.isEmpty) {
+        AdvancedLogger.info('[ServerTesterService] No survivors from Sieve in this batch.');
+        continue;
       }
-    }
 
-    // Save all updates after Phase 2
-    await _saveBatchUpdates(configs);
-    AdvancedLogger.info('[ServerTesterService] Phase 2 completed');
+      // STAGE 2 & 3: Real Protocol Latency & Stability
+      // We run these concurrently for the survivors of the batch
+      await _runDeepAnalysisStages(sieveSurvivors);
+    }
   }
 
-  /// Phase 3: Stress test on top 5 configs
-  Future<void> _runStressPhase(List<VpnConfigWithMetrics> configs) async {
-    AdvancedLogger.info('[ServerTesterService] Phase 3: Stress Test - Stability/Speed');
+  // --- STAGE 1: THE SIEVE ---
+  Future<List<VpnConfigWithMetrics>> _runSieveStage(List<VpnConfigWithMetrics> batch) async {
+    final List<VpnConfigWithMetrics> survivors = [];
 
-    // Get top 5 configs by tier and score
-    final topConfigs = configs
-        .where((config) => config.tier >= 2)
-        .toList()
-        ..sort((a, b) => b.score.compareTo(a.score));
-
-    final configsToTest = topConfigs.length > 5 ? topConfigs.sublist(0, 5) : topConfigs;
-    if (configsToTest.isEmpty) {
-      AdvancedLogger.info('[ServerTesterService] No configs to stress test');
-      return;
-    }
-
-    // Run stability test on each top config
-    for (final config in configsToTest) {
+    // Run concurrently
+    final futures = batch.map((config) async {
       try {
-        final result = await _latencyService.runStabilityTest(
-          config.rawConfig,
-          duration: Duration(seconds: 15), // Shorter stress test
-        );
+        final isAlive = await _checkTcpAndTls(config);
 
-        // Update metrics
-        await _configManager.updateConfigMetrics(
-          config.id,
-          ping: result.health.averageLatency,
-          connectionSuccess: result.health.averageLatency > 0,
-        );
-
-        // Promote to tier 3 if stability is good
-        final updatedTier = result.stability != null && result.stability!.packetLoss < 0.1 ? 3 : config.tier;
-        final index = configs.indexOf(config);
-        if (index != -1) {
-          configs[index] = config.copyWith(tier: updatedTier);
+        if (isAlive) {
+          // Mark as alive (Tier 1)
+          final updated = config.copyWith(
+            isAlive: true,
+            tier: 1,
+            failureCount: 0 // Reset failure count on success
+          );
+          _configManager.updateConfigMetrics(updated.id, connectionSuccess: false); // Just update metadata
+          survivors.add(updated);
+        } else {
+          // Mark as dead
+          // _configManager.markFailure(config.id); // Optional: don't be too harsh on simple check failure?
         }
       } catch (e) {
-        AdvancedLogger.error('[ServerTesterService] Error in stress phase for ${config.name}: $e');
-        final index = configs.indexOf(config);
-        if (index != -1) {
-          configs[index] = config.copyWith(tier: config.tier); // Keep current tier on error
-        }
+        // Ignore errors in sieve
       }
-    }
+    });
 
-    // Save all updates after Phase 3
-    await _saveBatchUpdates(configs);
-    AdvancedLogger.info('[ServerTesterService] Phase 3 completed');
+    await Future.wait(futures);
+    return survivors;
   }
 
-  /// Quick connectivity check using TCP ping and HTTP head request
-  Future<bool> _quickConnectivityCheck(VpnConfigWithMetrics config) async {
+  Future<bool> _checkTcpAndTls(VpnConfigWithMetrics config) async {
     try {
-      // Extract host and port from config
-      final serverDetails = _extractServerDetails(config.rawConfig);
-      if (serverDetails == null) return false;
+      final details = _extractServerDetails(config.rawConfig);
+      if (details == null) return false;
 
-      final host = serverDetails['host'] as String;
-      final port = serverDetails['port'] as int;
+      final host = details['host'] as String;
+      final port = details['port'] as int;
+      final isTls = details['isTls'] as bool;
 
-      // TCP ping
-      final socket = await Socket.connect(host, port, timeout: Duration(seconds: 5));
-      socket.destroy();
-      
+      // 1. TCP Connect (Timeout 2s)
+      final socket = await Socket.connect(host, port, timeout: const Duration(seconds: 2));
+
+      // 2. Generic TLS Handshake (if applicable)
+      if (isTls || port == 443) {
+        try {
+          final secureSocket = await SecureSocket.secure(
+            socket,
+            onBadCertificate: (_) => true, // We don't care about cert validity here, just handshake
+            timeout: const Duration(seconds: 2)
+          );
+          secureSocket.destroy();
+        } catch (e) {
+          socket.destroy();
+          return false; // TCP ok but TLS failed
+        }
+      } else {
+        socket.destroy();
+      }
+
       return true;
     } catch (e) {
       return false;
     }
   }
 
-  /// Extract server details from config URL
+  // --- STAGE 2 & 3: REAL LATENCY & STABILITY ---
+  Future<void> _runDeepAnalysisStages(List<VpnConfigWithMetrics> survivors) async {
+    // Run concurrently but limit concurrency for Sing-box instances
+    const int maxConcurrency = 3;
+    await _processWithPool(survivors, maxConcurrency, _processSingleDeepAnalysis);
+  }
+
+  // Helper to process list with limited concurrency (Simple FIFO throttle)
+  Future<void> _processWithPool(
+      List<VpnConfigWithMetrics> items,
+      int poolSize,
+      Future<void> Function(VpnConfigWithMetrics) processor
+  ) async {
+    final pool = <Future<void>>[];
+
+    for (final item in items) {
+      // Add new task
+      pool.add(processor(item));
+
+      // If pool is full, wait for the oldest task to complete (FIFO)
+      // This is a simple throttling mechanism.
+      // While suboptimal (head-of-line blocking), it limits concurrency effectively.
+      if (pool.length >= poolSize) {
+        await pool[0];
+        pool.removeAt(0);
+      }
+    }
+
+    // Wait for remaining tasks
+    await Future.wait(pool);
+  }
+
+  Future<void> _processSingleDeepAnalysis(VpnConfigWithMetrics config) async {
+     try {
+       // STAGE 2: Real Protocol Latency
+       // Use Sing-box to measure url-test to http://cp.cloudflare.com
+       final result = await _latencyService.getAdvancedLatency(
+         config.rawConfig,
+         timeout: const Duration(seconds: 5), // Strict timeout
+       );
+
+       final latency = result.health.averageLatency;
+
+       // DISCARD if delay > 3000ms or failed (-1)
+       if (latency <= 0 || latency > 3000) {
+          // Update as failed/high latency
+          await _configManager.updateConfigMetrics(config.id, ping: latency > 0 ? latency.toInt() : -1, connectionSuccess: false);
+          return;
+       }
+
+       // STAGE 3: Stability Check (Jitter)
+       // Send 3 rapid pings (approx). We use runStabilityTest with short duration.
+       // Duration 2s should give ~4 samples with default 500ms interval.
+       final stabilityResult = await _latencyService.runStabilityTest(
+         config.rawConfig,
+         duration: const Duration(seconds: 2),
+         timeout: const Duration(seconds: 5),
+       );
+
+       final jitter = stabilityResult.stability?.jitter ?? 0.0;
+       final avgLatency = stabilityResult.health.averageLatency > 0
+           ? stabilityResult.health.averageLatency
+           : latency; // Fallback to stage 2 latency if stage 3 fails
+
+       if (avgLatency <= 0) return; // Stage 3 failed completely
+
+       // Calculate Priority Score: (Latency * 0.7) + (Jitter * 0.3)
+       // Lower is better.
+       // Note: config.score is "Higher is better". We need to handle this mapping.
+       // The requirement defines the algorithm for *selection*.
+
+       // Update Config with Metrics
+       await _configManager.updateConfigMetrics(
+         config.id,
+         ping: avgLatency.toInt(),
+         jitter: jitter,
+         connectionSuccess: true
+       );
+
+       // Check for Hot-Swap
+       final updatedConfig = _configManager.getConfigById(config.id);
+       if (updatedConfig != null) {
+          await _configManager.considerCandidate(updatedConfig);
+       }
+
+     } catch (e) {
+       AdvancedLogger.warn('[ServerTester] Error processing ${config.name}: $e');
+     }
+  }
+
+  // --- HELPERS ---
   Map<String, dynamic>? _extractServerDetails(String configUrl) {
     try {
       final uri = Uri.parse(configUrl);
       final host = uri.host;
       final port = uri.effectivePort;
       
-      return {'host': host, 'port': port};
+      // Heuristic for TLS
+      bool isTls = false;
+      if (protocol == 'trojan' || protocol == 'hysteria' || protocol == 'hysteria2' || protocol == 'tuic') {
+        isTls = true;
+      } else if (protocol == 'vmess' || protocol == 'vless') {
+         // Check streamSettings or query params if possible (simplified here)
+         if (uri.queryParameters['security'] == 'tls' || port == 443) isTls = true;
+      }
+
+      return {'host': host, 'port': port, 'isTls': isTls};
     } catch (e) {
       return null;
     }
@@ -245,3 +250,4 @@ class ServerTesterService {
     _configManager.notifyListeners();
   }
 }
+ 

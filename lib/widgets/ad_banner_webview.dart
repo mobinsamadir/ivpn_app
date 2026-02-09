@@ -24,13 +24,10 @@ class _AdBannerWebViewState extends State<AdBannerWebView> {
   Widget build(BuildContext context) {
     return Consumer<ConfigManager>(
       builder: (context, configManager, child) {
-        return Container(
-          height: 80,
-          // Pass the live connection status to the child widgets
-          child: Platform.isWindows
-              ? WindowsWebViewAd(isConnected: configManager.isConnected)
-              : MobileWebViewAd(isConnected: configManager.isConnected),
-        );
+        // Remove fixed height container to allow collapsing
+        return Platform.isWindows
+            ? WindowsWebViewAd(isConnected: configManager.isConnected)
+            : MobileWebViewAd(isConnected: configManager.isConnected);
       },
     );
   }
@@ -255,7 +252,8 @@ class _WindowsWebViewAdState extends State<WindowsWebViewAd> {
 
   @override
   Widget build(BuildContext context) {
-    if (_showFallback) return _buildFallback();
+    // If fallback is triggered (failure), return 0 height to hide
+    if (_showFallback) return const SizedBox(height: 0);
 
     if (!_controller.value.isInitialized) {
       return Container(
@@ -270,10 +268,19 @@ class _WindowsWebViewAdState extends State<WindowsWebViewAd> {
       );
     }
 
-    return Webview(_controller);
+    return SizedBox(
+      height: 80,
+      child: Webview(_controller),
+    );
   }
 
   Widget _buildFallback() {
+    // Deprecated: used to return container, now returns 0 height logic in build
+    return const SizedBox(height: 0);
+  }
+
+  // Kept for reference but unused
+  Widget _buildFallbackOld() {
     return Container(
       height: 80,
       decoration: BoxDecoration(
@@ -593,14 +600,21 @@ class _MobileWebViewAdState extends State<MobileWebViewAd> {
   @override
   Widget build(BuildContext context) {
     if (_showFallback) {
-      return _buildFallback();
+      return const SizedBox(height: 0);
     }
     // ویجت مخصوص موبایل
-    return WebViewWidget(controller: _controller);
+    return SizedBox(
+      height: 80,
+      child: WebViewWidget(controller: _controller),
+    );
   }
 
   // کپی همان فال‌بک بالا برای موبایل
   Widget _buildFallback() {
+    return const SizedBox(height: 0);
+  }
+
+  Widget _buildFallbackOld() {
     return Container(
       height: 80,
       decoration: BoxDecoration(
