@@ -30,7 +30,6 @@ class SpeedTestService {
         AdvancedLogger.debug('Configuring proxy for $uri', metadata: {'proxy': proxy});
         return proxy;
       };
-      client.badCertificateCallback = (cert, host, port) => true;
       return client;
     };
     AdvancedLogger.info('Proxy configured: $proxyHost:$proxyPort');
