@@ -18,9 +18,9 @@ void main() {
 
     test('addConfig saves to SharedPreferences', () async {
       final manager = ConfigManager();
-      await manager.init();
+      await manager.init(fetchRemote: false);
 
-      await manager.addConfig('vless://test', 'Test Config', countryCode: 'US');
+      await manager.addConfig('vless://test#Test%20Config', 'Test Config');
 
       expect(manager.allConfigs.length, 1);
       expect(manager.allConfigs.first.name, 'Test Config');
@@ -34,42 +34,44 @@ void main() {
 
     test('deleteConfig removes from list and storage', () async {
       final manager = ConfigManager();
-      await manager.init();
+      await manager.init(fetchRemote: false);
       await manager.clearAllData();
 
-      await manager.addConfig('vless://test1', 'Config 1');
-      await manager.addConfig('vless://test2', 'Config 2');
+      await manager.addConfig('vless://test1#Config1', 'Config 1');
+      await manager.addConfig('vless://test2#Config2', 'Config 2');
 
-      final idToDelete = manager.allConfigs.first.id;
+      // Check if added
+      expect(manager.allConfigs.length, 2);
+
+      final idToDelete = manager.allConfigs.firstWhere((c) => c.name == 'Config1').id;
       final result = await manager.deleteConfig(idToDelete);
 
       expect(result, isTrue);
       expect(manager.allConfigs.length, 1);
-      expect(manager.allConfigs.first.name, 'Config 2'); // Assuming order preserved
+      expect(manager.allConfigs.first.name, 'Config2');
     });
     
     test('toggleFavorite updates list and storage', () async {
       final manager = ConfigManager();
-      await manager.init();
+      await manager.init(fetchRemote: false);
       await manager.clearAllData();
       
-      await manager.addConfig('vless://test', 'Fav Config');
-      final config = manager.allConfigs.first;
+      await manager.addConfig('vless://test#FavConfig', 'Fav Config');
       
-      expect(config.isFavorite, isFalse);
+      expect(manager.allConfigs.first.isFavorite, isFalse);
       
-      await manager.toggleFavorite(config.id);
-      expect(config.isFavorite, isTrue);
+      await manager.toggleFavorite(manager.allConfigs.first.id);
+      expect(manager.allConfigs.first.isFavorite, isTrue);
       expect(manager.favoriteConfigs.length, 1);
       
-      await manager.toggleFavorite(config.id);
-      expect(config.isFavorite, isFalse);
+      await manager.toggleFavorite(manager.allConfigs.first.id);
+      expect(manager.allConfigs.first.isFavorite, isFalse);
       expect(manager.favoriteConfigs.isEmpty, isTrue);
     });
     
     test('getBestConfig returns valid config or null', () async {
       final manager = ConfigManager();
-      await manager.init();
+      await manager.init(fetchRemote: false);
       await manager.clearAllData();
       
       var best = await manager.getBestConfig();

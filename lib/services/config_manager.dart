@@ -46,24 +46,78 @@ class ConfigManager extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Watchdog variables
+  Timer? _watchdogTimer;
+  final Duration _watchdogInterval = const Duration(seconds: 45);
+  int _consecutiveFailures = 0;
+
+  // Hot-Swap Logic
+  VpnConfigWithMetrics? _currentBestCandidate;
+  Future<void> Function(VpnConfigWithMetrics)? onHotSwap;
+  bool _isHotSwapActive = false;
+
+  void startHotSwap() {
+    _isHotSwapActive = true;
+    _currentBestCandidate = null;
+    notifyListeners();
+  }
+
+  void stopHotSwap() {
+    _isHotSwapActive = false;
+    notifyListeners();
+  }
+
+  Future<void> considerCandidate(VpnConfigWithMetrics candidate) async {
+     if (!_isHotSwapActive) return;
+
+     // Only consider valid candidates with good ping
+     if (candidate.currentPing <= 0 || candidate.currentPing > 3000) return;
+
+     bool isBetter = false;
+
+     if (_currentBestCandidate == null) {
+       isBetter = true;
+     } else {
+       // Compare scores: Lower priorityScore is better
+       // Priority Score: (Latency * 0.7) + (Jitter * 0.3)
+       // We use a margin to prevent flipping (e.g., must be 20% better)
+       final currentScore = _currentBestCandidate!.priorityScore;
+       final newScore = candidate.priorityScore;
+
+       if (newScore < currentScore * 0.8) { // 20% improvement
+         isBetter = true;
+       }
+     }
+
+     if (isBetter) {
+        AdvancedLogger.info('[ConfigManager] New Hot-Swap Candidate: ${candidate.name} (Score: ${candidate.priorityScore.toStringAsFixed(1)})');
+        _currentBestCandidate = candidate;
+
+        // Notify UI to swap
+        if (onHotSwap != null) {
+           await onHotSwap!(candidate);
+        }
+     }
+  }
+
   static const String _configsKey = 'vpn_configs';
   static const String _autoSwitchKey = 'auto_switch_enabled';
 
   // --- INITIALIZATION ---
-  Future<void> init() async {
+  Future<void> init({bool fetchRemote = true}) async {
     AdvancedLogger.info('[ConfigManager] Initializing...');
     await _initDeviceId();
     await _loadAutoSwitchSetting();
     await _loadConfigs();
 
-    if (allConfigs.isEmpty) {
+    if (allConfigs.isEmpty && fetchRemote) {
        AdvancedLogger.info('[ConfigManager] No configs, fetching from remote...');
        await fetchStartupConfigs();
     }
     
     _updateLists();
     // Fire and forget startup refresh to get latest updates
-    fetchStartupConfigs(); 
+    if (fetchRemote) fetchStartupConfigs();
   }
 
   Future<void> fetchStartupConfigs() async {
@@ -72,35 +126,42 @@ class ConfigManager extends ChangeNotifier {
     notifyListeners();
 
     try {
-      AdvancedLogger.info('[ConfigManager] Downloading configs...');
-      
-      // MIRRORS: Priority 1 is Google Drive Direct Link
-      final mirrors = [
-        'https://drive.google.com/uc?export=download&id=1S7CI5xq4bbnERZ1i1eGuYn5bhluh2LaW', // Primary
-        'https://fastly.jsdelivr.net/gh/mobinsamadir/ivpn-servers@main/servers.txt', // Backup
-      ];
+      AdvancedLogger.info('[ConfigManager] Downloading configs from Google Drive...');
 
+      const String driveUrl = 'https://drive.google.com/uc?export=download&id=1S7CI5xq4bbnERZ1i1eGuYn5bhluh2LaW';
+      
       String content = '';
       bool downloadSuccess = false;
+      int attempts = 0;
+      const int maxAttempts = 3;
 
-      for (final url in mirrors) {
-        if (downloadSuccess) break;
+      while (attempts < maxAttempts && !downloadSuccess) {
+        attempts++;
         try {
-          AdvancedLogger.info('[ConfigManager] Trying mirror: $url');
-          // 60s timeout for slow networks
-          final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 60));
+          AdvancedLogger.info('[ConfigManager] Attempt $attempts of $maxAttempts to fetch from Drive...');
+
+          final response = await http.get(Uri.parse(driveUrl)).timeout(const Duration(seconds: 60));
           
           if (response.statusCode == 200) {
             if (_isHtmlResponse(response.body)) {
-               AdvancedLogger.warn('[ConfigManager] Mirror returned HTML (Blocked): $url');
+               AdvancedLogger.warn('[ConfigManager] Drive returned HTML (Blocked): $driveUrl');
+               // Drive might return HTML for rate limits or errors, treat as failure to retry
             } else {
                content = response.body;
                downloadSuccess = true;
-               AdvancedLogger.info('✅ Downloaded ${content.length} bytes from $url');
+               AdvancedLogger.info('✅ Downloaded ${content.length} bytes from Drive');
             }
+          } else {
+            AdvancedLogger.warn('[ConfigManager] Drive returned status code: ${response.statusCode}');
           }
         } catch (e) {
-          AdvancedLogger.warn('[ConfigManager] Failed to fetch from $url: $e');
+          AdvancedLogger.warn('[ConfigManager] Failed to fetch from Drive (Attempt $attempts): $e');
+        }
+
+        if (!downloadSuccess && attempts < maxAttempts) {
+           final backoff = Duration(seconds: 2 * attempts); // 2s, 4s, 6s...
+           AdvancedLogger.info('[ConfigManager] Retrying in ${backoff.inSeconds}s...');
+           await Future.delayed(backoff);
         }
       }
 
@@ -111,7 +172,12 @@ class ConfigManager extends ChangeNotifier {
         if (configUrls.isNotEmpty) {
            // 2. SANITIZE: Remove "spider_x" to prevent core crash
            final cleanedConfigs = configUrls.map((c) {
-             return c.replaceAll(RegExp(r'"spider_x":\s*("[^"]*"|[^,{}]+),?'), '');
+             // Remove "spider_x" field completely from JSON-like structures
+             // Handles cases like "spider_x": "value", or "spider_x": 123,
+             return c.replaceAll(RegExp(r'"spider_x":\s*("[^"]*"|[^,{}]+),?'), '')
+                     // Also handle potential trailing comma issues if it was the last item
+                     .replaceAll(RegExp(r',\s*}'), '}')
+                     .trim();
            }).toList();
            
            // 3. Add to list
@@ -120,6 +186,8 @@ class ConfigManager extends ChangeNotifier {
         } else {
            AdvancedLogger.warn('[ConfigManager] No valid configs found in downloaded content.');
         }
+      } else {
+        AdvancedLogger.error('[ConfigManager] All attempts to fetch from Drive failed.');
       }
     } catch (e) {
        AdvancedLogger.error('[ConfigManager] Critical error in fetchStartupConfigs: $e');
@@ -286,13 +354,14 @@ class ConfigManager extends ChangeNotifier {
      favoriteConfigs.sort((a, b) => b.score.compareTo(a.score));
   }
 
-  Future<void> updateConfigMetrics(String id, {int? ping, double? speed, bool? connectionSuccess}) async {
+  Future<void> updateConfigMetrics(String id, {int? ping, double? speed, double? jitter, bool? connectionSuccess}) async {
      final index = allConfigs.indexWhere((c) => c.id == id);
      if (index != -1) {
         allConfigs[index] = allConfigs[index].updateMetrics(
            deviceId: _currentDeviceId,
            ping: ping, 
            speed: speed, 
+           jitter: jitter,
            connectionSuccess: connectionSuccess ?? false
         );
         _updateLists();
@@ -370,11 +439,19 @@ class ConfigManager extends ChangeNotifier {
      final p = await SharedPreferences.getInstance();
      await p.setBool(_autoSwitchKey, _isAutoSwitchEnabled);
   }
+
   void setConnected(bool c, {String status = 'Connected'}) {
      _isConnected = c;
      _connectionStatus = status;
      notifyListeners();
+
+     if (_isConnected) {
+       _startWatchdog();
+     } else {
+       _stopWatchdog();
+     }
   }
+
   void stopSession() { _sessionTimer?.cancel(); }
   Future<void> clearAllData() async {
      final p = await SharedPreferences.getInstance();
@@ -382,6 +459,99 @@ class ConfigManager extends ChangeNotifier {
      allConfigs.clear(); _updateLists(); notifyListeners();
   }
   
+  // Watchdog Implementation
+  void _startWatchdog() {
+    _watchdogTimer?.cancel();
+    _consecutiveFailures = 0;
+    _watchdogTimer = Timer.periodic(_watchdogInterval, (timer) {
+      if (_isConnected) {
+        _performHealthCheck();
+      } else {
+        _stopWatchdog();
+      }
+    });
+    AdvancedLogger.info('[Watchdog] Started monitoring connection...');
+  }
+
+  void _stopWatchdog() {
+    _watchdogTimer?.cancel();
+    _watchdogTimer = null;
+    AdvancedLogger.info('[Watchdog] Stopped monitoring.');
+  }
+
+  Future<void> _performHealthCheck() async {
+    if (!_isConnected || _selectedConfig == null) return;
+
+    int failures = 0;
+    int totalLatency = 0;
+    int successfulPings = 0;
+
+    // Perform 3 checks
+    for (int i = 0; i < 3; i++) {
+       try {
+         final sw = Stopwatch()..start();
+         final client = HttpClient();
+         client.connectionTimeout = const Duration(milliseconds: 3000);
+         // Use a common target that responds to HEAD
+         final req = await client.headUrl(Uri.parse('http://cp.cloudflare.com'))
+             .timeout(const Duration(milliseconds: 3000));
+         final res = await req.close()
+             .timeout(const Duration(milliseconds: 3000));
+         sw.stop();
+
+         if (res.statusCode == 200 || res.statusCode == 204) {
+            final latency = sw.elapsedMilliseconds;
+            totalLatency += latency;
+            successfulPings++;
+            // If latency is very high, we count it towards the high latency check later
+         } else {
+            failures++;
+         }
+       } catch (e) {
+         failures++;
+       }
+       await Future.delayed(const Duration(milliseconds: 200));
+    }
+
+    bool shouldFail = false;
+
+    // 1. Packet Loss > 50% (2 or more failures out of 3)
+    if (failures >= 2) shouldFail = true;
+
+    // 2. Avg Ping > 3000ms
+    if (successfulPings > 0) {
+       final avgPing = totalLatency / successfulPings;
+       if (avgPing > 3000) shouldFail = true;
+    }
+
+    if (shouldFail) {
+       _consecutiveFailures++;
+       AdvancedLogger.warn('[Watchdog] Health check failed. Loss: $failures/3');
+
+       // React immediately
+       final failedId = _selectedConfig!.id;
+       await markFailure(failedId);
+
+       final nextBest = await getBestConfig();
+       if (nextBest != null && nextBest.id != failedId) {
+          AdvancedLogger.info('[Watchdog] Switching to next best: ${nextBest.name}');
+          if (onHotSwap != null) {
+             onHotSwap!(nextBest);
+          }
+       }
+    } else {
+       _consecutiveFailures = 0;
+       if (successfulPings > 0) {
+          // Update metrics with fresh data
+          updateConfigMetrics(
+             _selectedConfig!.id,
+             ping: (totalLatency / successfulPings).toInt(),
+             connectionSuccess: true
+          );
+       }
+    }
+  }
+
   // Legacy aliases for UI compatibility
   Future<void> refreshAllConfigs() => fetchStartupConfigs();
   static Future<List<String>> parseAndFetchConfigs(String text) => parseMixedContent(text);
