@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 import 'package:http/http.dart' as http;
+import '../utils/extensions.dart';
 import '../models/vpn_config_with_metrics.dart';
 import '../services/config_manager.dart';
 import '../services/latency_service.dart';
@@ -225,9 +226,8 @@ class ServerTesterService {
   Map<String, dynamic>? _extractServerDetails(String configUrl) {
     try {
       final uri = Uri.parse(configUrl);
-      final protocol = uri.scheme;
       final host = uri.host;
-      final port = uri.port != 0 ? uri.port : _getDefaultPort(protocol);
+      final port = uri.effectivePort;
       
       // Heuristic for TLS
       bool isTls = false;
@@ -244,16 +244,10 @@ class ServerTesterService {
     }
   }
 
-  int _getDefaultPort(String protocol) {
-    switch (protocol) {
-      case 'vmess':
-      case 'vless':
-      case 'trojan':
-        return 443;
-      case 'ss':
-        return 8388;
-      default:
-        return 80;
-    }
+  /// Save batch updates to config manager
+  Future<void> _saveBatchUpdates(List<VpnConfigWithMetrics> configs) async {
+    // Just notify listeners since individual configs are updated during testing
+    _configManager.notifyListeners();
   }
 }
+ 

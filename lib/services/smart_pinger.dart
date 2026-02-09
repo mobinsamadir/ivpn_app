@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import '../utils/advanced_logger.dart';
+import '../utils/extensions.dart';
 import '../utils/test_constants.dart';
 import '../utils/cancellable_operation.dart';
 
@@ -154,9 +155,7 @@ class SmartPinger {
       
       final uri = Uri.parse(endpoint);
       final host = uri.host;
-      final port = uri.port == 0 
-        ? (uri.scheme == 'https' ? 443 : 80)
-        : uri.port;
+      final port = uri.effectivePort;
       
       // TCP connection test
       final socket = await Socket.connect(
