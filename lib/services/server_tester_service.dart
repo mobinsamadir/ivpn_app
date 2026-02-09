@@ -115,7 +115,6 @@ class ServerTesterService {
           final secureSocket = await SecureSocket.secure(
             socket,
             onBadCertificate: (_) => true, // We don't care about cert validity here, just handshake
-            timeout: const Duration(seconds: 2)
           );
           secureSocket.destroy();
         } catch (e) {
