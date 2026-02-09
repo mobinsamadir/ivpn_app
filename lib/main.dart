@@ -1,38 +1,24 @@
-﻿import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-import 'services/advanced_logger.dart';
-import 'services/file_logger.dart';
+import 'utils/advanced_logger.dart'; // Corrected import
 import 'services/storage_service.dart';
-import 'services/config_manager.dart';
 import 'utils/cleanup_utils.dart';
 import 'providers/theme_provider.dart';
 import 'providers/home_provider.dart';
 import 'screens/connection_home_screen.dart';
+import 'screens/splash_screen.dart';
 import 'services/background_ad_service.dart';
 
-void main() async {
-  print('ðŸš€ IVPN App Started - ${DateTime.now()}');
-  stdout.writeln('=== Debug Mode Active ===');
+void main() {
+  // Minimize work in main() to prevent launch timeouts (Grey Screen)
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Initialize advanced logger with full debug info
-  await AdvancedLogger.init();
-  AdvancedLogger.info('ðŸš€ IVPN App Initialized', metadata: {
-    'platform': Platform.operatingSystem,
-    'version': Platform.operatingSystemVersion,
-  });
-  
-  await FileLogger.init();
-  FileLogger.log("Application starting...");
-
-  // Setup Global Crash Recovery
+  // Setup Global Crash Recovery (Safe to call early as long as loggers handle uninitialized state)
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
+    // AdvancedLogger handles uninitialized state gracefully
     AdvancedLogger.error("GLOBAL FLUTTER ERROR", error: details.exception, stackTrace: details.stack);
     CleanupUtils.emergencyCleanup();
   };
@@ -43,31 +29,58 @@ void main() async {
     return true; // Handle error
   };
 
-  final prefs = await SharedPreferences.getInstance();
-  final storageService = StorageService(prefs: prefs);
-
-  // Initialize Config Manager
-  await ConfigManager().init();
-
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (context) => ThemeProvider()),
-        ChangeNotifierProvider(
-          create: (context) => HomeProvider(storageService: storageService),
-        ),
-      ],
-      child: const MyApp(),
-    ),
-  );
+  runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  StorageService? _storageService;
+
+  @override
   Widget build(BuildContext context) {
+    // Phase 1: Show Splash Screen & Initialize
+    if (_storageService == null) {
+      return MaterialApp(
+        title: 'iVPN Splash',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData.dark(useMaterial3: true), // Dark theme for splash
+        home: SplashScreen(
+          onInitializationComplete: (storage) {
+            setState(() {
+              _storageService = storage;
+            });
+          },
+        ),
+      );
+    }
+
+    // Phase 2: Show Main App with Providers injected
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(
+          create: (_) => HomeProvider(storageService: _storageService!),
+        ),
+      ],
+      child: const ThemedApp(),
+    );
+  }
+}
+
+class ThemedApp extends StatelessWidget {
+  const ThemedApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // Now we can safely access ThemeProvider
     final themeProvider = context.watch<ThemeProvider>();
+
     return MaterialApp(
       title: 'iVPN',
       debugShowCheckedModeBanner: false,
@@ -81,4 +94,3 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
