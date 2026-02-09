@@ -19,3 +19,25 @@ extension PingStatusUI on PingStatus {
     }
   }
 }
+
+/// Extension on [Uri] to provide effective port calculation.
+extension UriPortExtension on Uri {
+  /// Returns the port if it's explicitly specified (not 0),
+  /// otherwise returns the default port for the scheme.
+  int get effectivePort {
+    if (port != 0) return port;
+
+    switch (scheme.toLowerCase()) {
+      case 'https':
+      case 'vmess':
+      case 'vless':
+      case 'trojan':
+        return 443;
+      case 'ss':
+        return 8388;
+      case 'http':
+      default:
+        return 80;
+    }
+  }
+}

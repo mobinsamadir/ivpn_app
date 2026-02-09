@@ -2,6 +2,7 @@
 import 'dart:convert';
 import 'dart:math';
 import '../utils/file_logger.dart';
+import '../utils/extensions.dart';
 
 class SingboxConfigGenerator {
   // Ports
@@ -279,7 +280,7 @@ class SingboxConfigGenerator {
       // VLESS / Trojan / generic URI
       return {
         'host': uri.host,
-        'port': uri.port > 0 ? uri.port : 443
+        'port': uri.effectivePort
       };
     } catch (e) {
       print('[CONFIG-GEN] Error extracting server details: $e');
