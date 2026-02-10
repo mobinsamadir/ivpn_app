@@ -357,14 +357,21 @@ class ConfigManager extends ChangeNotifier {
      }
   }
 
-  void _updateLists() {
-     validatedConfigs = allConfigs.where((c) => c.isValidated).toList();
-     favoriteConfigs = allConfigs.where((c) => c.isFavorite).toList();
-     
-     // Sorting Logic: Priority to Validated & High Score
-     allConfigs.sort((a, b) => b.score.compareTo(a.score));
-     validatedConfigs.sort((a, b) => b.score.compareTo(a.score));
-     favoriteConfigs.sort((a, b) => b.score.compareTo(a.score));
+  Future<void> _updateLists() async {
+    try {
+      final result = await compute(_isolateSortAndFilter, allConfigs);
+      allConfigs = result['all']!;
+      validatedConfigs = result['validated']!;
+      favoriteConfigs = result['favorite']!;
+    } catch (e) {
+      AdvancedLogger.error('Sorting failed: $e');
+      // Fallback to main thread sorting if isolate fails
+      validatedConfigs = allConfigs.where((c) => c.isValidated).toList();
+      favoriteConfigs = allConfigs.where((c) => c.isFavorite).toList();
+      allConfigs.sort((a, b) => b.score.compareTo(a.score));
+      validatedConfigs.sort((a, b) => b.score.compareTo(a.score));
+      favoriteConfigs.sort((a, b) => b.score.compareTo(a.score));
+    }
   }
 
   Future<void> _loadAutoSwitchSetting() async {
@@ -411,4 +418,26 @@ class ConfigManager extends ChangeNotifier {
   Future<void> considerCandidate(VpnConfigWithMetrics c) async {} 
   void startHotSwap() {} 
   void stopHotSwap() {} 
+}
+
+// --- ISOLATE WORKER ---
+Map<String, List<VpnConfigWithMetrics>> _isolateSortAndFilter(List<VpnConfigWithMetrics> configs) {
+  // Use a copy to sort, although Isolate automatically copies input data.
+  // The 'configs' list is a copy of 'allConfigs' passed from main isolate.
+  final all = List<VpnConfigWithMetrics>.from(configs);
+
+  final validated = all.where((c) => c.isValidated).toList();
+  final favorite = all.where((c) => c.isFavorite).toList();
+
+  int compare(VpnConfigWithMetrics a, VpnConfigWithMetrics b) => b.score.compareTo(a.score);
+
+  all.sort(compare);
+  validated.sort(compare);
+  favorite.sort(compare);
+
+  return {
+    'all': all,
+    'validated': validated,
+    'favorite': favorite,
+  };
 }

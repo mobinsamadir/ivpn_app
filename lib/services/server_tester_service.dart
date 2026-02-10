@@ -32,13 +32,13 @@ class ServerTesterService {
     AdvancedLogger.info('[ServerTesterService] Funnel Test completed');
   }
 
-  /// Phase 1: Quick connectivity check on ALL configs concurrently (batch size 20, timeout 2s)
+  /// Phase 1: Quick connectivity check on ALL configs concurrently (batch size 50, timeout 2s)
   Future<void> _runSievePhase(List<VpnConfigWithMetrics> configs) async {
     AdvancedLogger.info('[ServerTesterService] Phase 1: Sieve - Connectivity Check');
 
-    // Process configs in batches of 20 with timeout
-    for (int i = 0; i < configs.length; i += 20) {
-      final endIndex = (i + 20 < configs.length) ? i + 20 : configs.length;
+    // Process configs in batches of 50 with timeout
+    for (int i = 0; i < configs.length; i += 50) {
+      final endIndex = (i + 50 < configs.length) ? i + 50 : configs.length;
       final batch = configs.sublist(i, endIndex);
 
       // Run connectivity checks concurrently for this batch with timeout
