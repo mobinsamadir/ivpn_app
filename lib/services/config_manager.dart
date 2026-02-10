@@ -232,6 +232,18 @@ class ConfigManager extends ChangeNotifier {
         notifyListeners();
      }
   }
+
+  Future<void> updateConfigDirectly(VpnConfigWithMetrics config) async {
+     final index = allConfigs.indexWhere((c) => c.id == config.id);
+     if (index != -1) {
+        allConfigs[index] = config;
+     } else {
+        // Option to add if missing, but usually we just update existing
+     }
+     _updateLists();
+     await _saveAllConfigs();
+     notifyListeners();
+  }
   
   Future<void> markSuccess(String id) async {
       final index = allConfigs.indexWhere((c) => c.id == id);
