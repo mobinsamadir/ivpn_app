@@ -1,14 +1,6 @@
-import 'dart:io';
 import 'ad_manager_interface.dart';
-import 'ad_manager_android.dart';
-import 'ad_manager_windows.dart';
 
 AdManager getPlatformAdManager() {
-  if (Platform.isAndroid || Platform.isIOS) {
-    return AndroidAdManager();
-  } else if (Platform.isWindows) {
-    return WindowsAdManager();
-  }
   return MockAdManager();
 }
 
