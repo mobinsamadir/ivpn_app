@@ -16,7 +16,7 @@ import '../services/config_importer.dart';
 import 'stability_chart_screen.dart';
 import 'log_viewer_screen.dart';
 import '../services/access_manager.dart';
-import '../widgets/ad_dialog.dart';
+import '../services/ad_manager_service.dart';
 import '../widgets/native_ad_banner.dart';
 import '../services/server_tester_service.dart';
 
@@ -233,15 +233,10 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     if (engage == true) {
       if (!mounted) return;
 
-      // Step 2: Show Internal Ad Dialog with WebView
-      const adUrl = "https://ad.a-ads.com/2426527";
+      // Step 2: Show Ad via Unified Ad Manager
+      final bool adSuccess = await AdManagerService().showPreConnectionAd(context);
 
-      await showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AdDialog(adUrl: adUrl),
-      );
-
+      if (!adSuccess) return; // If ad failed or user didn't complete properly
       if (!mounted) return;
 
       // Step 3: Reward Claim Dialog
@@ -1909,82 +1904,6 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     );
   }
 
-  Future<bool> _showAdDialog() async {
-    bool adWatched = false;
-
-    await showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            Future.delayed(const Duration(seconds: 3), () {
-              if (Navigator.of(context).canPop()) {
-                Navigator.of(context).pop();
-                adWatched = true;
-              }
-            });
-
-            return AlertDialog(
-              backgroundColor: const Color(0xFF1A1A1A),
-              title: const Text(
-                'Advertisement',
-                style: TextStyle(color: Colors.white),
-              ),
-              content: Container(
-                width: double.maxFinite,
-                height: 200,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.ad_units,
-                      size: 64,
-                      color: Colors.amber[400],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Advertisement',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Thank you for supporting our service',
-                      style: TextStyle(
-                        color: Colors.grey[400],
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.blueGrey.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        'Ad Content Placeholder',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-
-    return adWatched;
-  }
 
   Future<void> _handleSessionExpiration() async {
     try {

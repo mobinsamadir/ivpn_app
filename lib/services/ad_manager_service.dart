@@ -1,12 +1,13 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import '../utils/advanced_logger.dart';
+import '../widgets/ad_dialog.dart';
 import 'ad_manager_interface.dart';
 
 // Conditionally import the correct implementation
 import 'ad_manager_stub.dart'
   if (dart.library.io) 'ad_manager_io.dart'
-  if (dart.library.html) 'ad_manager_web.dart'; // Web not used but good practice
+  if (dart.library.html) 'ad_manager_web.dart';
 
 class AdManagerService {
   static final AdManagerService _instance = AdManagerService._internal();
@@ -28,26 +29,29 @@ class AdManagerService {
     _initialized = true;
   }
 
-  /// Shows a Rewarded Ad (Pre-Connection).
-  /// Returns `true` if ad completed OR failed (Fail-Open).
-  Future<bool> showPreConnectionAd() async {
+  /// Shows a Rewarded Ad (Pre-Connection) using a Dialog.
+  /// Returns `true` if ad was closed successfully (Close & Connect).
+  Future<bool> showPreConnectionAd(BuildContext context) async {
      if (!_initialized) await initialize();
+     if (!context.mounted) return false;
 
-     AdvancedLogger.info("[AdManager] Requesting Pre-Connection Ad...");
+     AdvancedLogger.info("[AdManager] Requesting Pre-Connection Ad (Dialog)...");
      try {
-       // Timeout ensures we never block the user for more than 5s
-       return await _manager.showRewarded().timeout(const Duration(seconds: 5), onTimeout: () {
-         AdvancedLogger.warn("[AdManager] Ad Timeout (5s) - Triggering Fail-Open");
-         return true; // Proceed
-       });
+       final result = await showDialog<bool>(
+         context: context,
+         barrierDismissible: false,
+         builder: (context) => const AdDialog(unitId: '2426527'),
+       );
+
+       return result ?? false;
      } catch (e) {
-       AdvancedLogger.error("[AdManager] Ad Exception: $e - Triggering Fail-Open");
-       return true; // Fail Open
+       AdvancedLogger.error("[AdManager] Ad Dialog Exception: $e - Fail Open");
+       return true; // Fail Open on error
      }
   }
 
   /// Shows an Interstitial Ad (Post-Connection).
-  /// Does not block connection, fire and forget.
+  /// Currently uses the mock manager or placeholder.
   Future<void> showPostConnectionAd() async {
      if (!_initialized) return;
      try {
