@@ -10,6 +10,7 @@ import '../utils/file_logger.dart';
 import 'singbox_config_generator.dart';
 
 class WindowsVpnService {
+  static bool isUserInitiatedDisconnect = false;
   Process? _process;
   
   // Log Stream (Stdout/Stderr)
@@ -166,6 +167,7 @@ class WindowsVpnService {
 
 
   Future<void> startVpn(String configContent) async {
+    isUserInitiatedDisconnect = false;
     AdvancedLogger.info('[WindowsVpnService] startVpn called with config length: ${configContent.length}');
 
     // 1. Ensure clean slate - Force kill any existing sing-box processes to free up ports
@@ -376,6 +378,7 @@ class WindowsVpnService {
   }
 
   Future<void> stopVpn() async {
+    isUserInitiatedDisconnect = true;
     AdvancedLogger.info('[WindowsVpnService] stopVpn called');
     _logController.add("🔻 Stopping VPN...");
 
