@@ -1,8 +1,6 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:webview_flutter/webview_flutter.dart';
-import 'package:webview_windows/webview_windows.dart';
+import 'aads_banner.dart';
 
 class AdDialog extends StatefulWidget {
   final String unitId;
@@ -82,13 +80,13 @@ class _AdDialogState extends State<AdDialog> {
             ),
             const SizedBox(height: 10),
             
-            // WebView Content
+            // WebView Content (Using Reusable AAdsBanner)
             Expanded(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
-                  color: Colors.black,
-                  child: _buildWebView(),
+                  color: Colors.transparent,
+                  child: const AAdsBanner(),
                 ),
               ),
             ),
@@ -123,125 +121,6 @@ class _AdDialogState extends State<AdDialog> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildWebView() {
-    final htmlContent = _getHtmlContent(widget.unitId);
-    if (Platform.isWindows) {
-      return WindowsAdWebView(htmlContent: htmlContent);
-    } else {
-      return MobileAdWebView(htmlContent: htmlContent);
-    }
-  }
-
-  String _getHtmlContent(String unitId) {
-    return '''
-<!DOCTYPE html>
-<html>
-<head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<style>
-  body { margin: 0; padding: 0; background-color: #000000; display: flex; justify-content: center; align-items: center; height: 100vh; color: white; }
-</style>
-</head>
-<body>
-  <div style="width: 100%; height: 100%; display: flex; justify-content: center; align-items: center;">
-    <iframe data-aa='$unitId' src='https://ad.a-ads.com/$unitId?size=Adaptive' style='border:0px; padding:0; width:100%; height:100%; overflow:hidden;'></iframe>
-  </div>
-</body>
-</html>
-''';
-  }
-}
-
-// Windows Implementation
-class WindowsAdWebView extends StatefulWidget {
-  final String htmlContent;
-  const WindowsAdWebView({super.key, required this.htmlContent});
-
-  @override
-  State<WindowsAdWebView> createState() => _WindowsAdWebViewState();
-}
-
-class _WindowsAdWebViewState extends State<WindowsAdWebView> {
-  final _controller = WebviewController();
-  bool _isInitialized = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _initWebview();
-  }
-
-  Future<void> _initWebview() async {
-    try {
-      await _controller.initialize();
-      await _controller.setBackgroundColor(Colors.transparent);
-      await _controller.clearCache();
-      await _controller.clearCookies();
-      await _controller.loadStringContent(widget.htmlContent);
-      if (mounted) setState(() => _isInitialized = true);
-    } catch (e) {
-      debugPrint('Windows WebView Error: $e');
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (!_isInitialized) {
-      return const Center(child: CircularProgressIndicator(color: Colors.blueAccent));
-    }
-    return Webview(_controller);
-  }
-}
-
-// Mobile Implementation
-class MobileAdWebView extends StatefulWidget {
-  final String htmlContent;
-  const MobileAdWebView({super.key, required this.htmlContent});
-
-  @override
-  State<MobileAdWebView> createState() => _MobileAdWebViewState();
-}
-
-class _MobileAdWebViewState extends State<MobileAdWebView> {
-  late final WebViewController _controller;
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(const Color(0x00000000))
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onPageFinished: (_) {
-            if (mounted) setState(() => _isLoading = false);
-          },
-          onWebResourceError: (error) {
-             debugPrint('Mobile WebView Error: ${error.description}');
-          }
-        ),
-      )
-      ..loadHtmlString(widget.htmlContent);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        WebViewWidget(controller: _controller),
-        if (_isLoading)
-          const Center(child: CircularProgressIndicator(color: Colors.blueAccent)),
-      ],
     );
   }
 }
