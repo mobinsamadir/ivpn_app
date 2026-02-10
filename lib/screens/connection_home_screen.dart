@@ -7,8 +7,7 @@ import '../providers/home_provider.dart';
 import '../services/config_manager.dart';
 import '../services/latency_service.dart';
 import '../services/windows_vpn_service.dart';
-import '../widgets/smart_connect_button.dart';
-import '../widgets/ad_banner_webview.dart';
+import '../widgets/aads_banner.dart';
 import '../widgets/config_list_tabs.dart';
 import '../utils/advanced_logger.dart';
 import '../utils/clipboard_utils.dart';
@@ -17,7 +16,6 @@ import 'stability_chart_screen.dart';
 import 'log_viewer_screen.dart';
 import '../services/access_manager.dart';
 import '../services/ad_manager_service.dart';
-import '../widgets/native_ad_banner.dart';
 import '../services/server_tester_service.dart';
 
 class ConnectionHomeScreen extends StatefulWidget {
@@ -442,10 +440,13 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
                           _buildAutoTestToggle(),
                           const SizedBox(height: 30),
 
-                          // Native Ad Banner
+                          // Middle Ad Banner
                           const Padding(
                             padding: EdgeInsets.symmetric(horizontal: 16.0),
-                            child: NativeAdBanner(key: Key('native_ad_banner')),
+                            child: SizedBox(
+                                height: 250,
+                                child: AAdsBanner(),
+                            ),
                           ),
                           const SizedBox(height: 20),
 
@@ -605,9 +606,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
 
   Widget _buildAdBannerSection() {
     return const SizedBox(
-      height: 80,
+      height: 100, // Adjusted height for Top Banner
       width: double.infinity,
-      child: AdBannerWebView(key: Key('top_banner_webview')),
+      child: AAdsBanner(),
     );
   }
 
