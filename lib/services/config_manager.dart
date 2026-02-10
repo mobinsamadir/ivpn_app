@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:http/http.dart' as http;
+// ignore: depend_on_referenced_packages
 import 'package:collection/collection.dart';
 import '../models/vpn_config_with_metrics.dart';
 import '../utils/advanced_logger.dart';
@@ -69,6 +70,7 @@ class ConfigManager extends ChangeNotifier {
       // لیست میرورها (لینک گوگل درایو اولویت دارد)
       final mirrors = [
         'https://drive.google.com/uc?export=download&id=1S7CI5xq4bbnERZ1i1eGuYn5bhluh2LaW', 
+        'https://gist.githubusercontent.com/mobinsamadir/687a7ef199d6eaf6d1912e36151a9327/raw/a1e99f7ce01dcc0ee065552cdcc13593de1cd888/servers.txt',
         'https://raw.githubusercontent.com/mobinsamadir/ivpn-servers/main/servers.txt', // Backup URL (Example)
       ];
 
