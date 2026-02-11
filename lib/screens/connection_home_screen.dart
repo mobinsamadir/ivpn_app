@@ -72,8 +72,13 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     });
     AccessManager().addListener(_onTimeChanged);
 
-    // Fire and forget: fetch startup configs from GitHub
-    _configManager.fetchStartupConfigs();
+    // Fire and forget: fetch startup configs from GitHub, then trigger auto-test
+    _configManager.fetchStartupConfigs().then((hasNewConfigs) {
+       if (hasNewConfigs && _autoTestOnStartup && !_configManager.isConnected && mounted) {
+           AdvancedLogger.info("[HomeScreen] Startup configs loaded. Triggering Auto-Test...");
+           _runFunnelTest();
+       }
+    });
 
     // VPN Connection Status Listener
     _windowsVpnService.statusStream.listen((status) {
@@ -297,28 +302,19 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
   Future<void> _initAppSequence() async {
     if (!mounted) return;
     setState(() {});
-
-    if (_autoTestOnStartup && mounted) {
-       _runSmartAutoTest();
-    }
+    // Auto-test is now triggered via fetchStartupConfigs callback in initState
   }
 
   Future<void> _runSmartAutoTest() async {
-    await Future.delayed(const Duration(seconds: 1));
     if (!mounted) return;
     
     if (_configManager.allConfigs.isEmpty) {
-        int attempts = 0;
-        while (_configManager.allConfigs.isEmpty && attempts < 10) {
-          await Future.delayed(const Duration(milliseconds: 500));
-          attempts++;
-        }
+       _showToast("No configs available to test");
+       return;
     }
 
-    if (_configManager.allConfigs.isEmpty) return;
-
-    AdvancedLogger.info("🚀 [Startup] Running Smart Auto-Test...");
-    await _runFunnelTest(_configManager.allConfigs);
+    AdvancedLogger.info("🚀 [Auto-Test] Running Smart Auto-Test...");
+    await _runFunnelTest();
     
     _configManager.allConfigs.sort((a, b) {
         final pingA = a.currentPing > 0 ? a.currentPing : 999999;
@@ -1519,12 +1515,12 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
   }
 
   // NEW: Run the advanced funnel test using ServerTesterService
-  Future<void> _runFunnelTest(List<VpnConfigWithMetrics> configs) async {
-    if (configs.isEmpty) return;
+  Future<void> _runFunnelTest() async {
+    if (_configManager.allConfigs.isEmpty) return;
 
     // Use the new ServerTesterService for advanced funnel testing
     final tester = ServerTesterService(_windowsVpnService);
-    await tester.runFunnelTest(configs);
+    await tester.startFunnel();
   }
 
   // Find the fastest server without connecting

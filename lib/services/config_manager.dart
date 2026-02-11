@@ -61,29 +61,29 @@ class ConfigManager extends ChangeNotifier {
   }
 
   // --- CORE: FETCH & PARSE ---
-  Future<void> fetchStartupConfigs() async {
-    if (_isRefreshing) return;
+  Future<bool> fetchStartupConfigs() async {
+    if (_isRefreshing) return false;
     _isRefreshing = true;
     notifyListeners();
+
+    bool anyConfigAdded = false;
 
     try {
       AdvancedLogger.info('[ConfigManager] Downloading configs from mirrors...');
       
-      // لیست میرورها (لینک گیتهاب اولویت دارد)
+      // Mirrors List (GitHub -> Drive -> MyFiles)
       final mirrors = [
         'https://gist.githubusercontent.com/mobinsamadir/687a7ef199d6eaf6d1912e36151a9327/raw/a1e99f7ce01dcc0ee065552cdcc13593de1cd888/servers.txt',
         'https://drive.google.com/uc?export=download&id=1S7CI5xq4bbnERZ1i1eGuYn5bhluh2LaW',
+        'https://my.files.ir/drive/s/D7zxAbnxHc4y4353UkL2RZ21MrjxJz',
       ];
 
-      String content = '';
-      bool downloadSuccess = false;
-
       for (final url in mirrors) {
-        if (downloadSuccess) break;
+        if (anyConfigAdded) break; // Chain Breaking: Stop if we already have configs
+
         try {
           AdvancedLogger.info('[ConfigManager] Attempting fetch from: $url');
           
-          // FIX: Added User-Agent to bypass Google Drive HTML block
           final response = await http.get(
             Uri.parse(url),
             headers: {
@@ -94,13 +94,37 @@ class ConfigManager extends ChangeNotifier {
           ).timeout(const Duration(seconds: 30));
           
           if (response.statusCode == 200) {
-            if (_isHtmlResponse(response.body)) {
-               AdvancedLogger.warn('[ConfigManager] Drive returned HTML (Blocked): $url');
+            String content = response.body;
+
+            // SMART EXTRACTOR: Even if it's HTML, try to parse it!
+            if (_isHtmlResponse(content)) {
+               AdvancedLogger.info('[ConfigManager] HTML detected at $url. Attempting Regex Scan...');
+               // We don't block HTML anymore. parseMixedContent handles it via Regex.
             } else {
-               content = response.body;
-               downloadSuccess = true;
                AdvancedLogger.info('✅ Downloaded ${content.length} bytes successfully.');
             }
+
+            // 1. Parse Mixed Content (Configs + Sub Links)
+            final configUrls = await parseMixedContent(content);
+
+            if (configUrls.isNotEmpty) {
+               // 2. SANITIZE: Remove malicious fields
+               final cleanedConfigs = configUrls.map((c) {
+                 return c.replaceAll(RegExp(r'"spider_x":\s*("[^"]*"|[^,{}]+),?'), '');
+               }).toList();
+
+               // 3. Add to Database
+               int added = await addConfigs(cleanedConfigs);
+               if (added > 0) {
+                  AdvancedLogger.info('[ConfigManager] Import finished: Added $added new configs from $url.');
+                  anyConfigAdded = true;
+               } else {
+                  AdvancedLogger.warn('[ConfigManager] Configs found but were duplicates/invalid.');
+               }
+            } else {
+               AdvancedLogger.warn('[ConfigManager] No valid configs found in content from $url.');
+            }
+
           } else {
              AdvancedLogger.warn('[ConfigManager] HTTP Error ${response.statusCode} from $url');
           }
@@ -109,31 +133,18 @@ class ConfigManager extends ChangeNotifier {
         }
       }
 
-      if (downloadSuccess) {
-        // 1. Parse Mixed Content (Configs + Sub Links)
-        final configUrls = await parseMixedContent(content);
-        
-        if (configUrls.isNotEmpty) {
-           // 2. SANITIZE: Remove malicious fields
-           final cleanedConfigs = configUrls.map((c) {
-             return c.replaceAll(RegExp(r'"spider_x":\s*("[^"]*"|[^,{}]+),?'), '');
-           }).toList();
-           
-           // 3. Add to Database
-           int added = await addConfigs(cleanedConfigs);
-           AdvancedLogger.info('[ConfigManager] Import finished: Added $added new configs.');
-        } else {
-           AdvancedLogger.warn('[ConfigManager] No valid configs found in content.');
-        }
-      } else {
-        AdvancedLogger.error('[ConfigManager] All attempts to fetch configs failed.');
+      if (!anyConfigAdded) {
+        AdvancedLogger.error('[ConfigManager] All attempts to fetch configs failed or yielded 0 new configs.');
       }
+
     } catch (e) {
        AdvancedLogger.error('[ConfigManager] Critical error in fetchStartupConfigs: $e');
     } finally {
       _isRefreshing = false;
       notifyListeners();
     }
+
+    return anyConfigAdded;
   }
 
   // --- SMART PARSER (Regex Extraction & Recursion) ---
