@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 import '../models/vpn_config_with_metrics.dart';
 import '../services/config_manager.dart';
@@ -45,6 +44,44 @@ class ServerTesterService {
   ServerTesterService(WindowsVpnService vpnService)
       : _latencyService = LatencyService(vpnService),
         _configManager = ConfigManager();
+
+  /// Public entry point with Priority Sorting
+  Future<void> startFunnel() async {
+    AdvancedLogger.info('[ServerTesterService] startFunnel called. Sorting configs...');
+    final List<VpnConfigWithMetrics> configs = List.from(_configManager.allConfigs);
+
+    // Sort logic:
+    // 1. Proven Working (lastSuccessfulConnectionTime > 0)
+    // 2. New Configs (Unknown)
+    // 3. Failed/Others
+    configs.sort((a, b) {
+      final aProven = a.lastSuccessfulConnectionTime > 0;
+      final bProven = b.lastSuccessfulConnectionTime > 0;
+
+      // Proven configs first
+      if (aProven && !bProven) return -1;
+      if (!aProven && bProven) return 1;
+
+      if (aProven && bProven) {
+         // Both proven, sort by recency (descending)
+         return b.lastSuccessfulConnectionTime.compareTo(a.lastSuccessfulConnectionTime);
+      }
+
+      // Both unproven: New vs Failed
+      final aNew = a.failureCount == 0 && a.lastTestedAt == null;
+      final bNew = b.failureCount == 0 && b.lastTestedAt == null;
+
+      if (aNew && !bNew) return -1;
+      if (!aNew && bNew) return 1;
+
+      // Both Failed or both New (if New, order doesn't matter much)
+      // Sort by failure count (less failures first)
+      return a.failureCount.compareTo(b.failureCount);
+    });
+
+    AdvancedLogger.info('[ServerTesterService] Configs sorted. Starting funnel test...');
+    await runFunnelTest(configs);
+  }
 
   /// Runs the new Stream-Based Pipeline Test
   Future<void> runFunnelTest(List<VpnConfigWithMetrics> configs) async {
