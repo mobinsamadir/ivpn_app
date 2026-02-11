@@ -73,6 +73,7 @@ class ConfigManager extends ChangeNotifier {
       
       // Mirrors List (GitHub -> Gist -> MyFiles -> Drive API)
       final mirrors = [
+        'https://raw.githubusercontent.com/yebekhe/TelegramV2rayCollector/main/sub/normal/mix',
         'https://raw.githubusercontent.com/mobinsamadir/ivpn-servers/refs/heads/main/servers.txt',
         'https://gist.githubusercontent.com/mobinsamadir/687a7ef199d6eaf6d1912e36151a9327/raw/servers.txt',
         'https://my.files.ir/drive/s/D7zxAbnxHc4y4353UkL2RZ21MrjxJz',
@@ -157,7 +158,7 @@ class ConfigManager extends ChangeNotifier {
 
     // Extract Standard Configs
     final regex = RegExp(
-      r'''(vmess|vless|ss|trojan|tuic|hysteria|hysteria2):\/\/[a-zA-Z0-9-._~:/?#\[\]@!$&()*+,;=%]+(?:#[^#\n\r]*)?''',
+      r'(vless|vmess|trojan|ss):\/\/[a-zA-Z0-9%?=&-._#@:\[\]]+',
       caseSensitive: false,
       multiLine: true,
     );
