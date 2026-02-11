@@ -103,7 +103,16 @@ class _WindowsWebViewState extends State<_WindowsWebView> {
 
   @override
   void dispose() {
-    _controller.dispose();
+    // Aggressive cleanup to free RAM immediately
+    try {
+      // Try to stop any active loading/processing
+      if (_isInitialized) {
+         _controller.stop();
+      }
+      _controller.dispose();
+    } catch (e) {
+      debugPrint('[AAdsBanner] Dispose error: $e');
+    }
     super.dispose();
   }
 

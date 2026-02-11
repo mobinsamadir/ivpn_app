@@ -5,8 +5,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  setUp(() {
+  setUp(() async {
     SharedPreferences.setMockInitialValues({});
+    await ConfigManager().clearAllData();
   });
 
   group('ConfigManager Tests', () {
@@ -20,7 +21,8 @@ void main() {
       final manager = ConfigManager();
       await manager.init();
 
-      await manager.addConfig('vless://test', 'Test Config', countryCode: 'US');
+      // Use proper URI format
+      await manager.addConfig('vless://uuid@127.0.0.1:443?query=1#Test%20Config', 'Ignored Name');
 
       expect(manager.allConfigs.length, 1);
       expect(manager.allConfigs.first.name, 'Test Config');
@@ -35,10 +37,10 @@ void main() {
     test('deleteConfig removes from list and storage', () async {
       final manager = ConfigManager();
       await manager.init();
-      await manager.clearAllData();
+      // clearAllData handled in setUp
 
-      await manager.addConfig('vless://test1', 'Config 1');
-      await manager.addConfig('vless://test2', 'Config 2');
+      await manager.addConfig('vless://uuid@127.0.0.1:443?query=1#Config%201', 'Config 1');
+      await manager.addConfig('vless://uuid@127.0.0.1:443?query=1#Config%202', 'Config 2');
 
       final idToDelete = manager.allConfigs.first.id;
       final result = await manager.deleteConfig(idToDelete);
@@ -51,31 +53,31 @@ void main() {
     test('toggleFavorite updates list and storage', () async {
       final manager = ConfigManager();
       await manager.init();
-      await manager.clearAllData();
+      // clearAllData handled in setUp
       
-      await manager.addConfig('vless://test', 'Fav Config');
+      await manager.addConfig('vless://uuid@127.0.0.1:443?query=1#Fav%20Config', 'Fav Config');
       final config = manager.allConfigs.first;
       
       expect(config.isFavorite, isFalse);
       
       await manager.toggleFavorite(config.id);
-      expect(config.isFavorite, isTrue);
+      expect(manager.allConfigs.first.isFavorite, isTrue);
       expect(manager.favoriteConfigs.length, 1);
       
       await manager.toggleFavorite(config.id);
-      expect(config.isFavorite, isFalse);
+      expect(manager.allConfigs.first.isFavorite, isFalse);
       expect(manager.favoriteConfigs.isEmpty, isTrue);
     });
     
     test('getBestConfig returns valid config or null', () async {
       final manager = ConfigManager();
       await manager.init();
-      await manager.clearAllData();
+      // clearAllData handled in setUp
       
       var best = await manager.getBestConfig();
       expect(best, isNull);
       
-      await manager.addConfig('vless://test', 'Best Config');
+      await manager.addConfig('vless://uuid@127.0.0.1:443?query=1#Best%20Config', 'Best Config');
       best = await manager.getBestConfig();
       expect(best, isNotNull);
     });

@@ -32,6 +32,9 @@ class ConfigManager extends ChangeNotifier {
   String get connectionStatus => _connectionStatus;
 
   Timer? _sessionTimer;
+  Timer? _throttleTimer; // For UI throttling
+  bool _hasPendingUpdates = false; // Flag for buffered updates
+
   bool _isRefreshing = false;
   bool get isRefreshing => _isRefreshing;
 
@@ -185,6 +188,35 @@ class ConfigManager extends ChangeNotifier {
     return collectedConfigs.toList();
   }
 
+  // --- THROTTLING LOGIC ---
+  void notifyListenersThrottled() {
+    if (_throttleTimer?.isActive ?? false) {
+      _hasPendingUpdates = true;
+      return;
+    }
+
+    // First call: Notify immediately (leading edge) for responsiveness?
+    // User requested: "User interactions must remain Instant". This method is for background updates.
+    // "Buffer updates and only call notifyListeners() once every 1 second (or 500ms)."
+    // So we'll use a trailing edge approach for the bulk updates to avoid UI stutter.
+
+    _throttleTimer = Timer(const Duration(milliseconds: 500), () {
+      if (_hasPendingUpdates) {
+        _hasPendingUpdates = false;
+        notifyListeners();
+        // If updates kept coming, we could restart timer here for continuous stream,
+        // but for now let's just clear timer and wait for next call.
+        // Actually, for continuous stream (like ping test), we want it to fire every 500ms if busy.
+        // But with this simple implementation, the next call will start a new timer.
+        // So effectively it batches updates into 500ms chunks.
+      }
+      _throttleTimer = null;
+    });
+
+    // Mark as pending so the timer knows to fire.
+    _hasPendingUpdates = true;
+  }
+
   // --- DATABASE OPERATIONS ---
   Future<int> addConfigs(List<String> configStrings) async {
     int addedCount = 0;
@@ -211,7 +243,7 @@ class ConfigManager extends ChangeNotifier {
     }
 
     if (addedCount > 0) {
-      _updateLists();
+      await _updateLists();
       await _saveAllConfigs();
       notifyListeners();
     }
@@ -227,9 +259,10 @@ class ConfigManager extends ChangeNotifier {
            speed: speed, 
            connectionSuccess: connectionSuccess ?? false
         );
-        _updateLists();
-        await _saveAllConfigs();
-        notifyListeners();
+        // Don't save on every metric update to save IO
+        // _updateLists is fast enough (in memory or isolate), but we should throttle UI updates.
+        _updateLists(); // We don't await here to keep metrics stream fast
+        notifyListenersThrottled();
      }
   }
 
@@ -240,9 +273,9 @@ class ConfigManager extends ChangeNotifier {
      } else {
         // Option to add if missing, but usually we just update existing
      }
-     _updateLists();
-     await _saveAllConfigs();
-     notifyListeners();
+     _updateLists(); // Don't await
+     // Direct updates (like from pipelines) also throttle to prevent flooding
+     notifyListenersThrottled();
   }
   
   Future<void> markSuccess(String id) async {
@@ -253,7 +286,7 @@ class ConfigManager extends ChangeNotifier {
             lastSuccessfulConnectionTime: DateTime.now().millisecondsSinceEpoch,
             isAlive: true
          );
-         _updateLists();
+         await _updateLists();
          await _saveAllConfigs();
          notifyListeners();
       }
@@ -266,7 +299,7 @@ class ConfigManager extends ChangeNotifier {
             failureCount: allConfigs[index].failureCount + 1,
             isAlive: false
          );
-         _updateLists();
+         await _updateLists();
          await _saveAllConfigs();
          notifyListeners();
       }
@@ -275,7 +308,7 @@ class ConfigManager extends ChangeNotifier {
   Future<bool> deleteConfig(String id) async {
      allConfigs.removeWhere((c) => c.id == id);
      if (_selectedConfig?.id == id) _selectedConfig = null;
-     _updateLists();
+     await _updateLists();
      await _saveAllConfigs();
      notifyListeners();
      return true;
@@ -287,7 +320,7 @@ class ConfigManager extends ChangeNotifier {
          allConfigs[index] = allConfigs[index].copyWith(
             isFavorite: !allConfigs[index].isFavorite
          );
-         _updateLists();
+         await _updateLists();
          await _saveAllConfigs();
          notifyListeners();
       }
@@ -415,7 +448,10 @@ class ConfigManager extends ChangeNotifier {
   Future<void> clearAllData() async {
      final p = await SharedPreferences.getInstance();
      await p.remove(_configsKey);
-     allConfigs.clear(); _updateLists(); notifyListeners();
+     _selectedConfig = null;
+     allConfigs.clear();
+     await _updateLists();
+     notifyListeners();
   }
   
   // Aliases for compatibility
