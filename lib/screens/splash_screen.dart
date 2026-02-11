@@ -47,6 +47,7 @@ class _SplashScreenState extends State<SplashScreen> {
         const Duration(seconds: 5), 
         onTimeout: () {
           AdvancedLogger.warn('Splash fetch timed out, proceeding with cached configs.');
+          return false; // <--- FIX: Explicitly return a boolean (false = failed/timed out)
         }
       );
 

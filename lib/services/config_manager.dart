@@ -69,6 +69,7 @@ class ConfigManager extends ChangeNotifier {
       // لیست میرورها (لینک گوگل درایو اولویت دارد)
       final mirrors = [
         'https://drive.google.com/uc?export=download&id=1S7CI5xq4bbnERZ1i1eGuYn5bhluh2LaW', 
+        
         'https://raw.githubusercontent.com/mobinsamadir/ivpn-servers/main/servers.txt', // Backup URL (Example)
       ];
 
