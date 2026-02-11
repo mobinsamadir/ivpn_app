@@ -75,6 +75,7 @@ class SingboxConfigGenerator {
       outbound["tls"] = {
         "enabled": true,
         "server_name": data['sni'] ?? data['host'] ?? data['add'],
+        "alpn": ["h2", "http/1.1"],
         "insecure": isTest,
       };
     }
@@ -150,7 +151,8 @@ class SingboxConfigGenerator {
       // Add ALPN if present (important for h2/h3)
       if (params.containsKey('alpn')) {
         tls["alpn"] = params['alpn']!.split(',');
-      } else if (protocol == "vless") {
+      } else {
+        // Default ALPN for Mux support
         tls["alpn"] = ["h2", "http/1.1"];
       }
 
