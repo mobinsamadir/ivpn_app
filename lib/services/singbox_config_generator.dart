@@ -58,7 +58,9 @@ class SingboxConfigGenerator {
       "multiplex": {
         "enabled": true,
         "padding": true,
-        "brutal": true
+        "protocol": "h2mux",
+        "max_connections": 4,
+        "min_streams": 2
       },
     };
 
@@ -111,7 +113,9 @@ class SingboxConfigGenerator {
       "multiplex": {
         "enabled": true,
         "padding": true,
-        "brutal": true
+        "protocol": "h2mux",
+        "max_connections": 4,
+        "min_streams": 2
       },
     };
 
