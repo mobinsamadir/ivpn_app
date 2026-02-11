@@ -56,7 +56,7 @@ class SingboxConfigGenerator {
       "security": "auto",
       "connect_timeout": isTest ? "5s" : "15s",
       "multiplex": {
-        "enabled": true,
+        "enabled": false,
         "padding": true,
         "protocol": "h2mux",
         "max_connections": 4,
@@ -120,7 +120,7 @@ class SingboxConfigGenerator {
       "server_port": port,
       "connect_timeout": isTest ? "5s" : "15s",
       "multiplex": {
-        "enabled": true,
+        "enabled": false,
         "padding": true,
         "protocol": "h2mux",
         "max_connections": 4,
