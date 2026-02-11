@@ -143,11 +143,17 @@ class SingboxConfigGenerator {
       }
 
       if (security == "reality") {
+        final pbk = params['pbk'] ?? "";
+        // VALIDATION: Prevent crash on invalid Reality configs
+        if (pbk.isEmpty) {
+           print('❌ [CONFIG-GEN] Invalid Reality Config: Missing public_key (pbk)');
+           throw Exception("Reality config missing public_key (pbk)");
+        }
+
         tls["reality"] = {
           "enabled": true,
-          "public_key": params['pbk'] ?? "",
-          "short_id": params['sid'] ?? "",
-          "spider_x": params['spx'] ?? ""
+          "public_key": pbk,
+          "short_id": params['sid'] ?? ""
         };
       }
       tls["insecure"] = isTest;

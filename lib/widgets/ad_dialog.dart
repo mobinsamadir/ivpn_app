@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:webview_windows/webview_windows.dart';
+import 'aads_banner.dart';
 
 class AdDialog extends StatefulWidget {
-  final String adUrl;
-  
+  final String unitId;
+
   const AdDialog({
     super.key,
-    required this.adUrl,
+    this.unitId = '2426527', // Default A-Ads Unit ID
   });
 
   @override
@@ -15,51 +15,38 @@ class AdDialog extends StatefulWidget {
 }
 
 class _AdDialogState extends State<AdDialog> {
-  final _controller = WebviewController();
-  bool _isCloseVisible = false;
-  bool _isLoading = true;
-  Timer? _closeButtonTimer;
+  int _timeLeft = 10;
+  bool _canClose = false;
+  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
-    _initWebview();
-    
-    // Show close button after 5 seconds
-    _closeButtonTimer = Timer(const Duration(seconds: 5), () {
-      if (mounted) {
-        setState(() {
-          _isCloseVisible = true;
-        });
+    _startTimer();
+  }
+
+  void _startTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_timeLeft > 0) {
+        if (mounted) {
+          setState(() {
+            _timeLeft--;
+          });
+        }
+      } else {
+        _timer?.cancel();
+        if (mounted) {
+          setState(() {
+            _canClose = true;
+          });
+        }
       }
     });
   }
 
-  Future<void> _initWebview() async {
-    try {
-      await _controller.initialize();
-      await _controller.setBackgroundColor(const Color(0xFF1E1E1E));
-      await _controller.loadUrl(widget.adUrl);
-      
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error initializing ad WebView: $e');
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
   @override
   void dispose() {
-    _closeButtonTimer?.cancel();
-    _controller.dispose();
+    _timer?.cancel();
     super.dispose();
   }
 
@@ -71,72 +58,66 @@ class _AdDialogState extends State<AdDialog> {
         borderRadius: BorderRadius.circular(20),
       ),
       child: Container(
-        width: MediaQuery.of(context).size.width * 0.8,
-        height: MediaQuery.of(context).size.height * 0.7,
+        width: MediaQuery.of(context).size.width * 0.9,
+        height: MediaQuery.of(context).size.height * 0.8,
         padding: const EdgeInsets.all(16),
-        child: Stack(
+        child: Column(
           children: [
-            // WebView Content
-            if (_isLoading)
-              const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(color: Colors.blueAccent),
-                    SizedBox(height: 16),
-                    Text(
-                      'Loading advertisement...',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  ],
+            // Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Sponsored Content',
+                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-              )
-            else
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Webview(_controller),
-              ),
+                if (_canClose)
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.grey),
+                    onPressed: () => Navigator.of(context).pop(true),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 10),
             
-            // Close Button (appears after 5 seconds)
-            Positioned(
-              top: 0,
-              right: 0,
-              child: Visibility(
-                visible: _isCloseVisible,
+            // WebView Content (Using Reusable AAdsBanner)
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
                 child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.7),
-                    shape: BoxShape.circle,
-                  ),
-                  child: IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.of(context).pop(),
-                    tooltip: 'Close',
-                  ),
+                  color: Colors.transparent,
+                  child: const AAdsBanner(),
                 ),
               ),
             ),
             
-            // Timer indicator (shows countdown until close button appears)
-            if (!_isCloseVisible)
-              Positioned(
-                top: 8,
-                right: 8,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.7),
+            const SizedBox(height: 16),
+
+            // Footer Button
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: _canClose
+                    ? () => Navigator.of(context).pop(true)
+                    : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _canClose ? Colors.green : Colors.grey[800],
+                  disabledBackgroundColor: Colors.grey[800],
+                  shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Text(
-                    'Please wait...',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12,
-                    ),
+                ),
+                child: Text(
+                  _canClose ? 'Close & Connect' : 'Please wait (${_timeLeft}s)...',
+                  style: TextStyle(
+                    color: _canClose ? Colors.white : Colors.white54,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
+            ),
           ],
         ),
       ),

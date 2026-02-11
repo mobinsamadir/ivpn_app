@@ -7,17 +7,15 @@ import '../providers/home_provider.dart';
 import '../services/config_manager.dart';
 import '../services/latency_service.dart';
 import '../services/windows_vpn_service.dart';
-import '../widgets/smart_connect_button.dart';
-import '../widgets/ad_banner_webview.dart';
-import '../widgets/config_list_tabs.dart';
+import '../widgets/aads_banner.dart';
+import '../widgets/config_card.dart';
 import '../utils/advanced_logger.dart';
 import '../utils/clipboard_utils.dart';
 import '../services/config_importer.dart';
 import 'stability_chart_screen.dart';
 import 'log_viewer_screen.dart';
 import '../services/access_manager.dart';
-import '../widgets/ad_dialog.dart';
-import '../widgets/native_ad_banner.dart';
+import '../services/ad_manager_service.dart';
 import '../services/server_tester_service.dart';
 
 class ConnectionHomeScreen extends StatefulWidget {
@@ -27,7 +25,7 @@ class ConnectionHomeScreen extends StatefulWidget {
   State<ConnectionHomeScreen> createState() => _ConnectionHomeScreenState();
 }
 
-class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with WidgetsBindingObserver {
+class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   // 1. Initialize services IMMEDIATELY
   final WindowsVpnService _windowsVpnService = WindowsVpnService();
   late final LatencyService _latencyService;
@@ -48,14 +46,22 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
 
   // Auto-switch Variables
   int _highPingCounter = 0;
-  static const int _highPingThreshold = 2000; // ms
   static const int _consecutiveHighPingCount = 2; // consecutive checks before switching
   Timer? _pingMonitorTimer;
+
+  late TabController _tabController;
 
   @override
   void initState() {
     _latencyService = LatencyService(_windowsVpnService);
     super.initState();
+
+    _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        setState(() {}); // Rebuild to switch lists
+      }
+    });
 
     _initialize();
     WidgetsBinding.instance.addObserver(this);
@@ -66,8 +72,13 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     });
     AccessManager().addListener(_onTimeChanged);
 
-    // Fire and forget: fetch startup configs from GitHub
-    _configManager.fetchStartupConfigs();
+    // Fire and forget: fetch startup configs from GitHub, then trigger auto-test
+    _configManager.fetchStartupConfigs().then((hasNewConfigs) {
+       if (hasNewConfigs && _autoTestOnStartup && !_configManager.isConnected && mounted) {
+           AdvancedLogger.info("[HomeScreen] Startup configs loaded. Triggering Auto-Test...");
+           _runFunnelTest();
+       }
+    });
 
     // VPN Connection Status Listener
     _windowsVpnService.statusStream.listen((status) {
@@ -99,6 +110,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     _timerUpdater?.cancel();
     _backgroundTestTimer?.cancel();
     _pingMonitorTimer?.cancel();
+    _tabController.dispose();
     super.dispose();
   }
 
@@ -233,15 +245,10 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     if (engage == true) {
       if (!mounted) return;
 
-      // Step 2: Show Internal Ad Dialog with WebView
-      const adUrl = "https://ad.a-ads.com/2426527";
+      // Step 2: Show Ad via Unified Ad Manager
+      final bool adSuccess = await AdManagerService().showPreConnectionAd(context);
 
-      await showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AdDialog(adUrl: adUrl),
-      );
-
+      if (!adSuccess) return; // If ad failed or user didn't complete properly
       if (!mounted) return;
 
       // Step 3: Reward Claim Dialog
@@ -295,28 +302,19 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
   Future<void> _initAppSequence() async {
     if (!mounted) return;
     setState(() {});
-
-    if (_autoTestOnStartup && mounted) {
-       _runSmartAutoTest();
-    }
+    // Auto-test is now triggered via fetchStartupConfigs callback in initState
   }
 
   Future<void> _runSmartAutoTest() async {
-    await Future.delayed(const Duration(seconds: 1));
     if (!mounted) return;
     
     if (_configManager.allConfigs.isEmpty) {
-        int attempts = 0;
-        while (_configManager.allConfigs.isEmpty && attempts < 10) {
-          await Future.delayed(const Duration(milliseconds: 500));
-          attempts++;
-        }
+       _showToast("No configs available to test");
+       return;
     }
 
-    if (_configManager.allConfigs.isEmpty) return;
-
-    AdvancedLogger.info("🚀 [Startup] Running Smart Auto-Test...");
-    await _runFunnelTest(_configManager.allConfigs);
+    AdvancedLogger.info("🚀 [Auto-Test] Running Smart Auto-Test...");
+    await _runFunnelTest();
     
     _configManager.allConfigs.sort((a, b) {
         final pingA = a.currentPing > 0 ? a.currentPing : 999999;
@@ -340,55 +338,6 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     }
   }
 
-  void _addLog(String msg) {
-    if (!mounted) return;
-    setState(() {
-      _connectionLogs.add(msg);
-    });
-  }
-
-  Future<void> _runSelfDiagnostics() async {
-    try {
-      AdvancedLogger.info("🔍 Running system diagnostics...");
-
-      if (_windowsVpnService == null) {
-        AdvancedLogger.error("❌ SYSTEMS CHECK: WindowsVpnService not initialized");
-        return;
-      }
-      if (_latencyService == null) {
-        AdvancedLogger.error("❌ SYSTEMS CHECK: LatencyService not initialized");
-        return;
-      }
-
-      try {
-        final executablePath = await _windowsVpnService.getExecutablePath();
-        AdvancedLogger.info("✅ SYSTEMS CHECK: Sing-box executable found at: $executablePath");
-      } catch (e) {
-        AdvancedLogger.error("❌ SYSTEMS CHECK: Sing-box executable not found - $e");
-        return;
-      }
-
-      const dummyConfig = "vmess://dummy@127.0.0.1:1?dummy=true#DummyTest";
-      final timeoutFuture = _latencyService.getAdvancedLatency(dummyConfig).timeout(
-        const Duration(seconds: 5),
-        onTimeout: () => throw TimeoutException('Latency test timed out'),
-      );
-
-      try {
-        await timeoutFuture;
-        AdvancedLogger.error("❌ SYSTEMS CHECK: Latency test should have failed with dummy config but didn't");
-      } catch (e) {
-        if (e is TimeoutException) {
-          AdvancedLogger.error("❌ SYSTEMS CHECK: Latency test timed out - service may be hanging");
-        } else {
-          AdvancedLogger.info("✅ SYSTEMS CHECK: Latency service is responsive (expected failure with dummy config)");
-        }
-      }
-      AdvancedLogger.info("✅ SYSTEMS CHECK: PASSED - All services initialized and responsive");
-    } catch (e) {
-      AdvancedLogger.error("❌ SYSTEMS CHECK: FAILED with error - $e");
-    }
-  }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -415,204 +364,392 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
       resizeToAvoidBottomInset: false,
       backgroundColor: const Color(0xFF121212),
       body: SafeArea(
-        child: Column(
-          children: [
-            // 1. TOP STICKY SECTION: Ad banner
-            _buildAdBannerSection(),
+        child: RefreshIndicator(
+          backgroundColor: const Color(0xFF1A1A1A),
+          color: Colors.blueAccent,
+          onRefresh: _refreshConfigsFromGitHub,
+          child: CustomScrollView(
+            slivers: [
+              // 1. Top Ad Banner
+              SliverToBoxAdapter(
+                child: _buildAdBannerSection(),
+              ),
 
-            // 2. SCROLLABLE CONTENT SECTION
-            Expanded(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 8),
-
-                    // App Header & Main Controls
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                      child: Column(
-                        children: [
-                          _buildAppHeader(),
-                          const SizedBox(height: 8),
-                          _buildSubscriptionCard(), 
-                          const SizedBox(height: 16),
-                          _buildConnectionStatus(),
-                          const SizedBox(height: 12),
-
-                          _buildConnectButton(),
-                          const SizedBox(height: 30),
-                          _buildSelectedConfig(),
-                          const SizedBox(height: 25),
-                          _buildAutoTestToggle(),
-                          const SizedBox(height: 30),
-
-                          // Native Ad Banner
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 16.0),
-                            child: NativeAdBanner(key: Key('native_ad_banner')),
-                          ),
-                          const SizedBox(height: 20),
-
-                          SizedBox(
-                            width: double.infinity,
-                            child: OutlinedButton.icon(
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: Colors.white,
-                                side: const BorderSide(color: Colors.greenAccent),
-                              ),
-                              onPressed: () {
-                                final selected = _configManager.selectedConfig;
-                                if (selected == null) {
-                                  _showToast('Please select a server first');
-                                  return;
-                                }
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => StabilityChartScreen(rawConfig: selected.rawConfig),
-                                  ),
-                                );
-                              },
-                              icon: const Icon(Icons.monitor_heart, color: Colors.greenAccent),
-                              label: const Text('Open 30s Stability Test'),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // "Switch to Faster" Overlay - appears when a faster server is found
-                    if (_showFastestOverlay && _fastestInBackground != null)
-                      Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [Colors.green.shade700, Colors.green.shade900],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.green.withOpacity(0.4),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: () {
-                              // Switch to the faster server
-                              _configManager.selectConfig(_fastestInBackground);
-                              setState(() {
-                                _showFastestOverlay = false;
-                              });
-                              _showToast("Switched to ${_fastestInBackground!.name} (${_fastestInBackground!.currentPing}ms)");
-                            },
-                            borderRadius: BorderRadius.circular(12),
-                            child: Container(
-                              padding: const EdgeInsets.all(16),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.flash_on, color: Colors.amber, size: 24),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        const Text(
-                                          '⚡ Fastest Server Found!',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        Text(
-                                          'Switch to ${_fastestInBackground!.name} (${_fastestInBackground!.currentPing}ms)',
-                                          style: const TextStyle(
-                                            color: Colors.white70,
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.white),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-
-                    // Server List Section
-                    Container(
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1E1E1E),
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(24),
-                          topRight: Radius.circular(24),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.4),
-                            blurRadius: 20,
-                            spreadRadius: 5,
-                            offset: const Offset(0, -5),
-                          ),
-                        ],
-                        border: Border.all(
-                          color: const Color(0xFF2A2A2A),
-                          width: 1,
-                        ),
-                      ),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF121212),
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(20),
-                            topRight: Radius.circular(20),
-                          ),
-                        ),
-                        child: ClipRRect(
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(20),
-                            topRight: Radius.circular(20),
-                          ),
-                          child: ConfigListTabs(
-                            key: const Key('server_list_view'),
-                            onConfigTapped: (config) {
-                              setState(() {});
-                            },
-                            onTestLatency: _runSingleLatencyTest,
-                            onTestSpeed: _runSingleSpeedTest,
-                            onTestStability: _runSingleStabilityTest,
-                            onTestAll: _runSmartAutoTest,
-                            onRefresh: _refreshConfigsFromGitHub,
-                            testingIds: _activeTestIds,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+              // 2. Main Content Header (App Info, Connection Status, Controls)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 8),
+                      _buildAppHeader(),
+                      const SizedBox(height: 8),
+                      _buildSubscriptionCard(),
+                      const SizedBox(height: 16),
+                      _buildConnectionStatus(),
+                      const SizedBox(height: 12),
+                      _buildConnectButton(),
+                      const SizedBox(height: 30),
+                      _buildSelectedConfig(),
+                      const SizedBox(height: 25),
+                      _buildAutoTestToggle(),
+                      const SizedBox(height: 30),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+
+              // 3. Middle Ad Banner
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.0),
+                  child: SizedBox(
+                    height: 250,
+                    child: AAdsBanner(),
+                  ),
+                ),
+              ),
+
+              // 4. Stability Test Button & Fastest Overlay
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+                  child: Column(
+                    children: [
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            side: const BorderSide(color: Colors.greenAccent),
+                          ),
+                          onPressed: () {
+                            final selected = _configManager.selectedConfig;
+                            if (selected == null) {
+                              _showToast('Please select a server first');
+                              return;
+                            }
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => StabilityChartScreen(rawConfig: selected.rawConfig),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.monitor_heart, color: Colors.greenAccent),
+                          label: const Text('Open 30s Stability Test'),
+                        ),
+                      ),
+
+                      // "Switch to Faster" Overlay
+                      if (_showFastestOverlay && _fastestInBackground != null)
+                        Container(
+                          margin: const EdgeInsets.only(top: 16),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [Colors.green.shade700, Colors.green.shade900],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.green.withOpacity(0.4),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () {
+                                _configManager.selectConfig(_fastestInBackground);
+                                setState(() {
+                                  _showFastestOverlay = false;
+                                });
+                                _showToast("Switched to ${_fastestInBackground!.name} (${_fastestInBackground!.currentPing}ms)");
+                              },
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                padding: const EdgeInsets.all(16),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.flash_on, color: Colors.amber, size: 24),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            '⚡ Fastest Server Found!',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          Text(
+                                            'Switch to ${_fastestInBackground!.name} (${_fastestInBackground!.currentPing}ms)',
+                                            style: const TextStyle(
+                                              color: Colors.white70,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.white),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // 5. Config List Header (Title + Actions)
+              SliverToBoxAdapter(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.list, color: Colors.blueAccent, size: 22),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Server Configuration',
+                        style: TextStyle(
+                          color: Colors.grey[100],
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.speed, color: Colors.blueAccent),
+                        onPressed: _runSmartAutoTest,
+                        tooltip: 'Test All Connections',
+                        splashRadius: 20,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete_forever, color: Colors.redAccent),
+                        onPressed: _showDeleteAllConfirmationDialog,
+                        tooltip: 'Delete All Configurations',
+                        splashRadius: 20,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // 6. Sticky Tab Bar
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _SliverTabBarDelegate(
+                  TabBar(
+                    controller: _tabController,
+                    indicator: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.blueAccent.withOpacity(0.8),
+                          Colors.indigoAccent.withOpacity(0.8),
+                        ],
+                      ),
+                    ),
+                    labelColor: Colors.white,
+                    unselectedLabelColor: Colors.grey[400],
+                    labelStyle: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                    unselectedLabelStyle: const TextStyle(
+                      fontWeight: FontWeight.normal,
+                      fontSize: 12,
+                    ),
+                    tabs: [
+                      Tab(
+                        icon: const Icon(Icons.list, size: 18),
+                        text: 'All (${_configManager.allConfigs.length})',
+                      ),
+                      Tab(
+                        icon: const Icon(Icons.check_circle, size: 18),
+                        text: 'Valid (${_configManager.validatedConfigs.length})',
+                      ),
+                      Tab(
+                        icon: const Icon(Icons.star, size: 18),
+                        text: 'Favs (${_configManager.favoriteConfigs.length})',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // 7. The Config List
+              ListenableBuilder(
+                listenable: _configManager,
+                builder: (context, _) {
+                  // Determine which list to show
+                  List<VpnConfigWithMetrics> configs;
+                  switch (_tabController.index) {
+                    case 1:
+                      configs = _configManager.validatedConfigs;
+                      break;
+                    case 2:
+                      configs = _configManager.favoriteConfigs;
+                      break;
+                    case 0:
+                    default:
+                      configs = _configManager.allConfigs;
+                  }
+
+                  if (configs.isEmpty) {
+                    return SliverToBoxAdapter(
+                      child: Container(
+                        padding: const EdgeInsets.all(50),
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.inbox_outlined,
+                                size: 64,
+                                color: Colors.grey[600],
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No configs available',
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 18,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Use Smart Paste to add configs',
+                                style: TextStyle(
+                                  color: Colors.grey[500],
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+
+                  return SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final config = configs[index];
+                        return ConfigCard(
+                          config: config,
+                          isSelected: _configManager.selectedConfig?.id == config.id,
+                          isTesting: _activeTestIds.contains(config.id),
+                          onTap: () {
+                            _configManager.selectConfig(config);
+                            setState(() {});
+                          },
+                          onTestLatency: () => _runSingleLatencyTest(config),
+                          onTestSpeed: () => _runSingleSpeedTest(config),
+                          onTestStability: () => _runSingleStabilityTest(config),
+                          onToggleFavorite: () async {
+                             await _configManager.toggleFavorite(config.id);
+                             setState(() {});
+                          },
+                          onDelete: () async {
+                            final confirm = await _showDeleteConfirmationDialog(config);
+                            if (confirm && mounted) {
+                              await _configManager.deleteConfig(config.id);
+                              setState(() {});
+                            }
+                          },
+                        );
+                      },
+                      childCount: configs.length,
+                    ),
+                  );
+                },
+              ),
+
+              // Bottom padding
+              const SliverToBoxAdapter(child: SizedBox(height: 20)),
+            ],
+          ),
         ),
       ),
     );
   }
 
+  // --- Helper Methods ---
+
+  Future<void> _showDeleteAllConfirmationDialog() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: const Text('Confirm Delete All', style: TextStyle(color: Colors.white)),
+        content: const Text(
+          'Are you sure? This will clear all configs.',
+          style: TextStyle(color: Colors.grey),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete All'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      await _configManager.clearAllData();
+      setState(() {});
+    }
+  }
+
+  Future<bool> _showDeleteConfirmationDialog(VpnConfigWithMetrics config) async {
+    return await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: const Text(
+          'Delete Config?',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Text(
+          'Are you sure you want to remove "${config.name}"?',
+          style: TextStyle(color: Colors.grey[300]),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: Colors.redAccent),
+            ),
+          ),
+        ],
+      ),
+    ) ?? false;
+  }
+
   Widget _buildAdBannerSection() {
     return const SizedBox(
-      height: 80,
+      height: 100, // Adjusted height for Top Banner
       width: double.infinity,
-      child: AdBannerWebView(key: Key('top_banner_webview')),
+      child: AAdsBanner(),
     );
   }
 
@@ -1353,31 +1490,6 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     }
   }
 
-  Future<void> _tryParseMultipleConfigs(String text) async {
-    // Use the enhanced method that handles both configs and subscription links
-    final configs = await ConfigManager.parseAndFetchConfigs(text);
-
-    int importedCount = 0;
-    for (final config in configs) {
-      try {
-        final name = ConfigImporter.extractName(config, index: importedCount);
-        await _configManager.addConfig(config, name);
-        importedCount++;
-      } catch (e) {
-        AdvancedLogger.error('[HomeScreen] Error adding config in _tryParseMultipleConfigs: $e');
-        continue;
-      }
-    }
-
-    if (importedCount > 0) {
-      _showToast('$importedCount configs imported successfully');
-      setState(() {});
-      await _configManager.refreshAllConfigs();
-    } else {
-      _showToast('No valid configs found in clipboard content');
-    }
-  }
-
   void _showToast(String message) {
     final scaffold = ScaffoldMessenger.of(context);
     scaffold.showSnackBar(
@@ -1396,166 +1508,19 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     );
   }
 
-  Future<void> _handleTestConnection() async {
-    final selectedConfig = _configManager.selectedConfig;
-    if (selectedConfig == null) {
-      _showToast('Please select a config first');
-      return;
-    }
-
-    _configManager.setConnected(_configManager.isConnected, status: 'Testing connection...');
-
-    try {
-      final result = await _latencyService.getAdvancedLatency(selectedConfig.rawConfig);
-      final latency = result.health.averageLatency;
-
-      await _configManager.updateConfigMetrics(
-        selectedConfig.id,
-        ping: latency,
-        connectionSuccess: latency > 0,
-      );
-
-      _showToast('Connection test completed: ${latency}ms');
-      _configManager.setConnected(_configManager.isConnected, status: 'Tested: ${latency}ms');
-    } catch (e) {
-      _showToast('Connection test failed: $e');
-      _configManager.setConnected(_configManager.isConnected, status: 'Test failed');
-      AdvancedLogger.error('[HomeScreen] Connection test failed: $e');
-    }
-  }
-
-  Future<void> _handleTestStability() async {
-    final selectedConfig = _configManager.selectedConfig;
-    if (selectedConfig == null) {
-      _showToast('Please select a config first');
-      return;
-    }
-
-    _configManager.setConnected(_configManager.isConnected, status: 'Testing stability...');
-
-    try {
-      final result = await _latencyService.getAdvancedLatency(selectedConfig.rawConfig);
-      final latency = result.health.averageLatency;
-
-      await _configManager.updateConfigMetrics(
-        selectedConfig.id,
-        ping: latency,
-        connectionSuccess: latency > 0,
-      );
-
-      _showToast('Stability test completed: ${latency}ms');
-      _configManager.setConnected(_configManager.isConnected, status: 'Stability: ${latency}ms');
-    } catch (e) {
-      _showToast('Stability test failed: $e');
-      _configManager.setConnected(_configManager.isConnected, status: 'Test failed');
-      AdvancedLogger.error('[HomeScreen] Stability test failed: $e');
-    }
-  }
-
   void _toggleAutoTestOnStartup(bool value) {
     setState(() {
       _autoTestOnStartup = value;
     });
   }
 
-  void _testAllConfigs() {
-    _showToast('Testing all configurations...');
-    _runFunnelTest(_configManager.allConfigs);
-  }
-
   // NEW: Run the advanced funnel test using ServerTesterService
-  Future<void> _runFunnelTest(List<VpnConfigWithMetrics> configs) async {
-    if (configs.isEmpty) return;
+  Future<void> _runFunnelTest() async {
+    if (_configManager.allConfigs.isEmpty) return;
 
     // Use the new ServerTesterService for advanced funnel testing
     final tester = ServerTesterService(_windowsVpnService);
-    await tester.runFunnelTest(configs);
-  }
-
-  Future<void> _testAllConfigsInternal(List<VpnConfigWithMetrics> configs) async {
-    if (configs.isEmpty) return;
-
-    if (Platform.isWindows) {
-       try { await Process.run('taskkill', ['/F', '/IM', 'sing-box.exe']); } catch (e) {}
-    }
-
-    const int maxConcurrency = 5;
-    int successCount = 0;
-    int failCount = 0;
-    int nextIndex = 0;
-    
-    final List<VpnConfigWithMetrics> snapshot = List.from(configs);
-    
-    Future<void> worker() async {
-      while (nextIndex < snapshot.length) {
-        final config = snapshot[nextIndex++];
-        
-        if (mounted) {
-          setState(() {
-            _activeTestIds.add(config.id);
-          });
-        }
-
-        try {
-          if (_configManager.getConfigById(config.id) == null) {
-            AdvancedLogger.info('[TestAll] Skipping deleted config: ${config.name}');
-            continue;
-          }
-
-          AdvancedLogger.info('[TestAll] Testing: ${config.name}');
-          final result = await _latencyService.getAdvancedLatency(
-            config.rawConfig,
-            configId: config.id,
-            timeout: const Duration(seconds: 35),
-            isPriority: false,
-          );
-          
-          final latency = result.health.averageLatency;
-          if (latency > -1) {
-            successCount++;
-          } else {
-            failCount++;
-          }
-
-          await _configManager.updateConfigMetrics(
-            config.id,
-            ping: latency,
-            connectionSuccess: latency > 0,
-          );
-        } catch (e) {
-          failCount++;
-          AdvancedLogger.error('[TestAll] Failed to test ${config.name}: $e');
-        } finally {
-          if (mounted) {
-            setState(() {
-              _activeTestIds.remove(config.id);
-            });
-          }
-          
-          await Future.delayed(const Duration(milliseconds: 50));
-        }
-      }
-    }
-
-    final List<Future<void>> workers = [];
-    final int workerCount = snapshot.length < maxConcurrency ? snapshot.length : maxConcurrency;
-    
-    for (int i = 0; i < workerCount; i++) {
-      workers.add(worker());
-    }
-    
-    await Future.wait(workers);
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Test Complete: $successCount Active, $failCount Failed'),
-          backgroundColor: successCount >= failCount ? Colors.green[800] : Colors.red[800],
-          duration: const Duration(seconds: 4),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
+    await tester.startFunnel();
   }
 
   // Find the fastest server without connecting
@@ -1909,99 +1874,6 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     );
   }
 
-  Future<bool> _showAdDialog() async {
-    bool adWatched = false;
-
-    await showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            Future.delayed(const Duration(seconds: 3), () {
-              if (Navigator.of(context).canPop()) {
-                Navigator.of(context).pop();
-                adWatched = true;
-              }
-            });
-
-            return AlertDialog(
-              backgroundColor: const Color(0xFF1A1A1A),
-              title: const Text(
-                'Advertisement',
-                style: TextStyle(color: Colors.white),
-              ),
-              content: Container(
-                width: double.maxFinite,
-                height: 200,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.ad_units,
-                      size: 64,
-                      color: Colors.amber[400],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Advertisement',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Thank you for supporting our service',
-                      style: TextStyle(
-                        color: Colors.grey[400],
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.blueGrey.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        'Ad Content Placeholder',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-
-    return adWatched;
-  }
-
-  Future<void> _handleSessionExpiration() async {
-    try {
-      await _windowsVpnService.stopVpn();
-      await _configManager.disconnectVpn(); 
-
-      if (mounted) {
-        _showToast('Session expired. Please reconnect.');
-        _addLog('Session expired. Connection terminated.');
-      }
-    } catch (e) {
-      AdvancedLogger.error('[HomeScreen] Session expiration handling failed: $e');
-      if (mounted) {
-        _showToast('Session expired but disconnect failed: $e');
-      }
-    }
-  }
 
   Future<void> _openLogViewer() async {
     Navigator.of(context).push(
@@ -2100,20 +1972,6 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     }
   }
 
-  Future<void> _runBackgroundFastestSearch() async {
-    await Future.delayed(const Duration(seconds: 10));
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('A faster route was found', style: TextStyle(color: Colors.white)),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-        duration: Duration(seconds: 3),
-      ),
-    );
-  }
-
   Widget _buildSubscriptionCard() {
     final access = AccessManager();
     final remaining = access.remainingTime;
@@ -2187,5 +2045,38 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
         ],
       ),
     );
+  }
+}
+
+class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
+  final TabBar _tabBar;
+
+  _SliverTabBarDelegate(this._tabBar);
+
+  @override
+  double get minExtent => _tabBar.preferredSize.height + 16; // Add padding
+
+  @override
+  double get maxExtent => _tabBar.preferredSize.height + 16; // Add padding
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(
+      color: const Color(0xFF121212), // Match background color
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF1E1E1E),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFF2A2A2A)),
+        ),
+        child: _tabBar,
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(_SliverTabBarDelegate oldDelegate) {
+    return true; // Rebuild to update counts
   }
 }

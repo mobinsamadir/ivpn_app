@@ -32,6 +32,9 @@ class ConfigManager extends ChangeNotifier {
   String get connectionStatus => _connectionStatus;
 
   Timer? _sessionTimer;
+  Timer? _throttleTimer; // For UI throttling
+  bool _hasPendingUpdates = false; // Flag for buffered updates
+
   bool _isRefreshing = false;
   bool get isRefreshing => _isRefreshing;
 
@@ -53,35 +56,34 @@ class ConfigManager extends ChangeNotifier {
     await _initDeviceId();
     await _loadAutoSwitchSetting();
     await _loadConfigs();
-    _updateLists();
+    _updateListsSync();
     AdvancedLogger.info('[ConfigManager] Initialization complete. Loaded ${allConfigs.length} configs.');
   }
 
   // --- CORE: FETCH & PARSE ---
-  Future<void> fetchStartupConfigs() async {
-    if (_isRefreshing) return;
+  Future<bool> fetchStartupConfigs() async {
+    if (_isRefreshing) return false;
     _isRefreshing = true;
     notifyListeners();
 
+    bool anyConfigAdded = false;
+
     try {
-      AdvancedLogger.info('[ConfigManager] Downloading configs from Google Drive...');
+      AdvancedLogger.info('[ConfigManager] Downloading configs from mirrors...');
       
-      // لیست میرورها (لینک گوگل درایو اولویت دارد)
+      // Mirrors List (GitHub -> Drive -> MyFiles)
       final mirrors = [
-        'https://drive.google.com/uc?export=download&id=1S7CI5xq4bbnERZ1i1eGuYn5bhluh2LaW', 
-        
-        'https://raw.githubusercontent.com/mobinsamadir/ivpn-servers/main/servers.txt', // Backup URL (Example)
+        'https://gist.githubusercontent.com/mobinsamadir/687a7ef199d6eaf6d1912e36151a9327/raw/a1e99f7ce01dcc0ee065552cdcc13593de1cd888/servers.txt',
+        'https://drive.google.com/uc?export=download&id=1S7CI5xq4bbnERZ1i1eGuYn5bhluh2LaW',
+        'https://my.files.ir/drive/s/D7zxAbnxHc4y4353UkL2RZ21MrjxJz',
       ];
 
-      String content = '';
-      bool downloadSuccess = false;
-
       for (final url in mirrors) {
-        if (downloadSuccess) break;
+        if (anyConfigAdded) break; // Chain Breaking: Stop if we already have configs
+
         try {
           AdvancedLogger.info('[ConfigManager] Attempting fetch from: $url');
           
-          // FIX: Added User-Agent to bypass Google Drive HTML block
           final response = await http.get(
             Uri.parse(url),
             headers: {
@@ -92,13 +94,37 @@ class ConfigManager extends ChangeNotifier {
           ).timeout(const Duration(seconds: 30));
           
           if (response.statusCode == 200) {
-            if (_isHtmlResponse(response.body)) {
-               AdvancedLogger.warn('[ConfigManager] Drive returned HTML (Blocked): $url');
+            String content = response.body;
+
+            // SMART EXTRACTOR: Even if it's HTML, try to parse it!
+            if (_isHtmlResponse(content)) {
+               AdvancedLogger.info('[ConfigManager] HTML detected at $url. Attempting Regex Scan...');
+               // We don't block HTML anymore. parseMixedContent handles it via Regex.
             } else {
-               content = response.body;
-               downloadSuccess = true;
                AdvancedLogger.info('✅ Downloaded ${content.length} bytes successfully.');
             }
+
+            // 1. Parse Mixed Content (Configs + Sub Links)
+            final configUrls = await parseMixedContent(content);
+
+            if (configUrls.isNotEmpty) {
+               // 2. SANITIZE: Remove malicious fields
+               final cleanedConfigs = configUrls.map((c) {
+                 return c.replaceAll(RegExp(r'"spider_x":\s*("[^"]*"|[^,{}]+),?'), '');
+               }).toList();
+
+               // 3. Add to Database
+               int added = await addConfigs(cleanedConfigs);
+               if (added > 0) {
+                  AdvancedLogger.info('[ConfigManager] Import finished: Added $added new configs from $url.');
+                  anyConfigAdded = true;
+               } else {
+                  AdvancedLogger.warn('[ConfigManager] Configs found but were duplicates/invalid.');
+               }
+            } else {
+               AdvancedLogger.warn('[ConfigManager] No valid configs found in content from $url.');
+            }
+
           } else {
              AdvancedLogger.warn('[ConfigManager] HTTP Error ${response.statusCode} from $url');
           }
@@ -107,31 +133,18 @@ class ConfigManager extends ChangeNotifier {
         }
       }
 
-      if (downloadSuccess) {
-        // 1. Parse Mixed Content (Configs + Sub Links)
-        final configUrls = await parseMixedContent(content);
-        
-        if (configUrls.isNotEmpty) {
-           // 2. SANITIZE: Remove malicious fields
-           final cleanedConfigs = configUrls.map((c) {
-             return c.replaceAll(RegExp(r'"spider_x":\s*("[^"]*"|[^,{}]+),?'), '');
-           }).toList();
-           
-           // 3. Add to Database
-           int added = await addConfigs(cleanedConfigs);
-           AdvancedLogger.info('[ConfigManager] Import finished: Added $added new configs.');
-        } else {
-           AdvancedLogger.warn('[ConfigManager] No valid configs found in content.');
-        }
-      } else {
-        AdvancedLogger.error('[ConfigManager] All attempts to fetch configs failed.');
+      if (!anyConfigAdded) {
+        AdvancedLogger.error('[ConfigManager] All attempts to fetch configs failed or yielded 0 new configs.');
       }
+
     } catch (e) {
        AdvancedLogger.error('[ConfigManager] Critical error in fetchStartupConfigs: $e');
     } finally {
       _isRefreshing = false;
       notifyListeners();
     }
+
+    return anyConfigAdded;
   }
 
   // --- SMART PARSER (Regex Extraction & Recursion) ---
@@ -185,6 +198,29 @@ class ConfigManager extends ChangeNotifier {
     return collectedConfigs.toList();
   }
 
+  // --- THROTTLING LOGIC ---
+  void notifyListenersThrottled() {
+    if (_throttleTimer?.isActive ?? false) {
+      _hasPendingUpdates = true;
+      return;
+    }
+
+    _throttleTimer = Timer(const Duration(milliseconds: 500), _onThrottleTick);
+  }
+
+  void _onThrottleTick() {
+    _updateListsSync(); // Sync update to avoid race conditions
+    notifyListeners();
+
+    _throttleTimer = null;
+
+    // If updates accumulated while waiting, trigger another cycle immediately
+    if (_hasPendingUpdates) {
+      _hasPendingUpdates = false;
+      notifyListenersThrottled();
+    }
+  }
+
   // --- DATABASE OPERATIONS ---
   Future<int> addConfigs(List<String> configStrings) async {
     int addedCount = 0;
@@ -211,7 +247,7 @@ class ConfigManager extends ChangeNotifier {
     }
 
     if (addedCount > 0) {
-      _updateLists();
+      _updateListsSync();
       await _saveAllConfigs();
       notifyListeners();
     }
@@ -221,16 +257,25 @@ class ConfigManager extends ChangeNotifier {
   Future<void> updateConfigMetrics(String id, {int? ping, double? speed, bool? connectionSuccess}) async {
      final index = allConfigs.indexWhere((c) => c.id == id);
      if (index != -1) {
+        // Update in-place
         allConfigs[index] = allConfigs[index].updateMetrics(
            deviceId: _currentDeviceId,
            ping: ping, 
            speed: speed, 
            connectionSuccess: connectionSuccess ?? false
         );
-        _updateLists();
-        await _saveAllConfigs();
-        notifyListeners();
+        // Don't sort immediately, use throttling
+        notifyListenersThrottled();
      }
+  }
+
+  Future<void> updateConfigDirectly(VpnConfigWithMetrics config) async {
+     final index = allConfigs.indexWhere((c) => c.id == config.id);
+     if (index != -1) {
+        allConfigs[index] = config;
+     }
+     // Don't sort immediately, use throttling
+     notifyListenersThrottled();
   }
   
   Future<void> markSuccess(String id) async {
@@ -241,7 +286,7 @@ class ConfigManager extends ChangeNotifier {
             lastSuccessfulConnectionTime: DateTime.now().millisecondsSinceEpoch,
             isAlive: true
          );
-         _updateLists();
+         _updateListsSync();
          await _saveAllConfigs();
          notifyListeners();
       }
@@ -254,7 +299,7 @@ class ConfigManager extends ChangeNotifier {
             failureCount: allConfigs[index].failureCount + 1,
             isAlive: false
          );
-         _updateLists();
+         _updateListsSync();
          await _saveAllConfigs();
          notifyListeners();
       }
@@ -263,7 +308,7 @@ class ConfigManager extends ChangeNotifier {
   Future<bool> deleteConfig(String id) async {
      allConfigs.removeWhere((c) => c.id == id);
      if (_selectedConfig?.id == id) _selectedConfig = null;
-     _updateLists();
+     _updateListsSync();
      await _saveAllConfigs();
      notifyListeners();
      return true;
@@ -275,7 +320,7 @@ class ConfigManager extends ChangeNotifier {
          allConfigs[index] = allConfigs[index].copyWith(
             isFavorite: !allConfigs[index].isFavorite
          );
-         _updateLists();
+         _updateListsSync();
          await _saveAllConfigs();
          notifyListeners();
       }
@@ -357,14 +402,16 @@ class ConfigManager extends ChangeNotifier {
      }
   }
 
-  void _updateLists() {
-     validatedConfigs = allConfigs.where((c) => c.isValidated).toList();
-     favoriteConfigs = allConfigs.where((c) => c.isFavorite).toList();
-     
-     // Sorting Logic: Priority to Validated & High Score
-     allConfigs.sort((a, b) => b.score.compareTo(a.score));
-     validatedConfigs.sort((a, b) => b.score.compareTo(a.score));
-     favoriteConfigs.sort((a, b) => b.score.compareTo(a.score));
+  void _updateListsSync() {
+    // Main thread sorting (fast for <5000 items)
+    validatedConfigs = allConfigs.where((c) => c.isValidated).toList();
+    favoriteConfigs = allConfigs.where((c) => c.isFavorite).toList();
+
+    int compare(VpnConfigWithMetrics a, VpnConfigWithMetrics b) => b.score.compareTo(a.score);
+
+    allConfigs.sort(compare);
+    validatedConfigs.sort(compare);
+    favoriteConfigs.sort(compare);
   }
 
   Future<void> _loadAutoSwitchSetting() async {
@@ -396,7 +443,10 @@ class ConfigManager extends ChangeNotifier {
   Future<void> clearAllData() async {
      final p = await SharedPreferences.getInstance();
      await p.remove(_configsKey);
-     allConfigs.clear(); _updateLists(); notifyListeners();
+     _selectedConfig = null;
+     allConfigs.clear();
+     _updateListsSync();
+     notifyListeners();
   }
   
   // Aliases for compatibility
@@ -412,3 +462,6 @@ class ConfigManager extends ChangeNotifier {
   void startHotSwap() {} 
   void stopHotSwap() {} 
 }
+
+// --- ISOLATE WORKER ---
+// Deprecated: Sorting moved to main thread for better performance with frequent updates

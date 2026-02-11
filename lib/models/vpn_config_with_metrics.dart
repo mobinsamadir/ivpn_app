@@ -1,22 +1,22 @@
-﻿
+
 class DeviceMetrics {
   final int latestPing;
   final double latestSpeed;
   final DateTime lastUpdated;
-  final int usageCount; // Added usageCount field
+  final int usageCount;
 
   DeviceMetrics({
     required this.latestPing,
     required this.latestSpeed,
     required this.lastUpdated,
-    this.usageCount = 0, // Added default value
+    this.usageCount = 0,
   });
 
   Map<String, dynamic> toJson() => {
     'latestPing': latestPing,
     'latestSpeed': latestSpeed,
     'lastUpdated': lastUpdated.toIso8601String(),
-    'usageCount': usageCount, // Added to JSON
+    'usageCount': usageCount,
   };
 
   factory DeviceMetrics.fromJson(Map<String, dynamic> json) {
@@ -24,25 +24,53 @@ class DeviceMetrics {
       latestPing: json['latestPing'] as int? ?? -1,
       latestSpeed: (json['latestSpeed'] as num?)?.toDouble() ?? 0.0,
       lastUpdated: DateTime.parse(json['lastUpdated'] as String),
-      usageCount: json['usageCount'] as int? ?? 0, // Added from JSON
+      usageCount: json['usageCount'] as int? ?? 0,
+    );
+  }
+}
+
+class TestResult {
+  final bool success;
+  final int latency;
+  final String? error;
+
+  TestResult({required this.success, this.latency = 0, this.error});
+
+  Map<String, dynamic> toJson() => {
+    'success': success,
+    'latency': latency,
+    'error': error,
+  };
+
+  factory TestResult.fromJson(Map<String, dynamic> json) {
+    return TestResult(
+      success: json['success'] as bool? ?? false,
+      latency: json['latency'] as int? ?? 0,
+      error: json['error'] as String?,
     );
   }
 }
 
 class VpnConfigWithMetrics {
   final String id;
-  final String rawConfig;  // Changed from VpnConfig to String
+  final String rawConfig;
   final String name;
   final String? countryCode;
   final bool isFavorite;
   final DateTime addedDate;
   final Map<String, DeviceMetrics> deviceMetrics;
 
-  // New fields for advanced server testing
+  // Advanced server testing fields
   final int failureCount;
   final int lastSuccessfulConnectionTime;
   final bool isAlive;
   final int tier; // 0=Untested, 1=Alive, 2=LowLatency, 3=Stable/HighSpeed
+
+  // Pipeline Tester Fields
+  final Map<String, TestResult> stageResults;
+  final String? lastFailedStage;
+  final String? failureReason;
+  final DateTime? lastTestedAt;
 
   VpnConfigWithMetrics({
     required this.id,
@@ -56,13 +84,16 @@ class VpnConfigWithMetrics {
     this.lastSuccessfulConnectionTime = 0,
     this.isAlive = true,
     this.tier = 0,
+    Map<String, TestResult>? stageResults,
+    this.lastFailedStage,
+    this.failureReason,
+    this.lastTestedAt,
   })  : addedDate = addedDate ?? DateTime.now(),
-        deviceMetrics = deviceMetrics ?? {};
+        deviceMetrics = deviceMetrics ?? {},
+        stageResults = stageResults ?? {};
 
   // Computed properties
   int get currentPing {
-     // Use a default key or inject device ID logic here. For simplicity, we use the raw map.
-     // In real app, pass ConfigManager().currentDeviceId
      if (deviceMetrics.isEmpty) return -1;
      return deviceMetrics.values.first.latestPing; 
   }
@@ -75,11 +106,11 @@ class VpnConfigWithMetrics {
     if (now - lastSuccessfulConnectionTime < 86400000) score += 50;
     if (currentPing > 0) score -= (currentPing / 20);
     if (!isAlive) score = -1000;
+    if (lastFailedStage != null) score -= 500;
     return score;
   }
 
-  // Add missing getters to match old API
-  double get calculatedScore => score; // Alias for score
+  double get calculatedScore => score;
 
   double get currentSpeed {
     if (deviceMetrics.isEmpty) return 0.0;
@@ -87,11 +118,12 @@ class VpnConfigWithMetrics {
   }
 
   double get successRate {
-    // Placeholder implementation - adjust based on your actual metrics
-    return 0.0; // Placeholder to fix build
+    return 0.0; // Placeholder
   }
 
-  // NEW: Update metrics for a specific device
+  // Helper to check if config is dead
+  bool get isDead => lastFailedStage != null;
+
   VpnConfigWithMetrics updateMetrics({
     required String deviceId,
     int? ping,
@@ -119,15 +151,11 @@ class VpnConfigWithMetrics {
     return copyWith(deviceMetrics: newDeviceMetrics);
   }
 
-  // NEW: Check if config is validated
   bool get isValidated {
-    // Logic: A config is validated if it has successful connection history OR recent low ping
     return (currentPing > 0 && currentPing < 2000) || lastSuccessfulConnectionTime > 0;
   }
 
-  // NEW: Check if config is eligible for auto-test
   bool get isEligibleForAutoTest {
-    // Logic: Not failed recently, or verified alive
     return isAlive && failureCount < 5;
   }
 
@@ -143,6 +171,10 @@ class VpnConfigWithMetrics {
     int? lastSuccessfulConnectionTime,
     bool? isAlive,
     int? tier,
+    Map<String, TestResult>? stageResults,
+    String? lastFailedStage,
+    String? failureReason,
+    DateTime? lastTestedAt,
   }) {
     return VpnConfigWithMetrics(
       id: id ?? this.id,
@@ -156,6 +188,10 @@ class VpnConfigWithMetrics {
       lastSuccessfulConnectionTime: lastSuccessfulConnectionTime ?? this.lastSuccessfulConnectionTime,
       isAlive: isAlive ?? this.isAlive,
       tier: tier ?? this.tier,
+      stageResults: stageResults ?? this.stageResults,
+      lastFailedStage: lastFailedStage ?? this.lastFailedStage,
+      failureReason: failureReason ?? this.failureReason,
+      lastTestedAt: lastTestedAt ?? this.lastTestedAt,
     );
   }
 
@@ -171,6 +207,10 @@ class VpnConfigWithMetrics {
     'lastSuccessfulConnectionTime': lastSuccessfulConnectionTime,
     'isAlive': isAlive,
     'tier': tier,
+    'stageResults': stageResults.map((k, v) => MapEntry<String, dynamic>(k, v.toJson())),
+    'lastFailedStage': lastFailedStage,
+    'failureReason': failureReason,
+    'lastTestedAt': lastTestedAt?.toIso8601String(),
   };
 
   factory VpnConfigWithMetrics.fromJson(Map<String, dynamic> json) {
@@ -188,6 +228,12 @@ class VpnConfigWithMetrics {
       lastSuccessfulConnectionTime: json['lastSuccessfulConnectionTime'] as int? ?? 0,
       isAlive: json['isAlive'] as bool? ?? true,
       tier: json['tier'] as int? ?? 0,
+      stageResults: (json['stageResults'] as Map<String, dynamic>?)?.map(
+        (k, v) => MapEntry<String, TestResult>(k, TestResult.fromJson(v as Map<String, dynamic>)),
+      ) ?? {},
+      lastFailedStage: json['lastFailedStage'] as String?,
+      failureReason: json['failureReason'] as String?,
+      lastTestedAt: json['lastTestedAt'] != null ? DateTime.parse(json['lastTestedAt'] as String) : null,
     );
   }
 }

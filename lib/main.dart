@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:window_manager/window_manager.dart';
 
 import 'services/advanced_logger.dart';
 import 'services/file_logger.dart';
@@ -16,10 +17,14 @@ import 'providers/home_provider.dart';
 import 'screens/connection_home_screen.dart';
 import 'services/background_ad_service.dart';
 import 'screens/splash_screen.dart'; // Ensure this import exists
+import 'services/windows_vpn_service.dart';
 
 void main() {
   runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      await windowManager.ensureInitialized();
+    }
 
     // Initialize Loggers
     await AdvancedLogger.init();
@@ -56,7 +61,7 @@ void main() {
             create: (context) => HomeProvider(storageService: storageService),
           ),
         ],
-        child: const MyApp(),
+        child: const GlobalWindowListener(child: MyApp()),
       ),
     );
   }, (error, stack) {
@@ -92,5 +97,62 @@ class MyApp extends StatelessWidget {
       // Start with Splash Screen to handle async init safely
       home: const SplashScreen(),
     );
+  }
+}
+
+class GlobalWindowListener extends StatefulWidget {
+  final Widget child;
+  const GlobalWindowListener({super.key, required this.child});
+
+  @override
+  State<GlobalWindowListener> createState() => _GlobalWindowListenerState();
+}
+
+class _GlobalWindowListenerState extends State<GlobalWindowListener> with WindowListener {
+  @override
+  void initState() {
+    super.initState();
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      windowManager.addListener(this);
+      _initWindow();
+    }
+  }
+
+  Future<void> _initWindow() async {
+    // Prevent default close to handle it manually
+    await windowManager.setPreventClose(true);
+  }
+
+  @override
+  void dispose() {
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      windowManager.removeListener(this);
+    }
+    super.dispose();
+  }
+
+  @override
+  Future<void> onWindowClose() async {
+    print("🧹 Closing app...");
+    AdvancedLogger.info("🧹 Closing app - cleaning up VPN...");
+
+    // Kill Process
+    try {
+      // Create a temporary instance to stop VPN (it kills by process name)
+      await WindowsVpnService().stopVpn();
+    } catch (e) {
+      AdvancedLogger.error("Error stopping VPN on exit: $e");
+    }
+
+    // Proceed with close
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      await windowManager.destroy();
+    }
+    exit(0);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.child;
   }
 }
