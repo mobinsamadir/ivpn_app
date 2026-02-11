@@ -80,8 +80,18 @@ class ConfigManager extends ChangeNotifier {
         'https://drive.google.com/uc?export=download&id=1S7CI5xq4bbnERZ1i1eGuYn5bhluh2LaW',
       ];
 
-      for (final url in mirrors) {
+      for (var url in mirrors) {
         if (anyConfigAdded) break; // Chain Breaking: Stop if we already have configs
+
+        // Auto-convert Google Drive /view links to direct download
+        if (url.contains('drive.google.com') && url.contains('/view')) {
+           final fileIdMatch = RegExp(r'\/d\/([a-zA-Z0-9_-]+)').firstMatch(url);
+           if (fileIdMatch != null) {
+              final fileId = fileIdMatch.group(1);
+              url = 'https://drive.google.com/uc?export=download&id=$fileId';
+              AdvancedLogger.info('[ConfigManager] Converted Drive View Link to: $url');
+           }
+        }
 
         try {
           AdvancedLogger.info('[ConfigManager] Attempting fetch from: $url');
@@ -93,7 +103,7 @@ class ConfigManager extends ChangeNotifier {
               "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
               "Accept-Language": "en-US,en;q=0.5",
             },
-          ).timeout(const Duration(seconds: 30));
+          ).timeout(const Duration(seconds: 5));
           
           if (response.statusCode == 200) {
             String content = response.body;
@@ -147,18 +157,29 @@ class ConfigManager extends ChangeNotifier {
     final collectedConfigs = <String>{};
     
     String processedText = text;
-    // Try Base64 Decode first
+
+    // 1. Base64 Decode Attempt
     try {
       final decoded = utf8.decode(base64Decode(text.replaceAll(RegExp(r'\s+'), '')));
-      // Check if decoded content looks promising
       if (decoded.contains('://')) processedText = decoded;
     } catch (e) {
-      // Not base64 or decode failed, treat as raw text
+      // Not base64, proceed with raw text
     }
 
-    // Extract Standard Configs
+    // 2. HTML Entity Decoding (CRITICAL FIX)
+    // Replace common HTML entities to ensure params like &amp; don't break regex
+    processedText = processedText
+        .replaceAll('&amp;', '&')
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>')
+        .replaceAll('&quot;', '"')
+        .replaceAll('&apos;', "'")
+        .replaceAll('&#038;', '&'); // Common variation
+
+    // 3. Extract Configs using WHITELIST Regex
+    // This allows only valid characters in URL, effectively stopping at HTML tags or quotes
     final regex = RegExp(
-      '(vless|vmess|trojan|ss):\\/\\/[^\\s<>"\'{}|\\\\^`]+',
+      r'(vless|vmess|trojan|ss):\/\/[a-zA-Z0-9+\/=@:._?&%\[\]#-]+',
       caseSensitive: false,
       multiLine: true,
     );
@@ -167,9 +188,9 @@ class ConfigManager extends ChangeNotifier {
        var config = match.group(0)?.trim();
        if (config != null && config.isNotEmpty) {
           try {
-             // Sanitization Step
+             // Basic Sanitization (Remove trailing punctuation if regex overshot)
              config = config!.trim();
-             while (config!.endsWith('?') || config!.endsWith('.') || config!.endsWith(',') || config!.endsWith(')')) {
+             while (config!.endsWith('.') || config!.endsWith(',') || config!.endsWith(')')) {
                config = config!.substring(0, config!.length - 1);
              }
 
@@ -182,8 +203,6 @@ class ConfigManager extends ChangeNotifier {
           }
        }
     }
-
-    // NO Recursion: We do NOT fetch links anymore.
     
     return collectedConfigs.toList();
   }
