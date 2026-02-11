@@ -146,8 +146,7 @@ class SingboxConfigGenerator {
         tls["reality"] = {
           "enabled": true,
           "public_key": params['pbk'] ?? "",
-          "short_id": params['sid'] ?? "",
-          "spider_x": params['spx'] ?? ""
+          "short_id": params['sid'] ?? ""
         };
       }
       tls["insecure"] = isTest;

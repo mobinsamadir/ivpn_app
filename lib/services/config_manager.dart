@@ -56,7 +56,7 @@ class ConfigManager extends ChangeNotifier {
     await _initDeviceId();
     await _loadAutoSwitchSetting();
     await _loadConfigs();
-    _updateLists();
+    _updateListsSync();
     AdvancedLogger.info('[ConfigManager] Initialization complete. Loaded ${allConfigs.length} configs.');
   }
 
@@ -71,9 +71,8 @@ class ConfigManager extends ChangeNotifier {
       
       // لیست میرورها (لینک گیتهاب اولویت دارد)
       final mirrors = [
-        'https://gist.githubusercontent.com/mobinsamadir/687a7ef199d6eaf6d1912e36151a9327/raw/servers.txt',
+        'https://gist.githubusercontent.com/mobinsamadir/687a7ef199d6eaf6d1912e36151a9327/raw/a1e99f7ce01dcc0ee065552cdcc13593de1cd888/servers.txt',
         'https://drive.google.com/uc?export=download&id=1S7CI5xq4bbnERZ1i1eGuYn5bhluh2LaW',
-        'https://textshare.me/s/SbeuWi',
       ];
 
       String content = '';
@@ -195,26 +194,20 @@ class ConfigManager extends ChangeNotifier {
       return;
     }
 
-    // First call: Notify immediately (leading edge) for responsiveness?
-    // User requested: "User interactions must remain Instant". This method is for background updates.
-    // "Buffer updates and only call notifyListeners() once every 1 second (or 500ms)."
-    // So we'll use a trailing edge approach for the bulk updates to avoid UI stutter.
+    _throttleTimer = Timer(const Duration(milliseconds: 500), _onThrottleTick);
+  }
 
-    _throttleTimer = Timer(const Duration(milliseconds: 500), () {
-      if (_hasPendingUpdates) {
-        _hasPendingUpdates = false;
-        notifyListeners();
-        // If updates kept coming, we could restart timer here for continuous stream,
-        // but for now let's just clear timer and wait for next call.
-        // Actually, for continuous stream (like ping test), we want it to fire every 500ms if busy.
-        // But with this simple implementation, the next call will start a new timer.
-        // So effectively it batches updates into 500ms chunks.
-      }
-      _throttleTimer = null;
-    });
+  void _onThrottleTick() {
+    _updateListsSync(); // Sync update to avoid race conditions
+    notifyListeners();
 
-    // Mark as pending so the timer knows to fire.
-    _hasPendingUpdates = true;
+    _throttleTimer = null;
+
+    // If updates accumulated while waiting, trigger another cycle immediately
+    if (_hasPendingUpdates) {
+      _hasPendingUpdates = false;
+      notifyListenersThrottled();
+    }
   }
 
   // --- DATABASE OPERATIONS ---
@@ -243,7 +236,7 @@ class ConfigManager extends ChangeNotifier {
     }
 
     if (addedCount > 0) {
-      await _updateLists();
+      _updateListsSync();
       await _saveAllConfigs();
       notifyListeners();
     }
@@ -253,15 +246,14 @@ class ConfigManager extends ChangeNotifier {
   Future<void> updateConfigMetrics(String id, {int? ping, double? speed, bool? connectionSuccess}) async {
      final index = allConfigs.indexWhere((c) => c.id == id);
      if (index != -1) {
+        // Update in-place
         allConfigs[index] = allConfigs[index].updateMetrics(
            deviceId: _currentDeviceId,
            ping: ping, 
            speed: speed, 
            connectionSuccess: connectionSuccess ?? false
         );
-        // Don't save on every metric update to save IO
-        // _updateLists is fast enough (in memory or isolate), but we should throttle UI updates.
-        _updateLists(); // We don't await here to keep metrics stream fast
+        // Don't sort immediately, use throttling
         notifyListenersThrottled();
      }
   }
@@ -270,11 +262,8 @@ class ConfigManager extends ChangeNotifier {
      final index = allConfigs.indexWhere((c) => c.id == config.id);
      if (index != -1) {
         allConfigs[index] = config;
-     } else {
-        // Option to add if missing, but usually we just update existing
      }
-     _updateLists(); // Don't await
-     // Direct updates (like from pipelines) also throttle to prevent flooding
+     // Don't sort immediately, use throttling
      notifyListenersThrottled();
   }
   
@@ -286,7 +275,7 @@ class ConfigManager extends ChangeNotifier {
             lastSuccessfulConnectionTime: DateTime.now().millisecondsSinceEpoch,
             isAlive: true
          );
-         await _updateLists();
+         _updateListsSync();
          await _saveAllConfigs();
          notifyListeners();
       }
@@ -299,7 +288,7 @@ class ConfigManager extends ChangeNotifier {
             failureCount: allConfigs[index].failureCount + 1,
             isAlive: false
          );
-         await _updateLists();
+         _updateListsSync();
          await _saveAllConfigs();
          notifyListeners();
       }
@@ -308,7 +297,7 @@ class ConfigManager extends ChangeNotifier {
   Future<bool> deleteConfig(String id) async {
      allConfigs.removeWhere((c) => c.id == id);
      if (_selectedConfig?.id == id) _selectedConfig = null;
-     await _updateLists();
+     _updateListsSync();
      await _saveAllConfigs();
      notifyListeners();
      return true;
@@ -320,7 +309,7 @@ class ConfigManager extends ChangeNotifier {
          allConfigs[index] = allConfigs[index].copyWith(
             isFavorite: !allConfigs[index].isFavorite
          );
-         await _updateLists();
+         _updateListsSync();
          await _saveAllConfigs();
          notifyListeners();
       }
@@ -402,21 +391,16 @@ class ConfigManager extends ChangeNotifier {
      }
   }
 
-  Future<void> _updateLists() async {
-    try {
-      final result = await compute(_isolateSortAndFilter, allConfigs);
-      allConfigs = result['all']!;
-      validatedConfigs = result['validated']!;
-      favoriteConfigs = result['favorite']!;
-    } catch (e) {
-      AdvancedLogger.error('Sorting failed: $e');
-      // Fallback to main thread sorting if isolate fails
-      validatedConfigs = allConfigs.where((c) => c.isValidated).toList();
-      favoriteConfigs = allConfigs.where((c) => c.isFavorite).toList();
-      allConfigs.sort((a, b) => b.score.compareTo(a.score));
-      validatedConfigs.sort((a, b) => b.score.compareTo(a.score));
-      favoriteConfigs.sort((a, b) => b.score.compareTo(a.score));
-    }
+  void _updateListsSync() {
+    // Main thread sorting (fast for <5000 items)
+    validatedConfigs = allConfigs.where((c) => c.isValidated).toList();
+    favoriteConfigs = allConfigs.where((c) => c.isFavorite).toList();
+
+    int compare(VpnConfigWithMetrics a, VpnConfigWithMetrics b) => b.score.compareTo(a.score);
+
+    allConfigs.sort(compare);
+    validatedConfigs.sort(compare);
+    favoriteConfigs.sort(compare);
   }
 
   Future<void> _loadAutoSwitchSetting() async {
@@ -450,7 +434,7 @@ class ConfigManager extends ChangeNotifier {
      await p.remove(_configsKey);
      _selectedConfig = null;
      allConfigs.clear();
-     await _updateLists();
+     _updateListsSync();
      notifyListeners();
   }
   
@@ -469,23 +453,4 @@ class ConfigManager extends ChangeNotifier {
 }
 
 // --- ISOLATE WORKER ---
-Map<String, List<VpnConfigWithMetrics>> _isolateSortAndFilter(List<VpnConfigWithMetrics> configs) {
-  // Use a copy to sort, although Isolate automatically copies input data.
-  // The 'configs' list is a copy of 'allConfigs' passed from main isolate.
-  final all = List<VpnConfigWithMetrics>.from(configs);
-
-  final validated = all.where((c) => c.isValidated).toList();
-  final favorite = all.where((c) => c.isFavorite).toList();
-
-  int compare(VpnConfigWithMetrics a, VpnConfigWithMetrics b) => b.score.compareTo(a.score);
-
-  all.sort(compare);
-  validated.sort(compare);
-  favorite.sort(compare);
-
-  return {
-    'all': all,
-    'validated': validated,
-    'favorite': favorite,
-  };
-}
+// Deprecated: Sorting moved to main thread for better performance with frequent updates
