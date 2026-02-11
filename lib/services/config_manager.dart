@@ -166,10 +166,20 @@ class ConfigManager extends ChangeNotifier {
     for (final match in regex.allMatches(processedText)) {
        var config = match.group(0)?.trim();
        if (config != null && config.isNotEmpty) {
-          if (config.contains('%')) {
-             try { config = Uri.decodeFull(config); } catch(e) {}
+          try {
+             // Sanitization Step
+             config = config!.trim();
+             while (config!.endsWith('?') || config!.endsWith('.') || config!.endsWith(',') || config!.endsWith(')')) {
+               config = config!.substring(0, config!.length - 1);
+             }
+
+             if (config!.contains('%')) {
+                config = Uri.decodeFull(config!);
+             }
+             collectedConfigs.add(config!);
+          } catch (e) {
+             AdvancedLogger.error("Failed to parse extracted config. Raw String: >>>$config<<<", error: e);
           }
-          collectedConfigs.add(config!);
        }
     }
 

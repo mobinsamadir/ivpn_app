@@ -6,6 +6,7 @@ void main() {
   test('SingboxConfigGenerator adds Mux to VLESS, VMESS, and TROJAN', () {
     // 1. VLESS
     const vlessLink = "vless://uuid@example.com:443?security=tls&type=tcp#VLESS";
+    // Using generateConfig which calls _parseUriStandard
     final vlessJson = SingboxConfigGenerator.generateConfig(vlessLink);
     final vlessConfig = jsonDecode(vlessJson);
     final vlessOutbound = vlessConfig['outbounds'][0];
@@ -14,7 +15,12 @@ void main() {
     expect(vlessOutbound['multiplex'], isNotNull, reason: 'VLESS missing multiplex');
     expect(vlessOutbound['multiplex']['enabled'], true);
     expect(vlessOutbound['multiplex']['padding'], true);
-    expect(vlessOutbound['multiplex']['brutal'], true);
+    expect(vlessOutbound['multiplex']['max_connections'], 4);
+    expect(vlessOutbound['multiplex']['protocol'], 'h2mux');
+
+    // Verify TLS ALPN
+    expect(vlessOutbound['tls']['alpn'], contains('h2'));
+    expect(vlessOutbound['tls']['alpn'], contains('http/1.1'));
 
     // 2. VMESS
     final vmessMap = {
@@ -29,6 +35,10 @@ void main() {
     expect(vmessOutbound['type'], 'vmess');
     expect(vmessOutbound['multiplex'], isNotNull, reason: 'VMESS missing multiplex');
     expect(vmessOutbound['multiplex']['enabled'], true);
+    expect(vmessOutbound['multiplex']['max_connections'], 4);
+
+    // Verify TLS ALPN for VMess
+    expect(vmessOutbound['tls']['alpn'], contains('h2'));
 
     // 3. TROJAN
     const trojanLink = "trojan://password@example.com:443?security=tls&type=tcp#TROJAN";
@@ -39,9 +49,12 @@ void main() {
     expect(trojanOutbound['type'], 'trojan');
     expect(trojanOutbound['multiplex'], isNotNull, reason: 'TROJAN missing multiplex');
     expect(trojanOutbound['multiplex']['enabled'], true);
+    expect(trojanOutbound['multiplex']['max_connections'], 4);
 
-    // 4. SHADOWSOCKS (Should NOT have Mux - assuming, or checking if it wasn't added unintentionally)
-    // The requirement was specific to vless/vmess/trojan.
+    // Verify TLS ALPN for Trojan
+    expect(trojanOutbound['tls']['alpn'], contains('h2'));
+
+    // 4. SHADOWSOCKS (Should NOT have Mux)
     const ssLink = "ss://Y2hhY2hhMjAtaWV0Zi1wb2x5MTMwNTpwYXNzd29yZA==@example.com:443#SS";
     final ssJson = SingboxConfigGenerator.generateConfig(ssLink);
     final ssConfig = jsonDecode(ssJson);

@@ -86,6 +86,7 @@ class ServerTesterService {
   /// Runs the new Stream-Based Pipeline Test
   Future<void> runFunnelTest(List<VpnConfigWithMetrics> configs) async {
     AdvancedLogger.info('[ServerTesterService] Starting Pipeline Test for ${configs.length} configs');
+    AdvancedLogger.info("Starting batch test with concurrency: 50");
 
     // Create a stream from the input list
     final inputStream = Stream.fromIterable(configs);
