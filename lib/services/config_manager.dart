@@ -71,11 +71,12 @@ class ConfigManager extends ChangeNotifier {
     try {
       AdvancedLogger.info('[ConfigManager] Downloading configs from mirrors...');
       
-      // Mirrors List (GitHub -> Drive -> MyFiles)
+      // Mirrors List (GitHub -> Gist -> MyFiles -> Drive API)
       final mirrors = [
-        'https://gist.githubusercontent.com/mobinsamadir/687a7ef199d6eaf6d1912e36151a9327/raw/a1e99f7ce01dcc0ee065552cdcc13593de1cd888/servers.txt',
-        'https://drive.google.com/uc?export=download&id=1S7CI5xq4bbnERZ1i1eGuYn5bhluh2LaW',
+        'https://raw.githubusercontent.com/mobinsamadir/ivpn-servers/refs/heads/main/servers.txt',
+        'https://gist.githubusercontent.com/mobinsamadir/687a7ef199d6eaf6d1912e36151a9327/raw/servers.txt',
         'https://my.files.ir/drive/s/D7zxAbnxHc4y4353UkL2RZ21MrjxJz',
+        'https://drive.google.com/uc?export=download&id=1S7CI5xq4bbnERZ1i1eGuYn5bhluh2LaW',
       ];
 
       for (final url in mirrors) {
@@ -95,16 +96,9 @@ class ConfigManager extends ChangeNotifier {
           
           if (response.statusCode == 200) {
             String content = response.body;
+            AdvancedLogger.info('✅ Downloaded ${content.length} bytes successfully from $url.');
 
-            // SMART EXTRACTOR: Even if it's HTML, try to parse it!
-            if (_isHtmlResponse(content)) {
-               AdvancedLogger.info('[ConfigManager] HTML detected at $url. Attempting Regex Scan...');
-               // We don't block HTML anymore. parseMixedContent handles it via Regex.
-            } else {
-               AdvancedLogger.info('✅ Downloaded ${content.length} bytes successfully.');
-            }
-
-            // 1. Parse Mixed Content (Configs + Sub Links)
+            // 1. Parse Mixed Content (Configs ONLY - No Recursion)
             final configUrls = await parseMixedContent(content);
 
             if (configUrls.isNotEmpty) {
@@ -147,7 +141,7 @@ class ConfigManager extends ChangeNotifier {
     return anyConfigAdded;
   }
 
-  // --- SMART PARSER (Regex Extraction & Recursion) ---
+  // --- SMART PARSER (Regex Extraction Only - NO Recursion) ---
   static Future<List<String>> parseMixedContent(String text) async {
     final collectedConfigs = <String>{};
     
@@ -155,8 +149,11 @@ class ConfigManager extends ChangeNotifier {
     // Try Base64 Decode first
     try {
       final decoded = utf8.decode(base64Decode(text.replaceAll(RegExp(r'\s+'), '')));
+      // Check if decoded content looks promising
       if (decoded.contains('://')) processedText = decoded;
-    } catch (e) {}
+    } catch (e) {
+      // Not base64 or decode failed, treat as raw text
+    }
 
     // Extract Standard Configs
     final regex = RegExp(
@@ -170,31 +167,8 @@ class ConfigManager extends ChangeNotifier {
        if (config != null) collectedConfigs.add(config.trim());
     }
 
-    // Extract Subscription Links (Recursion)
-    final linkRegex = RegExp(r'''https?:\/\/[^\s"\'<>\n\r`{}|\[\]]+''', caseSensitive: false);
-    final linkMatches = linkRegex.allMatches(processedText);
+    // NO Recursion: We do NOT fetch links anymore.
     
-    for (final match in linkMatches) {
-       final link = match.group(0);
-       // Fetch only if it looks like a sub link and NOT a config protocol
-       if (link != null && _isValidSubscriptionLink(link)) {
-          try {
-             // Avoid recursive loops with simple check (not robust but helpful)
-             if (link.contains('google.com') || link.length < 15) continue;
-
-             AdvancedLogger.info('[ConfigManager] Found sub link, fetching: $link');
-             final res = await http.get(Uri.parse(link)).timeout(const Duration(seconds: 10));
-             
-             if (res.statusCode == 200 && !_isHtmlResponse(res.body)) {
-                // Recursive call
-                final subConfigs = await parseMixedContent(res.body);
-                collectedConfigs.addAll(subConfigs);
-             }
-          } catch(e) {
-             AdvancedLogger.warn('[ConfigManager] Failed to fetch sub link: $link');
-          }
-       }
-    }
     return collectedConfigs.toList();
   }
 
@@ -332,17 +306,6 @@ class ConfigManager extends ChangeNotifier {
   }
 
   // --- HELPERS ---
-  static bool _isHtmlResponse(String body) {
-    final t = body.trim().toLowerCase();
-    return t.startsWith('<!doctype') || t.startsWith('<html') || t.contains('virus scan warning');
-  }
-
-  static bool _isValidSubscriptionLink(String link) {
-    final l = link.toLowerCase();
-    return !l.startsWith('vmess') && !l.startsWith('vless') && 
-           !l.startsWith('ss') && !l.startsWith('trojan') &&
-           !l.startsWith('hysteria') && !l.startsWith('tuic');
-  }
 
   String _extractServerName(String raw) {
      try {

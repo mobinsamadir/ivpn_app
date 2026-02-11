@@ -55,6 +55,11 @@ class SingboxConfigGenerator {
       "alter_id": int.tryParse(data['aid']?.toString() ?? '0') ?? 0,
       "security": "auto",
       "connect_timeout": isTest ? "5s" : "15s",
+      "multiplex": {
+        "enabled": true,
+        "padding": true,
+        "brutal": true
+      },
     };
 
     final transport = _buildSingBoxTransport(
@@ -103,6 +108,11 @@ class SingboxConfigGenerator {
       "server": host,
       "server_port": port,
       "connect_timeout": isTest ? "5s" : "15s",
+      "multiplex": {
+        "enabled": true,
+        "padding": true,
+        "brutal": true
+      },
     };
 
     if (protocol == "vless") {
