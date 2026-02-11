@@ -158,14 +158,19 @@ class ConfigManager extends ChangeNotifier {
 
     // Extract Standard Configs
     final regex = RegExp(
-      r'(vless|vmess|trojan|ss):\/\/[a-zA-Z0-9%?=&-._#@:\[\]]+',
+      '(vless|vmess|trojan|ss):\\/\\/[^\\s<>"\'{}|\\\\^`]+',
       caseSensitive: false,
       multiLine: true,
     );
     
     for (final match in regex.allMatches(processedText)) {
-       final config = match.group(0);
-       if (config != null) collectedConfigs.add(config.trim());
+       var config = match.group(0)?.trim();
+       if (config != null && config.isNotEmpty) {
+          if (config.contains('%')) {
+             try { config = Uri.decodeFull(config); } catch(e) {}
+          }
+          collectedConfigs.add(config!);
+       }
     }
 
     // NO Recursion: We do NOT fetch links anymore.

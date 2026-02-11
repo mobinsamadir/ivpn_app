@@ -50,7 +50,7 @@ class SingboxConfigGenerator {
       "type": "vmess",
       "tag": "proxy",
       "server": data['add'],
-      "server_port": int.parse(data['port'].toString()),
+      "server_port": int.tryParse(data['port'].toString()) ?? 443,
       "uuid": data['id'],
       "alter_id": int.tryParse(data['aid']?.toString() ?? '0') ?? 0,
       "security": "auto",
@@ -89,11 +89,19 @@ class SingboxConfigGenerator {
       print('⚠️ [CONFIG-GEN] WARNING: Link missing query parameters (?). This might be truncated: $link');
     }
     
-    final uri = Uri.parse(link);
+    Uri uri;
+    try {
+      uri = Uri.parse(link);
+    } catch (e) {
+      throw FormatException("Invalid URI: $link");
+    }
+
     final protocol = uri.scheme;
     final String userInfo = uri.userInfo;
     final String host = uri.host;
-    final int port = uri.port;
+    // Fallback port logic
+    final int port = uri.hasPort ? uri.port : 443;
+
     final Map<String, String> params = uri.queryParameters;
     final String security = params['security'] ?? "none";
 
@@ -159,7 +167,7 @@ class SingboxConfigGenerator {
       if (security == "reality") {
         final pbk = params['pbk'] ?? "";
         // VALIDATION: Prevent crash on invalid Reality configs
-        if (pbk.isEmpty) {
+        if (pbk.trim().isEmpty) {
            print('❌ [CONFIG-GEN] Invalid Reality Config: Missing public_key (pbk)');
            throw Exception("Reality config missing public_key (pbk)");
         }
@@ -205,7 +213,7 @@ class SingboxConfigGenerator {
       password = authParts[1];
       final serverParts = parts[1].split(':');
       host = serverParts[0].split('#').first;
-      port = int.parse(serverParts[1].split('#').first);
+      port = int.tryParse(serverParts[1].split('#').first) ?? 443;
     } else {
       final decoded = utf8.decode(base64Decode(content.split('#').first));
       final mainParts = decoded.split('@');
@@ -214,7 +222,7 @@ class SingboxConfigGenerator {
       password = authParts[1];
       final serverParts = mainParts[1].split(':');
       host = serverParts[0];
-      port = int.parse(serverParts[1]);
+      port = int.tryParse(serverParts[1]) ?? 443;
     }
     final Map<String, dynamic> outbound = {
       "type": "shadowsocks",
