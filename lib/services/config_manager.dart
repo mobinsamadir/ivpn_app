@@ -179,25 +179,26 @@ class ConfigManager extends ChangeNotifier {
     // 3. Extract Configs using WHITELIST Regex
     // This allows only valid characters in URL, effectively stopping at HTML tags or quotes
     final regex = RegExp(
-      r'(vless|vmess|trojan|ss):\/\/[a-zA-Z0-9+\/=@:._?&%\[\]#-]+',
+      r'(vless|vmess|trojan|ss):\/\/[a-zA-Z0-9+\/=@:._?&%\[\]#,;-]+',
       caseSensitive: false,
       multiLine: true,
     );
     
     for (final match in regex.allMatches(processedText)) {
-       var config = match.group(0)?.trim();
-       if (config != null && config.isNotEmpty) {
+       var rawConfig = match.group(0)?.trim();
+       if (rawConfig != null && rawConfig.isNotEmpty) {
+          var config = rawConfig;
           try {
              // Basic Sanitization (Remove trailing punctuation if regex overshot)
-             config = config!.trim();
-             while (config!.endsWith('.') || config!.endsWith(',') || config!.endsWith(')')) {
-               config = config!.substring(0, config!.length - 1);
+             config = config.trim();
+             while (config.endsWith('.') || config.endsWith(',') || config.endsWith(')') || config.endsWith('?')) {
+               config = config.substring(0, config.length - 1);
              }
 
-             if (config!.contains('%')) {
-                config = Uri.decodeFull(config!);
+             if (config.contains('%')) {
+                config = Uri.decodeFull(config);
              }
-             collectedConfigs.add(config!);
+             collectedConfigs.add(config);
           } catch (e) {
              AdvancedLogger.error("Failed to parse extracted config. Raw String: >>>$config<<<", error: e);
           }

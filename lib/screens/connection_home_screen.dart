@@ -1087,6 +1087,28 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
                   onPressed: _findFastestServer,
                 ),
               ),
+              // Next Server Button
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.indigoAccent,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 8,
+                      spreadRadius: 2,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.skip_next_rounded, color: Colors.white, size: 22),
+                  tooltip: 'Skip to Next Server',
+                  onPressed: _handleNextServer,
+                ),
+              ),
               // Favorite Button - restored to secondary row
               Container(
                 width: 50,
@@ -1809,6 +1831,53 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
         }
       }
     });
+  }
+
+  // Handle Next Server Logic (Cycles through current list)
+  Future<void> _handleNextServer() async {
+    // 1. Identify current list based on active tab
+    List<VpnConfigWithMetrics> currentList;
+    switch (_tabController.index) {
+      case 1:
+        currentList = _configManager.validatedConfigs;
+        break;
+      case 2:
+        currentList = _configManager.favoriteConfigs;
+        break;
+      case 0:
+      default:
+        currentList = _configManager.allConfigs;
+    }
+
+    if (currentList.isEmpty) {
+      _showToast("No servers in current list to switch to.");
+      return;
+    }
+
+    // 2. Calculate next index
+    final currentConfig = _configManager.selectedConfig;
+    int nextIndex = 0;
+    if (currentConfig != null) {
+      final currentIndex = currentList.indexWhere((c) => c.id == currentConfig.id);
+      if (currentIndex != -1) {
+        nextIndex = (currentIndex + 1) % currentList.length;
+      }
+    }
+
+    final nextConfig = currentList[nextIndex];
+    _configManager.selectConfig(nextConfig);
+    _showToast("Switching to: ${nextConfig.name}");
+
+    // 3. Force Reconnect
+    // If currently connected/connecting, stop first.
+    if (_configManager.isConnected || _configManager.connectionStatus == 'Connecting...') {
+        await _windowsVpnService.stopVpn();
+        // Allow a brief moment for port release / state update
+        await Future.delayed(const Duration(milliseconds: 500));
+    }
+
+    // Now connect
+    await _handleConnection();
   }
 
   // Refactored Main Button Action - Connect button now shows ads automatically during connection
