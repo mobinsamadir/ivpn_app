@@ -5,6 +5,7 @@ import '../services/config_manager.dart';
 import '../services/latency_service.dart';
 import '../services/windows_vpn_service.dart';
 import '../utils/advanced_logger.dart';
+import '../utils/cancellable_operation.dart';
 
 class Semaphore {
   final int maxPermits;
@@ -35,7 +36,6 @@ class Semaphore {
 class ServerTesterService {
   final LatencyService _latencyService;
   final ConfigManager _configManager;
-  final Semaphore _globalSemaphore = Semaphore(15); // Global concurrency limit (Smart Batching)
 
   // Stream controller to emit updates for UI
   final _pipelineController = StreamController<VpnConfigWithMetrics>.broadcast();
@@ -43,206 +43,159 @@ class ServerTesterService {
 
   ServerTesterService(WindowsVpnService vpnService)
       : _latencyService = LatencyService(vpnService),
-        _configManager = ConfigManager();
+        _configManager = ConfigManager() {
+     // Bind to ConfigManager to allow triggering from other parts
+     _configManager.onTriggerFunnel = () async => await startFunnel(autoConnect: true);
+  }
 
-  /// Public entry point with Priority Sorting
-  Future<void> startFunnel() async {
-    AdvancedLogger.info('[ServerTesterService] startFunnel called. Sorting configs...');
-    final List<VpnConfigWithMetrics> configs = List.from(_configManager.allConfigs);
+  /// 3-Stage Funnel Testing Architecture
+  Future<void> startFunnel({bool autoConnect = false}) async {
+    final cancelToken = _configManager.getScanCancelToken();
+    AdvancedLogger.info('[ServerTesterService] Starting Funnel Test (AutoConnect: $autoConnect)');
 
-    // Sort logic:
-    // 1. Proven Working (lastSuccessfulConnectionTime > 0)
-    // 2. New Configs (Unknown)
-    // 3. Failed/Others
-    configs.sort((a, b) {
-      final aProven = a.lastSuccessfulConnectionTime > 0;
-      final bProven = b.lastSuccessfulConnectionTime > 0;
+    // Initial Candidates
+    List<VpnConfigWithMetrics> candidates = List.from(_configManager.allConfigs);
 
-      // Proven configs first
-      if (aProven && !bProven) return -1;
-      if (!aProven && bProven) return 1;
+    // --- STAGE 1: TCP Filter (Availability) ---
+    // Goal: Eliminate dead servers instantly
+    // Concurrency: 20, Timeout: 1s
+    AdvancedLogger.info('--- STAGE 1: TCP Filter (${candidates.length} configs) ---');
+    final stage1Results = await _runStage(
+      candidates,
+      concurrency: 20,
+      cancelToken: cancelToken,
+      task: (c) async {
+         final details = _extractServerDetails(c.rawConfig);
+         if (details == null) return null;
 
-      if (aProven && bProven) {
-         // Both proven, sort by recency (descending)
-         return b.lastSuccessfulConnectionTime.compareTo(a.lastSuccessfulConnectionTime);
+         final latency = await _tcpPing(details['host'], details['port'], timeout: const Duration(seconds: 1));
+         if (latency == -1) return null; // Fail
+
+         return c.copyWith(
+            lastTestedAt: DateTime.now(),
+            stageResults: {...c.stageResults, 'Stage1': TestResult(success: true, latency: latency)}
+         ).updateMetrics(deviceId: "local", ping: latency);
       }
+    );
 
-      // Both unproven: New vs Failed
-      final aNew = a.failureCount == 0 && a.lastTestedAt == null;
-      final bNew = b.failureCount == 0 && b.lastTestedAt == null;
+    if (cancelToken.isCancelled) return;
 
-      if (aNew && !bNew) return -1;
-      if (!aNew && bNew) return 1;
+    // Filter & Sort for Stage 2
+    // Take Top 20% (min 5)
+    stage1Results.sort((a, b) => (a.currentPing).compareTo(b.currentPing));
 
-      // Both Failed or both New (if New, order doesn't matter much)
-      // Sort by failure count (less failures first)
-      return a.failureCount.compareTo(b.failureCount);
+    int stage2Count = (stage1Results.length * 0.2).ceil();
+    if (stage2Count < 5 && stage1Results.length >= 5) stage2Count = 5;
+    if (stage2Count > stage1Results.length) stage2Count = stage1Results.length;
+
+    final stage2Candidates = stage1Results.take(stage2Count).toList();
+    AdvancedLogger.info('--- STAGE 2: HTTP Latency (${stage2Candidates.length} configs) ---');
+
+    // --- STAGE 2: HTTP Head (Real Latency) ---
+    // Goal: Real delay measurement (Proxy Latency)
+    // Concurrency: 5 (Strict limit for Windows), Timeout: 2s
+    final stage2Results = await _runStage(
+      stage2Candidates,
+      concurrency: 5,
+      cancelToken: cancelToken,
+      task: (c) async {
+         final result = await _latencyService.getAdvancedLatency(
+            c.rawConfig,
+            timeout: const Duration(seconds: 2)
+         );
+
+         if (result.health.averageLatency > 0) {
+            return c.copyWith(
+               stageResults: {...c.stageResults, 'Stage2': TestResult(success: true, latency: result.health.averageLatency)},
+               isAlive: true,
+            ).updateMetrics(deviceId: "local", ping: result.health.averageLatency, connectionSuccess: true);
+         }
+         return null; // Fail
+      }
+    );
+
+    if (cancelToken.isCancelled) return;
+
+    // Filter & Sort for Stage 3
+    // Take Top 5 for heavy download test
+    stage2Results.sort((a, b) => a.currentPing.compareTo(b.currentPing));
+    final stage3Candidates = stage2Results.take(5).toList();
+
+    AdvancedLogger.info('--- STAGE 3: Quality/Speed (${stage3Candidates.length} configs) ---');
+
+    // --- STAGE 3: Download Test (Quality) ---
+    // Goal: Speed & Stability
+    // Concurrency: 1 (Sequential), 1MB File
+    final finalResults = await _runStage(
+       stage3Candidates,
+       concurrency: 1,
+       cancelToken: cancelToken,
+       task: (c) async {
+          final speed = await _latencyService.getDownloadSpeed(c.rawConfig); // Returns Mbps
+
+          return c.copyWith(
+             stageResults: {...c.stageResults, 'Stage3': TestResult(success: true, latency: 0)},
+             tier: 3
+          ).updateMetrics(deviceId: "local", speed: speed);
+       }
+    );
+
+    // Scoring Formula: Score = (10000 / Latency) + (DownloadSpeed * 5)
+    finalResults.sort((a, b) {
+       final scoreA = (10000 / (a.currentPing > 0 ? a.currentPing : 9999)) + (a.currentSpeed * 5);
+       final scoreB = (10000 / (b.currentPing > 0 ? b.currentPing : 9999)) + (b.currentSpeed * 5);
+       return scoreB.compareTo(scoreA); // Descending
     });
 
-    AdvancedLogger.info('[ServerTesterService] Configs sorted. Starting funnel test...');
-    await runFunnelTest(configs);
-  }
+    if (cancelToken.isCancelled) return;
 
-  /// Runs the new Stream-Based Pipeline Test
-  Future<void> runFunnelTest(List<VpnConfigWithMetrics> configs) async {
-    AdvancedLogger.info('[ServerTesterService] Starting Pipeline Test for ${configs.length} configs');
-    AdvancedLogger.info("Starting batch test with concurrency: 15");
+    // Update ConfigManager
+    _configManager.reserveList = finalResults;
+    AdvancedLogger.info('Funnel Complete. Reserve List: ${finalResults.length}');
 
-    // Create a stream from the input list
-    final inputStream = Stream.fromIterable(configs);
-
-    // Process the stream concurrently with global semaphore
-    await for (final config in inputStream) {
-      // We don't await the processing of each config here, otherwise it's sequential.
-      // We await the acquisition of the semaphore, then spawn the task.
-      await _globalSemaphore.acquire();
-
-      // Run in background (unawaited) so loop continues
-      _processConfigPipeline(config).then((_) {
-        _globalSemaphore.release();
-      }).catchError((e) {
-        AdvancedLogger.error('[ServerTesterService] Unhandled pipeline error: $e');
-        _globalSemaphore.release();
-      });
-    }
-
-    AdvancedLogger.info('[ServerTesterService] All tests queued/started.');
-  }
-
-  /// The Core Pipeline Logic (Feed-Forward)
-  Future<void> _processConfigPipeline(VpnConfigWithMetrics config) async {
-    VpnConfigWithMetrics currentConfig = config;
-    final Map<String, TestResult> results = {};
-
-    // Helper to fail fast
-    Future<void> fail(String stage, String reason) async {
-      results[stage] = TestResult(success: false, error: reason);
-      currentConfig = currentConfig.copyWith(
-        stageResults: results,
-        lastFailedStage: stage,
-        failureReason: reason,
-        isAlive: false,
-        tier: 0,
-        lastTestedAt: DateTime.now(),
-      );
-      _emitUpdate(currentConfig);
-      await _saveConfig(currentConfig);
-    }
-
-    // Helper to pass
-    void pass(String stage, int latency) {
-      results[stage] = TestResult(success: true, latency: latency);
-      currentConfig = currentConfig.copyWith(stageResults: results);
-      // Don't save yet, wait for next stage
-    }
-
-    try {
-      final serverDetails = _extractServerDetails(currentConfig.rawConfig);
-      if (serverDetails == null) {
-        return await fail("Parse", "Invalid Config Format");
-      }
-      final host = serverDetails['host'] as String;
-      final port = serverDetails['port'] as int;
-
-      // --- Stage 1: ICMP (Ping) ---
-      // Note: True ICMP requires root/admin. We use system ping or skip if not possible.
-      // Ideally we'd use Process.run('ping'). For now, we simulate "Connectivity" via quick TCP
-      // because ICMP failures are often false positives (firewalls).
-      // However, per requirements, we implement a lightweight check.
-      // We will use a very short timeout TCP check as "Sieve".
-
-      int icmpLatency = await _tcpPing(host, port, timeout: const Duration(seconds: 2));
-      if (icmpLatency == -1) {
-         // Retry once
-         icmpLatency = await _tcpPing(host, port, timeout: const Duration(seconds: 2));
-      }
-
-      if (icmpLatency == -1) {
-        return await fail("Stage 1: ICMP", "Host Unreachable / Timeout");
-      }
-      pass("Stage 1: ICMP", icmpLatency);
-
-      // Update UI that stage 1 passed
-      _emitUpdate(currentConfig);
-
-
-      // --- Stage 2: TCP Handshake ---
-      // Already covered by _tcpPing above effectively, but let's be strict about "Port Open".
-      // We can do a slightly longer check or check a different aspect.
-      // Since Stage 1 used TCP to port, Stage 2 is effectively passed.
-      // We'll mark it passed explicitly.
-      pass("Stage 2: TCP", icmpLatency);
-
-
-      // --- Stage 3: TLS Handshake (if applicable) ---
-      if (port == 443 || currentConfig.rawConfig.contains('tls')) {
-        final tlsLatency = await _tlsPing(host, port, timeout: const Duration(seconds: 3));
-        if (tlsLatency == -1) {
-           return await fail("Stage 3: TLS", "SSL Handshake Failed");
-        }
-        pass("Stage 3: TLS", tlsLatency);
-      } else {
-        // Skip TLS for non-TLS configs
-        results["Stage 3: TLS"] = TestResult(success: true, latency: 0, error: "Skipped (Non-TLS)");
-      }
-      _emitUpdate(currentConfig);
-
-
-      // --- Stage 4: Real Latency (Benchmark) ---
-      // This uses the heavy LatencyService (Singbox)
-      try {
-        final result = await _latencyService.getAdvancedLatency(
-          currentConfig.rawConfig,
-          timeout: const Duration(seconds: 2) // Fast timeout for "Best Server" scan
-        );
-
-        if (result.health.averageLatency > 0) {
-           pass("Stage 4: Latency", result.health.averageLatency);
-
-           // Success! Update Tier.
-           int tier = 1;
-           if (result.health.averageLatency < 800) tier = 2;
-           if (result.health.averageLatency < 300) tier = 3;
-
-           currentConfig = currentConfig.copyWith(
-             stageResults: results,
-             isAlive: true,
-             tier: tier,
-             lastSuccessfulConnectionTime: DateTime.now().millisecondsSinceEpoch,
-             lastTestedAt: DateTime.now(),
-             lastFailedStage: null, // Clear failure
-             failureReason: null,
-           ).updateMetrics(
-             deviceId: "local", // Or get real ID
-             ping: result.health.averageLatency,
-             connectionSuccess: true
-           );
-
-           _emitUpdate(currentConfig);
-           await _saveConfig(currentConfig);
-
-        } else {
-           return await fail("Stage 4: Latency", "Singbox Probe Failed");
-        }
-      } catch (e) {
-        return await fail("Stage 4: Latency", "Service Error: $e");
-      }
-
-    } catch (e) {
-      AdvancedLogger.error('Pipeline Exception for ${currentConfig.name}: $e');
-      await fail("System", "Exception: $e");
+    // Auto Connect
+    if (autoConnect && finalResults.isNotEmpty) {
+       AdvancedLogger.info('Auto-connecting to winner: ${finalResults.first.name}');
+       _configManager.selectConfig(finalResults.first);
+       _configManager.onAutoSwitch?.call(finalResults.first);
     }
   }
 
-  void _emitUpdate(VpnConfigWithMetrics config) {
-    _pipelineController.add(config);
-    // Also notify ConfigManager listeners if needed, but stream is better for high freq
-  }
+  // Generic Batch Runner with Semaphore
+  Future<List<VpnConfigWithMetrics>> _runStage({
+    required List<VpnConfigWithMetrics> input,
+    required int concurrency,
+    required CancelToken cancelToken,
+    required Future<VpnConfigWithMetrics?> Function(VpnConfigWithMetrics) task
+  }) async {
+      final results = <VpnConfigWithMetrics>[];
+      final semaphore = Semaphore(concurrency);
+      final futures = <Future<void>>[];
 
-  Future<void> _saveConfig(VpnConfigWithMetrics config) async {
-    // In a real app, we might batch these or debounce.
-    // For now, we update ConfigManager directly.
-    await _configManager.updateConfigDirectly(config);
+      for (final config in input) {
+         if (cancelToken.isCancelled) break;
+
+         final f =  () async {
+            await semaphore.acquire();
+            try {
+               if (cancelToken.isCancelled) return;
+               final res = await task(config);
+               if (res != null) {
+                  results.add(res);
+                  _configManager.updateConfigDirectly(res); // Update UI
+                  _pipelineController.add(res);
+               }
+            } catch (e) {
+               // Log error
+            } finally {
+               semaphore.release();
+            }
+         }();
+         futures.add(f);
+      }
+
+      await Future.wait(futures);
+      return results;
   }
 
   // --- Helpers ---

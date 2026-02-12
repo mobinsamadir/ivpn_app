@@ -9,6 +9,7 @@ import 'package:collection/collection.dart';
 import 'package:html/parser.dart' as html_parser;
 import '../models/vpn_config_with_metrics.dart';
 import '../utils/advanced_logger.dart';
+import '../utils/cancellable_operation.dart';
 
 class ConfigManager extends ChangeNotifier {
   static final ConfigManager _instance = ConfigManager._internal();
@@ -19,6 +20,9 @@ class ConfigManager extends ChangeNotifier {
   List<VpnConfigWithMetrics> allConfigs = [];
   List<VpnConfigWithMetrics> validatedConfigs = [];
   List<VpnConfigWithMetrics> favoriteConfigs = [];
+  List<VpnConfigWithMetrics> reserveList = []; // Fallback servers
+
+  CancelToken? _scanCancelToken;
 
   String _currentDeviceId = 'unknown';
   String get currentDeviceId => _currentDeviceId;
@@ -34,7 +38,12 @@ class ConfigManager extends ChangeNotifier {
 
   Timer? _sessionTimer;
   Timer? _throttleTimer; // For UI throttling
+  Timer? _heartbeatTimer; // Smart Monitor
   bool _hasPendingUpdates = false; // Flag for buffered updates
+
+  // Callbacks
+  Future<void> Function()? onTriggerFunnel;
+  Function(VpnConfigWithMetrics)? onAutoSwitch;
 
   bool _isRefreshing = false;
   bool get isRefreshing => _isRefreshing;
@@ -59,6 +68,19 @@ class ConfigManager extends ChangeNotifier {
     await _loadConfigs();
     _updateListsSync();
     AdvancedLogger.info('[ConfigManager] Initialization complete. Loaded ${allConfigs.length} configs.');
+  }
+
+  CancelToken getScanCancelToken() {
+    _scanCancelToken?.cancel();
+    _scanCancelToken = CancelToken();
+    return _scanCancelToken!;
+  }
+
+  void cancelScan() {
+    if (_scanCancelToken != null && !_scanCancelToken!.isCancelled) {
+      _scanCancelToken!.cancel();
+      AdvancedLogger.info('[ConfigManager] Scan cancelled via token.');
+    }
   }
 
   // --- CORE: FETCH & PARSE ---
@@ -104,22 +126,46 @@ class ConfigManager extends ChangeNotifier {
               "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
               "Accept-Language": "en-US,en;q=0.5",
             },
-          ).timeout(const Duration(seconds: 5));
+          ).timeout(const Duration(seconds: 10)); // Increased timeout for large files
           
           if (response.statusCode == 200) {
             String content = response.body;
 
             // Check for Google Drive "Virus scan warning" or confirmation
-            // This handles the case where Drive returns an HTML warning page instead of the file content
+            // Logic: Response body > 100KB AND contains html tag OR confirm=
             if (url.contains('drive.google.com') &&
-                (content.contains('Google Drive - Virus scan warning') || content.contains('confirm='))) {
-               AdvancedLogger.info('[ConfigManager] Detected Drive Warning. Parsing confirmation link...');
-               final confirmLink = extractDriveConfirmationLink(content); // Uses robust Regex fallback now
-               if (confirmLink != null) {
-                  var nextUrl = confirmLink;
-                  if (nextUrl.startsWith('/')) {
-                     nextUrl = 'https://drive.google.com$nextUrl';
-                  }
+                ((content.length > 100000 && content.contains('<html')) ||
+                 content.contains('Google Drive - Virus scan warning') ||
+                 content.contains('confirm='))) {
+
+               AdvancedLogger.info('[ConfigManager] Detected Drive Warning/Large File. Parsing confirmation link...');
+
+               // 1. Extract token using simple Regex first (Fast)
+               final confirmMatch = RegExp(r'confirm=([a-zA-Z0-9_-]+)').firstMatch(content);
+               String? confirmToken = confirmMatch?.group(1);
+
+               String? nextUrl;
+               if (confirmToken != null) {
+                   // Construct URL directly if token found
+                   final fileIdMatch = RegExp(r'id=([a-zA-Z0-9_-]+)').firstMatch(url);
+                   final fileId = fileIdMatch?.group(1);
+                   if (fileId != null) {
+                      nextUrl = 'https://drive.google.com/uc?export=download&id=$fileId&confirm=$confirmToken';
+                   }
+               }
+
+               // Fallback to HTML parsing if regex failed
+               if (nextUrl == null) {
+                   final confirmLink = extractDriveConfirmationLink(content);
+                   if (confirmLink != null) {
+                      nextUrl = confirmLink;
+                      if (nextUrl.startsWith('/')) {
+                         nextUrl = 'https://drive.google.com$nextUrl';
+                      }
+                   }
+               }
+
+               if (nextUrl != null) {
                   AdvancedLogger.info('[ConfigManager] Fetching confirmation URL: $nextUrl');
                   try {
                     final nextResponse = await http.get(Uri.parse(nextUrl), headers: {
@@ -567,11 +613,75 @@ class ConfigManager extends ChangeNotifier {
   void setConnected(bool c, {String status = 'Connected'}) {
      _isConnected = c;
      _connectionStatus = status;
+     if (c) {
+       startSmartMonitor();
+     } else {
+       stopSmartMonitor();
+     }
      notifyListeners();
   }
   
   void stopSession() { _sessionTimer?.cancel(); }
+
+  // --- SMART MONITOR (HEARTBEAT) ---
+  void startSmartMonitor() {
+    _heartbeatTimer?.cancel();
+    if (!isAutoSwitchEnabled) return;
+
+    AdvancedLogger.info('[ConfigManager] Starting Smart Monitor...');
+    int failureCount = 0;
+
+    _heartbeatTimer = Timer.periodic(const Duration(seconds: 30), (timer) async {
+       if (!_isConnected) {
+         timer.cancel();
+         return;
+       }
+
+       final ping = await measureActivePing();
+
+       // Logic: Fail if ping is -1 (error) or extremely high (>2000ms)
+       if (ping == -1 || ping > 2000) {
+          failureCount++;
+          AdvancedLogger.warn('[Smart Monitor] Heartbeat failed. Count: $failureCount');
+
+          if (failureCount >= 3) {
+             AdvancedLogger.warn('[Smart Monitor] Threshold reached. Initiating Auto-Switch...');
+             failureCount = 0;
+             await _performAutoSwitch();
+          }
+       } else {
+          failureCount = 0; // Reset on success
+       }
+    });
+  }
+
+  void stopSmartMonitor() {
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = null;
+  }
   
+  Future<void> _performAutoSwitch() async {
+    // 1. Check Reserve List
+    if (reserveList.isNotEmpty) {
+       final nextBest = reserveList.removeAt(0);
+       AdvancedLogger.info('[Smart Monitor] Switching to reserve config: ${nextBest.name}');
+       _selectedConfig = nextBest;
+       notifyListeners();
+
+       onAutoSwitch?.call(nextBest);
+    } else {
+       // 2. No reserves -> Trigger Funnel
+       AdvancedLogger.info('[Smart Monitor] Reserve list empty. Triggering Funnel...');
+       onTriggerFunnel?.call();
+    }
+  }
+
+  Future<void> disconnectVpn() async {
+    cancelScan();
+    stopSmartMonitor();
+    setConnected(false, status: 'Disconnected');
+  }
+
   Future<void> clearAllData() async {
      final p = await SharedPreferences.getInstance();
      await p.remove(_configsKey);
