@@ -696,7 +696,6 @@ class ConfigManager extends ChangeNotifier {
   static Future<List<String>> parseAndFetchConfigs(String text) => parseMixedContent(text);
   Future<void> addConfig(String raw, String name) => addConfigs([raw]); 
   VpnConfigWithMetrics? getConfigById(String id) => allConfigs.firstWhereOrNull((c) => c.id == id);
-  Future<void> disconnectVpn() async { setConnected(false, status: 'Disconnected'); }
   Future<VpnConfigWithMetrics?> runQuickTestOnAllConfigs(Function(String)? log) async { return getBestConfig(); }
   
   // Dummy implementations for Hot-Swap to prevent compilation errors (can be implemented later)

@@ -162,8 +162,8 @@ class ServerTesterService {
   }
 
   // Generic Batch Runner with Semaphore
-  Future<List<VpnConfigWithMetrics>> _runStage({
-    required List<VpnConfigWithMetrics> input,
+  Future<List<VpnConfigWithMetrics>> _runStage(
+    List<VpnConfigWithMetrics> input, {
     required int concurrency,
     required CancelToken cancelToken,
     required Future<VpnConfigWithMetrics?> Function(VpnConfigWithMetrics) task
