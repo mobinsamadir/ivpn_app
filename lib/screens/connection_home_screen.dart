@@ -29,6 +29,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
   // 1. Initialize services IMMEDIATELY
   final WindowsVpnService _windowsVpnService = WindowsVpnService();
   late final LatencyService _latencyService;
+  late final ServerTesterService _serverTesterService;
 
   // 2. State Variables
   final ConfigManager _configManager = ConfigManager();
@@ -57,6 +58,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
   @override
   void initState() {
     _latencyService = LatencyService(_windowsVpnService);
+    _serverTesterService = ServerTesterService(_windowsVpnService);
     super.initState();
 
     _tabController = TabController(length: 3, vsync: this);
@@ -74,6 +76,14 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
       if (mounted) setState(() {});
     });
     AccessManager().addListener(_onTimeChanged);
+
+    // Auto-Switch Callback
+    _configManager.onAutoSwitch = (config) {
+      if (mounted) {
+         AdvancedLogger.info("[HomeScreen] Auto-Switch triggered to: ${config.name}");
+         _handleConnection();
+      }
+    };
 
     // Fire and forget: fetch startup configs from GitHub, then trigger auto-test
     _configManager.fetchStartupConfigs().then((hasNewConfigs) {
@@ -1542,57 +1552,19 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
   // NEW: Run the advanced funnel test using ServerTesterService
   Future<void> _runFunnelTest() async {
     if (_configManager.allConfigs.isEmpty) return;
-
-    // Use the new ServerTesterService for advanced funnel testing
-    final tester = ServerTesterService(_windowsVpnService);
-    await tester.startFunnel();
+    await _serverTesterService.startFunnel();
   }
 
-  // Find the fastest server without connecting
+  // Find the fastest server using Funnel Test
   Future<void> _findFastestServer() async {
     if (_configManager.allConfigs.isEmpty) {
       _showToast("No configurations available. Please refresh.");
       return;
     }
 
-    _showToast("Finding fastest server...");
-
-    // Sort configs by ping to find the fastest
-    _configManager.allConfigs.sort((a, b) {
-      final pingA = a.currentPing > 0 ? a.currentPing : 999999;
-      final pingB = b.currentPing > 0 ? b.currentPing : 999999;
-      return pingA.compareTo(pingB);
-    });
-
-    final bestConfig = _configManager.allConfigs.firstWhere(
-      (config) => config.currentPing > 0 && config.currentPing < 999999,
-      orElse: () => _configManager.allConfigs.first,
-    );
-
-    if (bestConfig.currentPing > 0 && bestConfig.currentPing < 999999) {
-      _configManager.selectConfig(bestConfig);
-      _showToast("Fastest server selected: ${bestConfig.name} (${bestConfig.currentPing}ms)");
-    } else {
-      // No server responded to ping, show dialog asking user to check internet
-      await showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          backgroundColor: const Color(0xFF1E1E1E),
-          title: const Text('Internet Connection Issue', style: TextStyle(color: Colors.white)),
-          content: const Text(
-            'No servers responded to ping. Please check your internet connection and try again.',
-            style: TextStyle(color: Colors.grey),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('OK', style: TextStyle(color: Colors.blueAccent)),
-            ),
-          ],
-        ),
-      );
-      _showToast("No responsive servers found. Check your internet connection.");
-    }
+    _showToast("Running Smart Funnel Test...");
+    // This will trigger the 3-Stage Funnel and auto-connect to the best one
+    await _serverTesterService.startFunnel(autoConnect: true);
   }
 
   // Connect to the selected server (or find fastest if none selected) with Parallel Intelligence
