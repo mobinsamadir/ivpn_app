@@ -39,6 +39,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
   Timer? _timerUpdater;
   final Set<String> _activeTestIds = {};
 
+  // Connection Control
+  bool _isConnectionCancelled = false;
+
   // Parallel Intelligence Variables
   VpnConfigWithMetrics? _fastestInBackground;
   bool _showFastestOverlay = false;
@@ -1601,8 +1604,10 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
 
     if (homeProvider.isConnected || homeProvider.connectionStatus == ConnectionStatus.connecting) {
       AdvancedLogger.info('[ConnectionHomeScreen] Already connected or connecting, stopping VPN');
+      _isConnectionCancelled = true; // Signal cancellation to break retry loops
       await _windowsVpnService.stopVpn();
     } else {
+      _isConnectionCancelled = false; // Reset cancellation flag
       // Check admin privileges before attempting connection (Windows only)
       if (Platform.isWindows) {
         try {
@@ -1696,6 +1701,12 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     const maxAttempts = 3;
 
     while (attempts < maxAttempts) {
+      // Check for user cancellation BEFORE attempting connection
+      if (_isConnectionCancelled) {
+        AdvancedLogger.info('[ConnectionHomeScreen] Connection loop cancelled by user.');
+        return;
+      }
+
       try {
         setState(() {
           _configManager.setConnected(false, status: 'Connecting to ${currentConfig.name} (Attempt ${attempts + 1}/$maxAttempts)...');
@@ -1721,6 +1732,12 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
         
         // Mark failure for the current config
         await _configManager.markFailure(currentConfig.id);
+
+        // Check for cancellation immediately after failure (e.g. if user clicked Stop during connection)
+        if (_isConnectionCancelled) {
+           AdvancedLogger.info('[ConnectionHomeScreen] Connection loop cancelled by user (during catch).');
+           return;
+        }
 
         attempts++;
         if (attempts >= maxAttempts) {
@@ -1849,31 +1866,29 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
         currentList = _configManager.allConfigs;
     }
 
-    if (currentList.isEmpty) {
+    // 2. Get Next Config using helper
+    final nextConfig = _configManager.getNextConfig(currentList);
+
+    if (nextConfig == null) {
       _showToast("No servers in current list to switch to.");
       return;
     }
 
-    // 2. Calculate next index
-    final currentConfig = _configManager.selectedConfig;
-    int nextIndex = 0;
-    if (currentConfig != null) {
-      final currentIndex = currentList.indexWhere((c) => c.id == currentConfig.id);
-      if (currentIndex != -1) {
-        nextIndex = (currentIndex + 1) % currentList.length;
-      }
-    }
-
-    final nextConfig = currentList[nextIndex];
     _configManager.selectConfig(nextConfig);
     _showToast("Switching to: ${nextConfig.name}");
 
     // 3. Force Reconnect
     // If currently connected/connecting, stop first.
     if (_configManager.isConnected || _configManager.connectionStatus == 'Connecting...') {
+        // Signal cancellation to ensure existing loops break
+        _isConnectionCancelled = true;
         await _windowsVpnService.stopVpn();
+
         // Allow a brief moment for port release / state update
         await Future.delayed(const Duration(milliseconds: 500));
+
+        // Reset flag for new connection
+        _isConnectionCancelled = false;
     }
 
     // Now connect
@@ -1959,23 +1974,35 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
           _activeTestIds.add(config.id);
         });
       }
-      
-      _showToast('Testing latency for ${config.name}...');
 
-      final result = await _latencyService.getAdvancedLatency(
-        config.rawConfig,
-        timeout: const Duration(seconds: 35),
-        isPriority: true,
-      );
-      final latency = result.health.averageLatency;
+      // Tap-to-Refresh: If connected to this config, ping directly using active tunnel
+      if (_configManager.isConnected && _configManager.selectedConfig?.id == config.id) {
+         _showToast('Refreshing active connection ping...');
+         final ping = await _configManager.measureActivePing();
+         if (ping != -1) {
+            _showToast('Active Ping: ${ping}ms');
+         } else {
+            _showToast('Active Ping Failed (Timeout/Error)');
+         }
+      } else {
+         // Background Test: Use LatencyService (spawns separate process)
+         _showToast('Testing latency for ${config.name}...');
 
-      await _configManager.updateConfigMetrics(
-        config.id,
-        ping: latency,
-        connectionSuccess: latency > 0,
-      );
+         final result = await _latencyService.getAdvancedLatency(
+            config.rawConfig,
+            timeout: const Duration(seconds: 5), // Reduced timeout for single test too
+            isPriority: true,
+         );
+         final latency = result.health.averageLatency;
 
-      _showToast('Latency test completed: ${latency}ms for ${config.name}');
+         await _configManager.updateConfigMetrics(
+            config.id,
+            ping: latency,
+            connectionSuccess: latency > 0,
+         );
+
+         _showToast('Latency test completed: ${latency}ms for ${config.name}');
+      }
     } catch (e) {
       _showToast('Latency test failed for ${config.name}: $e');
       AdvancedLogger.error('[HomeScreen] Latency test failed for ${config.name}: $e');

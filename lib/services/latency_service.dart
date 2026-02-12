@@ -149,9 +149,9 @@ class LatencyService {
     File? configFile;
     final Completer<void> processExitCompleter = Completer<void>();
     
+    final opTimeout = timeout ?? const Duration(seconds: 5);
     try {
-      log("🔍 [INIT] Starting Robust Latency Test (Timeout: 5s)...");
-      AdvancedLogger.info("[SERVICE] ⏳ Timeout set to 5s for fast UX");
+      log("🔍 [INIT] Starting Robust Latency Test (Timeout: ${opTimeout.inSeconds}s)...");
 
       final int port = _nextPort;
       _nextPort += 2;
@@ -229,8 +229,8 @@ class LatencyService {
       });
 
       try {
-        final startupTimeout = const Duration(seconds: 5);
-        await startCompleter.future.timeout(startupTimeout);
+        // Startup should be fast, but cap it at opTimeout
+        await startCompleter.future.timeout(opTimeout);
         log("✅ [READY] Core is running. Sending Ping...");
       } catch (e) {
         log("❌ [ABORT] Core failed to start: $e");
@@ -240,7 +240,7 @@ class LatencyService {
       // Probing starts here
       final client = HttpClient();
       client.findProxy = (uri) => "PROXY 127.0.0.1:${port + 1}";
-      client.connectionTimeout = const Duration(seconds: 8);
+      client.connectionTimeout = opTimeout;
       
       const String targetUrl = "http://cp.cloudflare.com";
       final sw = Stopwatch();
@@ -250,7 +250,7 @@ class LatencyService {
           sw.reset();
           sw.start();
           log("Dart: 🚀 Sending request to $targetUrl via 127.0.0.1:${port + 1} (Attempt $attempt/2)");
-          final request = await client.headUrl(Uri.parse(targetUrl)).timeout(const Duration(seconds: 8));
+          final request = await client.headUrl(Uri.parse(targetUrl)).timeout(opTimeout);
           final response = await request.close();
           sw.stop();
           log("Dart: 📩 Received response: ${response.statusCode}");
