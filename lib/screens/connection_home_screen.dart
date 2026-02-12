@@ -1562,6 +1562,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
       return;
     }
 
+    // Reset reserve list to force fresh scan
+    _configManager.clearReserveList();
+
     _showToast("Running Smart Funnel Test...");
     // This will trigger the 3-Stage Funnel and auto-connect to the best one
     await _serverTesterService.startFunnel(autoConnect: true);
@@ -1576,9 +1579,11 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
 
     if (homeProvider.isConnected || homeProvider.connectionStatus == ConnectionStatus.connecting) {
       AdvancedLogger.info('[ConnectionHomeScreen] Already connected or connecting, stopping VPN');
+      _configManager.setUserStopped(true); // Flag explicit user stop
       _isConnectionCancelled = true; // Signal cancellation to break retry loops
       await _windowsVpnService.stopVpn();
     } else {
+      _configManager.setUserStopped(false); // Reset explicit user stop
       _isConnectionCancelled = false; // Reset cancellation flag
       // Check admin privileges before attempting connection (Windows only)
       if (Platform.isWindows) {
@@ -1674,7 +1679,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
 
     while (attempts < maxAttempts) {
       // Check for user cancellation BEFORE attempting connection
-      if (_isConnectionCancelled) {
+      if (_isConnectionCancelled || _configManager.isUserStopped) {
         AdvancedLogger.info('[ConnectionHomeScreen] Connection loop cancelled by user.');
         return;
       }
@@ -1706,7 +1711,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
         await _configManager.markFailure(currentConfig.id);
 
         // Check for cancellation immediately after failure (e.g. if user clicked Stop during connection)
-        if (_isConnectionCancelled) {
+        if (_isConnectionCancelled || _configManager.isUserStopped) {
            AdvancedLogger.info('[ConnectionHomeScreen] Connection loop cancelled by user (during catch).');
            return;
         }
