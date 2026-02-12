@@ -110,10 +110,11 @@ class ConfigManager extends ChangeNotifier {
             String content = response.body;
 
             // Check for Google Drive "Virus scan warning" or confirmation
+            // This handles the case where Drive returns an HTML warning page instead of the file content
             if (url.contains('drive.google.com') &&
                 (content.contains('Google Drive - Virus scan warning') || content.contains('confirm='))) {
                AdvancedLogger.info('[ConfigManager] Detected Drive Warning. Parsing confirmation link...');
-               final confirmLink = extractDriveConfirmationLink(content);
+               final confirmLink = extractDriveConfirmationLink(content); // Uses robust Regex fallback now
                if (confirmLink != null) {
                   var nextUrl = confirmLink;
                   if (nextUrl.startsWith('/')) {
@@ -184,16 +185,31 @@ class ConfigManager extends ChangeNotifier {
   // --- SMART PARSER (Regex Extraction Only - NO Recursion) ---
   static String? extractDriveConfirmationLink(String html) {
      try {
+       // 1. Try HTML Parser
        var document = html_parser.parse(html);
-       // Find anchor tag with href containing "confirm="
-       final link = document.querySelector('a[href*="confirm="]')?.attributes['href'];
-       // Also check for "download_warning" ID sometimes used
+
+       // Try 'uc-download-link' ID (Standard Button)
+       var link = document.getElementById('uc-download-link')?.attributes['href'];
        if (link != null) return link;
 
-       return document.getElementById('uc-download-link')?.attributes['href'];
+       // Try any link with 'confirm='
+       link = document.querySelector('a[href*="confirm="]')?.attributes['href'];
+       if (link != null) return link;
+
+       // 2. Regex Fallback (Robust)
+       // Matches: /uc?export=download&confirm=... or full URL
+       final regex = RegExp(r'\/uc\?export=download&[^"]*confirm=[a-zA-Z0-9_-]+[^"]*', caseSensitive: false);
+       final match = regex.firstMatch(html);
+       if (match != null) {
+          String url = match.group(0)!;
+          // Decode HTML entities if present (e.g. &amp;)
+          return url.replaceAll('&amp;', '&');
+       }
+
      } catch (e) {
-       return null;
+       AdvancedLogger.warn('[ConfigManager] Error extracting confirmation link: $e');
      }
+     return null;
   }
 
   static Future<List<String>> parseMixedContent(String text) async {
@@ -421,6 +437,41 @@ class ConfigManager extends ChangeNotifier {
   void selectConfig(VpnConfigWithMetrics? c) {
      _selectedConfig = c;
      notifyListeners();
+  }
+
+  // --- ACTIVE CONNECTION PING & NAVIGATION ---
+
+  Future<int> measureActivePing() async {
+    if (!_isConnected || _selectedConfig == null) return -1;
+
+    final stopwatch = Stopwatch()..start();
+    try {
+      final response = await http.head(
+        Uri.parse('https://www.google.com'),
+      ).timeout(const Duration(seconds: 3));
+
+      stopwatch.stop();
+      if (response.statusCode == 200) {
+         final ping = stopwatch.elapsedMilliseconds;
+         // Update metrics directly
+         await updateConfigMetrics(_selectedConfig!.id, ping: ping, connectionSuccess: true);
+         AdvancedLogger.info('[ConfigManager] Active ping success: ${ping}ms');
+         return ping;
+      }
+    } catch (e) {
+      AdvancedLogger.warn('[ConfigManager] Active ping failed: $e');
+    }
+    return -1;
+  }
+
+  VpnConfigWithMetrics? getNextConfig(List<VpnConfigWithMetrics> currentList) {
+     if (currentList.isEmpty) return null;
+     if (_selectedConfig == null) return currentList.first;
+
+     final currentIndex = currentList.indexWhere((c) => c.id == _selectedConfig!.id);
+     if (currentIndex == -1) return currentList.first;
+
+     return currentList[(currentIndex + 1) % currentList.length];
   }
 
   // --- HELPERS ---

@@ -35,7 +35,7 @@ class Semaphore {
 class ServerTesterService {
   final LatencyService _latencyService;
   final ConfigManager _configManager;
-  final Semaphore _globalSemaphore = Semaphore(50); // Global concurrency limit
+  final Semaphore _globalSemaphore = Semaphore(15); // Global concurrency limit (Smart Batching)
 
   // Stream controller to emit updates for UI
   final _pipelineController = StreamController<VpnConfigWithMetrics>.broadcast();
@@ -86,7 +86,7 @@ class ServerTesterService {
   /// Runs the new Stream-Based Pipeline Test
   Future<void> runFunnelTest(List<VpnConfigWithMetrics> configs) async {
     AdvancedLogger.info('[ServerTesterService] Starting Pipeline Test for ${configs.length} configs');
-    AdvancedLogger.info("Starting batch test with concurrency: 50");
+    AdvancedLogger.info("Starting batch test with concurrency: 15");
 
     // Create a stream from the input list
     final inputStream = Stream.fromIterable(configs);
@@ -193,7 +193,7 @@ class ServerTesterService {
       try {
         final result = await _latencyService.getAdvancedLatency(
           currentConfig.rawConfig,
-          timeout: const Duration(seconds: 5)
+          timeout: const Duration(seconds: 2) // Fast timeout for "Best Server" scan
         );
 
         if (result.health.averageLatency > 0) {
