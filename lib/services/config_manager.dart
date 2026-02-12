@@ -108,6 +108,34 @@ class ConfigManager extends ChangeNotifier {
           
           if (response.statusCode == 200) {
             String content = response.body;
+
+            // Check for Google Drive "Virus scan warning" or confirmation
+            if (url.contains('drive.google.com') &&
+                (content.contains('Google Drive - Virus scan warning') || content.contains('confirm='))) {
+               AdvancedLogger.info('[ConfigManager] Detected Drive Warning. Parsing confirmation link...');
+               final confirmLink = extractDriveConfirmationLink(content);
+               if (confirmLink != null) {
+                  var nextUrl = confirmLink;
+                  if (nextUrl.startsWith('/')) {
+                     nextUrl = 'https://drive.google.com$nextUrl';
+                  }
+                  AdvancedLogger.info('[ConfigManager] Fetching confirmation URL: $nextUrl');
+                  try {
+                    final nextResponse = await http.get(Uri.parse(nextUrl), headers: {
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+                        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+                        "Accept-Language": "en-US,en;q=0.5",
+                    });
+                    if (nextResponse.statusCode == 200) {
+                       content = nextResponse.body;
+                       AdvancedLogger.info('✅ Downloaded confirmed content: ${content.length} bytes.');
+                    }
+                  } catch (e) {
+                    AdvancedLogger.warn('[ConfigManager] Failed to fetch confirmed link: $e');
+                  }
+               }
+            }
+
             AdvancedLogger.info('✅ Downloaded ${content.length} bytes successfully from $url.');
 
             // 1. Parse Mixed Content (Configs ONLY - No Recursion)
@@ -154,6 +182,20 @@ class ConfigManager extends ChangeNotifier {
   }
 
   // --- SMART PARSER (Regex Extraction Only - NO Recursion) ---
+  static String? extractDriveConfirmationLink(String html) {
+     try {
+       var document = html_parser.parse(html);
+       // Find anchor tag with href containing "confirm="
+       final link = document.querySelector('a[href*="confirm="]')?.attributes['href'];
+       // Also check for "download_warning" ID sometimes used
+       if (link != null) return link;
+
+       return document.getElementById('uc-download-link')?.attributes['href'];
+     } catch (e) {
+       return null;
+     }
+  }
+
   static Future<List<String>> parseMixedContent(String text) async {
     final collectedConfigs = <String>{};
     
@@ -201,8 +243,38 @@ class ConfigManager extends ChangeNotifier {
           var config = rawConfig;
           try {
              // Basic Sanitization (Remove trailing punctuation if regex overshot)
-             while (config.endsWith('.') || config.endsWith(',') || config.endsWith(')') || config.endsWith('?')) {
+             const junkChars = {'.', ',', ')', '?', ';', '&'};
+             while (config.isNotEmpty && junkChars.contains(config[config.length - 1])) {
                config = config.substring(0, config.length - 1);
+             }
+
+             // Fix Base64 Padding for vmess/trojan
+             if (config.startsWith('vmess://')) {
+                 final base64Part = config.substring(8);
+                 // vmess body is usually base64 encoded JSON, no @
+                 if (!base64Part.contains('@')) {
+                     var fixedBase64 = base64Part;
+                     while (fixedBase64.length % 4 != 0) {
+                         fixedBase64 += '=';
+                     }
+                     if (fixedBase64 != base64Part) {
+                         config = 'vmess://$fixedBase64';
+                     }
+                 }
+             } else if (config.startsWith('trojan://')) {
+                 // Some trojan links are base64 encoded (rare but exists)
+                 // Standard: trojan://password@...
+                 // If no @, assume base64
+                 final base64Part = config.substring(9);
+                 if (!base64Part.contains('@')) {
+                      var fixedBase64 = base64Part;
+                      while (fixedBase64.length % 4 != 0) {
+                          fixedBase64 += '=';
+                      }
+                      if (fixedBase64 != base64Part) {
+                          config = 'trojan://$fixedBase64';
+                      }
+                 }
              }
 
              if (config.contains('%')) {

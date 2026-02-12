@@ -68,4 +68,62 @@ vmess://eyJhZGQiOiIxMjcuMC4wLjEiIn0=
      expect(configs, contains('vless://uuid@domain:443?path=/ws&host=domain&security=tls#RawServer'));
      expect(configs, contains('vmess://eyJhZGQiOiIxMjcuMC4wLjEiIn0='));
   });
+
+  test('ConfigManager.extractDriveConfirmationLink finds the link', () {
+    const driveWarningHtml = '''
+    <html>
+      <body>
+        <p>Google Drive - Virus scan warning</p>
+        <p>This file is too large to scan.</p>
+        <a href="/uc?export=download&confirm=t&id=12345">Download anyway</a>
+        <a href="/other">Other link</a>
+      </body>
+    </html>
+    ''';
+
+    final link = ConfigManager.extractDriveConfirmationLink(driveWarningHtml);
+    expect(link, equals('/uc?export=download&confirm=t&id=12345'));
+
+    const driveWarningHtml2 = '''
+    <html><body><a id="uc-download-link" href="/uc?export=download&confirm=X">Download</a></body></html>
+    ''';
+    final link2 = ConfigManager.extractDriveConfirmationLink(driveWarningHtml2);
+    expect(link2, equals('/uc?export=download&confirm=X'));
+
+    const noWarningHtml = '<html><body><p>Just text</p></body></html>';
+    final link3 = ConfigManager.extractDriveConfirmationLink(noWarningHtml);
+    expect(link3, isNull);
+  });
+
+  test('ConfigManager.parseMixedContent fixes base64 padding and removes junk', () async {
+    // 1. Padding Fix Check
+    // "eyJhZGQiOiIxMjcuMC4wLjEiIn0" (len 27, needs 1 '=')
+    const brokenVmess = 'vmess://eyJhZGQiOiIxMjcuMC4wLjEiIn0';
+    const expectedVmess = 'vmess://eyJhZGQiOiIxMjcuMC4wLjEiIn0=';
+
+    // 2. Junk Removal Check
+    // "vmess://...;&" -> "vmess://..."
+    const junkVmess = 'vmess://eyJhZGQiOiIxMjcuMC4wLjEiIn0=;&';
+
+    final configs = await ConfigManager.parseMixedContent('$brokenVmess\n$junkVmess');
+
+    expect(configs, contains(expectedVmess));
+    // The second one should also result in expectedVmess after cleaning junk
+    // Note: ConfigManager uses a set, so duplicates are merged if identical.
+    expect(configs.length, equals(1));
+    expect(configs.first, equals(expectedVmess));
+
+    // 3. Trojan Base64 Check
+    // "trojan://eyJhZGQiOiIxMjcuMC4wLjEiIn0" (len 27) -> "trojan://eyJhZGQiOiIxMjcuMC4wLjEiIn0="
+    const brokenTrojan = 'trojan://eyJhZGQiOiIxMjcuMC4wLjEiIn0';
+    const expectedTrojan = 'trojan://eyJhZGQiOiIxMjcuMC4wLjEiIn0=';
+
+    final configs2 = await ConfigManager.parseMixedContent(brokenTrojan);
+    expect(configs2, contains(expectedTrojan));
+
+    // 4. Trojan Standard (should NOT change)
+    const standardTrojan = 'trojan://password@1.2.3.4:443';
+    final configs3 = await ConfigManager.parseMixedContent(standardTrojan);
+    expect(configs3, contains(standardTrojan));
+  });
 }
