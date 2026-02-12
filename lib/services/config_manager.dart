@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:http/http.dart' as http;
 import 'package:collection/collection.dart';
+import 'package:html/parser.dart' as html_parser;
 import '../models/vpn_config_with_metrics.dart';
 import '../utils/advanced_logger.dart';
 
@@ -158,28 +159,38 @@ class ConfigManager extends ChangeNotifier {
     
     String processedText = text;
 
-    // 1. Base64 Decode Attempt
-    try {
-      final decoded = utf8.decode(base64Decode(text.replaceAll(RegExp(r'\s+'), '')));
-      if (decoded.contains('://')) processedText = decoded;
-    } catch (e) {
-      // Not base64, proceed with raw text
+    // 1. Detect & Parse HTML (The Bulletproof Fix)
+    // If it looks like HTML, use the parser to get clean text (decodes entities automatically)
+    if (text.trimLeft().startsWith('<') || text.contains('<!DOCTYPE html>')) {
+       try {
+         var document = html_parser.parse(text);
+         // .text automatically decodes &amp; -> & and strips tags
+         final bodyText = document.body?.text ?? '';
+
+         // Also extract hrefs from anchor tags to catch links
+         final hrefs = document.querySelectorAll('a')
+             .map((e) => e.attributes['href'])
+             .whereType<String>()
+             .join('\n');
+
+         processedText = '$bodyText\n$hrefs';
+       } catch (e) {
+         AdvancedLogger.warn('[ConfigManager] HTML parsing failed, falling back to raw text: $e');
+       }
+    } else {
+       // 2. Base64 Decode Attempt (Only if not HTML)
+       try {
+         final decoded = utf8.decode(base64Decode(text.replaceAll(RegExp(r'\s+'), '')));
+         if (decoded.contains('://')) processedText = decoded;
+       } catch (e) {
+         // Not base64
+       }
     }
 
-    // 2. HTML Entity Decoding (CRITICAL FIX)
-    // Replace common HTML entities to ensure params like &amp; don't break regex
-    processedText = processedText
-        .replaceAll('&amp;', '&')
-        .replaceAll('&lt;', '<')
-        .replaceAll('&gt;', '>')
-        .replaceAll('&quot;', '"')
-        .replaceAll('&apos;', "'")
-        .replaceAll('&#038;', '&'); // Common variation
-
-    // 3. Extract Configs using WHITELIST Regex
-    // This allows only valid characters in URL, effectively stopping at HTML tags or quotes
+    // 3. Extract Configs using RELAXED "Terminator" Regex
+    // Capture everything until whitespace, <, ", or '
     final regex = RegExp(
-      r'(vless|vmess|trojan|ss):\/\/[a-zA-Z0-9+\/=@:._?&%\[\]#,;-]+',
+      r'''(vless|vmess|trojan|ss):\/\/[^\s<"']+\S''',
       caseSensitive: false,
       multiLine: true,
     );
@@ -190,7 +201,6 @@ class ConfigManager extends ChangeNotifier {
           var config = rawConfig;
           try {
              // Basic Sanitization (Remove trailing punctuation if regex overshot)
-             config = config.trim();
              while (config.endsWith('.') || config.endsWith(',') || config.endsWith(')') || config.endsWith('?')) {
                config = config.substring(0, config.length - 1);
              }
