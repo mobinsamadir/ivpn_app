@@ -32,6 +32,13 @@ class ConfigManager extends ChangeNotifier {
 
   bool _isConnected = false;
   bool get isConnected => _isConnected;
+
+  bool _isUserStopped = false;
+  bool get isUserStopped => _isUserStopped;
+  void setUserStopped(bool value) {
+    _isUserStopped = value;
+    notifyListeners();
+  }
   
   String _connectionStatus = 'Ready';
   String get connectionStatus => _connectionStatus;
@@ -141,8 +148,9 @@ class ConfigManager extends ChangeNotifier {
                AdvancedLogger.info('[ConfigManager] Detected Drive Warning/Large File. Parsing confirmation link...');
 
                // 1. Extract token using simple Regex first (Fast)
-               final confirmMatch = RegExp(r'confirm=([a-zA-Z0-9_-]+)').firstMatch(content);
-               String? confirmToken = confirmMatch?.group(1);
+               // Matches confirm=... or &amp;confirm=...
+               final confirmMatch = RegExp(r'(&amp;)?confirm=([a-zA-Z0-9_-]+)').firstMatch(content);
+               String? confirmToken = confirmMatch?.group(2);
 
                String? nextUrl;
                if (confirmToken != null) {
@@ -156,6 +164,7 @@ class ConfigManager extends ChangeNotifier {
 
                // Fallback to HTML parsing if regex failed
                if (nextUrl == null) {
+                   AdvancedLogger.warn('[ConfigManager] Regex extraction failed. Response start: ${content.substring(0, content.length > 500 ? 500 : content.length)}');
                    final confirmLink = extractDriveConfirmationLink(content);
                    if (confirmLink != null) {
                       nextUrl = confirmLink;
@@ -506,6 +515,9 @@ class ConfigManager extends ChangeNotifier {
       }
     } catch (e) {
       AdvancedLogger.warn('[ConfigManager] Active ping failed: $e');
+      if (e.toString().contains('HandshakeException') || e.toString().contains('TlsException')) {
+        return -2; // Special code for Handshake/TLS errors
+      }
     }
     return -1;
   }
@@ -640,11 +652,21 @@ class ConfigManager extends ChangeNotifier {
        final ping = await measureActivePing();
 
        // Logic: Fail if ping is -1 (error) or extremely high (>2000ms)
-       if (ping == -1 || ping > 2000) {
-          failureCount++;
-          AdvancedLogger.warn('[Smart Monitor] Heartbeat failed. Count: $failureCount');
+       if (ping == -1 || ping > 2000 || ping == -2) {
 
-          if (failureCount >= 3) {
+          if (ping > 2000) {
+             failureCount += 2; // Penalize high ping more heavily
+          } else {
+             failureCount++;
+          }
+
+          AdvancedLogger.warn('[Smart Monitor] Heartbeat failed (Ping: $ping). Count: $failureCount');
+
+          if (ping == -2) {
+             AdvancedLogger.warn('[Smart Monitor] Handshake Exception detected! Immediate Switch.');
+             failureCount = 0;
+             await _performAutoSwitch();
+          } else if (failureCount >= 3) {
              AdvancedLogger.warn('[Smart Monitor] Threshold reached. Initiating Auto-Switch...');
              failureCount = 0;
              await _performAutoSwitch();
@@ -680,6 +702,11 @@ class ConfigManager extends ChangeNotifier {
     cancelScan();
     stopSmartMonitor();
     setConnected(false, status: 'Disconnected');
+  }
+
+  void clearReserveList() {
+    reserveList.clear();
+    notifyListeners();
   }
 
   Future<void> clearAllData() async {
