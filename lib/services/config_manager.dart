@@ -11,6 +11,7 @@ import 'package:html/parser.dart' as html_parser;
 import '../models/vpn_config_with_metrics.dart';
 import '../utils/advanced_logger.dart';
 import '../utils/cancellable_operation.dart';
+import '../utils/base64_utils.dart';
 
 class ConfigManager extends ChangeNotifier {
   static final ConfigManager _instance = ConfigManager._internal();
@@ -124,88 +125,10 @@ class ConfigManager extends ChangeNotifier {
       for (var url in mirrors) {
         if (anyConfigAdded) break; // Chain Breaking: Stop if we already have configs
 
-        // Auto-convert Google Drive /view links to direct download
-        if (url.contains('drive.google.com') && url.contains('/view')) {
-           final fileIdMatch = RegExp(r'\/d\/([a-zA-Z0-9_-]+)').firstMatch(url);
-           if (fileIdMatch != null) {
-              final fileId = fileIdMatch.group(1);
-              url = 'https://drive.google.com/uc?export=download&id=$fileId';
-              AdvancedLogger.info('[ConfigManager] Converted Drive View Link to: $url');
-           }
-        }
-
         try {
-          AdvancedLogger.info('[ConfigManager] Attempting fetch from: $url');
+          String? content = await _robustFetch(url);
           
-          final response = await http.get(
-            Uri.parse(url),
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-              'Accept-Language': 'en-US,en;q=0.9',
-              'Sec-Fetch-Dest': 'document',
-              'Sec-Fetch-Mode': 'navigate',
-            },
-          ).timeout(const Duration(seconds: 30)); // Increased timeout to 30s
-          
-          if (response.statusCode == 200) {
-            String content = response.body;
-
-            // Check for Google Drive "Virus scan warning" or confirmation
-            // Logic: Response body > 100KB AND contains html tag OR confirm=
-            if (url.contains('drive.google.com') &&
-                ((content.length > 100000 && content.contains('<html')) ||
-                 content.contains('Google Drive - Virus scan warning') ||
-                 content.contains('confirm='))) {
-
-               AdvancedLogger.info('[ConfigManager] Detected Drive Warning/Large File. Parsing confirmation link...');
-
-               // 1. Extract token using simple Regex first (Fast)
-               final confirmMatch = RegExp(r'confirm=([a-zA-Z0-9_-]+)').firstMatch(content);
-               String? confirmToken = confirmMatch?.group(1);
-
-               String? nextUrl;
-               if (confirmToken != null) {
-                   // Construct URL directly if token found
-                   final fileIdMatch = RegExp(r'id=([a-zA-Z0-9_-]+)').firstMatch(url);
-                   final fileId = fileIdMatch?.group(1);
-                   if (fileId != null) {
-                      nextUrl = 'https://drive.google.com/uc?export=download&id=$fileId&confirm=$confirmToken';
-                   }
-               }
-
-               // Fallback to HTML parsing if regex failed
-               if (nextUrl == null) {
-                   final confirmLink = extractDriveConfirmationLink(content);
-                   if (confirmLink != null) {
-                      nextUrl = confirmLink;
-                      if (nextUrl.startsWith('/')) {
-                         nextUrl = 'https://drive.google.com$nextUrl';
-                      }
-                   }
-               }
-
-               if (nextUrl != null) {
-                  AdvancedLogger.info('[ConfigManager] Fetching confirmation URL: $nextUrl');
-                  try {
-                    final nextResponse = await http.get(Uri.parse(nextUrl), headers: {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-                        'Accept-Language': 'en-US,en;q=0.9',
-                        'Sec-Fetch-Dest': 'document',
-                        'Sec-Fetch-Mode': 'navigate',
-                    }).timeout(const Duration(seconds: 30));
-
-                    if (nextResponse.statusCode == 200) {
-                       content = nextResponse.body;
-                       AdvancedLogger.info('✅ Downloaded confirmed content: ${content.length} bytes.');
-                    }
-                  } catch (e) {
-                    AdvancedLogger.warn('[ConfigManager] Failed to fetch confirmed link: $e');
-                  }
-               }
-            }
-
+          if (content != null && content.isNotEmpty) {
             AdvancedLogger.info('✅ Downloaded ${content.length} bytes successfully from $url.');
 
             // 1. Parse Mixed Content (Configs ONLY - No Recursion)
@@ -228,9 +151,6 @@ class ConfigManager extends ChangeNotifier {
             } else {
                AdvancedLogger.warn('[ConfigManager] No valid configs found in content from $url.');
             }
-
-          } else {
-             AdvancedLogger.warn('[ConfigManager] HTTP Error ${response.statusCode} from $url');
           }
         } catch (e) {
           AdvancedLogger.warn('[ConfigManager] Failed to fetch from $url: $e');
@@ -251,51 +171,131 @@ class ConfigManager extends ChangeNotifier {
     return anyConfigAdded;
   }
 
-  // --- SMART PARSER (Enhanced: ID -> Anchor -> Form -> Debug) ---
-  static String? extractDriveConfirmationLink(String html) {
+  // --- ROBUST FETCH (Drive + Direct) ---
+  Future<String?> _robustFetch(String url) async {
+    String targetUrl = url;
+
+    // 1. Auto-convert Google Drive /view links to direct download
+    if (targetUrl.contains('drive.google.com') && targetUrl.contains('/view')) {
+        final fileIdMatch = RegExp(r'\/d\/([a-zA-Z0-9_-]+)').firstMatch(targetUrl);
+        if (fileIdMatch != null) {
+          final fileId = fileIdMatch.group(1);
+          targetUrl = 'https://drive.google.com/uc?export=download&id=$fileId';
+          AdvancedLogger.info('[ConfigManager] Converted Drive View Link to: $targetUrl');
+        }
+    }
+
+    try {
+      AdvancedLogger.info('[ConfigManager] Attempting fetch from: $targetUrl');
+
+      final response = await http.get(
+        Uri.parse(targetUrl),
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+        },
+      ).timeout(const Duration(seconds: 30));
+
+      if (response.statusCode != 200) {
+         AdvancedLogger.warn('[ConfigManager] HTTP Error ${response.statusCode} from $targetUrl');
+         return null;
+      }
+
+      String content = response.body;
+
+      // 2. Google Drive "Virus Scan / Large File" Warning Handler
+      if (targetUrl.contains('drive.google.com') &&
+         (content.contains('confirm=') || content.contains('Virus scan warning'))) {
+
+          AdvancedLogger.info('[ConfigManager] Detected Drive Warning. Attempting to extract confirm token...');
+
+          String? confirmToken;
+
+          // Strategy A: Regex for confirm=XXXX
+          final confirmMatch = RegExp(r'confirm=([a-zA-Z0-9_-]+)').firstMatch(content);
+          if (confirmMatch != null) {
+            confirmToken = confirmMatch.group(1);
+          }
+
+          // Strategy B: Form Action or Link
+          if (confirmToken == null) {
+             confirmToken = _extractDriveTokenFromHtml(content);
+          }
+
+          if (confirmToken != null) {
+             final fileIdMatch = RegExp(r'id=([a-zA-Z0-9_-]+)').firstMatch(targetUrl);
+             final fileId = fileIdMatch?.group(1);
+
+             if (fileId != null) {
+                final confirmUrl = 'https://drive.google.com/uc?export=download&id=$fileId&confirm=$confirmToken';
+                AdvancedLogger.info('[ConfigManager] Retrying with confirm token: $confirmToken');
+
+                final retryResponse = await http.get(Uri.parse(confirmUrl), headers: {
+                   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+                }).timeout(const Duration(seconds: 30));
+
+                if (retryResponse.statusCode == 200) {
+                   content = retryResponse.body;
+                } else {
+                   AdvancedLogger.warn('[ConfigManager] Failed to fetch confirmed link. Status: ${retryResponse.statusCode}');
+                   return null;
+                }
+             }
+          } else {
+             AdvancedLogger.warn('[ConfigManager] Could not extract confirm token from Drive page.');
+             return null;
+          }
+      }
+
+      // 3. Validation: Ensure content isn't just an error page HTML
+      if (content.trim().toLowerCase().startsWith('<!doctype html>') && !content.contains('vmess://') && !content.contains('vless://')) {
+          AdvancedLogger.warn('[ConfigManager] Fetched content appears to be a generic HTML page, not config.');
+          return null;
+      }
+
+      return content;
+
+    } catch (e) {
+      AdvancedLogger.warn('[ConfigManager] Fetch error: $e');
+      return null;
+    }
+  }
+
+  String? _extractDriveTokenFromHtml(String html) {
      try {
-       var document = html_parser.parse(html);
+       // Check for any link or form action containing 'confirm='
+       final document = html_parser.parse(html);
 
-       // 1. Strict ID Check
-       var element = document.getElementById('uc-download-link');
-       var href = element?.attributes['href'];
-       if (href != null) return _normalizeUrl(href);
+       // Check links
+       final anchors = document.querySelectorAll('a[href*="confirm="]');
+       for (var a in anchors) {
+          final href = a.attributes['href'];
+          if (href != null) {
+             final uri = Uri.parse(href);
+             if (uri.queryParameters.containsKey('confirm')) {
+                return uri.queryParameters['confirm'];
+             }
+          }
+       }
 
-       // 2. Fallback: Any Anchor with confirm=
-       AdvancedLogger.info('[ConfigManager] #uc-download-link not found. Trying fallback <a> search...');
-       var anchor = document.querySelector('a[href*="confirm="]');
-       href = anchor?.attributes['href'];
-       if (href != null) return _normalizeUrl(href);
-
-       // 3. Fallback: Form Action
-       AdvancedLogger.info('[ConfigManager] Anchor not found. Trying fallback <form> search...');
-       var form = document.querySelector('form[action*="confirm="]');
-       var action = form?.attributes['action'];
-       if (action != null) return _normalizeUrl(action);
-
-       // 4. Debug Log (CRITICAL)
-       AdvancedLogger.warn('[ConfigManager] ❌ Failed to extract confirmation link. Dumping HTML start:');
-       AdvancedLogger.warn(html.substring(0, math.min(1000, html.length)));
-
-     } catch (e) {
-       AdvancedLogger.warn('[ConfigManager] Error extracting confirmation link: $e');
+       // Check forms
+       final forms = document.querySelectorAll('form[action*="confirm="]');
+       for (var f in forms) {
+          final action = f.attributes['action'];
+          if (action != null) {
+             final uri = Uri.parse(action);
+             if (uri.queryParameters.containsKey('confirm')) {
+                return uri.queryParameters['confirm'];
+             }
+          }
+       }
+     } catch(e) {
+       AdvancedLogger.warn('[ConfigManager] HTML parsing error for token: $e');
      }
      return null;
-  }
-
-  static String _normalizeUrl(String url) {
-      var normalized = url.replaceAll('&amp;', '&');
-      if (normalized.startsWith('/')) {
-         return 'https://drive.google.com$normalized';
-      }
-      return normalized;
-  }
-
-  static String _fixBase64Padding(String s) {
-    while (s.length % 4 != 0) {
-      s += '=';
-    }
-    return s;
   }
 
   static Future<List<String>> parseMixedContent(String text) async {
@@ -323,13 +323,10 @@ class ConfigManager extends ChangeNotifier {
        }
     } else {
        // 2. Base64 Decode Attempt (Only if not HTML)
-       try {
-         String cleanText = text.replaceAll(RegExp(r'\s+'), '');
-         cleanText = _fixBase64Padding(cleanText);
-         final decoded = utf8.decode(base64Decode(cleanText));
-         if (decoded.contains('://')) processedText = decoded;
-       } catch (e) {
-         // Not base64
+       // Use Base64Utils for robust decoding
+       final decoded = Base64Utils.safeDecode(text);
+       if (decoded.isNotEmpty && decoded.contains('://')) {
+          processedText = decoded;
        }
     }
 
@@ -352,34 +349,11 @@ class ConfigManager extends ChangeNotifier {
                config = config.substring(0, config.length - 1);
              }
 
-             // Fix Base64 Padding for vmess/trojan
-             if (config.startsWith('vmess://')) {
-                 final base64Part = config.substring(8);
-                 // vmess body is usually base64 encoded JSON, no @
-                 if (!base64Part.contains('@')) {
-                     var fixedBase64 = base64Part;
-                     while (fixedBase64.length % 4 != 0) {
-                         fixedBase64 += '=';
-                     }
-                     if (fixedBase64 != base64Part) {
-                         config = 'vmess://$fixedBase64';
-                     }
-                 }
-             } else if (config.startsWith('trojan://')) {
-                 // Some trojan links are base64 encoded (rare but exists)
-                 // Standard: trojan://password@...
-                 // If no @, assume base64
-                 final base64Part = config.substring(9);
-                 if (!base64Part.contains('@')) {
-                      var fixedBase64 = base64Part;
-                      while (fixedBase64.length % 4 != 0) {
-                          fixedBase64 += '=';
-                      }
-                      if (fixedBase64 != base64Part) {
-                          config = 'trojan://$fixedBase64';
-                      }
-                 }
-             }
+             // Fix Base64 Padding for vmess/trojan using Base64Utils logic manually if needed,
+             // but here we deal with the protocol string.
+             // If vmess://, the part after is base64. Base64Utils handles string decoding,
+             // but here we just want to ensure the string itself is valid protocol format.
+             // The generator will handle the actual payload decoding.
 
              if (config.contains('%')) {
                 config = Uri.decodeFull(config);
@@ -745,6 +719,3 @@ class ConfigManager extends ChangeNotifier {
   void startHotSwap() {} 
   void stopHotSwap() {} 
 }
-
-// --- ISOLATE WORKER ---
-// Deprecated: Sorting moved to main thread for better performance with frequent updates

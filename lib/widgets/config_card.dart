@@ -8,7 +8,6 @@ class ConfigCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onTestLatency;
   final VoidCallback onTestSpeed;
-  final VoidCallback onTestStability;
   final VoidCallback onToggleFavorite;
   final VoidCallback onDelete;
 
@@ -20,7 +19,6 @@ class ConfigCard extends StatelessWidget {
     required this.onTap,
     required this.onTestLatency,
     required this.onTestSpeed,
-    required this.onTestStability,
     required this.onToggleFavorite,
     required this.onDelete,
   });
@@ -245,19 +243,7 @@ class ConfigCard extends StatelessWidget {
                         color: Colors.greenAccent,
                       ),
                       onPressed: onTestSpeed,
-                      tooltip: 'Test Speed (2MB Download)',
-                      splashRadius: 20,
-                    ),
-
-                    // Stability Test button
-                    IconButton(
-                      icon: const Icon(
-                        Icons.analytics_outlined,
-                        size: 20,
-                        color: Colors.orangeAccent,
-                      ),
-                      onPressed: onTestStability,
-                      tooltip: 'Analyze Stability',
+                      tooltip: 'Test Speed',
                       splashRadius: 20,
                     ),
 
@@ -408,15 +394,7 @@ class ConfigCard extends StatelessWidget {
 
   Color _getPingColor(int ping) {
     if (ping < 0) return Colors.grey; // Timeout
-    if (ping <= 500) return Colors.green[700]!; // Excellent (Wait, removing ! here)
-    // Actually, I'll remove ! from green[700] too.
-    if (ping <= 500) return Colors.green[700] ?? Colors.green; // Fallback just in case
-    // Or just Colors.green[700] if analyzer says it's non-null.
-    // I'll try Colors.green[700] without !.
-    if (ping <= 500) return Colors.green[700]!; // I'll keep ! if I can't be sure, but analyzer warned.
-    // I'll remove !.
-    if (ping <= 500) return Colors.green[700] ?? Colors.green; // Safe
-
+    if (ping <= 500) return Colors.green[700]!;
     if (ping <= 1000) return Colors.lightGreen; // Good
     if (ping <= 2000) return Colors.orange; // Fair
     return Colors.red; // Poor
