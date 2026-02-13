@@ -1,6 +1,6 @@
 name: ivpn_new
 description: iVPN Client - High Performance VPN
-version: 1.0.2+3 # نسخه را کمی بالا بردم
+version: 1.0.159+1 # <--- تغییر مهم: یک شماره بالاتر از نسخه فعلی
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -9,32 +9,32 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # Networking & API
-  dio: ^5.7.0           # آپدیت شده (پایداری بیشتر در دانلود)
-  http: ^1.2.2          # آپدیت شده
-  connectivity_plus: ^6.1.0 # آپدیت شده (حیاتی برای تشخیص قطع/وصل شبکه)
+  # Networking & API (Optimized)
+  dio: ^5.7.0
+  http: ^1.2.2
+  connectivity_plus: ^6.1.0 # حیاتی برای تشخیص درست قطع و وصل
 
   # UI & State Management
-  provider: ^6.1.2      # آپدیت شده
-  window_manager: ^0.4.3 # آپدیت شده (مدیریت پنجره ویندوز بهتر)
-  webview_flutter: ^4.9.0 # آپدیت شده
-  webview_windows: ^0.5.0 # آپدیت شده
+  provider: ^6.1.2
+  window_manager: ^0.4.3
+  webview_flutter: ^4.9.0
+  webview_windows: ^0.5.0
 
   # Utilities & Storage
   path_provider: ^2.1.5
   path: ^1.9.0
-  file_picker: ^8.1.4   # آپدیت شده (رفع باگ انتخاب فایل)
-  device_info_plus: ^11.1.0 # آپدیت شده (رفع خطای بیلد لاگ قبلی)
-  url_launcher: ^6.3.1  # آپدیت شده
-  shared_preferences: ^2.3.2 # آپدیت شده
-  crypto: ^3.0.5        # آپدیت شده
+  file_picker: ^8.1.4
+  device_info_plus: ^11.1.0
+  url_launcher: ^6.3.1
+  shared_preferences: ^2.3.2
+  crypto: ^3.0.5
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_launcher_icons: ^0.14.2 # آپدیت شده
-  flutter_lints: ^5.0.0 # آپدیت شده (برای کد تمیزتر)
-  build_runner: ^2.4.13 # آپدیت شده
+  flutter_launcher_icons: ^0.14.2
+  flutter_lints: ^5.0.0
+  build_runner: ^2.4.13
   mockito: ^5.4.4
 
 # تنظیمات آیکون
