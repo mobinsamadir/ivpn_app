@@ -41,9 +41,14 @@ class ConfigManager extends ChangeNotifier {
   Timer? _heartbeatTimer; // Smart Monitor
   bool _hasPendingUpdates = false; // Flag for buffered updates
 
+  // Global Kill Switch
+  bool _isGlobalStopRequested = false;
+  bool get isGlobalStopRequested => _isGlobalStopRequested;
+
   // Callbacks
   Future<void> Function()? onTriggerFunnel;
   Function(VpnConfigWithMetrics)? onAutoSwitch;
+  Future<void> Function()? stopVpnCallback;
 
   bool _isRefreshing = false;
   bool get isRefreshing => _isRefreshing;
@@ -83,10 +88,22 @@ class ConfigManager extends ChangeNotifier {
     }
   }
 
+  Future<void> stopAllOperations() async {
+    AdvancedLogger.info('[ConfigManager] 🛑 STOP ALL OPERATIONS REQUESTED');
+    _isGlobalStopRequested = true;
+    cancelScan();
+    stopSmartMonitor();
+    if (stopVpnCallback != null) {
+      await stopVpnCallback!();
+    }
+    notifyListeners();
+  }
+
   // --- CORE: FETCH & PARSE ---
   Future<bool> fetchStartupConfigs() async {
     if (_isRefreshing) return false;
     _isRefreshing = true;
+    _isGlobalStopRequested = false; // Reset flag on new operation
     notifyListeners();
 
     bool anyConfigAdded = false;
@@ -227,30 +244,28 @@ class ConfigManager extends ChangeNotifier {
     return anyConfigAdded;
   }
 
-  // --- SMART PARSER (Regex Extraction Only - NO Recursion) ---
+  // --- SMART PARSER (Strict HTML Only) ---
   static String? extractDriveConfirmationLink(String html) {
      try {
-       // 1. Try HTML Parser
+       // Strict HTML Parsing as requested
        var document = html_parser.parse(html);
 
-       // Try 'uc-download-link' ID (Standard Button)
-       var link = document.getElementById('uc-download-link')?.attributes['href'];
-       if (link != null) return link;
+       // Find the specific download button
+       var element = document.getElementById('uc-download-link');
+       var href = element?.attributes['href'];
 
-       // Try any link with 'confirm='
-       link = document.querySelector('a[href*="confirm="]')?.attributes['href'];
-       if (link != null) return link;
+       if (href != null) {
+          // Decode HTML entities (package:html does this usually, but just in case)
+          href = href.replaceAll('&amp;', '&');
 
-       // 2. Regex Fallback (Robust)
-       // Matches: /uc?export=download&confirm=... or full URL
-       final regex = RegExp(r'\/uc\?export=download&[^"]*confirm=[a-zA-Z0-9_-]+[^"]*', caseSensitive: false);
-       final match = regex.firstMatch(html);
-       if (match != null) {
-          String url = match.group(0)!;
-          // Decode HTML entities if present (e.g. &amp;)
-          return url.replaceAll('&amp;', '&');
+          // Make absolute if needed
+          if (href.startsWith('/')) {
+             return 'https://drive.google.com$href';
+          }
+          return href;
        }
 
+       AdvancedLogger.warn('[ConfigManager] Could not find #uc-download-link in Drive page.');
      } catch (e) {
        AdvancedLogger.warn('[ConfigManager] Error extracting confirmation link: $e');
      }

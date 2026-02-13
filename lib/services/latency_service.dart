@@ -263,9 +263,19 @@ class LatencyService {
             final int lat = sw.elapsedMilliseconds;
 
             // SANITY CHECK: Impossible latency for real VPN
+            // Only apply if it looks like a remote connection check
             if (lat < 10) {
-               log("⚠️ [PROBE] Latency too low (${lat}ms) - likely false positive/loopback. Treating as failure.");
-               throw const SocketException("False positive: Latency < 10ms");
+                // Double check if target is local to avoid false positives on local dev tests
+                bool isLocal = false;
+                try {
+                   final uri = Uri.parse(targetUrl);
+                   if (uri.host == 'localhost' || uri.host == '127.0.0.1') isLocal = true;
+                } catch(_) {}
+
+                if (!isLocal) {
+                   log("⚠️ [PROBE] Latency too low (${lat}ms) for remote target - likely false positive. Treating as failure.");
+                   throw const SocketException("False positive: Latency < 10ms");
+                }
             }
 
             final healthMetrics = HealthMetrics(

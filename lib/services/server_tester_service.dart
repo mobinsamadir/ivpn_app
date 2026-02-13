@@ -56,6 +56,19 @@ class ServerTesterService {
     // Initial Candidates
     List<VpnConfigWithMetrics> candidates = List.from(_configManager.allConfigs);
 
+    // PRIORITY SORT: Validated > New > Failed
+    candidates.sort((a, b) {
+       // 1. Validated First
+       if (a.isValidated && !b.isValidated) return -1;
+       if (!a.isValidated && b.isValidated) return 1;
+
+       // 2. New (Zero failures) before Failed
+       if (a.failureCount == 0 && b.failureCount > 0) return -1;
+       if (a.failureCount > 0 && b.failureCount == 0) return 1;
+
+       return 0;
+    });
+
     // --- STAGE 1: TCP Filter (Availability) ---
     // Goal: Eliminate dead servers instantly
     // Concurrency: 20, Timeout: 1s
@@ -173,12 +186,12 @@ class ServerTesterService {
       final futures = <Future<void>>[];
 
       for (final config in input) {
-         if (cancelToken.isCancelled) break;
+         if (cancelToken.isCancelled || _configManager.isGlobalStopRequested) break;
 
          final f =  () async {
             await semaphore.acquire();
             try {
-               if (cancelToken.isCancelled) return;
+               if (cancelToken.isCancelled || _configManager.isGlobalStopRequested) return;
                final res = await task(config);
                if (res != null) {
                   results.add(res);

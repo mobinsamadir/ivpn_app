@@ -77,6 +77,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     });
     AccessManager().addListener(_onTimeChanged);
 
+    // Register Stop Callback
+    _configManager.stopVpnCallback = _windowsVpnService.stopVpn;
+
     // Auto-Switch Callback
     _configManager.onAutoSwitch = (config) {
       if (mounted) {
@@ -1577,7 +1580,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     if (homeProvider.isConnected || homeProvider.connectionStatus == ConnectionStatus.connecting) {
       AdvancedLogger.info('[ConnectionHomeScreen] Already connected or connecting, stopping VPN');
       _isConnectionCancelled = true; // Signal cancellation to break retry loops
-      await _windowsVpnService.stopVpn();
+      await _configManager.stopAllOperations(); // Global Kill Switch
     } else {
       _isConnectionCancelled = false; // Reset cancellation flag
       // Check admin privileges before attempting connection (Windows only)
@@ -1674,7 +1677,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
 
     while (attempts < maxAttempts) {
       // Check for user cancellation BEFORE attempting connection
-      if (_isConnectionCancelled) {
+      if (_isConnectionCancelled || _configManager.isGlobalStopRequested) {
         AdvancedLogger.info('[ConnectionHomeScreen] Connection loop cancelled by user.');
         return;
       }
