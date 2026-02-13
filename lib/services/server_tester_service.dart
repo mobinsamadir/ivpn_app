@@ -190,13 +190,33 @@ class ServerTesterService {
 
          final f =  () async {
             await semaphore.acquire();
+            await Future.delayed(const Duration(milliseconds: 50)); // Micro-Delay to prevent instant spawn spike
+
             try {
                if (cancelToken.isCancelled || _configManager.isGlobalStopRequested) return;
-               final res = await task(config);
-               if (res != null) {
-                  results.add(res);
-                  _configManager.updateConfigDirectly(res); // Update UI
-                  _pipelineController.add(res);
+
+               // Retry loop for Panic Mode (Socket Exhaustion)
+               int attempts = 0;
+               while (attempts < 2) {
+                  try {
+                     final res = await task(config);
+                     if (res != null) {
+                        results.add(res);
+                        _configManager.updateConfigDirectly(res); // Update UI
+                        _pipelineController.add(res);
+                     }
+                     break; // Success, exit retry loop
+                  } on SocketException catch (e) {
+                     if (e.osError?.errorCode == 10048 || e.osError?.errorCode == 1225 || e.message.contains('exhausted')) {
+                        AdvancedLogger.warn("⚠️ System overwhelmed (SocketException). Pausing queue for 2s...");
+                        await Future.delayed(const Duration(seconds: 2));
+                        attempts++;
+                     } else {
+                        rethrow; // Other socket errors are fatal for this task
+                     }
+                  } catch (e) {
+                     break; // Other errors are fatal
+                  }
                }
             } catch (e) {
                // Log error

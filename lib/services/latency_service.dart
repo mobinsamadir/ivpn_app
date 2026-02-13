@@ -260,7 +260,7 @@ class LatencyService {
           }
           
           if (response.statusCode == 204 || response.statusCode == 200) {
-            final int lat = sw.elapsedMilliseconds;
+            int lat = sw.elapsedMilliseconds;
 
             // SANITY CHECK: Impossible latency for real VPN
             // Only apply if it looks like a remote connection check
@@ -273,8 +273,17 @@ class LatencyService {
                 } catch(_) {}
 
                 if (!isLocal) {
-                   log("⚠️ [PROBE] Latency too low (${lat}ms) for remote target - likely false positive. Treating as failure.");
-                   throw const SocketException("False positive: Latency < 10ms");
+                   log("⚠️ [PROBE] Latency too low (${lat}ms). Possible process crash or loopback.");
+
+                   // RETRY LOGIC for false positive
+                   if (attempt < 2) {
+                      log("🔄 [RETRY] Waiting 500ms and retrying to confirm latency...");
+                      await Future.delayed(const Duration(milliseconds: 500));
+                      continue; // Proceed to next attempt loop
+                   } else {
+                      log("❌ [FAIL] Persistently low latency. Marking as failure.");
+                      throw const SocketException("False positive: Latency < 10ms");
+                   }
                 }
             }
 
