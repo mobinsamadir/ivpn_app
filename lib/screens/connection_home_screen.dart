@@ -1680,6 +1680,26 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
       }
 
       try {
+        // 1. Pre-flight Ping
+        setState(() {
+          _configManager.setConnected(false, status: 'Testing ${currentConfig.name}...');
+        });
+
+        // This will verify connectivity AND update UI with latest ping
+        final pingResult = await _latencyService.getAdvancedLatency(
+           currentConfig.rawConfig,
+           timeout: const Duration(seconds: 5),
+           isPriority: true,
+           configId: currentConfig.id,
+        );
+
+        if (pingResult.health.averageLatency == -1 || pingResult.health.averageLatency < 10) {
+             AdvancedLogger.warn('[ConnectionHomeScreen] Pre-flight ping failed for ${currentConfig.name} (Latency: ${pingResult.health.averageLatency})');
+             // Fail fast to trigger failover
+             throw Exception("Pre-flight ping failed");
+        }
+
+        // 2. Connect
         setState(() {
           _configManager.setConnected(false, status: 'Connecting to ${currentConfig.name} (Attempt ${attempts + 1}/$maxAttempts)...');
         });

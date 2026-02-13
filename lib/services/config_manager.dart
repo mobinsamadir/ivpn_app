@@ -122,11 +122,10 @@ class ConfigManager extends ChangeNotifier {
           final response = await http.get(
             Uri.parse(url),
             headers: {
-              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-              "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-              "Accept-Language": "en-US,en;q=0.5",
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+              "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             },
-          ).timeout(const Duration(seconds: 10)); // Increased timeout for large files
+          ).timeout(const Duration(seconds: 30)); // Increased timeout to 30s
           
           if (response.statusCode == 200) {
             String content = response.body;
@@ -169,10 +168,10 @@ class ConfigManager extends ChangeNotifier {
                   AdvancedLogger.info('[ConfigManager] Fetching confirmation URL: $nextUrl');
                   try {
                     final nextResponse = await http.get(Uri.parse(nextUrl), headers: {
-                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-                        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-                        "Accept-Language": "en-US,en;q=0.5",
-                    });
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                    }).timeout(const Duration(seconds: 30));
+
                     if (nextResponse.statusCode == 200) {
                        content = nextResponse.body;
                        AdvancedLogger.info('✅ Downloaded confirmed content: ${content.length} bytes.');
@@ -292,9 +291,9 @@ class ConfigManager extends ChangeNotifier {
     }
 
     // 3. Extract Configs using RELAXED "Terminator" Regex
-    // Capture everything until whitespace, <, ", or '
+    // Capture everything until whitespace, <, ", ', or ` (backtick)
     final regex = RegExp(
-      r'''(vless|vmess|trojan|ss):\/\/[^\s<"']+\S''',
+      r'''(vless|vmess|trojan|ss):\/\/[^\s<"'`]+''',
       caseSensitive: false,
       multiLine: true,
     );

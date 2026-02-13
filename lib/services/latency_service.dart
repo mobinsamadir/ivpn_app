@@ -261,6 +261,13 @@ class LatencyService {
           
           if (response.statusCode == 204 || response.statusCode == 200) {
             final int lat = sw.elapsedMilliseconds;
+
+            // SANITY CHECK: Impossible latency for real VPN
+            if (lat < 10) {
+               log("⚠️ [PROBE] Latency too low (${lat}ms) - likely false positive/loopback. Treating as failure.");
+               throw const SocketException("False positive: Latency < 10ms");
+            }
+
             final healthMetrics = HealthMetrics(
               endpointLatencies: {targetUrl: lat},
               successRate: 100.0,
