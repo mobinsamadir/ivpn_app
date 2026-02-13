@@ -244,32 +244,44 @@ class ConfigManager extends ChangeNotifier {
     return anyConfigAdded;
   }
 
-  // --- SMART PARSER (Strict HTML Only) ---
+  // --- SMART PARSER (Enhanced: ID -> Anchor -> Form -> Debug) ---
   static String? extractDriveConfirmationLink(String html) {
      try {
-       // Strict HTML Parsing as requested
        var document = html_parser.parse(html);
 
-       // Find the specific download button
+       // 1. Strict ID Check
        var element = document.getElementById('uc-download-link');
        var href = element?.attributes['href'];
+       if (href != null) return _normalizeUrl(href);
 
-       if (href != null) {
-          // Decode HTML entities (package:html does this usually, but just in case)
-          href = href.replaceAll('&amp;', '&');
+       // 2. Fallback: Any Anchor with confirm=
+       AdvancedLogger.info('[ConfigManager] #uc-download-link not found. Trying fallback <a> search...');
+       var anchor = document.querySelector('a[href*="confirm="]');
+       href = anchor?.attributes['href'];
+       if (href != null) return _normalizeUrl(href);
 
-          // Make absolute if needed
-          if (href.startsWith('/')) {
-             return 'https://drive.google.com$href';
-          }
-          return href;
-       }
+       // 3. Fallback: Form Action
+       AdvancedLogger.info('[ConfigManager] Anchor not found. Trying fallback <form> search...');
+       var form = document.querySelector('form[action*="confirm="]');
+       var action = form?.attributes['action'];
+       if (action != null) return _normalizeUrl(action);
 
-       AdvancedLogger.warn('[ConfigManager] Could not find #uc-download-link in Drive page.');
+       // 4. Debug Log (CRITICAL)
+       AdvancedLogger.warn('[ConfigManager] ❌ Failed to extract confirmation link. Dumping HTML start:');
+       AdvancedLogger.warn(html.substring(0, math.min(1000, html.length)));
+
      } catch (e) {
        AdvancedLogger.warn('[ConfigManager] Error extracting confirmation link: $e');
      }
      return null;
+  }
+
+  static String _normalizeUrl(String url) {
+      var normalized = url.replaceAll('&amp;', '&');
+      if (normalized.startsWith('/')) {
+         return 'https://drive.google.com$normalized';
+      }
+      return normalized;
   }
 
   static Future<List<String>> parseMixedContent(String text) async {
