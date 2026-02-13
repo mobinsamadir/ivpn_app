@@ -56,6 +56,19 @@ class ServerTesterService {
     // Initial Candidates
     List<VpnConfigWithMetrics> candidates = List.from(_configManager.allConfigs);
 
+    // PRIORITY SORT: Validated > New > Failed
+    candidates.sort((a, b) {
+       // 1. Validated First
+       if (a.isValidated && !b.isValidated) return -1;
+       if (!a.isValidated && b.isValidated) return 1;
+
+       // 2. New (Zero failures) before Failed
+       if (a.failureCount == 0 && b.failureCount > 0) return -1;
+       if (a.failureCount > 0 && b.failureCount == 0) return 1;
+
+       return 0;
+    });
+
     // --- STAGE 1: TCP Filter (Availability) ---
     // Goal: Eliminate dead servers instantly
     // Concurrency: 20, Timeout: 1s
@@ -173,17 +186,37 @@ class ServerTesterService {
       final futures = <Future<void>>[];
 
       for (final config in input) {
-         if (cancelToken.isCancelled) break;
+         if (cancelToken.isCancelled || _configManager.isGlobalStopRequested) break;
 
          final f =  () async {
             await semaphore.acquire();
+            await Future.delayed(const Duration(milliseconds: 50)); // Micro-Delay to prevent instant spawn spike
+
             try {
-               if (cancelToken.isCancelled) return;
-               final res = await task(config);
-               if (res != null) {
-                  results.add(res);
-                  _configManager.updateConfigDirectly(res); // Update UI
-                  _pipelineController.add(res);
+               if (cancelToken.isCancelled || _configManager.isGlobalStopRequested) return;
+
+               // Retry loop for Panic Mode (Socket Exhaustion)
+               int attempts = 0;
+               while (attempts < 2) {
+                  try {
+                     final res = await task(config);
+                     if (res != null) {
+                        results.add(res);
+                        _configManager.updateConfigDirectly(res); // Update UI
+                        _pipelineController.add(res);
+                     }
+                     break; // Success, exit retry loop
+                  } on SocketException catch (e) {
+                     if (e.osError?.errorCode == 10048 || e.osError?.errorCode == 1225 || e.message.contains('exhausted')) {
+                        AdvancedLogger.warn("⚠️ System overwhelmed (SocketException). Pausing queue for 2s...");
+                        await Future.delayed(const Duration(seconds: 2));
+                        attempts++;
+                     } else {
+                        rethrow; // Other socket errors are fatal for this task
+                     }
+                  } catch (e) {
+                     break; // Other errors are fatal
+                  }
                }
             } catch (e) {
                // Log error

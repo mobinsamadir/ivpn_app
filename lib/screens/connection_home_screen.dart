@@ -77,6 +77,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     });
     AccessManager().addListener(_onTimeChanged);
 
+    // Register Stop Callback
+    _configManager.stopVpnCallback = _windowsVpnService.stopVpn;
+
     // Auto-Switch Callback
     _configManager.onAutoSwitch = (config) {
       if (mounted) {
@@ -1577,7 +1580,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     if (homeProvider.isConnected || homeProvider.connectionStatus == ConnectionStatus.connecting) {
       AdvancedLogger.info('[ConnectionHomeScreen] Already connected or connecting, stopping VPN');
       _isConnectionCancelled = true; // Signal cancellation to break retry loops
-      await _windowsVpnService.stopVpn();
+      await _configManager.stopAllOperations(); // Global Kill Switch
     } else {
       _isConnectionCancelled = false; // Reset cancellation flag
       // Check admin privileges before attempting connection (Windows only)
@@ -1674,12 +1677,32 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
 
     while (attempts < maxAttempts) {
       // Check for user cancellation BEFORE attempting connection
-      if (_isConnectionCancelled) {
+      if (_isConnectionCancelled || _configManager.isGlobalStopRequested) {
         AdvancedLogger.info('[ConnectionHomeScreen] Connection loop cancelled by user.');
         return;
       }
 
       try {
+        // 1. Pre-flight Ping
+        setState(() {
+          _configManager.setConnected(false, status: 'Testing ${currentConfig.name}...');
+        });
+
+        // This will verify connectivity AND update UI with latest ping
+        final pingResult = await _latencyService.getAdvancedLatency(
+           currentConfig.rawConfig,
+           timeout: const Duration(seconds: 5),
+           isPriority: true,
+           configId: currentConfig.id,
+        );
+
+        if (pingResult.health.averageLatency == -1 || pingResult.health.averageLatency < 10) {
+             AdvancedLogger.warn('[ConnectionHomeScreen] Pre-flight ping failed for ${currentConfig.name} (Latency: ${pingResult.health.averageLatency})');
+             // Fail fast to trigger failover
+             throw Exception("Pre-flight ping failed");
+        }
+
+        // 2. Connect
         setState(() {
           _configManager.setConnected(false, status: 'Connecting to ${currentConfig.name} (Attempt ${attempts + 1}/$maxAttempts)...');
         });

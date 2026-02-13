@@ -41,9 +41,14 @@ class ConfigManager extends ChangeNotifier {
   Timer? _heartbeatTimer; // Smart Monitor
   bool _hasPendingUpdates = false; // Flag for buffered updates
 
+  // Global Kill Switch
+  bool _isGlobalStopRequested = false;
+  bool get isGlobalStopRequested => _isGlobalStopRequested;
+
   // Callbacks
   Future<void> Function()? onTriggerFunnel;
   Function(VpnConfigWithMetrics)? onAutoSwitch;
+  Future<void> Function()? stopVpnCallback;
 
   bool _isRefreshing = false;
   bool get isRefreshing => _isRefreshing;
@@ -83,10 +88,22 @@ class ConfigManager extends ChangeNotifier {
     }
   }
 
+  Future<void> stopAllOperations() async {
+    AdvancedLogger.info('[ConfigManager] 🛑 STOP ALL OPERATIONS REQUESTED');
+    _isGlobalStopRequested = true;
+    cancelScan();
+    stopSmartMonitor();
+    if (stopVpnCallback != null) {
+      await stopVpnCallback!();
+    }
+    notifyListeners();
+  }
+
   // --- CORE: FETCH & PARSE ---
   Future<bool> fetchStartupConfigs() async {
     if (_isRefreshing) return false;
     _isRefreshing = true;
+    _isGlobalStopRequested = false; // Reset flag on new operation
     notifyListeners();
 
     bool anyConfigAdded = false;
@@ -122,11 +139,10 @@ class ConfigManager extends ChangeNotifier {
           final response = await http.get(
             Uri.parse(url),
             headers: {
-              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-              "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-              "Accept-Language": "en-US,en;q=0.5",
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+              "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             },
-          ).timeout(const Duration(seconds: 10)); // Increased timeout for large files
+          ).timeout(const Duration(seconds: 30)); // Increased timeout to 30s
           
           if (response.statusCode == 200) {
             String content = response.body;
@@ -169,10 +185,10 @@ class ConfigManager extends ChangeNotifier {
                   AdvancedLogger.info('[ConfigManager] Fetching confirmation URL: $nextUrl');
                   try {
                     final nextResponse = await http.get(Uri.parse(nextUrl), headers: {
-                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-                        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-                        "Accept-Language": "en-US,en;q=0.5",
-                    });
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                    }).timeout(const Duration(seconds: 30));
+
                     if (nextResponse.statusCode == 200) {
                        content = nextResponse.body;
                        AdvancedLogger.info('✅ Downloaded confirmed content: ${content.length} bytes.');
@@ -228,34 +244,44 @@ class ConfigManager extends ChangeNotifier {
     return anyConfigAdded;
   }
 
-  // --- SMART PARSER (Regex Extraction Only - NO Recursion) ---
+  // --- SMART PARSER (Enhanced: ID -> Anchor -> Form -> Debug) ---
   static String? extractDriveConfirmationLink(String html) {
      try {
-       // 1. Try HTML Parser
        var document = html_parser.parse(html);
 
-       // Try 'uc-download-link' ID (Standard Button)
-       var link = document.getElementById('uc-download-link')?.attributes['href'];
-       if (link != null) return link;
+       // 1. Strict ID Check
+       var element = document.getElementById('uc-download-link');
+       var href = element?.attributes['href'];
+       if (href != null) return _normalizeUrl(href);
 
-       // Try any link with 'confirm='
-       link = document.querySelector('a[href*="confirm="]')?.attributes['href'];
-       if (link != null) return link;
+       // 2. Fallback: Any Anchor with confirm=
+       AdvancedLogger.info('[ConfigManager] #uc-download-link not found. Trying fallback <a> search...');
+       var anchor = document.querySelector('a[href*="confirm="]');
+       href = anchor?.attributes['href'];
+       if (href != null) return _normalizeUrl(href);
 
-       // 2. Regex Fallback (Robust)
-       // Matches: /uc?export=download&confirm=... or full URL
-       final regex = RegExp(r'\/uc\?export=download&[^"]*confirm=[a-zA-Z0-9_-]+[^"]*', caseSensitive: false);
-       final match = regex.firstMatch(html);
-       if (match != null) {
-          String url = match.group(0)!;
-          // Decode HTML entities if present (e.g. &amp;)
-          return url.replaceAll('&amp;', '&');
-       }
+       // 3. Fallback: Form Action
+       AdvancedLogger.info('[ConfigManager] Anchor not found. Trying fallback <form> search...');
+       var form = document.querySelector('form[action*="confirm="]');
+       var action = form?.attributes['action'];
+       if (action != null) return _normalizeUrl(action);
+
+       // 4. Debug Log (CRITICAL)
+       AdvancedLogger.warn('[ConfigManager] ❌ Failed to extract confirmation link. Dumping HTML start:');
+       AdvancedLogger.warn(html.substring(0, math.min(1000, html.length)));
 
      } catch (e) {
        AdvancedLogger.warn('[ConfigManager] Error extracting confirmation link: $e');
      }
      return null;
+  }
+
+  static String _normalizeUrl(String url) {
+      var normalized = url.replaceAll('&amp;', '&');
+      if (normalized.startsWith('/')) {
+         return 'https://drive.google.com$normalized';
+      }
+      return normalized;
   }
 
   static Future<List<String>> parseMixedContent(String text) async {
@@ -292,9 +318,9 @@ class ConfigManager extends ChangeNotifier {
     }
 
     // 3. Extract Configs using RELAXED "Terminator" Regex
-    // Capture everything until whitespace, <, ", or '
+    // Capture everything until whitespace, <, ", ', or ` (backtick)
     final regex = RegExp(
-      r'''(vless|vmess|trojan|ss):\/\/[^\s<"']+\S''',
+      r'''(vless|vmess|trojan|ss):\/\/[^\s<"'`]+''',
       caseSensitive: false,
       multiLine: true,
     );
