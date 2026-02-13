@@ -2,6 +2,7 @@
 import 'dart:convert';
 import 'dart:math';
 import '../utils/file_logger.dart';
+import '../utils/base64_utils.dart';
 
 class SingboxConfigGenerator {
   // Ports
@@ -39,11 +40,9 @@ class SingboxConfigGenerator {
   }
 
   static String _parseVmess(String link, {required int socksPort, required int httpPort, required bool isTest}) {
-    String encoded = link.substring(8).replaceAll(RegExp(r'\s+'), '');
-    int mod = encoded.length % 4;
-    if (mod > 0) encoded += '=' * (4 - mod);
+    final String decoded = Base64Utils.safeDecode(link.substring(8));
+    if (decoded.isEmpty) throw FormatException("Invalid VMess Base64");
 
-    final String decoded = utf8.decode(base64Decode(encoded));
     final Map<String, dynamic> data = jsonDecode(decoded);
 
     final Map<String, dynamic> outbound = {
@@ -84,11 +83,7 @@ class SingboxConfigGenerator {
   }
 
   static String _parseUriStandard(String link, {required int socksPort, required int httpPort, required bool isTest}) {
-    print('[CONFIG-GEN] Parsing standard URI: ${link.substring(0, link.length > 30 ? 30 : link.length)}...');
-    
-    if (!link.contains('?')) {
-      print('⚠️ [CONFIG-GEN] WARNING: Link missing query parameters (?). This might be truncated: $link');
-    }
+    // print('[CONFIG-GEN] Parsing standard URI: ${link.substring(0, link.length > 30 ? 30 : link.length)}...');
     
     Uri uri;
     try {
@@ -105,13 +100,6 @@ class SingboxConfigGenerator {
 
     final Map<String, String> params = uri.queryParameters;
     final String security = params['security'] ?? "none";
-
-    if (protocol == "vless") {
-      print('[CONFIG-GEN] VLESS Security: $security');
-      print('[CONFIG-GEN] VLESS Full params: $params');
-      print('[CONFIG-GEN] VLESS Type: ${params['type']}');
-      print('[CONFIG-GEN] VLESS ALPN: ${params['alpn']}');
-    }
 
     final Map<String, dynamic> outbound = {
       "type": protocol,
@@ -193,13 +181,6 @@ class SingboxConfigGenerator {
     );
     if (transport != null) outbound["transport"] = transport;
 
-    try {
-      String encoded = jsonEncode(outbound);
-      String preview = encoded.length > 200 ? "${encoded.substring(0, 200)}..." : encoded;
-      print('[CONFIG-GEN] Generated ${protocol.toUpperCase()} outbound: $preview');
-    } catch (e) {
-      print('[CONFIG-GEN] Error logging config: $e');
-    }
     return _assembleFinalConfig(outbound, socksPort: socksPort, httpPort: httpPort, isTest: isTest);
   }
 
@@ -210,14 +191,19 @@ class SingboxConfigGenerator {
 
     if (content.contains('@')) {
       final parts = content.split('@');
-      final authParts = utf8.decode(base64Decode(parts[0])).split(':');
+      final decodedAuth = Base64Utils.safeDecode(parts[0]);
+      if (decodedAuth.isEmpty) throw FormatException("Invalid SS Auth Base64");
+
+      final authParts = decodedAuth.split(':');
       method = authParts[0];
       password = authParts[1];
       final serverParts = parts[1].split(':');
       host = serverParts[0].split('#').first;
       port = int.tryParse(serverParts[1].split('#').first) ?? 443;
     } else {
-      final decoded = utf8.decode(base64Decode(content.split('#').first));
+      final decoded = Base64Utils.safeDecode(content.split('#').first);
+      if (decoded.isEmpty) throw FormatException("Invalid SS Base64");
+
       final mainParts = decoded.split('@');
       final authParts = mainParts[0].split(':');
       method = authParts[0];
@@ -260,11 +246,6 @@ class SingboxConfigGenerator {
       }
     }
 
-    try {
-      print('[CONFIG-GEN] Generated SHADOWSOCKS outbound: ${jsonEncode(outbound)}');
-    } catch (e) {
-      print('[CONFIG-GEN] Error logging SS config: $e');
-    }
     return _assembleFinalConfig(outbound, socksPort: socksPort, httpPort: httpPort, isTest: isTest);
   }
 
@@ -275,10 +256,9 @@ class SingboxConfigGenerator {
       if (uri == null) return null;
 
       if (link.toLowerCase().startsWith('vmess://')) {
-        String encoded = link.substring(8).replaceAll(RegExp(r'\s+'), '');
-        int mod = encoded.length % 4;
-        if (mod > 0) encoded += '=' * (4 - mod);
-        final String decoded = utf8.decode(base64Decode(encoded));
+        final String decoded = Base64Utils.safeDecode(link.substring(8));
+        if (decoded.isEmpty) return null;
+
         final Map<String, dynamic> data = jsonDecode(decoded);
         return {
           'host': data['add'],
@@ -297,7 +277,9 @@ class SingboxConfigGenerator {
           host = serverParts[0].split('#').first;
           port = int.parse(serverParts[1].split('#').first);
         } else {
-          final decoded = utf8.decode(base64Decode(content.split('#').first));
+          final decoded = Base64Utils.safeDecode(content.split('#').first);
+          if (decoded.isEmpty) return null;
+
           final mainParts = decoded.split('@');
           final serverParts = mainParts[1].split(':');
           host = serverParts[0];

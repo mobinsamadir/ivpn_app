@@ -5,18 +5,17 @@ import 'dart:io';
 import '../models/vpn_config_with_metrics.dart';
 import '../providers/home_provider.dart';
 import '../services/config_manager.dart';
-import '../services/latency_service.dart';
 import '../services/windows_vpn_service.dart';
 import '../widgets/aads_banner.dart';
 import '../widgets/config_card.dart';
 import '../utils/advanced_logger.dart';
 import '../utils/clipboard_utils.dart';
 import '../services/config_importer.dart';
-import 'stability_chart_screen.dart';
 import 'log_viewer_screen.dart';
 import '../services/access_manager.dart';
 import '../services/ad_manager_service.dart';
-import '../services/server_tester_service.dart';
+import '../services/funnel_service.dart'; // NEW: Funnel Service
+import '../services/testers/ephemeral_tester.dart'; // NEW: Ephemeral Tester
 
 class ConnectionHomeScreen extends StatefulWidget {
   const ConnectionHomeScreen({super.key});
@@ -28,8 +27,8 @@ class ConnectionHomeScreen extends StatefulWidget {
 class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   // 1. Initialize services IMMEDIATELY
   final WindowsVpnService _windowsVpnService = WindowsVpnService();
-  late final LatencyService _latencyService;
-  late final ServerTesterService _serverTesterService;
+  final FunnelService _funnelService = FunnelService();
+  final EphemeralTester _ephemeralTester = EphemeralTester();
 
   // 2. State Variables
   final ConfigManager _configManager = ConfigManager();
@@ -53,12 +52,13 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
   static const int _consecutiveHighPingCount = 2; // consecutive checks before switching
   Timer? _pingMonitorTimer;
 
+  // Progress State
+  String _testProgress = "";
+
   late TabController _tabController;
 
   @override
   void initState() {
-    _latencyService = LatencyService(_windowsVpnService);
-    _serverTesterService = ServerTesterService(_windowsVpnService);
     super.initState();
 
     _tabController = TabController(length: 3, vsync: this);
@@ -87,6 +87,11 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
          _handleConnection();
       }
     };
+
+    // Listen to Funnel Progress
+    _funnelService.progressStream.listen((msg) {
+       if (mounted) setState(() => _testProgress = msg);
+    });
 
     // Fire and forget: fetch startup configs from GitHub, then trigger auto-test
     _configManager.fetchStartupConfigs().then((hasNewConfigs) {
@@ -141,13 +146,11 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
   // Check for high ping and auto-switch if needed
   void _checkForHighPingAndAutoSwitch() async {
     if (!_configManager.isAutoSwitchEnabled) {
-      // Reset counter when auto-switch is disabled
       _highPingCounter = 0;
       return;
     }
 
     if (!_configManager.isConnected) {
-      // Reset counter when not connected
       _highPingCounter = 0;
       return;
     }
@@ -185,10 +188,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
       // Find the fastest server
       final newConfig = await _findFastestServerEager();
       if (newConfig != null) {
-        // Update selected config
         _configManager.selectConfig(newConfig);
-
-        // Reconnect with the new config
         await _handleConnection();
       } else {
         _showToast("Could not find a better server to switch to");
@@ -205,27 +205,19 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
 
   String _getConnectionStatusMessage(String status) {
     switch (status) {
-      case 'CONNECTED':
-        return 'Connected';
-      case 'CONNECTING':
-        return 'Connecting...';
-      case 'DISCONNECTED':
-        return 'Disconnected';
-      case 'ERROR':
-        return 'Connection Error';
-      default:
-        return status;
+      case 'CONNECTED': return 'Connected';
+      case 'CONNECTING': return 'Connecting...';
+      case 'DISCONNECTED': return 'Disconnected';
+      case 'ERROR': return 'Connection Error';
+      default: return status;
     }
   }
 
   Color _getPingColor(int ping) {
-    if (ping < 150) {
-      return Colors.green.shade700; // Green for low ping
-    } else if (ping < 400) {
-      return Colors.yellow.shade700; // Yellow for medium ping
-    } else {
-      return Colors.red.shade700; // Red for high ping
-    }
+    if (ping < 0) return Colors.grey;
+    if (ping < 150) return Colors.green.shade700;
+    if (ping < 400) return Colors.yellow.shade700;
+    return Colors.red.shade700;
   }
   
   // --- AD REWARD LOGIC ---
@@ -318,7 +310,6 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
   Future<void> _initAppSequence() async {
     if (!mounted) return;
     setState(() {});
-    // Auto-test is now triggered via fetchStartupConfigs callback in initState
   }
 
   Future<void> _runSmartAutoTest() async {
@@ -329,36 +320,14 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
        return;
     }
 
-    AdvancedLogger.info("🚀 [Auto-Test] Running Smart Auto-Test...");
+    AdvancedLogger.info("🚀 [Auto-Test] Running Smart Auto-Test (Funnel)...");
     await _runFunnelTest();
-    
-    _configManager.allConfigs.sort((a, b) {
-        final pingA = a.currentPing > 0 ? a.currentPing : 999999;
-        final pingB = b.currentPing > 0 ? b.currentPing : 999999;
-        return pingA.compareTo(pingB);
-    });
-
-    if (mounted) {
-       setState(() {});
-       final best = _configManager.allConfigs.first;
-       if (best.currentPing > 0 && best.currentPing < 999999) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Best Server Found: ${best.name} (${best.currentPing}ms)'),
-              backgroundColor: Colors.green[700],
-              duration: const Duration(seconds: 3),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-       }
-    }
   }
 
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    // Lifecycle handling if needed
   }
 
   Future<void> _initialize() async {
@@ -426,35 +395,39 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
                 ),
               ),
 
-              // 4. Stability Test Button & Fastest Overlay
+              // 4. Progress Bar & Fastest Overlay
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
                   child: Column(
                     children: [
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            side: const BorderSide(color: Colors.greenAccent),
+                       if (_testProgress.isNotEmpty && _testProgress != "Completed" && _testProgress != "Stopped")
+                          Container(
+                             padding: const EdgeInsets.all(12),
+                             decoration: BoxDecoration(
+                                color: const Color(0xFF1A1A1A),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.blueAccent.withOpacity(0.3))
+                             ),
+                             child: Row(
+                                children: [
+                                   const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(strokeWidth: 2)
+                                   ),
+                                   const SizedBox(width: 12),
+                                   Expanded(child: Text(_testProgress, style: const TextStyle(color: Colors.white, fontSize: 13))),
+                                   IconButton(
+                                      icon: const Icon(Icons.stop, color: Colors.redAccent),
+                                      onPressed: () {
+                                         _funnelService.stop();
+                                         _showToast("Test Stopped");
+                                      },
+                                   )
+                                ],
+                             ),
                           ),
-                          onPressed: () {
-                            final selected = _configManager.selectedConfig;
-                            if (selected == null) {
-                              _showToast('Please select a server first');
-                              return;
-                            }
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => StabilityChartScreen(rawConfig: selected.rawConfig),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.monitor_heart, color: Colors.greenAccent),
-                          label: const Text('Open 30s Stability Test'),
-                        ),
-                      ),
 
                       // "Switch to Faster" Overlay
                       if (_showFastestOverlay && _fastestInBackground != null)
@@ -546,7 +519,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
                       IconButton(
                         icon: const Icon(Icons.speed, color: Colors.blueAccent),
                         onPressed: _runSmartAutoTest,
-                        tooltip: 'Test All Connections',
+                        tooltip: 'Test All Connections (Funnel)',
                         splashRadius: 20,
                       ),
                       IconButton(
@@ -669,9 +642,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
                             _configManager.selectConfig(config);
                             setState(() {});
                           },
-                          onTestLatency: () => _runSingleLatencyTest(config),
-                          onTestSpeed: () => _runSingleSpeedTest(config),
-                          onTestStability: () => _runSingleStabilityTest(config),
+                          onTestLatency: () => _runSingleTest(config),
+                          onTestSpeed: () => _runSingleTest(config), // Replaced with Ephemeral Test
                           onToggleFavorite: () async {
                              await _configManager.toggleFavorite(config.id);
                              setState(() {});
@@ -996,7 +968,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
             ),
             child: Column(
               children: [
-                // Main Connect/Disconnect Button with State-Based Styling (Increased size)
+                // Main Connect/Disconnect Button with State-Based Styling
                 AnimatedBuilder(
                   animation: _configManager,
                   builder: (context, child) {
@@ -1005,17 +977,14 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
                     String tooltipText;
 
                     if (_configManager.isConnected) {
-                      // CONNECTED state
                       buttonColor = Colors.greenAccent;
                       iconData = Icons.shield;
                       tooltipText = 'Connected - Protected';
                     } else if (_configManager.connectionStatus == 'Connecting...') {
-                      // CONNECTING state
                       buttonColor = Colors.yellow;
                       iconData = Icons.autorenew;
                       tooltipText = 'Connecting - Securing...';
                     } else {
-                      // IDLE state
                       buttonColor = Colors.grey.shade600;
                       iconData = Icons.power_settings_new;
                       tooltipText = 'Start Protection';
@@ -1044,7 +1013,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
                           icon: Icon(
                             iconData,
                             color: Colors.white,
-                            size: 60, // Increased icon size proportionally
+                            size: 60,
                           ),
                           tooltip: tooltipText,
                           onPressed: _handleMainButtonAction,
@@ -1075,12 +1044,12 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
               ],
             ),
           ),
-          const SizedBox(height: 25), // Increased spacing
-          // Secondary Actions Row (Smaller buttons)
+          const SizedBox(height: 25),
+          // Secondary Actions Row
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              // Fastest Button - moved to secondary row with smaller size
+              // Fastest Button
               Container(
                 key: const Key('find_fastest_button'),
                 width: 50,
@@ -1125,7 +1094,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
                   onPressed: _handleNextServer,
                 ),
               ),
-              // Favorite Button - restored to secondary row
+              // Favorite Button
               Container(
                 width: 50,
                 height: 50,
@@ -1151,7 +1120,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
                   onPressed: _toggleFavorite,
                 ),
               ),
-              // Auto-Switch Toggle Button (Reduced size)
+              // Auto-Switch Toggle Button
               Container(
                 width: 50,
                 height: 50,
@@ -1174,8 +1143,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
                     size: 18,
                   ),
                   tooltip: _configManager.isAutoSwitchEnabled
-                      ? 'Auto-Switch Enabled: Will switch to best server when ping is high'
-                      : 'Auto-Switch Disabled: Tap to enable automatic server switching',
+                      ? 'Auto-Switch Enabled'
+                      : 'Auto-Switch Disabled',
                   onPressed: () {
                     _configManager.isAutoSwitchEnabled = !_configManager.isAutoSwitchEnabled;
                     _showToast(_configManager.isAutoSwitchEnabled
@@ -1500,7 +1469,6 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
       final configs = await ConfigManager.parseAndFetchConfigs(clipboardText);
 
       if (configs.isNotEmpty) {
-        // Use the new addConfigs method that returns the count of added configs
         final importedCount = await _configManager.addConfigs(configs);
 
         if (importedCount > 0) {
@@ -1511,16 +1479,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
           _showToast('No valid configs found in clipboard content');
         }
       } else {
-        // If no configs were found via the enhanced method, try the old single config approach
-        if (ClipboardUtils.validateConfig(clipboardText)) {
-          final name = ConfigImporter.extractName(clipboardText);
-          await _configManager.addConfig(clipboardText, name);
-          _showToast('Config imported successfully');
-          setState(() {});
-          await _configManager.refreshAllConfigs();
-        } else {
-          _showToast('No valid configs found in clipboard content');
-        }
+         _showToast('No valid configs found in clipboard content');
       }
     } catch (e) {
       _showToast('Error processing clipboard: $e');
@@ -1552,10 +1511,10 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     });
   }
 
-  // NEW: Run the advanced funnel test using ServerTesterService
+  // NEW: Run the advanced funnel test
   Future<void> _runFunnelTest() async {
     if (_configManager.allConfigs.isEmpty) return;
-    await _serverTesterService.startFunnel();
+    await _funnelService.startFunnel();
   }
 
   // Find the fastest server using Funnel Test
@@ -1566,99 +1525,52 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     }
 
     _showToast("Running Smart Funnel Test...");
-    // This will trigger the 3-Stage Funnel and auto-connect to the best one
-    await _serverTesterService.startFunnel(autoConnect: true);
+    await _funnelService.startFunnel();
   }
 
-  // Connect to the selected server (or find fastest if none selected) with Parallel Intelligence
+  // Connect to the selected server (or find fastest if none selected)
   Future<void> _handleConnection() async {
     AdvancedLogger.info('[ConnectionHomeScreen] _handleConnection called');
 
     final homeProvider = Provider.of<HomeProvider>(context, listen: false);
-    AdvancedLogger.info('[ConnectionHomeScreen] Current connection status: isConnected=${homeProvider.isConnected}, connectionStatus=${homeProvider.connectionStatus}');
 
     if (homeProvider.isConnected || homeProvider.connectionStatus == ConnectionStatus.connecting) {
-      AdvancedLogger.info('[ConnectionHomeScreen] Already connected or connecting, stopping VPN');
-      _isConnectionCancelled = true; // Signal cancellation to break retry loops
-      await _configManager.stopAllOperations(); // Global Kill Switch
+      _isConnectionCancelled = true;
+      await _configManager.stopAllOperations();
     } else {
-      _isConnectionCancelled = false; // Reset cancellation flag
-      // Check admin privileges before attempting connection (Windows only)
+      _isConnectionCancelled = false;
+      // Check admin privileges (Windows)
       if (Platform.isWindows) {
-        try {
-          final isAdmin = await _windowsVpnService.isAdmin();
-          if (!isAdmin) {
-            AdvancedLogger.error('[ConnectionHomeScreen] Administrator privileges required for VPN connection');
-            _showToast("Administrator privileges required. Please run the app as Administrator.");
-
-            // Show a dialog explaining the issue
-            await showDialog(
-              context: context,
-              builder: (context) => AlertDialog(
-                backgroundColor: const Color(0xFF1E1E1E),
-                title: const Text('Administrator Rights Required', style: TextStyle(color: Colors.white)),
-                content: const Text(
-                  'This VPN application requires administrator privileges to create a secure tunnel. '
-                  'Please close the app and run it as Administrator.',
-                  style: TextStyle(color: Colors.grey),
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('OK', style: TextStyle(color: Colors.blueAccent)),
-                  ),
-                ],
-              ),
-            );
-            return;
-          }
-        } catch (e) {
-          AdvancedLogger.error('[ConnectionHomeScreen] Failed to check admin privileges: $e');
-          _showToast("Failed to verify admin privileges: $e");
-          return;
+        if (!await _windowsVpnService.isAdmin()) {
+           _showToast("Administrator privileges required.");
+           return;
         }
       }
 
-      // Set connection status to connecting to update UI
-      AdvancedLogger.info('[ConnectionHomeScreen] Setting connection status to Connecting...');
+      // Set connection status to connecting
       _configManager.setConnected(false, status: 'Connecting...');
 
-      // Show ad automatically during connection process (without user confirmation)
+      // Show ad automatically
       final access = AccessManager();
-      AdvancedLogger.info('[ConnectionHomeScreen] Checking access: hasAccess=${access.hasAccess}');
-
       if (!access.hasAccess) {
-        AdvancedLogger.info('[ConnectionHomeScreen] No access, showing ad sequence');
         await _showAdSequence();
-        if (!access.hasAccess) {
-          // User cancelled ad or didn't gain access
-          AdvancedLogger.info('[ConnectionHomeScreen] No access after ad sequence, returning');
-          return;
-        }
+        if (!access.hasAccess) return;
       }
 
-      AdvancedLogger.info('[ConnectionHomeScreen] Checking if configs are available. Count: ${_configManager.allConfigs.length}');
       if (_configManager.allConfigs.isEmpty) {
         _showToast("No configurations available. Please refresh.");
-        AdvancedLogger.error('[ConnectionHomeScreen] No configurations available');
         return;
       }
 
       var targetConfig = _configManager.selectedConfig;
-      AdvancedLogger.info('[ConnectionHomeScreen] Selected config: ${targetConfig?.name ?? "None"}');
 
-      // If no server is selected, run the fastest logic first, then connect
+      // If no server selected, find fastest
       if (targetConfig == null) {
-        AdvancedLogger.info('[ConnectionHomeScreen] No config selected, finding fastest server');
-        // EAGER START: Connect to first config with ping < 1200ms
         targetConfig = await _findFastestServerEager();
-
-        // BACKGROUND TEST: Continue testing all configs in background
-        _startBackgroundTesting(targetConfig);
       }
 
       if (targetConfig == null) {
-        AdvancedLogger.error('[ConnectionHomeScreen] Target config is null, cannot proceed with connection');
+        _showToast("Failed to find a suitable server.");
         return;
       }
 
@@ -1669,37 +1581,27 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
 
   /// Connect to a server with automatic failover to the next best server
   Future<void> _connectWithFailover(VpnConfigWithMetrics? initialConfig) async {
-    if (initialConfig == null) return; // Add this check!
+    if (initialConfig == null) return;
 
-    VpnConfigWithMetrics currentConfig = initialConfig; // Now safe
+    VpnConfigWithMetrics currentConfig = initialConfig;
     int attempts = 0;
     const maxAttempts = 3;
 
     while (attempts < maxAttempts) {
-      // Check for user cancellation BEFORE attempting connection
-      if (_isConnectionCancelled || _configManager.isGlobalStopRequested) {
-        AdvancedLogger.info('[ConnectionHomeScreen] Connection loop cancelled by user.');
-        return;
-      }
+      if (_isConnectionCancelled || _configManager.isGlobalStopRequested) return;
 
       try {
-        // 1. Pre-flight Ping
+        // 1. Pre-flight Check (Using EphemeralTester for accuracy)
         setState(() {
           _configManager.setConnected(false, status: 'Testing ${currentConfig.name}...');
         });
 
-        // This will verify connectivity AND update UI with latest ping
-        final pingResult = await _latencyService.getAdvancedLatency(
-           currentConfig.rawConfig,
-           timeout: const Duration(seconds: 5),
-           isPriority: true,
-           configId: currentConfig.id,
-        );
+        // Use EphemeralTester to check if it's REALLY alive (not ghost)
+        final testResult = await _ephemeralTester.runTest(currentConfig);
+        await _configManager.updateConfigDirectly(testResult);
 
-        if (pingResult.health.averageLatency == -1 || pingResult.health.averageLatency < 10) {
-             AdvancedLogger.warn('[ConnectionHomeScreen] Pre-flight ping failed for ${currentConfig.name} (Latency: ${pingResult.health.averageLatency})');
-             // Fail fast to trigger failover
-             throw Exception("Pre-flight ping failed");
+        if (testResult.funnelStage < 2) {
+             throw Exception("Pre-flight check failed (Ghost/Dead)");
         }
 
         // 2. Connect
@@ -1707,37 +1609,25 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
           _configManager.setConnected(false, status: 'Connecting to ${currentConfig.name} (Attempt ${attempts + 1}/$maxAttempts)...');
         });
 
-        AdvancedLogger.info('[ConnectionHomeScreen] Calling _windowsVpnService.startVpn with config: ${currentConfig.name}');
         await _windowsVpnService.startVpn(currentConfig.rawConfig);
 
-        // Update metrics
         _configManager.updateConfigMetrics(
           currentConfig.id,
           connectionSuccess: true,
         );
 
-        // Mark success
         await _configManager.markSuccess(currentConfig.id);
-
-        AdvancedLogger.info('[ConnectionHomeScreen] Successfully initiated VPN connection to: ${currentConfig.name}');
-        return; // Success, exit the loop
+        return;
 
       } catch (e, stackTrace) {
         AdvancedLogger.error('[ConnectionHomeScreen] Connection failed: $e', error: e, stackTrace: stackTrace);
-        
-        // Mark failure for the current config
         await _configManager.markFailure(currentConfig.id);
 
-        // Check for cancellation immediately after failure (e.g. if user clicked Stop during connection)
-        if (_isConnectionCancelled) {
-           AdvancedLogger.info('[ConnectionHomeScreen] Connection loop cancelled by user (during catch).');
-           return;
-        }
+        if (_isConnectionCancelled) return;
 
         attempts++;
         if (attempts >= maxAttempts) {
-          // No more attempts, show error
-          _showToast('Connection failed after $maxAttempts attempts: $e');
+          _showToast('Connection failed after $maxAttempts attempts.');
           _configManager.setConnected(false, status: 'Connection failed');
           return;
         }
@@ -1748,7 +1638,6 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
           _showToast('Connection to ${currentConfig.name} failed. Trying ${nextBest.name}...');
           currentConfig = nextBest;
         } else {
-          // No other servers available, show error
           _showToast('Connection failed: $e');
           _configManager.setConnected(false, status: 'Connection failed');
           return;
@@ -1759,90 +1648,16 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
 
   // Find the fastest server with EAGER START logic
   Future<VpnConfigWithMetrics?> _findFastestServerEager() async {
-    if (_configManager.allConfigs.isEmpty) {
-      _showToast("No configurations available. Please refresh.");
-      return null;
-    }
+    if (_configManager.allConfigs.isEmpty) return null;
 
     _showToast("Finding fastest server...");
 
-    // Sort configs by ping to find the fastest
-    _configManager.allConfigs.sort((a, b) {
-      final pingA = a.currentPing > 0 ? a.currentPing : 999999;
-      final pingB = b.currentPing > 0 ? b.currentPing : 999999;
-      return pingA.compareTo(pingB);
-    });
+    _configManager.allConfigs.sort((a, b) => a.compareTo(b)); // Uses new compareTo
 
-    // EAGER START: Find first config with ping < 1200ms
-    final fastestConfig = _configManager.allConfigs.firstWhere(
-      (config) => config.currentPing > 0 && config.currentPing < 1200,
-      orElse: () => _configManager.allConfigs.firstWhere(
-        (config) => config.currentPing > 0,
-        orElse: () => _configManager.allConfigs.first,
-      ),
-    );
-
-    if (fastestConfig.currentPing > 0 && fastestConfig.currentPing < 1200) {
-      _configManager.selectConfig(fastestConfig);
-      _showToast("Eager start: ${fastestConfig.name} (${fastestConfig.currentPing}ms)");
-      return fastestConfig;
-    } else if (fastestConfig.currentPing > 0) {
-      _configManager.selectConfig(fastestConfig);
-      _showToast("Fastest server selected: ${fastestConfig.name} (${fastestConfig.currentPing}ms)");
-      return fastestConfig;
-    } else {
-      // No server responded to ping, show dialog asking user to check internet
-      await showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          backgroundColor: const Color(0xFF1E1E1E),
-          title: const Text('Internet Connection Issue', style: TextStyle(color: Colors.white)),
-          content: const Text(
-            'No servers responded to ping. Please check your internet connection and try again.',
-            style: TextStyle(color: Colors.grey),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('OK', style: TextStyle(color: Colors.blueAccent)),
-            ),
-          ],
-        ),
-      );
-      _showToast("No responsive servers found. Check your internet connection.");
-      return null;
-    }
-  }
-
-  // Start background testing to find better servers
-  void _startBackgroundTesting(VpnConfigWithMetrics? currentConfig) async {
-    if (currentConfig == null) return;
-
-    // Schedule background testing after a short delay
-    _backgroundTestTimer?.cancel();
-    _backgroundTestTimer = Timer(const Duration(seconds: 2), () async {
-      for (final config in _configManager.allConfigs) {
-        if (config.id != currentConfig.id) {
-          try {
-            // Test this config in the background
-            // This would normally use the latency service to test the connection
-            // For now, we'll just check if it has a better ping
-            if (config.currentPing > 0 &&
-                currentConfig.currentPing > 0 &&
-                (currentConfig.currentPing - config.currentPing) >= 40) {
-              // Found a significantly better server
-              setState(() {
-                _fastestInBackground = config;
-                _showFastestOverlay = true;
-              });
-              break; // Stop after finding the first better server
-            }
-          } catch (e) {
-            continue; // Skip if test fails
-          }
-        }
-      }
-    });
+    // Pick top one
+    final best = _configManager.allConfigs.first;
+    _configManager.selectConfig(best);
+    return best;
   }
 
   // Handle Next Server Logic (Cycles through current list)
@@ -1861,7 +1676,6 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
         currentList = _configManager.allConfigs;
     }
 
-    // 2. Get Next Config using helper
     final nextConfig = _configManager.getNextConfig(currentList);
 
     if (nextConfig == null) {
@@ -1872,25 +1686,16 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     _configManager.selectConfig(nextConfig);
     _showToast("Switching to: ${nextConfig.name}");
 
-    // 3. Force Reconnect
-    // If currently connected/connecting, stop first.
     if (_configManager.isConnected || _configManager.connectionStatus == 'Connecting...') {
-        // Signal cancellation to ensure existing loops break
         _isConnectionCancelled = true;
         await _windowsVpnService.stopVpn();
-
-        // Allow a brief moment for port release / state update
         await Future.delayed(const Duration(milliseconds: 500));
-
-        // Reset flag for new connection
         _isConnectionCancelled = false;
     }
 
-    // Now connect
     await _handleConnection();
   }
 
-  // Refactored Main Button Action - Connect button now shows ads automatically during connection
   Future<void> _handleMainButtonAction() async {
     await _handleConnection();
   }
@@ -1901,32 +1706,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
 
     if (selectedConfig != null) {
       await _configManager.toggleFavorite(selectedConfig.id);
-
-      // Re-fetch the config to ensure we have the LATEST state after the toggle
-      final updatedConfig = _configManager.getConfigById(selectedConfig.id);
-      final isFavorite = updatedConfig?.isFavorite ?? false;
-      final message = isFavorite ? "Added to Favorites" : "Removed from Favorites";
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(message),
-            backgroundColor: isFavorite ? Colors.green : Colors.orange,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
+      setState(() {});
     } else {
-      // Show feedback that no server is selected
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text("No server selected"),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
+      _showToast("No server selected");
     }
   }
 
@@ -1962,104 +1744,33 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     );
   }
 
-  Future<void> _runSingleLatencyTest(VpnConfigWithMetrics config) async {
+  Future<void> _runSingleTest(VpnConfigWithMetrics config) async {
     try {
-      if (mounted) {
-        setState(() {
-          _activeTestIds.add(config.id);
-        });
-      }
+      if (mounted) setState(() => _activeTestIds.add(config.id));
 
-      // Tap-to-Refresh: If connected to this config, ping directly using active tunnel
-      if (_configManager.isConnected && _configManager.selectedConfig?.id == config.id) {
-         _showToast('Refreshing active connection ping...');
-         final ping = await _configManager.measureActivePing();
-         if (ping != -1) {
-            _showToast('Active Ping: ${ping}ms');
-         } else {
-            _showToast('Active Ping Failed (Timeout/Error)');
-         }
-      } else {
-         // Background Test: Use LatencyService (spawns separate process)
-         _showToast('Testing latency for ${config.name}...');
+      _showToast('Testing ${config.name}...');
 
-         final result = await _latencyService.getAdvancedLatency(
-            config.rawConfig,
-            timeout: const Duration(seconds: 5), // Reduced timeout for single test too
-            isPriority: true,
-         );
-         final latency = result.health.averageLatency;
+      // Use Ephemeral Tester for single test
+      final result = await _ephemeralTester.runTest(config);
+      await _configManager.updateConfigDirectly(result);
 
-         await _configManager.updateConfigMetrics(
-            config.id,
-            ping: latency,
-            connectionSuccess: latency > 0,
-         );
-
-         _showToast('Latency test completed: ${latency}ms for ${config.name}');
-      }
-    } catch (e) {
-      _showToast('Latency test failed for ${config.name}: $e');
-      AdvancedLogger.error('[HomeScreen] Latency test failed for ${config.name}: $e');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _activeTestIds.remove(config.id);
-        });
-      }
-    }
-  }
-
-  Future<void> _runSingleSpeedTest(VpnConfigWithMetrics config) async {
-    try {
-      if (mounted) {
-        setState(() {
-          _activeTestIds.add(config.id);
-        });
-      }
+      _showToast('Test complete. Stage: ${result.funnelStage}');
       
-      _showToast('Testing speed for ${config.name}...');
-
-      final speed = await _latencyService.getDownloadSpeed(config.rawConfig);
-
-      await _configManager.updateConfigMetrics(
-        config.id,
-        speed: speed,
-        connectionSuccess: speed > 0,
-      );
-
-      _showToast('Speed test completed: ${speed.toStringAsFixed(2)}Mbps for ${config.name}');
     } catch (e) {
-      _showToast('Speed test failed for ${config.name}: $e');
-      AdvancedLogger.error('[HomeScreen] Speed test failed for ${config.name}: $e');
+      _showToast('Test failed: $e');
     } finally {
-      if (mounted) {
-        setState(() {
-          _activeTestIds.remove(config.id);
-        });
-      }
+      if (mounted) setState(() => _activeTestIds.remove(config.id));
     }
-  }
-
-  Future<void> _runSingleStabilityTest(VpnConfigWithMetrics config) async {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => StabilityChartScreen(rawConfig: config.rawConfig),
-      ),
-    );
   }
 
   Future<void> _refreshConfigsFromGitHub() async {
     if (!mounted) return;
-
     _showToast('Refreshing configs from GitHub...');
-
     try {
       await _configManager.fetchStartupConfigs();
       _showToast('Refresh check completed');
     } catch (e) {
       _showToast('Failed to refresh configs: $e');
-      AdvancedLogger.error('[HomeScreen] Failed to refresh configs: $e');
     }
   }
 
@@ -2145,15 +1856,15 @@ class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
   _SliverTabBarDelegate(this._tabBar);
 
   @override
-  double get minExtent => _tabBar.preferredSize.height + 16; // Add padding
+  double get minExtent => _tabBar.preferredSize.height + 16;
 
   @override
-  double get maxExtent => _tabBar.preferredSize.height + 16; // Add padding
+  double get maxExtent => _tabBar.preferredSize.height + 16;
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Container(
-      color: const Color(0xFF121212), // Match background color
+      color: const Color(0xFF121212),
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       child: Container(
         decoration: BoxDecoration(
@@ -2168,6 +1879,6 @@ class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   bool shouldRebuild(_SliverTabBarDelegate oldDelegate) {
-    return true; // Rebuild to update counts
+    return true;
   }
 }

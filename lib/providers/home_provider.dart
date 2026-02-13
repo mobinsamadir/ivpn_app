@@ -3,15 +3,15 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
 import '../models/server_model.dart';
-import '../services/native_vpn_service.dart'; // ✅ ایمپورت سرویس جدید
-import '../services/windows_vpn_service.dart'; // ✅ New Windows Service
-import '../services/latency_service.dart'; // ✅ Sequential Latency
+import '../services/native_vpn_service.dart';
+import '../services/windows_vpn_service.dart';
+import '../services/testers/ephemeral_tester.dart'; // ✅ Switched to EphemeralTester
 import '../services/storage_service.dart';
 import '../services/speed_test_service.dart';
-import 'dart:io'; // For Platform check
-import '../utils/file_logger.dart'; // ✅
+import 'dart:io';
+import '../utils/file_logger.dart';
+import '../models/vpn_config_with_metrics.dart'; // Needed for EphemeralTester wrapper
 
-// یک enum برای مدیریت بهتر و تمیزتر وضعیت اتصال
 enum ConnectionStatus { disconnected, connecting, connected, error }
 
 class HomeProvider extends ChangeNotifier {
@@ -20,9 +20,9 @@ class HomeProvider extends ChangeNotifier {
   // --- Services ---
   final StorageService _storageService;
   final NativeVpnService _nativeVpnService;
-  final WindowsVpnService _windowsVpnService; // ✅
-  final LatencyService _latencyService; // ✅
+  final WindowsVpnService _windowsVpnService;
   final SpeedTestService _speedTestService;
+  final EphemeralTester _ephemeralTester = EphemeralTester(); // ✅
 
   // --- State ---
   bool _isLoading = true;
@@ -103,12 +103,7 @@ class HomeProvider extends ChangeNotifier {
   HomeProvider({required StorageService storageService})
     : _storageService = storageService,
       _nativeVpnService = NativeVpnService(),
-      _windowsVpnService = WindowsVpnService(), // ✅
-      _latencyService = LatencyService(WindowsVpnService()), // Using a separate instance for pings or same? Better separate or same? 
-      // Actually, since WindowsVpnService handles the single active VPN, 
-      // it might be better to have LatencyService use its own instance 
-      // if it needs to start/stop processes without clashing.
-      // But generateConfig and paths are shared.
+      _windowsVpnService = WindowsVpnService(),
       _speedTestService = SpeedTestService() {
     initializeApp();
   }
@@ -132,7 +127,7 @@ class HomeProvider extends ChangeNotifier {
 
     _listenToConnectionStatus();
 
-    _logPath = await FileLogger.getLogPath(); // ✅
+    _logPath = await FileLogger.getLogPath();
     
     _isLoading = false;
     _startPingingAllServers();
@@ -175,7 +170,6 @@ class HomeProvider extends ChangeNotifier {
         _connectedServer = null;
         break;
       default:
-        // Optional: handle unknown status
         break;
     }
     notifyListeners();
@@ -186,8 +180,14 @@ class HomeProvider extends ChangeNotifier {
 
     int ping;
     if (Platform.isWindows) {
-      final result = await _latencyService.getAdvancedLatency(server.rawConfig);
-      ping = result.health.averageLatency;
+      // Use EphemeralTester logic for robust testing
+      final tempConfig = VpnConfigWithMetrics(
+          id: server.id,
+          rawConfig: server.rawConfig,
+          name: server.name
+      );
+      final result = await _ephemeralTester.runTest(tempConfig);
+      ping = result.currentPing;
     } else {
       ping = await _nativeVpnService.getPing(server.rawConfig);
     }
@@ -200,7 +200,6 @@ class HomeProvider extends ChangeNotifier {
     else
       newStatus = PingStatus.bad;
 
-    // --- 🟢 اصلاحیه ۱ ---
     _updateServerStateInMemory(
       serverId: server.id,
       ping: ping,
@@ -218,7 +217,7 @@ class HomeProvider extends ChangeNotifier {
     if (_connectionStatus == ConnectionStatus.connecting) return;
 
     if (isConnected) {
-      await stopVpn(); // Use the new method that also stops the session
+      await stopVpn();
     } else {
       final targetServer = serverToDisplay;
       if (targetServer != null) {
@@ -236,7 +235,6 @@ class HomeProvider extends ChangeNotifier {
         }
         _addServerToRecents(targetServer);
 
-        // Start the session timer when connecting
         startSession();
       }
     }
@@ -245,7 +243,7 @@ class HomeProvider extends ChangeNotifier {
 
   // --- Session Timer Methods ---
   void startSession() {
-    stopSession(); // Stop any existing session first
+    stopSession();
     _remainingTime = const Duration(hours: 1);
     _sessionTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_disposed) {
@@ -255,7 +253,7 @@ class HomeProvider extends ChangeNotifier {
       _remainingTime = _remainingTime - const Duration(seconds: 1);
       if (_remainingTime.isNegative) {
         _remainingTime = Duration.zero;
-        stopVpn(); // Disconnect when time is up
+        stopVpn();
         _showSessionExpiredNotification();
         timer.cancel();
       }
@@ -271,13 +269,11 @@ class HomeProvider extends ChangeNotifier {
   }
 
   void _showSessionExpiredNotification() {
-    // This would typically trigger a notification to the UI
-    // For now, we'll just log it
     print('Session expired. Please reconnect.');
   }
 
   Future<void> stopVpn() async {
-    stopSession(); // Stop the session timer when disconnecting
+    stopSession();
     if (Platform.isWindows) {
       await _windowsVpnService.stopVpn();
     } else {
@@ -293,7 +289,6 @@ class HomeProvider extends ChangeNotifier {
       _favoriteIds.add(server.id);
     }
     await _storageService.saveFavoriteIds(_favoriteIds);
-    // --- 🟢 اصلاحیه ۲ ---
     _updateServerStateInMemory(
       serverId: server.id,
       isFavorite: !isCurrentlyFavorite,
@@ -303,22 +298,17 @@ class HomeProvider extends ChangeNotifier {
 
   Future<void> handleSpeedTest(Server server) async {
     if (server.isTestingSpeed) return;
-    // --- 🟢 اصلاحیه ۳ ---
     _updateServerStateInMemory(serverId: server.id, isTestingSpeed: true);
-    notifyListeners(); // Notify UI to show loading indicator
+    notifyListeners();
 
     final speed = await _speedTestService.testDownloadSpeed();
 
-    // --- 🟢 اصلاحیه ۴ ---
     _updateServerStateInMemory(
       serverId: server.id,
       downloadSpeed: speed,
       isTestingSpeed: false,
     );
-    // No need to call notifyListeners() here because the UI updater timer will handle it
   }
-
-  // --- متدهای باقی‌مانده بدون تغییر یا با تغییرات جزئی ---
 
   void _updateServerStateInMemory({
     required String serverId,

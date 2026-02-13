@@ -2,6 +2,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../utils/file_logger.dart';
+import '../utils/base64_utils.dart';
 
 class ConfigImporter {
   // Regex to identify protocol fragments in a mixed blob
@@ -39,13 +40,12 @@ class ConfigImporter {
 
       // Handle Direct Config
       if (_isValidProxyConfig(candidate)) {
-          print('[IMPORTER] Found valid config: ${candidate.substring(0, candidate.length > 50 ? 50 : candidate.length)}...');
-          print('[IMPORTER] Has parameters: ${candidate.contains('?')}');
+          // print('[IMPORTER] Found valid config: ${candidate.substring(0, candidate.length > 50 ? 50 : candidate.length)}...');
           validConfigs.add(candidate);
       }
     }
 
-    print("✅ [IMPORTER] Parsed ${validConfigs.length} unique configs.");
+    // print("✅ [IMPORTER] Parsed ${validConfigs.length} unique configs.");
     FileLogger.log("✅ [Importer] Parsed ${validConfigs.length} unique configs.");
     return validConfigs.toList();
   }
@@ -74,12 +74,7 @@ class ConfigImporter {
       // Fallback for VMess (which is JSON base64 encoded)
       if (link.toLowerCase().startsWith('vmess://')) {
         try {
-          String encoded = link.substring(8).replaceAll(RegExp(r'\s+'), '');
-          // Basic base64 cleanup
-          int mod = encoded.length % 4;
-          if (mod > 0) encoded += '=' * (4 - mod);
-          
-          final decoded = utf8.decode(base64Decode(encoded));
+          final decoded = Base64Utils.safeDecode(link.substring(8));
           final data = jsonDecode(decoded);
           if (data['ps'] != null && data['ps'].toString().isNotEmpty) {
             return data['ps'].toString();
@@ -99,10 +94,10 @@ class ConfigImporter {
         String content = utf8.decode(response.bodyBytes);
         
         // Try Base64 Decode (Standard Subscription Format)
-        try {
-          content = utf8.decode(base64Decode(content.replaceAll(RegExp(r'\s+'), '')));
-        } catch (_) {
-          // Content might be plain text list, keep as is
+        // If it looks like base64, decode it. Otherwise assume plaintext list.
+        final decoded = Base64Utils.safeDecode(content);
+        if (decoded.isNotEmpty) {
+           content = decoded;
         }
 
         // Recursively parse the content of the subscription
@@ -119,7 +114,6 @@ class ConfigImporter {
 
   /// Load initial hardcoded configurations
   static Future<List<String>> loadInitialConfigs() async {
-    // These are placeholders/defaults that should always be available
     return [
       "vmess://eyJhZGQiOiI4NS4xOTUuMTAxLjEyMiIsImFpZCI6IjAiLCJhbHBuIjoiIiwiZnAiOiIiLCJob3N0IjoiIiwiaWQiOiJmM2Q0MTY3ZS1iMTVlLTRlNDYtODJlOS05Mjg2ZWY5M2ZkYTciLCJuZXQiOiJ0Y3AiLCJwYXRoIjoiIiwicG9ydCI6IjQwODc4IiwicHMiOiJJUi1ASVJBTl9WMlJBWTEiLCJzY3kiOiJhdXRvIiwic25pIjoiIiwidGxzIjoiIiwidHlwZSI6Im5vbmUiLCJ2IjoiMiJ9",
       "ss://Y2hhY2hhMjAtaWV0Zi1wb2x5MTMwNTpKSWhONnJCS2thRWJvTE5YVlN2NXJx@142.4.216.225:80#All-%40IRAN_V2RAY1",

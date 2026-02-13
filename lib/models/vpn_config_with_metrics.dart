@@ -51,7 +51,7 @@ class TestResult {
   }
 }
 
-class VpnConfigWithMetrics {
+class VpnConfigWithMetrics implements Comparable<VpnConfigWithMetrics> {
   final String id;
   final String rawConfig;
   final String name;
@@ -65,6 +65,10 @@ class VpnConfigWithMetrics {
   final int lastSuccessfulConnectionTime;
   final bool isAlive;
   final int tier; // 0=Untested, 1=Alive, 2=LowLatency, 3=Stable/HighSpeed
+
+  // Funnel & Score Fields
+  final int funnelStage; // 0=Untested, 1=TCP, 2=HTTP, 3=Speed
+  final int speedScore;  // 0-100
 
   // Pipeline Tester Fields
   final Map<String, TestResult> stageResults;
@@ -84,6 +88,8 @@ class VpnConfigWithMetrics {
     this.lastSuccessfulConnectionTime = 0,
     this.isAlive = true,
     this.tier = 0,
+    this.funnelStage = 0,
+    this.speedScore = 0,
     Map<String, TestResult>? stageResults,
     this.lastFailedStage,
     this.failureReason,
@@ -98,16 +104,23 @@ class VpnConfigWithMetrics {
      return deviceMetrics.values.first.latestPing; 
   }
 
-  // Advanced Score
+  // Legacy Score (Deprecated usage but kept for backward compat if needed)
   double get score {
-    double score = 100.0;
-    score -= (failureCount * 20);
-    final now = DateTime.now().millisecondsSinceEpoch;
-    if (now - lastSuccessfulConnectionTime < 86400000) score += 50;
-    if (currentPing > 0) score -= (currentPing / 20);
-    if (!isAlive) score = -1000;
-    if (lastFailedStage != null) score -= 500;
-    return score;
+    // New scoring logic primarily relies on funnelStage and speedScore
+    // But we map it to a double for compatibility with legacy sort functions if any remain
+    double baseScore = funnelStage * 1000.0;
+    baseScore += speedScore * 10.0;
+
+    if (currentPing > 0) {
+      baseScore += (2000 - currentPing) / 10.0; // Lower ping gives slightly more points
+    }
+
+    if (isFavorite) baseScore += 5000;
+
+    // Penalize failures
+    baseScore -= (failureCount * 50);
+
+    return baseScore;
   }
 
   double get calculatedScore => score;
@@ -122,7 +135,7 @@ class VpnConfigWithMetrics {
   }
 
   // Helper to check if config is dead
-  bool get isDead => lastFailedStage != null;
+  bool get isDead => failureCount >= 3;
 
   VpnConfigWithMetrics updateMetrics({
     required String deviceId,
@@ -152,7 +165,7 @@ class VpnConfigWithMetrics {
   }
 
   bool get isValidated {
-    return (currentPing > 0 && currentPing < 2000) || lastSuccessfulConnectionTime > 0;
+    return funnelStage >= 2; // Passed HTTP Stage
   }
 
   bool get isEligibleForAutoTest {
@@ -171,6 +184,8 @@ class VpnConfigWithMetrics {
     int? lastSuccessfulConnectionTime,
     bool? isAlive,
     int? tier,
+    int? funnelStage,
+    int? speedScore,
     Map<String, TestResult>? stageResults,
     String? lastFailedStage,
     String? failureReason,
@@ -188,6 +203,8 @@ class VpnConfigWithMetrics {
       lastSuccessfulConnectionTime: lastSuccessfulConnectionTime ?? this.lastSuccessfulConnectionTime,
       isAlive: isAlive ?? this.isAlive,
       tier: tier ?? this.tier,
+      funnelStage: funnelStage ?? this.funnelStage,
+      speedScore: speedScore ?? this.speedScore,
       stageResults: stageResults ?? this.stageResults,
       lastFailedStage: lastFailedStage ?? this.lastFailedStage,
       failureReason: failureReason ?? this.failureReason,
@@ -207,6 +224,8 @@ class VpnConfigWithMetrics {
     'lastSuccessfulConnectionTime': lastSuccessfulConnectionTime,
     'isAlive': isAlive,
     'tier': tier,
+    'funnelStage': funnelStage,
+    'speedScore': speedScore,
     'stageResults': stageResults.map((k, v) => MapEntry<String, dynamic>(k, v.toJson())),
     'lastFailedStage': lastFailedStage,
     'failureReason': failureReason,
@@ -228,6 +247,9 @@ class VpnConfigWithMetrics {
       lastSuccessfulConnectionTime: json['lastSuccessfulConnectionTime'] as int? ?? 0,
       isAlive: json['isAlive'] as bool? ?? true,
       tier: json['tier'] as int? ?? 0,
+      // Default to 0 for missing keys (Migration Safety)
+      funnelStage: json['funnelStage'] as int? ?? 0,
+      speedScore: json['speedScore'] as int? ?? 0,
       stageResults: (json['stageResults'] as Map<String, dynamic>?)?.map(
         (k, v) => MapEntry<String, TestResult>(k, TestResult.fromJson(v as Map<String, dynamic>)),
       ) ?? {},
@@ -235,5 +257,25 @@ class VpnConfigWithMetrics {
       failureReason: json['failureReason'] as String?,
       lastTestedAt: json['lastTestedAt'] != null ? DateTime.parse(json['lastTestedAt'] as String) : null,
     );
+  }
+
+  @override
+  int compareTo(VpnConfigWithMetrics other) {
+    // 1. Funnel Stage (Higher is better)
+    if (this.funnelStage != other.funnelStage) {
+      return other.funnelStage.compareTo(this.funnelStage);
+    }
+
+    // 2. Speed Score (Higher is better)
+    if (this.speedScore != other.speedScore) {
+      return other.speedScore.compareTo(this.speedScore);
+    }
+
+    // 3. Latency (Lower is better)
+    // Handle -1 or 0 (invalid/timeout) as MAX_INT
+    int myPing = (this.currentPing <= 0) ? 999999 : this.currentPing;
+    int otherPing = (other.currentPing <= 0) ? 999999 : other.currentPing;
+
+    return myPing.compareTo(otherPing);
   }
 }
