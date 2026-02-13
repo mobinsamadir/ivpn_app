@@ -140,8 +140,11 @@ class ConfigManager extends ChangeNotifier {
           final response = await http.get(
             Uri.parse(url),
             headers: {
-              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-              "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+              'Accept-Language': 'en-US,en;q=0.9',
+              'Sec-Fetch-Dest': 'document',
+              'Sec-Fetch-Mode': 'navigate',
             },
           ).timeout(const Duration(seconds: 30)); // Increased timeout to 30s
           
@@ -186,8 +189,11 @@ class ConfigManager extends ChangeNotifier {
                   AdvancedLogger.info('[ConfigManager] Fetching confirmation URL: $nextUrl');
                   try {
                     final nextResponse = await http.get(Uri.parse(nextUrl), headers: {
-                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                        'Accept-Language': 'en-US,en;q=0.9',
+                        'Sec-Fetch-Dest': 'document',
+                        'Sec-Fetch-Mode': 'navigate',
                     }).timeout(const Duration(seconds: 30));
 
                     if (nextResponse.statusCode == 200) {
@@ -285,6 +291,13 @@ class ConfigManager extends ChangeNotifier {
       return normalized;
   }
 
+  static String _fixBase64Padding(String s) {
+    while (s.length % 4 != 0) {
+      s += '=';
+    }
+    return s;
+  }
+
   static Future<List<String>> parseMixedContent(String text) async {
     final collectedConfigs = <String>{};
     
@@ -311,7 +324,9 @@ class ConfigManager extends ChangeNotifier {
     } else {
        // 2. Base64 Decode Attempt (Only if not HTML)
        try {
-         final decoded = utf8.decode(base64Decode(text.replaceAll(RegExp(r'\s+'), '')));
+         String cleanText = text.replaceAll(RegExp(r'\s+'), '');
+         cleanText = _fixBase64Padding(cleanText);
+         final decoded = utf8.decode(base64Decode(cleanText));
          if (decoded.contains('://')) processedText = decoded;
        } catch (e) {
          // Not base64
