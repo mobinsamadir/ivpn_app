@@ -9,6 +9,11 @@ import '../singbox_config_generator.dart';
 import '../../utils/advanced_logger.dart';
 import '../windows_vpn_service.dart';
 
+/// Test Modes
+/// - `connectivity`: Stages 1 (TCP) & 2 (HTTP) only. Used for validation.
+/// - `speed`: Stages 1, 2, & 3 (Download). Used for ranking.
+enum TestMode { connectivity, speed }
+
 class EphemeralTester {
   static final EphemeralTester _instance = EphemeralTester._internal();
   factory EphemeralTester() => _instance;
@@ -28,11 +33,6 @@ class EphemeralTester {
       await socket?.close();
     }
   }
-
-  /// Test Modes
-  /// - `connectivity`: Stages 1 (TCP) & 2 (HTTP) only. Used for validation.
-  /// - `speed`: Stages 1, 2, & 3 (Download). Used for ranking.
-  enum TestMode { connectivity, speed }
 
   /// Runs the Funnel Test on a specific config based on the mode.
   /// Returns a VpnConfigWithMetrics object with updated stageResults and scores.

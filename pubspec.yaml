@@ -10,6 +10,7 @@ dependencies:
     sdk: flutter
 
   # Networking & API (Optimized)
+  html: ^0.15.4
   dio: ^5.7.0
   http: ^1.2.2
   connectivity_plus: ^6.1.0 # حیاتی برای تشخیص درست قطع و وصل
