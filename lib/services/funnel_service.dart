@@ -167,7 +167,7 @@ class FunnelService {
 
          // STAGE 2: HTTP Connectivity (Strict 204)
          // Use EphemeralTester in 'connectivity' mode
-         final result = await _tester.runTest(config!, mode: EphemeralTester.TestMode.connectivity);
+         final result = await _tester.runTest(config!, mode: TestMode.connectivity);
 
          if (result.funnelStage == 2) { // Success
              _httpPassed++;
@@ -208,7 +208,7 @@ class FunnelService {
          // STAGE 3: Speed Test
          // Use EphemeralTester in 'speed' mode
          // Note: It will re-run stages 1 & 2 internally, which is fine for robustness
-         final result = await _tester.runTest(config!, mode: EphemeralTester.TestMode.speed);
+         final result = await _tester.runTest(config!, mode: TestMode.speed);
 
          _speedFinished++;
          // Update DB with speed score
