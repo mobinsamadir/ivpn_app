@@ -29,9 +29,14 @@ class EphemeralTester {
     }
   }
 
-  /// Runs the 3-Stage Funnel Test on a specific config.
+  /// Test Modes
+  /// - `connectivity`: Stages 1 (TCP) & 2 (HTTP) only. Used for validation.
+  /// - `speed`: Stages 1, 2, & 3 (Download). Used for ranking.
+  enum TestMode { connectivity, speed }
+
+  /// Runs the Funnel Test on a specific config based on the mode.
   /// Returns a VpnConfigWithMetrics object with updated stageResults and scores.
-  Future<VpnConfigWithMetrics> runTest(VpnConfigWithMetrics config) async {
+  Future<VpnConfigWithMetrics> runTest(VpnConfigWithMetrics config, {TestMode mode = TestMode.speed}) async {
     int port = await findFreePort();
     if (port == 0) {
       return config.copyWith(
@@ -133,7 +138,7 @@ class EphemeralTester {
       // Proxy: 127.0.0.1:port+1 (HTTP Inbound)
 
       dartHttpClient.findProxy = (uri) => "PROXY 127.0.0.1:${port + 1}"; // HTTP Inbound is port+1
-      dartHttpClient.connectionTimeout = const Duration(seconds: 3); // 3s Timeout
+      dartHttpClient.connectionTimeout = const Duration(seconds: 5); // 5s Timeout
 
       final sw = Stopwatch()..start();
       try {
@@ -141,9 +146,11 @@ class EphemeralTester {
          final resp = await req.close();
 
          sw.stop();
-         latency = sw.elapsedMilliseconds;
 
+         // STRICT STATUS CODE CHECK: Only 204 is valid.
+         // 200 (Captive Portal), 302, 403, 502 are FAILURES.
          if (resp.statusCode == 204) {
+            latency = sw.elapsedMilliseconds;
             stage2Success = true;
          } else {
             throw Exception("Stage 2 Failed: Status ${resp.statusCode} (Expected 204)");
@@ -153,8 +160,8 @@ class EphemeralTester {
       }
 
       // --- STAGE 3: Speed Test (Quality) ---
-      // Only if Stage 2 passed
-      if (stage2Success) {
+      // Only run if mode is `speed` and Stage 2 passed
+      if (mode == TestMode.speed && stage2Success) {
          int bytes = 0;
          final speedSw = Stopwatch(); // Defined outside try
 
@@ -220,13 +227,17 @@ class EphemeralTester {
     if (speedMbps > 0) score += (speedMbps * 5).clamp(0, 50).toInt();
     if (latency > 0) score += (1000 ~/ latency).clamp(0, 50).toInt();
 
+    // Determine final stage
+    // If mode is connectivity, we stopped at 2. If speed, we finished 3.
+    final finalStage = (mode == TestMode.connectivity) ? 2 : 3;
+
     return config.copyWith(
-       funnelStage: 3, // Completed all stages
+       funnelStage: finalStage,
        speedScore: score,
        stageResults: {
           'TCP': TestResult(success: true),
           'HTTP': TestResult(success: true, latency: latency),
-          'Speed': TestResult(success: true, latency: 0), // Speed is separate
+          if (mode == TestMode.speed) 'Speed': TestResult(success: true, latency: 0),
        },
        failureCount: 0,
        isAlive: true,
