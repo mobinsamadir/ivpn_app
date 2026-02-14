@@ -133,7 +133,7 @@ class EphemeralTester {
       // Proxy: 127.0.0.1:port+1 (HTTP Inbound)
 
       dartHttpClient.findProxy = (uri) => "PROXY 127.0.0.1:${port + 1}"; // HTTP Inbound is port+1
-      dartHttpClient.connectionTimeout = const Duration(seconds: 3); // 3s Timeout
+      dartHttpClient.connectionTimeout = const Duration(seconds: 5); // 5s Timeout
 
       final sw = Stopwatch()..start();
       try {
@@ -141,9 +141,11 @@ class EphemeralTester {
          final resp = await req.close();
 
          sw.stop();
-         latency = sw.elapsedMilliseconds;
 
+         // STRICT STATUS CODE CHECK: Only 204 is valid.
+         // 200 (Captive Portal), 302, 403, 502 are FAILURES.
          if (resp.statusCode == 204) {
+            latency = sw.elapsedMilliseconds;
             stage2Success = true;
          } else {
             throw Exception("Stage 2 Failed: Status ${resp.statusCode} (Expected 204)");
