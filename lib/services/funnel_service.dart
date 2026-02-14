@@ -1,7 +1,8 @@
 import 'dart:async';
-import 'dart:collection';
+import 'dart:io';
 import '../models/vpn_config_with_metrics.dart';
 import 'config_manager.dart';
+import 'singbox_config_generator.dart';
 import 'testers/ephemeral_tester.dart';
 import '../utils/advanced_logger.dart';
 import '../utils/cancellable_operation.dart';
@@ -14,28 +15,41 @@ class FunnelService {
   final ConfigManager _configManager = ConfigManager();
   final EphemeralTester _tester = EphemeralTester();
 
-  // Concurrency Control
-  static const int _maxConcurrentTests = 5;
-  int _activeTests = 0;
-  final List<Completer<void>> _waitingQueue = [];
+  // Queues
+  final List<VpnConfigWithMetrics> _tcpQueue = [];
+  final List<VpnConfigWithMetrics> _httpQueue = [];
+  final List<VpnConfigWithMetrics> _speedQueue = [];
+
+  // Active Worker Counts
+  int _activeTcpWorkers = 0;
+  int _activeHttpWorkers = 0;
+  int _activeSpeedWorkers = 0;
+
+  // Limits
+  static const int _maxTcpWorkers = 50;
+  static const int _maxHttpWorkers = 10;
+  static const int _maxSpeedWorkers = 2;
 
   // State
   bool _isRunning = false;
   CancelToken? _cancelToken;
 
+  // Stats
+  int _totalConfigs = 0;
+  int _tcpPassed = 0;
+  int _httpPassed = 0;
+  int _speedFinished = 0;
+
   // Progress Stream
   final _progressController = StreamController<String>.broadcast();
   Stream<String> get progressStream => _progressController.stream;
 
-  // Stats
-  int _totalToTest = 0;
-  int _testedCount = 0;
-
   Future<void> stop() async {
     _isRunning = false;
     _cancelToken?.cancel();
-    _activeTests = 0;
-    _waitingQueue.clear();
+    _tcpQueue.clear();
+    _httpQueue.clear();
+    _speedQueue.clear();
     _progressController.add("Stopped");
     AdvancedLogger.info("FunnelService: Stopped by user.");
   }
@@ -48,79 +62,182 @@ class FunnelService {
 
     _isRunning = true;
     _cancelToken = CancelToken();
-    _testedCount = 0;
+    _tcpPassed = 0;
+    _httpPassed = 0;
+    _speedFinished = 0;
 
-    AdvancedLogger.info("FunnelService: Starting Funnel (RetestDead: $retestDead)");
-    _progressController.add("Initializing...");
+    AdvancedLogger.info("FunnelService: Starting Pipeline (RetestDead: $retestDead)");
+    _progressController.add("Initializing Pipeline...");
 
-    // 1. Build & Sort Queue
-    List<VpnConfigWithMetrics> queue = _buildPriorityQueue(retestDead);
-    _totalToTest = queue.length;
+    // 1. Populate TCP Queue (Initial Feed)
+    final all = _buildPriorityQueue(retestDead);
+    _totalConfigs = all.length;
+    _tcpQueue.addAll(all);
 
-    AdvancedLogger.info("FunnelService: Queue built with ${_totalToTest} configs.");
-    _progressController.add("Queue: $_totalToTest configs");
+    AdvancedLogger.info("FunnelService: Loaded ${_totalConfigs} configs into TCP Queue.");
+    _progressController.add("Queue: $_totalConfigs configs");
 
-    // 2. Process Queue with Concurrency Limit
-    final List<Future<void>> futures = [];
+    // 2. Start Worker Pools
+    _spawnWorkers(_maxTcpWorkers, _tcpWorker, "TCP");
+    _spawnWorkers(_maxHttpWorkers, _httpWorker, "HTTP");
+    _spawnWorkers(_maxSpeedWorkers, _speedWorker, "Speed");
+  }
 
-    for (final config in queue) {
-      if (!_isRunning || _cancelToken!.isCancelled) break;
+  void _spawnWorkers(int count, Future<void> Function() worker, String name) {
+    for (int i = 0; i < count; i++) {
+      worker().ignore();
+    }
+    AdvancedLogger.info("FunnelService: Spawned $count $name workers.");
+  }
 
-      // Wait for slot
-      await _acquireSlot();
+  // --- WORKER LOOPS ---
 
-      if (!_isRunning || _cancelToken!.isCancelled) {
-         _releaseSlot();
-         break;
+  Future<void> _tcpWorker() async {
+    while (_isRunning && !_cancelToken!.isCancelled) {
+      VpnConfigWithMetrics? config;
+
+      // Critical Section: Pop from Queue
+      if (_tcpQueue.isNotEmpty) {
+        config = _tcpQueue.removeAt(0);
+        _activeTcpWorkers++;
+      } else {
+        // Queue empty? Wait a bit or exit if finished?
+        // For decoupled pipeline, we just wait until everything is done or stopped.
+        // We'll poll with delay.
+        await Future.delayed(const Duration(milliseconds: 500));
+        continue;
       }
 
-      final f = _runTestSafe(config).then((_) {
-         _releaseSlot();
-      });
-      futures.add(f);
+      try {
+        _updateProgress();
+
+        // STAGE 1: TCP Connect (Raw Dart Socket)
+        final details = SingboxConfigGenerator.extractServerDetails(config.rawConfig);
+        bool passed = false;
+
+        if (details != null && details['host'] != null) {
+           final host = details['host'] as String;
+           final port = details['port'] as int? ?? 443;
+
+           try {
+             final socket = await Socket.connect(host, port, timeout: const Duration(seconds: 2));
+             socket.destroy();
+             passed = true;
+           } catch (_) {
+             // Failed
+           }
+        }
+
+        if (passed) {
+           // Push to HTTP Queue
+           _tcpPassed++;
+           _httpQueue.add(config);
+           // We do NOT update DB yet to keep UI clean, or maybe we do?
+           // User requirement: "Output: PASS -> Push to HttpQueue".
+           // "FAIL -> Mark as -1".
+        } else {
+           await _configManager.markFailure(config!.id);
+        }
+
+      } catch (e) {
+         AdvancedLogger.warn("TCP Worker Error: $e");
+      } finally {
+        _activeTcpWorkers--;
+        _updateProgress();
+      }
     }
-
-    // Wait for remaining tests
-    await Future.wait(futures);
-
-    _isRunning = false;
-    _progressController.add("Completed");
-    AdvancedLogger.info("FunnelService: Funnel Complete.");
   }
 
-  Future<void> _acquireSlot() {
-    if (_activeTests < _maxConcurrentTests) {
-      _activeTests++;
-      return Future.value();
+  Future<void> _httpWorker() async {
+    while (_isRunning && !_cancelToken!.isCancelled) {
+      VpnConfigWithMetrics? config;
+
+      if (_httpQueue.isNotEmpty) {
+        config = _httpQueue.removeAt(0);
+        _activeHttpWorkers++;
+      } else {
+        // If TCP queue is empty and active TCP workers are 0, and we are empty, maybe we are done?
+        // Ideally just poll.
+        await Future.delayed(const Duration(milliseconds: 500));
+        continue;
+      }
+
+      try {
+         _updateProgress();
+
+         // STAGE 2: HTTP Connectivity (Strict 204)
+         // Use EphemeralTester in 'connectivity' mode
+         final result = await _tester.runTest(config!, mode: EphemeralTester.TestMode.connectivity);
+
+         if (result.funnelStage == 2) { // Success
+             _httpPassed++;
+             // Update DB as "Valid"
+             await _configManager.updateConfigDirectly(result);
+
+             // Push to Speed Queue
+             _speedQueue.add(result);
+         } else {
+             // Failed
+             await _configManager.markFailure(config.id);
+         }
+
+      } catch (e) {
+         AdvancedLogger.warn("HTTP Worker Error: $e");
+      } finally {
+         _activeHttpWorkers--;
+         _updateProgress();
+      }
     }
-    final completer = Completer<void>();
-    _waitingQueue.add(completer);
-    return completer.future;
   }
 
-  void _releaseSlot() {
-    _activeTests--;
-    if (_waitingQueue.isNotEmpty) {
-      _activeTests++; // Re-occupy immediately for the waiting task
-      _waitingQueue.removeAt(0).complete();
+  Future<void> _speedWorker() async {
+    while (_isRunning && !_cancelToken!.isCancelled) {
+      VpnConfigWithMetrics? config;
+
+      if (_speedQueue.isNotEmpty) {
+         config = _speedQueue.removeAt(0);
+         _activeSpeedWorkers++;
+      } else {
+         await Future.delayed(const Duration(milliseconds: 500));
+         continue;
+      }
+
+      try {
+         _updateProgress();
+
+         // STAGE 3: Speed Test
+         // Use EphemeralTester in 'speed' mode
+         // Note: It will re-run stages 1 & 2 internally, which is fine for robustness
+         final result = await _tester.runTest(config!, mode: EphemeralTester.TestMode.speed);
+
+         _speedFinished++;
+         // Update DB with speed score
+         await _configManager.updateConfigDirectly(result);
+
+      } catch (e) {
+         AdvancedLogger.warn("Speed Worker Error: $e");
+      } finally {
+         _activeSpeedWorkers--;
+         _updateProgress();
+      }
     }
   }
 
-  Future<void> _runTestSafe(VpnConfigWithMetrics config) async {
-    try {
-       // Update UI (Testing...)
-       _progressController.add("Testing (${_testedCount + 1}/$_totalToTest): ${config.name}");
+  void _updateProgress() {
+    if (!_isRunning) return;
+    final msg = "TCP: $_tcpPassed | Valid: $_httpPassed | Speed: $_speedFinished | Queued: ${_tcpQueue.length + _httpQueue.length + _speedQueue.length}";
+    _progressController.add(msg);
 
-       final result = await _tester.runTest(config);
-
-       // Update ConfigManager
-       // We use updateConfigDirectly to persist the result (metrics, stages, etc.)
-       await _configManager.updateConfigDirectly(result);
-
-       _testedCount++;
-
-    } catch (e) {
-       AdvancedLogger.error("FunnelService: Error testing ${config.name}: $e");
+    // Check completion
+    if (_tcpQueue.isEmpty && _httpQueue.isEmpty && _speedQueue.isEmpty &&
+        _activeTcpWorkers == 0 && _activeHttpWorkers == 0 && _activeSpeedWorkers == 0) {
+        // Debounce completion to ensure no race condition
+        Future.delayed(const Duration(seconds: 2), () {
+           if (_tcpQueue.isEmpty && _activeTcpWorkers == 0) {
+              stop();
+              _progressController.add("Completed");
+           }
+        });
     }
   }
 
@@ -137,13 +254,10 @@ class FunnelService {
     final now = DateTime.now();
 
     for (final c in all) {
-       // Logic for Tiers
        if (c.funnelStage > 0) {
-          // If tested successfully recently (e.g. < 24h), it's Tier 1
           if (c.lastTestedAt != null && now.difference(c.lastTestedAt!).inHours < 24) {
              tier1.add(c);
           } else {
-             // Old success, treat as Tier 1 but lower priority? No, Tier 1 is "Retest".
              tier1.add(c);
           }
        } else if (c.funnelStage == 0 && c.failureCount == 0) {
@@ -155,10 +269,8 @@ class FunnelService {
        }
     }
 
-    // Sort Tier 1 by Speed/Score to re-verify best ones first
     tier1.sort((a, b) => b.calculatedScore.compareTo(a.calculatedScore));
 
-    // Combine
     final queue = [...tier1, ...tier2, ...tier3];
     if (retestDead) {
        queue.addAll(dead);
@@ -166,4 +278,8 @@ class FunnelService {
 
     return queue;
   }
+}
+
+extension IgnoreFuture on Future {
+  void ignore() {}
 }

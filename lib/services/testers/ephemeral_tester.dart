@@ -29,9 +29,14 @@ class EphemeralTester {
     }
   }
 
-  /// Runs the 3-Stage Funnel Test on a specific config.
+  /// Test Modes
+  /// - `connectivity`: Stages 1 (TCP) & 2 (HTTP) only. Used for validation.
+  /// - `speed`: Stages 1, 2, & 3 (Download). Used for ranking.
+  enum TestMode { connectivity, speed }
+
+  /// Runs the Funnel Test on a specific config based on the mode.
   /// Returns a VpnConfigWithMetrics object with updated stageResults and scores.
-  Future<VpnConfigWithMetrics> runTest(VpnConfigWithMetrics config) async {
+  Future<VpnConfigWithMetrics> runTest(VpnConfigWithMetrics config, {TestMode mode = TestMode.speed}) async {
     int port = await findFreePort();
     if (port == 0) {
       return config.copyWith(
@@ -155,8 +160,8 @@ class EphemeralTester {
       }
 
       // --- STAGE 3: Speed Test (Quality) ---
-      // Only if Stage 2 passed
-      if (stage2Success) {
+      // Only run if mode is `speed` and Stage 2 passed
+      if (mode == TestMode.speed && stage2Success) {
          int bytes = 0;
          final speedSw = Stopwatch(); // Defined outside try
 
@@ -222,13 +227,17 @@ class EphemeralTester {
     if (speedMbps > 0) score += (speedMbps * 5).clamp(0, 50).toInt();
     if (latency > 0) score += (1000 ~/ latency).clamp(0, 50).toInt();
 
+    // Determine final stage
+    // If mode is connectivity, we stopped at 2. If speed, we finished 3.
+    final finalStage = (mode == TestMode.connectivity) ? 2 : 3;
+
     return config.copyWith(
-       funnelStage: 3, // Completed all stages
+       funnelStage: finalStage,
        speedScore: score,
        stageResults: {
           'TCP': TestResult(success: true),
           'HTTP': TestResult(success: true, latency: latency),
-          'Speed': TestResult(success: true, latency: 0), // Speed is separate
+          if (mode == TestMode.speed) 'Speed': TestResult(success: true, latency: 0),
        },
        failureCount: 0,
        isAlive: true,
