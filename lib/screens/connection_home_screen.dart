@@ -6,7 +6,7 @@ import '../models/vpn_config_with_metrics.dart';
 import '../providers/home_provider.dart';
 import '../services/config_manager.dart';
 import '../services/windows_vpn_service.dart';
-import '../widgets/aads_banner.dart';
+import '../widgets/universal_ad_widget.dart';
 import '../widgets/config_card.dart';
 import '../utils/advanced_logger.dart';
 import '../utils/clipboard_utils.dart';
@@ -109,6 +109,13 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
           // Update the connection status in ConfigManager to reflect the actual VPN status
           _configManager.setConnected(status == 'CONNECTED', status: _getConnectionStatusMessage(status));
         });
+
+        // NEW: Retry Config Fetch on Connect (Anti-Censorship)
+        if (status == 'CONNECTED') {
+           AdvancedLogger.info("[HomeScreen] VPN Connected. Retrying config fetch...");
+           _configManager.fetchStartupConfigs();
+           // Note: AdManagerService has its own listener for retrying ads.
+        }
       }
     });
 
@@ -384,13 +391,13 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
                 ),
               ),
 
-              // 3. Middle Ad Banner
+              // 3. Middle Ad Banner (Bottom Slot)
               const SliverToBoxAdapter(
                 child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16.0),
                   child: SizedBox(
                     height: 250,
-                    child: AAdsBanner(),
+                    child: UniversalAdWidget(slot: 'home_banner_bottom'),
                   ),
                 ),
               ),
@@ -737,7 +744,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     return const SizedBox(
       height: 100, // Adjusted height for Top Banner
       width: double.infinity,
-      child: AAdsBanner(),
+      child: UniversalAdWidget(slot: 'home_banner_top'),
     );
   }
 

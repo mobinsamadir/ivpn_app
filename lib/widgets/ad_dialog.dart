@@ -1,13 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'aads_banner.dart';
+import '../services/ad_manager_service.dart';
+import 'universal_ad_widget.dart';
 
 class AdDialog extends StatefulWidget {
   final String unitId;
 
   const AdDialog({
     super.key,
-    this.unitId = '2426527', // Default A-Ads Unit ID
+    this.unitId = 'reward_ad', // Changed default to match new system
   });
 
   @override
@@ -22,6 +23,16 @@ class _AdDialogState extends State<AdDialog> {
   @override
   void initState() {
     super.initState();
+    _initializeTimer();
+  }
+
+  void _initializeTimer() {
+    final ad = AdManagerService().getAdUnit(widget.unitId);
+    _timeLeft = ad?.timerSeconds ?? 10;
+    // Enforce a minimum safety of 3 seconds if enabled, unless explicitly 0
+    if (_timeLeft > 0 && _timeLeft < 3) {
+      _timeLeft = 3;
+    }
     _startTimer();
   }
 
@@ -80,13 +91,13 @@ class _AdDialogState extends State<AdDialog> {
             ),
             const SizedBox(height: 10),
             
-            // WebView Content (Using Reusable AAdsBanner)
+            // WebView Content (Using Reusable UniversalAdWidget)
             Expanded(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
                   color: Colors.transparent,
-                  child: const AAdsBanner(),
+                  child: UniversalAdWidget(slot: widget.unitId),
                 ),
               ),
             ),
