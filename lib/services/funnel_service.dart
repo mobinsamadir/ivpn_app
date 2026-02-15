@@ -78,7 +78,9 @@ class FunnelService {
     _progressController.add("Queue: $_totalConfigs configs");
 
     // 2. Start Worker Pools
-    await _spawnWorkers(_maxTcpWorkers, _tcpWorker, "TCP");
+    // Reduce TCP workers on Windows to prevent port exhaustion
+    final tcpWorkers = Platform.isWindows ? 10 : _maxTcpWorkers;
+    await _spawnWorkers(tcpWorkers, _tcpWorker, "TCP");
     await _spawnWorkers(_maxHttpWorkers, _httpWorker, "HTTP");
     await _spawnWorkers(_maxSpeedWorkers, _speedWorker, "Speed");
   }

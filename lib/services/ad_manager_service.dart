@@ -27,14 +27,13 @@ class AdManagerService {
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { margin: 0; padding: 0; background-color: transparent; display: flex; justify-content: center; align-items: center; height: 100vh; }
-    iframe { border: 0; width: 100%; height: 100%; overflow: hidden; display: block; }
+    html, body { margin: 0; padding: 0; width: 100%; height: 100%; background-color: transparent !important; }
+    body { display: flex; justify-content: center; align-items: center; }
+    iframe { border: none; width: 100%; height: 100%; overflow: hidden; }
   </style>
 </head>
 <body>
-  <div id="frame" style="width:100%; height:100%;">
-    <iframe data-aa='2426527' src='https://acceptable.a-ads.com/2426527/?size=Adaptive'></iframe>
-  </div>
+  <iframe src="https://acceptable.a-ads.com/2426527/?size=Adaptive"></iframe>
 </body>
 </html>
 """;
@@ -122,11 +121,15 @@ class AdManagerService {
   }
 
   Future<void> fetchRemoteConfig() async {
-    AdvancedLogger.info("[AdManager] Fetching config from: $_remoteConfigUrl");
+    AdvancedLogger.info("[AdManager] Requesting: $_remoteConfigUrl");
     try {
       final response = await _dio.get(_remoteConfigUrl);
 
       AdvancedLogger.info("[AdManager] HTTP Status: ${response.statusCode}");
+      if (response.data != null) {
+        final raw = response.data.toString();
+        AdvancedLogger.info("[AdManager] Raw Response: ${raw.length > 200 ? raw.substring(0, 200) : raw}");
+      }
 
       if (response.statusCode == 200 && response.data != null) {
         dynamic data = response.data;
@@ -143,9 +146,11 @@ class AdManagerService {
         await prefs.setString(_storageKey, jsonEncode(data));
       } else {
         AdvancedLogger.warn("[AdManager] Fetch returned non-200 status.");
+        AdvancedLogger.info("[AdManager] Fallback Triggered! Using hardcoded HTML.");
       }
     } catch (e) {
       AdvancedLogger.error("[AdManager] Error fetching config: $e");
+      AdvancedLogger.info("[AdManager] Fallback Triggered! Using hardcoded HTML.");
     }
   }
 
