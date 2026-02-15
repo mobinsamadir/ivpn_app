@@ -190,57 +190,43 @@ class _WebViewAd extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Determine if it's HTML content or a URL
-    // Rule: Check if mediaSource contains <iframe> or <div> or <html>
-    final isHtml = mediaSource.contains('<iframe') ||
-                   mediaSource.contains('<div') ||
-                   mediaSource.contains('<html') ||
-                   !mediaSource.startsWith('http');
+    String content = mediaSource;
 
-    String htmlContent = mediaSource;
-    if (!isHtml) {
-        // If it's a URL, wrap it in an iframe or loadRequest
-        // For simplicity and consistency with A-Ads (which provides iframe code usually),
-        // we assume if it's a URL intended for webview, we can just load it.
-        // However, the Windows implementation expects `loadStringContent`.
-        // So wrapping in iframe is safer for "banner" behavior on Windows.
-        htmlContent = '''
-<!DOCTYPE html>
-<html>
-<head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<style>
-  body { margin: 0; padding: 0; background-color: transparent; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
-</style>
-</head>
-<body>
-  <iframe src='$mediaSource' style='border:0; padding:0; width:100%; height:100%; overflow:hidden; display: block; margin: auto'></iframe>
-</body>
-</html>
-''';
-    } else {
-        // Ensure standard wrapper if missing
-        if (!htmlContent.contains('<body')) {
-            htmlContent = '''
-<!DOCTYPE html>
-<html>
-<head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<style>
-  body { margin: 0; padding: 0; background-color: transparent; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
-</style>
-</head>
-<body>
-  $htmlContent
-</body>
-</html>
-''';
-        }
+    // Step 1: Detect Plain URL
+    // If it starts with http/https and does NOT look like HTML tag, wrap it.
+    if (content.startsWith('http') && !content.contains('<')) {
+      content =
+          '<iframe src="$content" style="border:0; width:100%; height:100%; overflow:hidden;" allow="autoplay"></iframe>';
+    }
+
+    // Step 2: Fix Protocol (Critical for A-Ads)
+    if (content.contains("src='//")) {
+      content = content.replaceAll("src='//", "src='https://");
+    }
+
+    // Step 3: Wrap in Full HTML Template (For Transparency & Centering)
+    if (!content.contains("<html")) {
+      content = """
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+          html, body { margin: 0; padding: 0; width: 100%; height: 100%; background-color: transparent !important; }
+          body { display: flex; justify-content: center; align-items: center; }
+          iframe { border: none; width: 100%; height: 100%; overflow: hidden; display: block; }
+        </style>
+      </head>
+      <body>
+        $content
+      </body>
+      </html>
+      """;
     }
 
     return Platform.isWindows
-        ? _WindowsWebView(htmlContent: htmlContent)
-        : _MobileWebView(htmlContent: htmlContent);
+        ? _WindowsWebView(htmlContent: content)
+        : _MobileWebView(htmlContent: content);
   }
 }
 
@@ -308,9 +294,12 @@ class _WindowsWebViewState extends State<_WindowsWebView> {
   @override
   Widget build(BuildContext context) {
     if (!_isInitialized) {
-       return const SizedBox();
+      return const SizedBox();
     }
-    return Webview(_controller);
+    return Container(
+      color: Colors.grey[900], // Prevent white flash
+      child: Webview(_controller),
+    );
   }
 }
 

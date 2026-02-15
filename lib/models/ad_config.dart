@@ -46,7 +46,10 @@ class AdUnit {
     return AdUnit(
       isEnabled: json['isEnabled'] as bool? ?? true,
       type: json['type'] as String? ?? 'webview',
-      mediaSource: json['mediaSource'] as String? ?? '',
+      mediaSource: json['media_source'] as String? ??
+          json['media_url'] as String? ??
+          json['mediaSource'] as String? ??
+          '',
       targetUrl: json['targetUrl'] as String? ?? '',
       timerSeconds: json['timerSeconds'] as int? ?? 0,
     );
