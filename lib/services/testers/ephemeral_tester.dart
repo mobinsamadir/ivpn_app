@@ -51,10 +51,10 @@ class EphemeralTester {
     final testId = DateTime.now().millisecondsSinceEpoch;
 
     // Results containers
-    bool stage1Success = false; // TCP
-    bool stage2Success = false; // Ghost/HTTP
-    double speedMbps = 0.0;     // Speed
-    int latency = 0;
+    bool stage1Success = (mode == TestMode.speed); // Assume success if skipping
+    bool stage2Success = (mode == TestMode.speed); // Assume success if skipping
+    double speedMbps = 0.0;
+    int latency = (mode == TestMode.speed) ? (config.stageResults['HTTP']?.latency ?? 0) : 0;
 
     // Define HttpClient outside try/catch for cleanup
     final dartHttpClient = HttpClient();
@@ -123,45 +123,50 @@ class EphemeralTester {
       // Since we use fatal, we won't see logs. Trusting it starts fast.
       await Future.delayed(const Duration(milliseconds: 500));
 
+      // Configure Proxy for HttpClient (Used for both Stage 2 & 3)
+      dartHttpClient.findProxy = (uri) => "PROXY 127.0.0.1:${port + 1}"; // HTTP Inbound is port+1
+      dartHttpClient.connectionTimeout = const Duration(seconds: 5); // 5s Timeout
+
       // --- STAGE 1: TCP Handshake (Availability) ---
       // Check if local port is listening (Proxy is up)
-      try {
-        final socket = await Socket.connect('127.0.0.1', port, timeout: const Duration(milliseconds: 1500));
-        socket.destroy();
-        stage1Success = true;
-      } catch (e) {
-        throw Exception("Stage 1 Failed: Proxy port not reachable");
+      if (mode != TestMode.speed) {
+        try {
+          final socket = await Socket.connect('127.0.0.1', port, timeout: const Duration(milliseconds: 1500));
+          socket.destroy();
+          stage1Success = true;
+        } catch (e) {
+          throw Exception("Stage 1 Failed: Proxy port not reachable");
+        }
       }
 
       // --- STAGE 2: HTTP Ghost Buster (Real Connectivity) ---
       // Request: https://connectivitycheck.gstatic.com/generate_204
       // Proxy: 127.0.0.1:port+1 (HTTP Inbound)
 
-      dartHttpClient.findProxy = (uri) => "PROXY 127.0.0.1:${port + 1}"; // HTTP Inbound is port+1
-      dartHttpClient.connectionTimeout = const Duration(seconds: 5); // 5s Timeout
+      if (mode != TestMode.speed) {
+        final sw = Stopwatch()..start();
+        try {
+           final req = await dartHttpClient.getUrl(Uri.parse('https://connectivitycheck.gstatic.com/generate_204'));
+           final resp = await req.close();
 
-      final sw = Stopwatch()..start();
-      try {
-         final req = await dartHttpClient.getUrl(Uri.parse('https://connectivitycheck.gstatic.com/generate_204'));
-         final resp = await req.close();
+           sw.stop();
 
-         sw.stop();
-
-         // STRICT STATUS CODE CHECK: Only 204 is valid.
-         // 200 (Captive Portal), 302, 403, 502 are FAILURES.
-         if (resp.statusCode == 204) {
-            latency = sw.elapsedMilliseconds;
-            stage2Success = true;
-         } else {
-            throw Exception("Stage 2 Failed: Status ${resp.statusCode} (Expected 204)");
-         }
-      } catch (e) {
-         throw Exception("Stage 2 Failed: $e");
+           // STRICT STATUS CODE CHECK: Only 204 is valid.
+           // 200 (Captive Portal), 302, 403, 502 are FAILURES.
+           if (resp.statusCode == 204) {
+              latency = sw.elapsedMilliseconds;
+              stage2Success = true;
+           } else {
+              throw Exception("Stage 2 Failed: Status ${resp.statusCode} (Expected 204)");
+           }
+        } catch (e) {
+           throw Exception("Stage 2 Failed: $e");
+        }
       }
 
       // --- STAGE 3: Speed Test (Quality) ---
-      // Only run if mode is `speed` and Stage 2 passed
-      if (mode == TestMode.speed && stage2Success) {
+      // Only run if mode is `speed`. We assume Stage 2 passed (or we skipped it).
+      if (mode == TestMode.speed) {
          int bytes = 0;
          final speedSw = Stopwatch(); // Defined outside try
 
@@ -170,10 +175,10 @@ class EphemeralTester {
             final speedReq = await dartHttpClient.getUrl(Uri.parse('http://speed.cloudflare.com/__down?bytes=1000000'));
             final speedResp = await speedReq.close();
 
-            // Timeout 5s for download
+            // Timeout 3s for download (OPTIMIZED)
             await speedResp.listen((chunk) {
                bytes += chunk.length;
-            }).asFuture().timeout(const Duration(seconds: 5));
+            }).asFuture().timeout(const Duration(seconds: 3));
 
             speedSw.stop();
 
@@ -231,14 +236,22 @@ class EphemeralTester {
     // If mode is connectivity, we stopped at 2. If speed, we finished 3.
     final finalStage = (mode == TestMode.connectivity) ? 2 : 3;
 
+    // Build Results Map (Preserving previous results)
+    final newStageResults = Map<String, TestResult>.from(config.stageResults);
+
+    if (mode == TestMode.connectivity) {
+       newStageResults['TCP'] = TestResult(success: true);
+       newStageResults['HTTP'] = TestResult(success: true, latency: latency);
+    } else if (mode == TestMode.speed) {
+       // We assume TCP/HTTP passed previously, so we don't overwrite them.
+       // Only add Speed result.
+       newStageResults['Speed'] = TestResult(success: true, latency: 0); // Speed result doesn't track latency
+    }
+
     return config.copyWith(
        funnelStage: finalStage,
        speedScore: score,
-       stageResults: {
-          'TCP': TestResult(success: true),
-          'HTTP': TestResult(success: true, latency: latency),
-          if (mode == TestMode.speed) 'Speed': TestResult(success: true, latency: 0),
-       },
+       stageResults: newStageResults,
        failureCount: 0,
        isAlive: true,
        lastTestedAt: DateTime.now(),

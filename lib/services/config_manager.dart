@@ -11,7 +11,7 @@ import 'package:html/parser.dart' as html_parser;
 import '../models/vpn_config_with_metrics.dart';
 import '../utils/advanced_logger.dart';
 import '../utils/cancellable_operation.dart';
-import '../utils/base64_utils.dart';
+import 'config_parser.dart';
 
 class ConfigManager extends ChangeNotifier {
   static final ConfigManager _instance = ConfigManager._internal();
@@ -299,79 +299,8 @@ class ConfigManager extends ChangeNotifier {
   }
 
   static Future<List<String>> parseMixedContent(String text) async {
-    final collectedConfigs = <String>{};
-    
-    String processedText = text;
-
-    // 1. Detect & Parse HTML (The Bulletproof Fix)
-    // If it looks like HTML, use the parser to get clean text (decodes entities automatically)
-    if (text.trimLeft().startsWith('<') || text.contains('<!DOCTYPE html>')) {
-       try {
-         var document = html_parser.parse(text);
-         // .text automatically decodes &amp; -> & and strips tags
-         final bodyText = document.body?.text ?? '';
-
-         // Also extract hrefs from anchor tags to catch links
-         final hrefs = document.querySelectorAll('a')
-             .map((e) => e.attributes['href'])
-             .whereType<String>()
-             .join('\n');
-
-         processedText = '$bodyText\n$hrefs';
-       } catch (e) {
-         AdvancedLogger.warn('[ConfigManager] HTML parsing failed, falling back to raw text: $e');
-       }
-    }
-    // 2. CHECK IF ALREADY A PROTOCOL (Before decoding)
-    else if (text.trim().startsWith(RegExp(r'(vless|vmess|trojan|ss|ssr)://'))) {
-       // It's already a config, do NOT decode
-       processedText = text;
-    }
-    else {
-       // 3. Base64 Decode Attempt (Only if not HTML and not already protocol)
-       // Use Base64Utils for robust decoding
-       final decoded = Base64Utils.safeDecode(text);
-       if (decoded.isNotEmpty && decoded.contains('://')) {
-          processedText = decoded;
-       }
-    }
-
-    // 3. Extract Configs using RELAXED "Terminator" Regex
-    // Capture everything until whitespace, <, ", ', or ` (backtick)
-    final regex = RegExp(
-      r'''(vless|vmess|trojan|ss):\/\/[^\s<"'`]+''',
-      caseSensitive: false,
-      multiLine: true,
-    );
-    
-    for (final match in regex.allMatches(processedText)) {
-       var rawConfig = match.group(0)?.trim();
-       if (rawConfig != null && rawConfig.isNotEmpty) {
-          var config = rawConfig;
-          try {
-             // Basic Sanitization (Remove trailing punctuation if regex overshot)
-             const junkChars = {'.', ',', ')', '?', ';', '&'};
-             while (config.isNotEmpty && junkChars.contains(config[config.length - 1])) {
-               config = config.substring(0, config.length - 1);
-             }
-
-             // Fix Base64 Padding for vmess/trojan using Base64Utils logic manually if needed,
-             // but here we deal with the protocol string.
-             // If vmess://, the part after is base64. Base64Utils handles string decoding,
-             // but here we just want to ensure the string itself is valid protocol format.
-             // The generator will handle the actual payload decoding.
-
-             if (config.contains('%')) {
-                config = Uri.decodeFull(config);
-             }
-             collectedConfigs.add(config);
-          } catch (e) {
-             AdvancedLogger.error("Failed to parse extracted config. Raw String: >>>$config<<<", error: e);
-          }
-       }
-    }
-    
-    return collectedConfigs.toList();
+    // Offload heavy parsing (HTML, Base64, Regex) to background isolate
+    return compute(parseConfigsInIsolate, text);
   }
 
   // --- THROTTLING LOGIC ---
