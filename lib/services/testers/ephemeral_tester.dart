@@ -141,7 +141,7 @@ class EphemeralTester {
             if (e.osError?.errorCode == 1225 || e.osError?.errorCode == 10048) {
               attempts++;
               if (attempts < 3) {
-                await Future.delayed(const Duration(seconds: 1)); // Wait for OS to release ports
+                await Future.delayed(const Duration(seconds: 2)); // Wait for OS to release ports
                 continue;
               }
             }

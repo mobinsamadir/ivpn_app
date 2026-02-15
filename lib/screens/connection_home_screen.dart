@@ -397,7 +397,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
                   padding: EdgeInsets.symmetric(horizontal: 16.0),
                   child: SizedBox(
                     height: 250,
-                    child: UniversalAdWidget(slot: 'home_banner_bottom'),
+                    child: UniversalAdWidget(slot: 'home_banner_bottom', height: 250),
                   ),
                 ),
               ),
@@ -744,7 +744,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     return const SizedBox(
       height: 100, // Adjusted height for Top Banner
       width: double.infinity,
-      child: UniversalAdWidget(slot: 'home_banner_top'),
+      child: UniversalAdWidget(slot: 'home_banner_top', height: 100),
     );
   }
 

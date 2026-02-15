@@ -269,6 +269,7 @@ class _WindowsWebViewState extends State<_WindowsWebView> {
       await _controller.clearCache();
       await _controller.clearCookies();
 
+      AdvancedLogger.info('[AdWidget] Loading HTML: ${widget.htmlContent}');
       await _controller.loadStringContent(widget.htmlContent);
 
       _controller.url.listen((url) {
@@ -327,6 +328,7 @@ class _MobileWebViewState extends State<_MobileWebView> {
   @override
   void initState() {
     super.initState();
+    AdvancedLogger.info('[AdWidget] Loading HTML: ${widget.htmlContent}');
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(Colors.transparent)
