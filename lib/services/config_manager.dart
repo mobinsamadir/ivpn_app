@@ -115,7 +115,6 @@ class ConfigManager extends ChangeNotifier {
       
       // Mirrors List (GitHub -> Gist -> MyFiles -> Drive API)
       final mirrors = [
-        'https://raw.githubusercontent.com/yebekhe/TelegramV2rayCollector/main/sub/normal/mix',
         'https://raw.githubusercontent.com/mobinsamadir/ivpn-servers/refs/heads/main/servers.txt',
         'https://gist.githubusercontent.com/mobinsamadir/687a7ef199d6eaf6d1912e36151a9327/raw/servers.txt',
         'https://my.files.ir/drive/s/D7zxAbnxHc4y4353UkL2RZ21MrjxJz',
@@ -445,7 +444,7 @@ class ConfigManager extends ChangeNotifier {
     try {
       final response = await http.head(
         Uri.parse('https://www.google.com'),
-      ).timeout(const Duration(seconds: 3));
+      ).timeout(const Duration(seconds: 5));
 
       stopwatch.stop();
       if (response.statusCode == 200) {
@@ -590,12 +589,12 @@ class ConfigManager extends ChangeNotifier {
 
        final ping = await measureActivePing();
 
-       // Logic: Fail if ping is -1 (error) or extremely high (>2000ms)
-       if (ping == -1 || ping > 2000) {
+       // Logic: Fail ONLY if ping is -1 (error/timeout). Do NOT fail on high ping alone.
+       if (ping == -1) {
           failureCount++;
           AdvancedLogger.warn('[Smart Monitor] Heartbeat failed. Count: $failureCount');
 
-          if (failureCount >= 3) {
+          if (failureCount >= 5) {
              AdvancedLogger.warn('[Smart Monitor] Threshold reached. Initiating Auto-Switch...');
              failureCount = 0;
              await _performAutoSwitch();
