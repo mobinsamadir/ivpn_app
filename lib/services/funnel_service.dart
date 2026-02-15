@@ -26,8 +26,8 @@ class FunnelService {
   int _activeSpeedWorkers = 0;
 
   // Limits
-  static const int _maxTcpWorkers = 50;
-  static const int _maxHttpWorkers = 10;
+  static const int _maxTcpWorkers = 20;
+  static const int _maxHttpWorkers = 5;
   static const int _maxSpeedWorkers = 2;
 
   // State
@@ -78,14 +78,15 @@ class FunnelService {
     _progressController.add("Queue: $_totalConfigs configs");
 
     // 2. Start Worker Pools
-    _spawnWorkers(_maxTcpWorkers, _tcpWorker, "TCP");
-    _spawnWorkers(_maxHttpWorkers, _httpWorker, "HTTP");
-    _spawnWorkers(_maxSpeedWorkers, _speedWorker, "Speed");
+    await _spawnWorkers(_maxTcpWorkers, _tcpWorker, "TCP");
+    await _spawnWorkers(_maxHttpWorkers, _httpWorker, "HTTP");
+    await _spawnWorkers(_maxSpeedWorkers, _speedWorker, "Speed");
   }
 
-  void _spawnWorkers(int count, Future<void> Function() worker, String name) {
+  Future<void> _spawnWorkers(int count, Future<void> Function() worker, String name) async {
     for (int i = 0; i < count; i++) {
       worker().ignore();
+      await Future.delayed(const Duration(milliseconds: 50));
     }
     AdvancedLogger.info("FunnelService: Spawned $count $name workers.");
   }

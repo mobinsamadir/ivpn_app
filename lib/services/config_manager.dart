@@ -321,8 +321,14 @@ class ConfigManager extends ChangeNotifier {
        } catch (e) {
          AdvancedLogger.warn('[ConfigManager] HTML parsing failed, falling back to raw text: $e');
        }
-    } else {
-       // 2. Base64 Decode Attempt (Only if not HTML)
+    }
+    // 2. CHECK IF ALREADY A PROTOCOL (Before decoding)
+    else if (text.trim().startsWith(RegExp(r'(vless|vmess|trojan|ss|ssr)://'))) {
+       // It's already a config, do NOT decode
+       processedText = text;
+    }
+    else {
+       // 3. Base64 Decode Attempt (Only if not HTML and not already protocol)
        // Use Base64Utils for robust decoding
        final decoded = Base64Utils.safeDecode(text);
        if (decoded.isNotEmpty && decoded.contains('://')) {
