@@ -594,7 +594,7 @@ class ConfigManager extends ChangeNotifier {
           failureCount++;
           AdvancedLogger.warn('[Smart Monitor] Heartbeat failed. Count: $failureCount');
 
-          if (failureCount >= 5) {
+          if (failureCount >= 10) {
              AdvancedLogger.warn('[Smart Monitor] Threshold reached. Initiating Auto-Switch...');
              failureCount = 0;
              await _performAutoSwitch();

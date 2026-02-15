@@ -81,7 +81,7 @@ class FunnelService {
     // Reduce TCP workers on Windows to prevent port exhaustion
     int tcpWorkers;
     if (Platform.isWindows) {
-      tcpWorkers = 8;
+      tcpWorkers = 5;
     } else if (Platform.isAndroid) {
       tcpWorkers = 12;
     } else {
