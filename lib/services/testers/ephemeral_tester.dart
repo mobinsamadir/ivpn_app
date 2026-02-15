@@ -7,12 +7,21 @@ import 'package:path_provider/path_provider.dart';
 import '../../models/vpn_config_with_metrics.dart';
 import '../singbox_config_generator.dart';
 import '../../utils/advanced_logger.dart';
-import '../windows_vpn_service.dart';
+import '../binary_manager.dart';
 
 /// Test Modes
 /// - `connectivity`: Stages 1 (TCP) & 2 (HTTP) only. Used for validation.
 /// - `speed`: Stages 1, 2, & 3 (Download). Used for ranking.
 enum TestMode { connectivity, speed }
+
+// Top-level function for compute
+String _generateConfigWrapper(Map<String, dynamic> args) {
+  return SingboxConfigGenerator.generateConfig(
+    args['rawConfig'],
+    listenPort: args['listenPort'],
+    isTest: args['isTest'],
+  );
+}
 
 class EphemeralTester {
   static final EphemeralTester _instance = EphemeralTester._internal();
@@ -61,16 +70,18 @@ class EphemeralTester {
 
     try {
       // 1. Prepare Config (JSON)
-      final binPath = await _getSingboxPath();
+      // Use BinaryManager to reliably get the executable path
+      final binPath = await BinaryManager.ensureBinary();
+
       final tempDir = await getTemporaryDirectory();
       tempConfigFile = File(p.join(tempDir.path, 'test_${config.id}_$testId.json'));
 
-      // Generate JSON with strict constraints
-      final jsonConfig = SingboxConfigGenerator.generateConfig(
-        config.rawConfig,
-        listenPort: port,
-        isTest: true,
-      );
+      // Generate JSON with strict constraints in background isolate to prevent UI lag
+      final jsonConfig = await compute(_generateConfigWrapper, {
+        'rawConfig': config.rawConfig,
+        'listenPort': port,
+        'isTest': true,
+      });
 
       // Inject "fatal" log level & Inbounds/Route constraints if not already handled by generator
       // The generator handles basic structure, but we enforce specific test overrides here
@@ -228,10 +239,14 @@ class EphemeralTester {
 
     } finally {
       dartHttpClient.close(); // Close client
-      // STRICT CLEANUP
+      // STRICT CLEANUP: Kill process in finally block
       try {
-        process?.kill(ProcessSignal.sigkill);
-      } catch (_) {}
+        if (process != null) {
+          process!.kill(ProcessSignal.sigkill);
+        }
+      } catch (e) {
+        AdvancedLogger.warn("EphemeralTester: Error killing process: $e");
+      }
 
       try {
         if (tempConfigFile != null && await tempConfigFile.exists()) {
@@ -275,23 +290,5 @@ class EphemeralTester {
           speed: speedMbps
        ).deviceMetrics
     );
-  }
-
-  Future<String> _getSingboxPath() async {
-     if (Platform.isWindows) {
-        return await WindowsVpnService().getExecutablePath();
-     } else if (Platform.isAndroid) {
-        // Attempt to locate libsingbox.so or similar in application directory
-        try {
-           final appDir = await getApplicationSupportDirectory();
-           final potentialPath = p.join(appDir.path, 'libsingbox.so');
-           if (await File(potentialPath).exists()) return potentialPath;
-
-           return "sing-box"; // Expecting it in PATH or fails
-        } catch (e) {
-           return "sing-box";
-        }
-     }
-     return "sing-box"; // Fallback for Linux/MacOS
   }
 }

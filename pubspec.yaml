@@ -61,4 +61,5 @@ flutter:
     - assets/executables/windows/sing-box.exe
     - assets/executables/windows/geoip.db
     - assets/executables/windows/geosite.db
+    - assets/executables/android/
     - assets/html/
