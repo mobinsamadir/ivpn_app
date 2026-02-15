@@ -45,7 +45,7 @@ class BinaryManager {
           // For now, rethrow to trigger fail-safe in caller or let it fail hard if asset is missing.
           // But wait, the user said "Assume that I ... will manually place ...".
           // If load fails, it means the asset isn't there.
-          throw Exception("Failed to load Android binary from assets: $e");
+          throw Exception("Please add libsingbox.so to assets/executables/android/. Details: $e");
         }
       }
 
