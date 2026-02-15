@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/config_manager.dart';
 import '../services/advanced_logger.dart';
+import '../services/ad_manager_service.dart';
+import '../services/funnel_service.dart';
 import 'connection_home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -39,6 +41,12 @@ class _SplashScreenState extends State<SplashScreen> {
       // 2. Initialize Config Logic
       setState(() => _statusMessage = 'Loading configs...');
       await configManager.init();
+
+      // NEW: Start Funnel immediately
+      FunnelService().startFunnel();
+
+      // NEW: Initialize Ads
+      AdManagerService().initialize();
 
       // 3. Fetch Updates (Non-blocking usually, but good to wait a bit)
       setState(() => _statusMessage = 'Updating from Cloud...');
