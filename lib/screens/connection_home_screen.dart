@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'; // Explicit import for compute
 import 'package:provider/provider.dart';
 import 'dart:async';
 import 'dart:io';
@@ -16,6 +17,13 @@ import '../services/access_manager.dart';
 import '../services/ad_manager_service.dart';
 import '../services/funnel_service.dart'; // NEW: Funnel Service
 import '../services/testers/ephemeral_tester.dart'; // NEW: Ephemeral Tester
+
+// Top-level function for sorting in background isolate
+List<VpnConfigWithMetrics> _sortConfigs(List<VpnConfigWithMetrics> configs) {
+  final sorted = List<VpnConfigWithMetrics>.from(configs);
+  sorted.sort((a, b) => a.compareTo(b));
+  return sorted;
+}
 
 class ConnectionHomeScreen extends StatefulWidget {
   const ConnectionHomeScreen({super.key});
@@ -1659,12 +1667,16 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
 
     _showToast("Finding fastest server...");
 
-    _configManager.allConfigs.sort((a, b) => a.compareTo(b)); // Uses new compareTo
+    // Offload sorting to background isolate
+    final sortedConfigs = await compute(_sortConfigs, _configManager.allConfigs);
 
     // Pick top one
-    final best = _configManager.allConfigs.first;
-    _configManager.selectConfig(best);
-    return best;
+    if (sortedConfigs.isNotEmpty) {
+      final best = sortedConfigs.first;
+      _configManager.selectConfig(best);
+      return best;
+    }
+    return null;
   }
 
   // Handle Next Server Logic (Cycles through current list)

@@ -79,7 +79,14 @@ class FunnelService {
 
     // 2. Start Worker Pools
     // Reduce TCP workers on Windows to prevent port exhaustion
-    final tcpWorkers = Platform.isWindows ? 10 : _maxTcpWorkers;
+    int tcpWorkers;
+    if (Platform.isWindows) {
+      tcpWorkers = 8;
+    } else if (Platform.isAndroid) {
+      tcpWorkers = 12;
+    } else {
+      tcpWorkers = 12; // Default for others
+    }
     await _spawnWorkers(tcpWorkers, _tcpWorker, "TCP");
     await _spawnWorkers(_maxHttpWorkers, _httpWorker, "HTTP");
     await _spawnWorkers(_maxSpeedWorkers, _speedWorker, "Speed");

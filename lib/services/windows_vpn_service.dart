@@ -9,6 +9,15 @@ import '../utils/advanced_logger.dart';
 import '../utils/file_logger.dart';
 import 'singbox_config_generator.dart';
 
+// Top-level function for compute to prevent UI lag
+String _generateConfigWrapper(Map<String, dynamic> args) {
+  return SingboxConfigGenerator.generateConfig(
+    args['configContent'],
+    listenPort: args['listenPort'],
+    isTest: args['isTest'],
+  );
+}
+
 class WindowsVpnService {
   static bool isUserInitiatedDisconnect = false;
   Process? _process;
@@ -21,7 +30,7 @@ class WindowsVpnService {
   final _statusController = StreamController<String>.broadcast();
   Stream<String> get statusStream => _statusController.stream;
 
-  Future<String> getExecutablePath() async {
+  static Future<String> getExecutablePath() async {
     // Check in the current directory
     final localPath = p.join(Directory.current.path, 'assets', 'executables', 'windows', 'sing-box.exe');
     debugPrint('Checking for Sing-box at local path: $localPath');
@@ -66,7 +75,7 @@ class WindowsVpnService {
     throw Exception("Sing-box executable not found. Checked:\n- $localPath\n- $bundledPath\n- $altPath\n- $resourcesPath\n- $projectRootPath");
   }
 
-  Future<String> getGeoIpPath() async {
+  static Future<String> getGeoIpPath() async {
     // Check in the current directory
     final localPath = p.join(Directory.current.path, 'assets', 'executables', 'windows', 'geoip.db');
     debugPrint('Checking for geoip.db at local path: $localPath');
@@ -103,7 +112,7 @@ class WindowsVpnService {
     throw Exception("geoip.db not found. Checked:\n- $localPath\n- $bundledPath\n- $altPath\n- $resourcesPath");
   }
 
-  Future<String> getGeoSitePath() async {
+  static Future<String> getGeoSitePath() async {
     // Check in the current directory
     final localPath = p.join(Directory.current.path, 'assets', 'executables', 'windows', 'geosite.db');
     debugPrint('Checking for geosite.db at local path: $localPath');
@@ -142,9 +151,9 @@ class WindowsVpnService {
 
   Future<bool> checkRequiredAssets() async {
     try {
-      await getExecutablePath();
-      await getGeoIpPath();
-      await getGeoSitePath();
+      await WindowsVpnService.getExecutablePath();
+      await WindowsVpnService.getGeoIpPath();
+      await WindowsVpnService.getGeoSitePath();
       return true;
     } catch (e) {
       debugPrint('Missing required assets: $e');
@@ -193,14 +202,14 @@ class WindowsVpnService {
       _statusController.add("CONNECTING");
       AdvancedLogger.info('[WindowsVpnService] Setting status to CONNECTING');
 
-      final exePath = await getExecutablePath();
+      final exePath = await WindowsVpnService.getExecutablePath();
       debugPrint('Attempting to run Sing-box at path: $exePath');
       AdvancedLogger.info('[WindowsVpnService] Sing-box executable path: $exePath');
 
-      final geoIpPath = await getGeoIpPath();
+      final geoIpPath = await WindowsVpnService.getGeoIpPath();
       AdvancedLogger.info('[WindowsVpnService] GeoIP database path: $geoIpPath');
 
-      final geoSitePath = await getGeoSitePath();
+      final geoSitePath = await WindowsVpnService.getGeoSitePath();
       AdvancedLogger.info('[WindowsVpnService] GeoSite database path: $geoSitePath');
 
       final workingDir = p.dirname(exePath);
@@ -217,13 +226,13 @@ class WindowsVpnService {
           jsonConfig = configContent;
           AdvancedLogger.info('[WindowsVpnService] Config is already JSON format');
       } else {
-          AdvancedLogger.info('[WindowsVpnService] Converting config from raw format to JSON');
-          // Generate PRODUCTION config (isTest: false)
-          jsonConfig = SingboxConfigGenerator.generateConfig(
-            configContent,
-            listenPort: 2080, // Main port for production
-            isTest: false,    // <--- CRITICAL: Enables TUN and Secure DNS
-          );
+          AdvancedLogger.info('[WindowsVpnService] Converting config from raw format to JSON (in background isolate)');
+          // Generate PRODUCTION config (isTest: false) in background isolate
+          jsonConfig = await compute(_generateConfigWrapper, {
+            'configContent': configContent,
+            'listenPort': 2080, // Main port for production
+            'isTest': false,    // <--- CRITICAL: Enables TUN and Secure DNS
+          });
           AdvancedLogger.info('[WindowsVpnService] Generated JSON config length: ${jsonConfig.length}');
       }
 
@@ -440,4 +449,3 @@ class WindowsVpnService {
     AdvancedLogger.info('[WindowsVpnService] VPN stopped, status set to DISCONNECTED');
   }
 }
-
