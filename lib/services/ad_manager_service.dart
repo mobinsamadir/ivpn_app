@@ -21,23 +21,23 @@ class AdManagerService {
   static const String _storageKey = "ad_config_cache";
 
   // Use the HTML from AAdsBanner as default
-  static const String _defaultAdHtml = '''
+  static const String _defaultAdHtml = """
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<style>
-  body { margin: 0; padding: 0; background-color: transparent; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
-</style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { margin: 0; padding: 0; background-color: transparent; display: flex; justify-content: center; align-items: center; height: 100vh; }
+    iframe { border: 0; width: 100%; height: 100%; overflow: hidden; display: block; }
+  </style>
 </head>
 <body>
-  <div id="frame" style="width: 100%; position: relative; z-index: 99998; text-align: center;">
-    <iframe data-aa='2426527' src='https://acceptable.a-ads.com/2426527/?size=Adaptive'
-            style='border:0; padding:0; width:100%; height:100%; overflow:hidden; display: block; margin: auto'></iframe>
+  <div id="frame" style="width:100%; height:100%;">
+    <iframe data-aa='2426527' src='https://acceptable.a-ads.com/2426527/?size=Adaptive'></iframe>
   </div>
 </body>
 </html>
-''';
+""";
 
   // Construct the JSON structure
   static final Map<String, dynamic> _defaultFallbackMap = {

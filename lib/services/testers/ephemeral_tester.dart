@@ -130,12 +130,25 @@ class EphemeralTester {
       // --- STAGE 1: TCP Handshake (Availability) ---
       // Check if local port is listening (Proxy is up)
       if (mode != TestMode.speed) {
-        try {
-          final socket = await Socket.connect('127.0.0.1', port, timeout: const Duration(milliseconds: 1500));
-          socket.destroy();
-          stage1Success = true;
-        } catch (e) {
-          throw Exception("Stage 1 Failed: Proxy port not reachable");
+        int attempts = 0;
+        while (attempts < 3) {
+          try {
+            final socket = await Socket.connect('127.0.0.1', port, timeout: const Duration(milliseconds: 1500));
+            socket.destroy();
+            stage1Success = true;
+            break; // Success
+          } on SocketException catch (e) {
+            if (e.osError?.errorCode == 1225 || e.osError?.errorCode == 10048) {
+              attempts++;
+              if (attempts < 3) {
+                await Future.delayed(const Duration(seconds: 1)); // Wait for OS to release ports
+                continue;
+              }
+            }
+            throw Exception("Stage 1 Failed: Proxy port not reachable (${e.osError?.errorCode})");
+          } catch (e) {
+            throw Exception("Stage 1 Failed: Proxy port not reachable");
+          }
         }
       }
 
