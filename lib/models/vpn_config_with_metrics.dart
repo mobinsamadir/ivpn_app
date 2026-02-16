@@ -66,6 +66,8 @@ class VpnConfigWithMetrics implements Comparable<VpnConfigWithMetrics> {
   final bool isAlive;
   final int tier; // 0=Untested, 1=Alive, 2=LowLatency, 3=Stable/HighSpeed
 
+  final int ping;
+
   // Funnel & Score Fields
   final int funnelStage; // 0=Untested, 1=TCP, 2=HTTP, 3=Speed
   final int speedScore;  // 0-100
@@ -88,6 +90,7 @@ class VpnConfigWithMetrics implements Comparable<VpnConfigWithMetrics> {
     this.lastSuccessfulConnectionTime = 0,
     this.isAlive = true,
     this.tier = 0,
+    this.ping = -1,
     this.funnelStage = 0,
     this.speedScore = 0,
     Map<String, TestResult>? stageResults,
@@ -100,6 +103,7 @@ class VpnConfigWithMetrics implements Comparable<VpnConfigWithMetrics> {
 
   // Computed properties
   int get currentPing {
+     if (ping != -1) return ping;
      if (deviceMetrics.isEmpty) return -1;
      return deviceMetrics.values.first.latestPing; 
   }
@@ -184,6 +188,7 @@ class VpnConfigWithMetrics implements Comparable<VpnConfigWithMetrics> {
     int? lastSuccessfulConnectionTime,
     bool? isAlive,
     int? tier,
+    int? ping,
     int? funnelStage,
     int? speedScore,
     Map<String, TestResult>? stageResults,
@@ -203,6 +208,7 @@ class VpnConfigWithMetrics implements Comparable<VpnConfigWithMetrics> {
       lastSuccessfulConnectionTime: lastSuccessfulConnectionTime ?? this.lastSuccessfulConnectionTime,
       isAlive: isAlive ?? this.isAlive,
       tier: tier ?? this.tier,
+      ping: ping ?? this.ping,
       funnelStage: funnelStage ?? this.funnelStage,
       speedScore: speedScore ?? this.speedScore,
       stageResults: stageResults ?? this.stageResults,
@@ -224,6 +230,7 @@ class VpnConfigWithMetrics implements Comparable<VpnConfigWithMetrics> {
     'lastSuccessfulConnectionTime': lastSuccessfulConnectionTime,
     'isAlive': isAlive,
     'tier': tier,
+    'ping': ping,
     'funnelStage': funnelStage,
     'speedScore': speedScore,
     'stageResults': stageResults.map((k, v) => MapEntry<String, dynamic>(k, v.toJson())),
@@ -247,6 +254,7 @@ class VpnConfigWithMetrics implements Comparable<VpnConfigWithMetrics> {
       lastSuccessfulConnectionTime: json['lastSuccessfulConnectionTime'] as int? ?? 0,
       isAlive: json['isAlive'] as bool? ?? true,
       tier: json['tier'] as int? ?? 0,
+      ping: json['ping'] as int? ?? -1,
       // Default to 0 for missing keys (Migration Safety)
       funnelStage: json['funnelStage'] as int? ?? 0,
       speedScore: json['speedScore'] as int? ?? 0,
