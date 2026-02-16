@@ -18,11 +18,12 @@ pluginManagement {
 }
 
 dependencyResolutionManagement {
+    // Use PREFER_SETTINGS to ignore plugin repositories and force clean configuration.
     repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     repositories {
         google()
         mavenCentral()
-        maven { url = uri("https://jitpack.io") }
+        // JitPack removed - Offline strategy uses manual AAR download
     }
 }
 
