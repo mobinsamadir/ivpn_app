@@ -42,6 +42,6 @@ flutter {
 }
 
 dependencies {
-    implementation("io.github.nekohasekai:libbox:1.9.0")
+    implementation("io.github.sagernet:libbox:1.12.22")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }
