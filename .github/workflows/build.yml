@@ -77,7 +77,16 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
-          cache: 'gradle'
+
+      - name: Setup Gradle Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
 
       - name: Cache Flutter
         uses: actions/cache@v4
@@ -110,6 +119,7 @@ jobs:
         run: |
           mkdir -p android/app/libs
           curl -L "https://raw.githubusercontent.com/singbox-android/libbox/refs/heads/main/libbox.aar" -o android/app/libs/libbox.aar
+          if [ $(stat -c%s "android/app/libs/libbox.aar") -lt 60000000 ]; then echo "Download failed or incomplete"; exit 1; fi
           ls -lh android/app/libs/libbox.aar
 
       - name: Build APK
