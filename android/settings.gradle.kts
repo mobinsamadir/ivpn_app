@@ -18,6 +18,7 @@ pluginManagement {
 }
 
 dependencyResolutionManagement {
+    // Use PREFER_SETTINGS to ignore plugin repositories and force clean configuration.
     repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     repositories {
         google()
