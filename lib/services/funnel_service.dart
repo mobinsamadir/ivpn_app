@@ -6,6 +6,7 @@ import 'singbox_config_generator.dart';
 import 'testers/ephemeral_tester.dart';
 import '../utils/advanced_logger.dart';
 import '../utils/cancellable_operation.dart';
+import 'native_vpn_service.dart';
 
 class FunnelService {
   static final FunnelService _instance = FunnelService._internal();
@@ -67,6 +68,14 @@ class FunnelService {
     _speedFinished = 0;
 
     AdvancedLogger.info("FunnelService: Starting Pipeline (RetestDead: $retestDead)");
+
+    // Android-specific parallel pipeline
+    if (Platform.isAndroid) {
+      // Don't await here so it runs in background like the original implementation
+      _runAndroidFunnel(retestDead).ignore();
+      return;
+    }
+
     _progressController.add("Initializing Pipeline...");
 
     // 1. Populate TCP Queue (Initial Feed)
@@ -82,14 +91,61 @@ class FunnelService {
     int tcpWorkers;
     if (Platform.isWindows) {
       tcpWorkers = 5;
-    } else if (Platform.isAndroid) {
-      tcpWorkers = 12;
     } else {
-      tcpWorkers = 12; // Default for others
+      tcpWorkers = 12; // Default for others (Linux/macOS)
     }
     await _spawnWorkers(tcpWorkers, _tcpWorker, "TCP");
     await _spawnWorkers(_maxHttpWorkers, _httpWorker, "HTTP");
     await _spawnWorkers(_maxSpeedWorkers, _speedWorker, "Speed");
+  }
+
+  // Optimized Android Pipeline using Native MethodChannel
+  Future<void> _runAndroidFunnel(bool retestDead) async {
+    _progressController.add("Android Pipeline: Initializing...");
+    final all = _buildPriorityQueue(retestDead);
+    _totalConfigs = all.length;
+    final nativeService = NativeVpnService();
+    AdvancedLogger.info("FunnelService (Android): Loaded $_totalConfigs configs.");
+
+    // Batch processing
+    const int batchSize = 4;
+    for (int i = 0; i < all.length; i += batchSize) {
+      if (!_isRunning || _cancelToken!.isCancelled) break;
+
+      final batch = all.skip(i).take(batchSize).toList();
+      _activeHttpWorkers = batch.length; // Reuse this counter for UI visibility
+      _updateProgress();
+
+      await Future.wait(batch.map((config) async {
+        if (!_isRunning) return;
+        try {
+          final ping = await nativeService.getPing(config.rawConfig);
+          if (ping > 0) {
+            _httpPassed++;
+            // Mark as valid (Stage 2 passed equivalent)
+            final updated = config.copyWith(
+              funnelStage: 2,
+              ping: ping,
+              lastTestedAt: DateTime.now(),
+              failureCount: 0
+            );
+            await _configManager.updateConfigDirectly(updated);
+          } else {
+             await _configManager.markFailure(config.id);
+          }
+        } catch (e) {
+          await _configManager.markFailure(config.id);
+        }
+      }));
+
+      _activeHttpWorkers = 0;
+      _updateProgress();
+    }
+
+    if (_isRunning) {
+        stop();
+        _progressController.add("Android Pipeline: Completed");
+    }
   }
 
   Future<void> _spawnWorkers(int count, Future<void> Function() worker, String name) async {
@@ -142,9 +198,6 @@ class FunnelService {
            // Push to HTTP Queue
            _tcpPassed++;
            _httpQueue.add(config);
-           // We do NOT update DB yet to keep UI clean, or maybe we do?
-           // User requirement: "Output: PASS -> Push to HttpQueue".
-           // "FAIL -> Mark as -1".
         } else {
            await _configManager.markFailure(config!.id);
         }
@@ -166,8 +219,6 @@ class FunnelService {
         config = _httpQueue.removeAt(0);
         _activeHttpWorkers++;
       } else {
-        // If TCP queue is empty and active TCP workers are 0, and we are empty, maybe we are done?
-        // Ideally just poll.
         await Future.delayed(const Duration(milliseconds: 500));
         continue;
       }
@@ -176,18 +227,13 @@ class FunnelService {
          _updateProgress();
 
          // STAGE 2: HTTP Connectivity (Strict 204)
-         // Use EphemeralTester in 'connectivity' mode
          final result = await _tester.runTest(config!, mode: TestMode.connectivity);
 
          if (result.funnelStage == 2) { // Success
              _httpPassed++;
-             // Update DB as "Valid"
              await _configManager.updateConfigDirectly(result);
-
-             // Push to Speed Queue
              _speedQueue.add(result);
          } else {
-             // Failed
              await _configManager.markFailure(config.id);
          }
 
@@ -216,12 +262,9 @@ class FunnelService {
          _updateProgress();
 
          // STAGE 3: Speed Test
-         // Use EphemeralTester in 'speed' mode
-         // Note: It will re-run stages 1 & 2 internally, which is fine for robustness
          final result = await _tester.runTest(config!, mode: TestMode.speed);
 
          _speedFinished++;
-         // Update DB with speed score
          await _configManager.updateConfigDirectly(result);
 
       } catch (e) {
@@ -235,6 +278,13 @@ class FunnelService {
 
   void _updateProgress() {
     if (!_isRunning) return;
+
+    if (Platform.isAndroid) {
+        final msg = "Testing: $_httpPassed/${_totalConfigs} | Active: $_activeHttpWorkers";
+        _progressController.add(msg);
+        return;
+    }
+
     final msg = "TCP: $_tcpPassed | Valid: $_httpPassed | Speed: $_speedFinished | Queued: ${_tcpQueue.length + _httpQueue.length + _speedQueue.length}";
     _progressController.add(msg);
 

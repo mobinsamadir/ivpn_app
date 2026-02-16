@@ -20,11 +20,12 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.ivpn_new" // مطمئن شو این نام پکیج درست است
-        minSdk = 21   // اجبار به نسخه ۲۱ برای سازگاری با کتابخانه‌های جدید
-        targetSdk = 34 // آخرین نسخه پایدار اندروید
+        applicationId = "com.example.ivpn_new"
+        minSdk = 21
+        targetSdk = 34
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        multiDexEnabled = true
     }
 
     buildTypes {
@@ -38,4 +39,9 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    implementation("io.github.nekohasekai:libbox:1.9.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }
