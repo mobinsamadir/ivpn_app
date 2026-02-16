@@ -26,6 +26,9 @@ dependencyResolutionManagement {
             url = uri("https://storage.googleapis.com/download.flutter.io")
         }
         maven {
+            url = uri("https://download.flutter.io")
+        }
+        maven {
             url = uri("https://maven.pkg.github.com/SagerNet/sing-box")
             credentials {
                 username = System.getenv("GITHUB_ACTOR")
