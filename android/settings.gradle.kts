@@ -23,7 +23,7 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven { url = uri("https://jitpack.io") }
+        // JitPack removed - Offline strategy uses manual AAR download
     }
 }
 

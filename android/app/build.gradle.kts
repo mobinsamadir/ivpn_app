@@ -42,6 +42,7 @@ flutter {
 }
 
 dependencies {
-    implementation("io.github.nekohasekai:libbox:1.9.0")
+    // Offline strategy: Use manually downloaded AAR from GitHub Actions
+    implementation(files("libs/libbox-1.9.0.aar"))
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }
