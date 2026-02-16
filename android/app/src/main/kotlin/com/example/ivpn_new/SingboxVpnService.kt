@@ -22,8 +22,8 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import okhttp3.OkHttpClient
 import okhttp3.Request
-// Assuming LibBox is the main entry point. If the package/class differs, this needs adjustment.
-import io.github.nekohasekai.libbox.LibBox
+// Assuming Libbox is the main entry point. If the package/class differs, this needs adjustment.
+import io.nekohasekai.libbox.Libbox
 
 class SingboxVpnService : VpnService() {
 
@@ -93,9 +93,9 @@ class SingboxVpnService : VpnService() {
                     // Use a try-catch block for the start command.
 
                     // START LIBBOX
-                    // If LibBox is a singleton, we must ensure we stop it after.
+                    // If Libbox is a singleton, we must ensure we stop it after.
                     // Use -1 or a safe invalid FD to indicate no TUN interface
-                    LibBox.newService(testConfigFile.absolutePath, -1)
+                    Libbox.newService(testConfigFile.absolutePath, -1)
                     // If newService expects FD, maybe we should use a different method for SOCKS.
                     // Assuming newService is generic.
 
@@ -133,7 +133,7 @@ class SingboxVpnService : VpnService() {
                 } finally {
                     // 5. Stop LibBox
                     try {
-                        LibBox.stopService()
+                        Libbox.stopService()
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
@@ -186,7 +186,7 @@ class SingboxVpnService : VpnService() {
                 configFile.writeText(configJson)
 
                 // 2. Start LibBox with TUN FD
-                LibBox.newService(configFile.absolutePath, fd.toLong())
+                Libbox.newService(configFile.absolutePath, fd.toLong())
 
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -200,7 +200,7 @@ class SingboxVpnService : VpnService() {
         isVpnRunning.set(false)
 
         try {
-            LibBox.stopService()
+            Libbox.stopService()
             vpnInterface?.close()
             vpnInterface = null
             stopForeground(true)
