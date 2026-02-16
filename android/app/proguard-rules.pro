@@ -9,3 +9,5 @@
 -keep class io.flutter.plugins.**  { *; }
 -keep class io.github.nekohasekai.libbox.** { *; }
 -keep interface io.github.nekohasekai.libbox.** { *; }
+-keep class io.nekohasekai.libbox.** { *; }
+-keep interface io.nekohasekai.libbox.** { *; }

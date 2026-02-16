@@ -103,11 +103,6 @@ jobs:
           flutter pub get
           dart run tool/setup_core.dart
 
-      - name: Download libbox AAR (Offline Strategy)
-        run: |
-          mkdir -p android/app/libs
-          wget "https://github.com/nekohasekai/libbox/releases/download/1.9.0/libbox-1.9.0.aar" -O android/app/libs/libbox-1.9.0.aar
-
       - name: Build APK
         run: |
           flutter pub get
