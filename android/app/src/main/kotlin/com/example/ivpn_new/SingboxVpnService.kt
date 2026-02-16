@@ -110,7 +110,7 @@ class SingboxVpnService : VpnService() {
                         .build()
 
                     val request = Request.Builder()
-                        .url("http://connectivitycheck.gstatic.com/generate_204")
+                        .url("https://www.google.com/generate_204")
                         .head()
                         .build()
 
