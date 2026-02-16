@@ -44,4 +44,5 @@ flutter {
 dependencies {
     implementation(files("libs/libbox.aar"))
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.github.termux:terminal-view:0.118.0")
 }

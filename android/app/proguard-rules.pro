@@ -12,4 +12,5 @@
 -keep class io.nekohasekai.libbox.** { *; }
 -keep interface io.nekohasekai.libbox.** { *; }
 -keep class io.github.sagernet.** { *; }
+-keep class io.github.sagernet.libbox.** { *; }
 -keep class io.sagernet.** { *; }
