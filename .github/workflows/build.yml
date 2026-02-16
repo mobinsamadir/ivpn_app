@@ -112,6 +112,9 @@ jobs:
           yes | flutter doctor --android-licenses || true
           # Build APK with new name iVPN
           flutter build apk --release --no-tree-shake-icons
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Rename APK
         run: mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/iVPN.apk

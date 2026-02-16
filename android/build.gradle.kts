@@ -12,14 +12,6 @@ subprojects {
     project.evaluationDependsOn(":app")
 }
 
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-        maven { url = uri("https://jitpack.io") }
-        maven { url = uri("https://storage.googleapis.com/download.flutter.io") }
-    }
-}
 
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
