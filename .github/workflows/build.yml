@@ -106,10 +106,11 @@ jobs:
           flutter pub get
           dart run tool/setup_core.dart
 
-      - name: Download verified Libbox AAR
+      - name: Download verified Libbox AAR (Raw)
         run: |
           mkdir -p android/app/libs
-          curl -L "https://github.com/singbox-android/libbox/raw/flutter-lib/libbox.aar" -o android/app/libs/libbox.aar
+          curl -L "https://raw.githubusercontent.com/singbox-android/libbox/refs/heads/main/libbox.aar" -o android/app/libs/libbox.aar
+          ls -lh android/app/libs/libbox.aar
 
       - name: Build APK
         run: |
