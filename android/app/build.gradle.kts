@@ -42,6 +42,6 @@ flutter {
 }
 
 dependencies {
-    implementation("io.github.sagernet:sing-box:1.12.22")
+    implementation("io.github.sagernet:sing-box:1.12.21")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }
