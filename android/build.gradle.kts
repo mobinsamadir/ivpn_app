@@ -2,15 +2,7 @@ allprojects {
     repositories {
         google()
         mavenCentral()
-        maven {
-            url = uri("https://jitpack.io")
-            val token = System.getenv("GITHUB_TOKEN")
-            if (token != null) {
-                credentials {
-                    username = token
-                }
-            }
-        }
+        maven { url = uri("https://jitpack.io") }
     }
 }
 

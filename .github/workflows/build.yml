@@ -104,8 +104,6 @@ jobs:
           dart run tool/setup_core.dart
 
       - name: Build APK
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           flutter pub get
           yes | flutter doctor --android-licenses || true
