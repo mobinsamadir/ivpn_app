@@ -18,22 +18,10 @@ pluginManagement {
 }
 
 dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
+    repositoriesMode.set(RepositoriesMode.PREFER_PROJECT)
     repositories {
         google()
         mavenCentral()
-        // Strict routing for SagerNet
-        maven {
-            url = uri("https://maven.pkg.github.com/SagerNet/sing-box")
-            content {
-                includeGroup("io.github.sagernet")
-            }
-            credentials {
-                username = System.getenv("GITHUB_ACTOR")
-                password = System.getenv("GITHUB_TOKEN")
-            }
-        }
-        // Fallback for Flutter (Use only the stable one)
         maven {
             url = uri("https://storage.googleapis.com/download.flutter.io")
         }
