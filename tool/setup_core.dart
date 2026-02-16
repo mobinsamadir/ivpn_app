@@ -20,11 +20,16 @@ void main() async {
   final androidDir = Directory('assets/executables/android');
   final windowsDir = Directory('assets/executables/windows');
 
-  if (!await androidDir.exists()) {
-    await androidDir.create(recursive: true);
-  }
-  if (!await windowsDir.exists()) {
-    await windowsDir.create(recursive: true);
+  try {
+    if (!await androidDir.exists()) {
+      await androidDir.create(recursive: true);
+    }
+    if (!await windowsDir.exists()) {
+      await windowsDir.create(recursive: true);
+    }
+  } catch (e) {
+    print('Critical Error: Failed to create directories: $e');
+    exit(1);
   }
 
   // 1. Android Sing-box
@@ -59,13 +64,17 @@ void main() async {
             print('Set executable permissions for Android binary.');
           } catch (e) {
             print('Warning: chmod failed: $e');
+            // Not critical if chmod fails in CI environment where permissions might be handled differently,
+            // but we proceed.
           }
         }
       } else {
-        print('Error: sing-box binary not found in Android archive.');
+        print('Critical Error: sing-box binary not found in Android archive.');
+        exit(1);
       }
     } catch (e) {
-      print('Error setting up Android Sing-box: $e');
+      print('Critical Error setting up Android Sing-box: $e');
+      exit(1);
     }
   } else {
     print('Android Sing-box already exists.');
@@ -94,10 +103,12 @@ void main() async {
         ).writeAsBytes(singboxFile.content as List<int>);
         print('Saved to ${windowsBinary.path}');
       } else {
-        print('Error: sing-box.exe not found in Windows archive.');
+        print('Critical Error: sing-box.exe not found in Windows archive.');
+        exit(1);
       }
     } catch (e) {
-      print('Error setting up Windows Sing-box: $e');
+      print('Critical Error setting up Windows Sing-box: $e');
+      exit(1);
     }
   } else {
     print('Windows Sing-box already exists.');
@@ -112,7 +123,8 @@ void main() async {
       await geoipFile.writeAsBytes(bytes);
       print('Saved to ${geoipFile.path}');
     } catch (e) {
-      print('Error downloading GeoIP: $e');
+      print('Critical Error downloading GeoIP: $e');
+      exit(1);
     }
   } else {
     print('GeoIP already exists.');
@@ -127,7 +139,8 @@ void main() async {
       await geositeFile.writeAsBytes(bytes);
       print('Saved to ${geositeFile.path}');
     } catch (e) {
-      print('Error downloading Geosite: $e');
+      print('Critical Error downloading Geosite: $e');
+      exit(1);
     }
   } else {
     print('Geosite already exists.');
