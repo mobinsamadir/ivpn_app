@@ -32,31 +32,11 @@ jobs:
           path: assets/executables/windows
           key: windows-assets-v1
 
-      - name: Download Windows Assets (Sing-box & GeoIP)
+      - name: Setup Core Assets (Download Binaries)
         if: steps.assets-cache.outputs.cache-hit != 'true'
-        shell: pwsh
         run: |
-          # 1. Create Directory
-          New-Item -ItemType Directory -Force -Path assets/executables/windows
-
-          # 2. Download Sing-box (Zip), Extract, and Move
-          Write-Host "Downloading Sing-box..."
-          $sbUrl = "https://github.com/SagerNet/sing-box/releases/download/v1.10.1/sing-box-1.10.1-windows-amd64.zip"
-          Invoke-WebRequest -Uri $sbUrl -OutFile "singbox.zip"
-          Expand-Archive -Path "singbox.zip" -DestinationPath "temp_sb"
-          Move-Item -Path "temp_sb/sing-box-*-windows-amd64/sing-box.exe" -Destination "assets/executables/windows/sing-box.exe" -Force
-
-          # 3. Download GeoIP
-          Write-Host "Downloading GeoIP..."
-          Invoke-WebRequest -Uri "https://github.com/v2fly/geoip/releases/latest/download/geoip.dat" -OutFile "assets/executables/windows/geoip.db"
-
-          # 4. Download Geosite
-          Write-Host "Downloading Geosite..."
-          Invoke-WebRequest -Uri "https://github.com/v2fly/domain-list-community/releases/latest/download/dlc.dat" -OutFile "assets/executables/windows/geosite.db"
-
-          # Cleanup
-          Remove-Item "singbox.zip"
-          Remove-Item "temp_sb" -Recurse
+          flutter pub get
+          dart run tool/setup_core.dart
 
       - name: Build iVPN Windows
         run: |
@@ -110,22 +90,18 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Cache Android JNI Libs
-        id: android-libs-cache
+      - name: Cache Android Assets
+        id: android-assets-cache
         uses: actions/cache@v4
         with:
-          path: android/app/src/main/jniLibs
-          key: android-libs-v1.10.1
+          path: assets/executables/android
+          key: android-assets-v1.10.1
 
-      - name: Setup Sing-Box Libs
-        if: steps.android-libs-cache.outputs.cache-hit != 'true'
+      - name: Setup Core Assets (Download Binaries)
+        if: steps.android-assets-cache.outputs.cache-hit != 'true'
         run: |
-          mkdir -p android/app/src/main/jniLibs/arm64-v8a
-          mkdir -p android/app/src/main/jniLibs/armeabi-v7a
-          curl -L -o sb.tar.gz https://github.com/SagerNet/sing-box/releases/download/v1.10.1/sing-box-1.10.1-android-arm64.tar.gz
-          tar -xzf sb.tar.gz
-          find . -name "libbox.so" -exec cp {} android/app/src/main/jniLibs/arm64-v8a/libbox.so \;
-          find . -name "libbox.so" -exec cp {} android/app/src/main/jniLibs/armeabi-v7a/libbox.so \;
+          flutter pub get
+          dart run tool/setup_core.dart
 
       - name: Build APK
         run: |
