@@ -115,12 +115,29 @@ jobs:
           flutter pub get
           dart run tool/setup_core.dart
 
-      - name: Download verified Libbox AAR (Raw)
+      - name: Download all local dependencies
         run: |
           mkdir -p android/app/libs
+          # Download Libbox
           curl -L "https://raw.githubusercontent.com/singbox-android/libbox/refs/heads/main/libbox.aar" -o android/app/libs/libbox.aar
-          if [ $(stat -c%s "android/app/libs/libbox.aar") -lt 60000000 ]; then echo "Download failed or incomplete"; exit 1; fi
+
+          # Check Libbox size
+          if [ $(stat -c%s "android/app/libs/libbox.aar") -lt 60000000 ]; then echo "Libbox download failed or incomplete"; exit 1; fi
           ls -lh android/app/libs/libbox.aar
+
+          # Download Terminal-View (Directly from JitPack as primary)
+          curl -L "https://jitpack.io/com/github/termux/termux-app/terminal-view/v0.118.0/terminal-view-v0.118.0.aar" -o android/app/libs/terminal-view.aar
+
+          # Check Terminal-View size
+          if [ $(stat -c%s "android/app/libs/terminal-view.aar") -lt 30000 ]; then echo "Terminal-View download failed or incomplete"; exit 1; fi
+          ls -lh android/app/libs/terminal-view.aar
+
+          # Download Terminal-Emulator (Dependency of Terminal-View)
+          curl -L "https://jitpack.io/com/github/termux/termux-app/terminal-emulator/v0.118.0/terminal-emulator-v0.118.0.aar" -o android/app/libs/terminal-emulator.aar
+
+          # Check Terminal-Emulator size
+          if [ $(stat -c%s "android/app/libs/terminal-emulator.aar") -lt 30000 ]; then echo "Terminal-Emulator download failed or incomplete"; exit 1; fi
+          ls -lh android/app/libs/terminal-emulator.aar
 
       - name: Build APK
         run: |
