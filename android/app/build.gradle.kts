@@ -20,22 +20,28 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.ivpn_new" // مطمئن شو این نام پکیج درست است
-        minSdk = 21   // اجبار به نسخه ۲۱ برای سازگاری با کتابخانه‌های جدید
-        targetSdk = 34 // آخرین نسخه پایدار اندروید
+        applicationId = "com.example.ivpn_new"
+        minSdk = 21
+        targetSdk = 34
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        multiDexEnabled = true
     }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+            isMinifyEnabled = true
+            proguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro")
         }
     }
 }
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    implementation("io.github.nekohasekai:libbox:1.9.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }
