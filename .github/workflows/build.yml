@@ -153,10 +153,7 @@ jobs:
         run: |
           flutter pub get
           yes | flutter doctor --android-licenses || true
-          flutter build apk --release --target-platform android-arm64
-
-      - name: Rename APK
-        run: mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/iVPN.apk
+          flutter build apk --split-per-abi --release
 
       - name: Create Release and Upload APK
         uses: softprops/action-gh-release@v1
@@ -164,7 +161,7 @@ jobs:
         with:
           tag_name: v1.0.${{ github.run_number }}
           name: Release v1.0.${{ github.run_number }}
-          files: build/app/outputs/flutter-apk/iVPN.apk
+          files: build/app/outputs/flutter-apk/*.apk
           draft: false
           prerelease: false
         env:
