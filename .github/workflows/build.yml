@@ -137,7 +137,7 @@ jobs:
         run: |
           flutter pub get
           yes | flutter doctor --android-licenses || true
-          flutter build apk --release --no-daemon --target-platform android-arm64
+          flutter build apk --release --target-platform android-arm64
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
