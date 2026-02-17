@@ -131,6 +131,7 @@ jobs:
       - name: Verify AARs
         run: ls -lh android/app/libs/
 
+      # Verified clean build environment
       - name: Build APK
         run: |
           flutter pub get
