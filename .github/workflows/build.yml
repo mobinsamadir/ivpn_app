@@ -9,63 +9,63 @@ permissions:
   contents: write
 
 jobs:
-  build-windows:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Cache Pub Dependencies
-        uses: actions/cache@v4
-        with:
-          path: C:\Users\runneradmin\AppData\Local\Pub\Cache
-          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
-
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: true
-
-      - name: Cache Windows Assets
-        id: assets-cache
-        uses: actions/cache@v4
-        with:
-          path: assets/executables/windows
-          key: windows-assets-v1
-
-      - name: Setup Core Assets (Download Binaries)
-        if: steps.assets-cache.outputs.cache-hit != 'true'
-        run: |
-          flutter pub get
-          dart run tool/setup_core.dart
-
-      - name: Build iVPN Windows
-        run: |
-          flutter pub get
-          flutter build windows --release
-
-      - name: Bundle VC++ Runtime DLLs
-        shell: pwsh
-        run: |
-          $buildDir = "build/windows/x64/runner/Release"
-          Copy-Item "C:\Windows\System32\msvcp140.dll" -Destination $buildDir
-          Copy-Item "C:\Windows\System32\vcruntime140.dll" -Destination $buildDir
-          Copy-Item "C:\Windows\System32\vcruntime140_1.dll" -Destination $buildDir
-
-      - name: Compress Windows Release
-        shell: pwsh
-        run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath ivpn-windows.zip -Force
-
-      - name: Create Release and Upload Windows
-        uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
-        with:
-          tag_name: v1.0.${{ github.run_number }}
-          name: Release v1.0.${{ github.run_number }}
-          files: ivpn-windows.zip
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#  build-windows:
+#    runs-on: windows-latest
+#    steps:
+#      - uses: actions/checkout@v4
+#
+#      - name: Cache Pub Dependencies
+#        uses: actions/cache@v4
+#        with:
+#          path: C:\Users\runneradmin\AppData\Local\Pub\Cache
+#          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+#
+#      - uses: subosito/flutter-action@v2
+#        with:
+#          channel: 'stable'
+#          cache: true
+#
+#      - name: Cache Windows Assets
+#        id: assets-cache
+#        uses: actions/cache@v4
+#        with:
+#          path: assets/executables/windows
+#          key: windows-assets-v1
+#
+#      - name: Setup Core Assets (Download Binaries)
+#        if: steps.assets-cache.outputs.cache-hit != 'true'
+#        run: |
+#          flutter pub get
+#          dart run tool/setup_core.dart
+#
+#      - name: Build iVPN Windows
+#        run: |
+#          flutter pub get
+#          flutter build windows --release
+#
+#      - name: Bundle VC++ Runtime DLLs
+#        shell: pwsh
+#        run: |
+#          $buildDir = "build/windows/x64/runner/Release"
+#          Copy-Item "C:\Windows\System32\msvcp140.dll" -Destination $buildDir
+#          Copy-Item "C:\Windows\System32\vcruntime140.dll" -Destination $buildDir
+#          Copy-Item "C:\Windows\System32\vcruntime140_1.dll" -Destination $buildDir
+#
+#      - name: Compress Windows Release
+#        shell: pwsh
+#        run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath ivpn-windows.zip -Force
+#
+#      - name: Create Release and Upload Windows
+#        uses: softprops/action-gh-release@v1
+#        if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
+#        with:
+#          tag_name: v1.0.${{ github.run_number }}
+#          name: Release v1.0.${{ github.run_number }}
+#          files: ivpn-windows.zip
+#          draft: false
+#          prerelease: false
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-android:
     runs-on: ubuntu-latest
@@ -127,8 +127,6 @@ jobs:
         run: |
           mkdir -p android/app/libs
           curl -L "https://raw.githubusercontent.com/singbox-android/libbox/refs/heads/main/libbox.aar" -o android/app/libs/libbox.aar
-          curl -L "https://jitpack.io/com/github/termux/terminal-view/0.118.0/terminal-view-0.118.0.aar" -o android/app/libs/terminal-view.aar
-          curl -L "https://jitpack.io/com/github/termux/terminal-emulator/0.118.0/terminal-emulator-0.118.0.aar" -o android/app/libs/terminal-emulator.aar
 
       - name: Verify AARs
         run: ls -lh android/app/libs/
