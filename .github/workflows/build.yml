@@ -121,7 +121,7 @@ jobs:
           curl -L "https://raw.githubusercontent.com/singbox-android/libbox/refs/heads/main/libbox.aar" -o android/app/libs/libbox.aar
           curl -L "https://jitpack.io/com/github/termux/terminal-view/0.118.0/terminal-view-0.118.0.aar" -o android/app/libs/terminal-view.aar
           curl -L "https://jitpack.io/com/github/termux/terminal-emulator/0.118.0/terminal-emulator-0.118.0.aar" -o android/app/libs/terminal-emulator.aar
-          find . -name "*.aar"
+          ls -lh android/app/libs/
 
       - name: Build APK
         run: |
