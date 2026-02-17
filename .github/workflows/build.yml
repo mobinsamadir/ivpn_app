@@ -134,14 +134,11 @@ jobs:
       # Verified clean build environment
       - name: Build APK
         run: |
-          # 1. Remove Gradle properties created by setup-java (potential leak source)
-          rm -f ~/.gradle/gradle.properties
+          # 1. Strip the authorization header injected by checkout
+          git config --global --unset-all http.https://github.com/.extraheader || true
+          git config --local --unset-all http.https://github.com/.extraheader || true
 
-          # 2. Completely unset environment variables from the shell memory
-          unset GITHUB_TOKEN
-          unset GITHUB_ACTOR
-
-          # 3. Proceed with build
+          # 2. Proceed with build
           flutter pub get
           yes | flutter doctor --android-licenses || true
           flutter build apk --release --target-platform android-arm64
