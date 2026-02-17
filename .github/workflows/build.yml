@@ -115,12 +115,6 @@ jobs:
           flutter pub get
           dart run tool/setup_core.dart
 
-      - name: Diagnostic
-        run: |
-          free -m
-          df -h
-          ls -R ${{ github.workspace }}/android/app/libs || true
-
       - name: Cache AARs
         id: aar-cache
         uses: actions/cache@v4
@@ -131,13 +125,13 @@ jobs:
       - name: Download all local dependencies
         if: steps.aar-cache.outputs.cache-hit != 'true'
         run: |
-          mkdir -p ${{ github.workspace }}/android/app/libs
-          curl -L "https://raw.githubusercontent.com/singbox-android/libbox/refs/heads/main/libbox.aar" -o ${{ github.workspace }}/android/app/libs/libbox.aar
-          curl -L "https://jitpack.io/com/github/termux/terminal-view/0.118.0/terminal-view-0.118.0.aar" -o ${{ github.workspace }}/android/app/libs/terminal-view.aar
-          curl -L "https://jitpack.io/com/github/termux/terminal-emulator/0.118.0/terminal-emulator-0.118.0.aar" -o ${{ github.workspace }}/android/app/libs/terminal-emulator.aar
+          mkdir -p android/app/libs
+          curl -L "https://raw.githubusercontent.com/singbox-android/libbox/refs/heads/main/libbox.aar" -o android/app/libs/libbox.aar
+          curl -L "https://jitpack.io/com/github/termux/terminal-view/0.118.0/terminal-view-0.118.0.aar" -o android/app/libs/terminal-view.aar
+          curl -L "https://jitpack.io/com/github/termux/terminal-emulator/0.118.0/terminal-emulator-0.118.0.aar" -o android/app/libs/terminal-emulator.aar
 
       - name: Verify AARs
-        run: ls -lh ${{ github.workspace }}/android/app/libs/
+        run: ls -lh android/app/libs/
 
       - name: Build APK
         run: |
