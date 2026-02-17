@@ -49,8 +49,8 @@ class SingboxVpnService : VpnService() {
 
             testMutex.withLock {
                 var socksPort = 0
-                // Use a dedicated LibBox instance/command for testing
-                // If LibBox is a singleton, this lock prevents race conditions.
+                // Use a dedicated Libbox instance/command for testing
+                // If Libbox is a singleton, this lock prevents race conditions.
 
                 try {
                     // 1. Find a random free port
@@ -81,10 +81,10 @@ class SingboxVpnService : VpnService() {
                     val testConfigFile = File(tempDir, "test_${System.currentTimeMillis()}.json")
                     testConfigFile.writeText(testConfigStr)
 
-                    // 3. Start LibBox in a way that doesn't trigger VPN service
-                    // Assuming LibBox.run(path) starts it.
+                    // 3. Start Libbox in a way that doesn't trigger VPN service
+                    // Assuming Libbox.run(path) starts it.
                     // Use a separate thread or process if possible, but here we just call start.
-                    // If LibBox.start() is blocking, we need to launch it in a separate job.
+                    // If Libbox.start() is blocking, we need to launch it in a separate job.
                     // If it's non-blocking, we just call it.
                     // Usually 'run' is blocking, 'start' is async.
                     // We'll assume we can start it.
@@ -131,7 +131,7 @@ class SingboxVpnService : VpnService() {
                     e.printStackTrace()
                     return@withLock -1
                 } finally {
-                    // 5. Stop LibBox
+                    // 5. Stop Libbox
                     try {
                         Libbox.stopService()
                     } catch (e: Exception) {
@@ -185,7 +185,7 @@ class SingboxVpnService : VpnService() {
                 val configFile = File(configDir, "config.json")
                 configFile.writeText(configJson)
 
-                // 2. Start LibBox with TUN FD
+                // 2. Start Libbox with TUN FD
                 Libbox.newService(configFile.absolutePath, fd.toLong())
 
             } catch (e: Exception) {
