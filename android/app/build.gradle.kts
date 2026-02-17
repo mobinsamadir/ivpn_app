@@ -42,6 +42,8 @@ flutter {
 }
 
 dependencies {
-    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar"))))
+    implementation(mapOf("name" to "libbox", "ext" to "aar"))
+    implementation(mapOf("name" to "terminal-view", "ext" to "aar"))
+    implementation(mapOf("name" to "terminal-emulator", "ext" to "aar"))
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }
