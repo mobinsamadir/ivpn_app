@@ -134,13 +134,17 @@ jobs:
       # Verified clean build environment
       - name: Build APK
         run: |
+          # 1. Remove Gradle properties created by setup-java (potential leak source)
+          rm -f ~/.gradle/gradle.properties
+
+          # 2. Completely unset environment variables from the shell memory
+          unset GITHUB_TOKEN
+          unset GITHUB_ACTOR
+
+          # 3. Proceed with build
           flutter pub get
           yes | flutter doctor --android-licenses || true
           flutter build apk --release --target-platform android-arm64
-        env:
-          # EXPLICITLY set to empty string to prevent inheritance/injection
-          GITHUB_TOKEN: ""
-          GITHUB_ACTOR: ""
 
       - name: Rename APK
         run: mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/iVPN.apk
