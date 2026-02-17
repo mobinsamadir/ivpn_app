@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import okhttp3.OkHttpClient
 import okhttp3.Request
 // Assuming Libbox is the main entry point. If the package/class differs, this needs adjustment.
-import io.nekohasekai.libbox.Libbox
+import io.github.sagernet.libbox.Libbox
 
 class SingboxVpnService : VpnService() {
 
