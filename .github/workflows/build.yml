@@ -141,16 +141,13 @@ jobs:
         run: |
           flutter pub get
           yes | flutter doctor --android-licenses || true
-          cd android
-          gradle wrapper --gradle-version 8.14
-          chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon
+          flutter build apk --release --no-daemon --target-platform android-arm64
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Rename APK
-        run: mv android/app/build/outputs/apk/release/app-release.apk android/app/build/outputs/apk/release/iVPN.apk
+        run: mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/iVPN.apk
 
       - name: Create Release and Upload APK
         uses: softprops/action-gh-release@v1
@@ -158,7 +155,7 @@ jobs:
         with:
           tag_name: v1.0.${{ github.run_number }}
           name: Release v1.0.${{ github.run_number }}
-          files: android/app/build/outputs/apk/release/iVPN.apk
+          files: build/app/outputs/flutter-apk/iVPN.apk
           draft: false
           prerelease: false
         env:
