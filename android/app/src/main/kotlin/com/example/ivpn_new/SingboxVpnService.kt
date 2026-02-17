@@ -1,5 +1,6 @@
 package com.example.ivpn_new
 
+// Android Imports
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -22,13 +23,20 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import okhttp3.OkHttpClient
 import okhttp3.Request
+
+// --- LIBBOX IMPORTS (CRITICAL FIXES) ---
 import io.nekohasekai.libbox.Libbox
 import io.nekohasekai.libbox.PlatformInterface
 import io.nekohasekai.libbox.TunOptions
 import io.nekohasekai.libbox.StringIterator
 import io.nekohasekai.libbox.NetworkInterfaceIterator
+import io.nekohasekai.libbox.WIFIState
+import io.nekohasekai.libbox.InterfaceUpdateListener
+import io.nekohasekai.libbox.LocalDNSTransport
+import io.nekohasekai.libbox.NetworkInterface
+// Alias to avoid conflict with android.app.Notification
+import io.nekohasekai.libbox.Notification as LibboxNotification
 
-// Updated for Libbox single-arg
 class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterface() {
 
     private var vpnInterface: ParcelFileDescriptor? = null
@@ -40,9 +48,7 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
         const val ACTION_START = "start"
         const val ACTION_STOP = "stop"
 
-        // Mutex to ensure only one test runs at a time
         private val testMutex = Mutex()
-        // Atomic flag to track if VPN is running (to prevent testing while VPN is active)
         val isVpnRunning = AtomicBoolean(false)
 
         suspend fun measurePing(configJson: String, tempDir: File): Int = withContext(Dispatchers.IO) {
@@ -53,16 +59,11 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
 
             testMutex.withLock {
                 var socksPort = 0
-                // Use a dedicated Libbox instance/command for testing
-                // If Libbox is a singleton, this lock prevents race conditions.
-
                 try {
-                    // 1. Find a random free port
                     val socket = ServerSocket(0)
                     socksPort = socket.localPort
                     socket.close()
 
-                    // 2. Modify Config to use SOCKS inbound
                     val json = JSONObject(configJson)
                     val inbounds = JSONArray()
                     val socksInbound = JSONObject()
@@ -73,37 +74,19 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
                     inbounds.put(socksInbound)
                     json.put("inbounds", inbounds)
 
-                    // Ensure outbounds are correct (keep existing or ensure minimal)
                     if (!json.has("outbounds")) {
                         return@withLock -1
                     }
-
-                    // Disable 'tun' if present in outbounds or inbounds just in case
-                    // (Though we replaced inbounds, outbounds might have routing rules referring to tun)
 
                     val testConfigStr = json.toString()
                     val testConfigFile = File(tempDir, "test_${System.currentTimeMillis()}.json")
                     testConfigFile.writeText(testConfigStr)
 
-                    // 3. Start Libbox in a way that doesn't trigger VPN service
-                    // Assuming Libbox.run(path) starts it.
-                    // Use a separate thread or process if possible, but here we just call start.
-                    // If Libbox.start() is blocking, we need to launch it in a separate job.
-                    // If it's non-blocking, we just call it.
-                    // Usually 'run' is blocking, 'start' is async.
-                    // We'll assume we can start it.
-
-                    // Note: We are not passing a TUN FD, so it should run in user-mode (SOCKS only).
-                    // Use a try-catch block for the start command.
-
-                    // START LIBBOX
-                    // If Libbox is a singleton, we must ensure we stop it after.
+                    // Use StubPlatformInterface for static context (Fixes crash)
                     Libbox.newService(testConfigFile.absolutePath, StubPlatformInterface())
 
-                    // Give it a moment to initialize
                     delay(500)
 
-                    // 4. Measure Ping
                     val client = OkHttpClient.Builder()
                         .connectTimeout(3, TimeUnit.SECONDS)
                         .readTimeout(3, TimeUnit.SECONDS)
@@ -132,7 +115,6 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
                     e.printStackTrace()
                     return@withLock -1
                 } finally {
-                    // 5. Stop Libbox
                     try {
                         Libbox.newService("", StubPlatformInterface())
                     } catch (e: Exception) {
@@ -143,8 +125,9 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
         }
     }
 
+    // --- CRITICAL OVERRIDE FOR VPN TRAFFIC ---
+    // Without this, the VPN connects but no data flows.
     override fun autoDetectInterfaceControl(fd: Int) {
-        // Essential: Protect the VPN tunnel socket
         this.protect(fd)
     }
 
@@ -170,7 +153,6 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
 
         serviceScope.launch {
             try {
-                // 1. Establish VPN Interface
                 val builder = Builder()
                 builder.setSession("iVPN Connection")
                 builder.addAddress("172.19.0.1", 28)
@@ -190,7 +172,6 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
                 val configDir = getExternalFilesDir(null)!!
                 val configFile = File(configDir, "config.json")
 
-                // Inject TUN File Descriptor
                 val jsonObject = JSONObject(configJson)
                 if (jsonObject.has("inbounds")) {
                     val inbounds = jsonObject.getJSONArray("inbounds")
@@ -204,7 +185,7 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
 
                 configFile.writeText(jsonObject.toString())
 
-                // 2. Start Libbox
+                // Pass 'this' as PlatformInterface (Required by new Libbox API)
                 Libbox.newService(configFile.absolutePath, this@SingboxVpnService)
 
             } catch (e: Exception) {
@@ -264,26 +245,60 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
     }
 }
 
+// ==========================================
+//           COMPLETE STUB IMPLEMENTATIONS
+// ==========================================
+
 // 1. String Iterator Stub
 class StubStringIterator : StringIterator {
     override fun next(): String = ""
     override fun hasNext(): Boolean = false
+    override fun len(): Int = 0 // Fixed: Added missing method
 }
 
 // 2. Network Interface Iterator Stub
 class StubNetworkInterfaceIterator : NetworkInterfaceIterator {
-    override fun next(): io.nekohasekai.libbox.NetworkInterface? = null
+    override fun next(): NetworkInterface? = null
     override fun hasNext(): Boolean = false
 }
 
-// 3. Main Platform Stub
+// 3. Main Platform Stub (Implementing ALL missing methods from logs)
 class StubPlatformInterface : PlatformInterface {
+    
+    // Original methods
     override fun autoDetectInterfaceControl(fd: Int) { }
     override fun openTun(options: TunOptions): Int = -1
     override fun usePlatformAutoDetectInterfaceControl(): Boolean = true
-    override fun readWIFIState(): String = ""
-    override fun writeWIFIState(s: String) {}
     override fun clearDNSCache() {}
-    // Only implement getInterfaces if required by the interface version you downloaded
-    // override fun getInterfaces(): NetworkInterfaceIterator = StubNetworkInterfaceIterator()
+
+    // WIFI State (Fixed types: Returns Object, Not String)
+    override fun readWIFIState(): WIFIState { return WIFIState() }
+    override fun writeWIFIState(state: WIFIState?) { }
+
+    // NEWLY ADDED METHODS (Fixes "Abstract member not implemented" errors)
+    override fun useProcFS(): Boolean = false
+    override fun writeLog(message: String?) { }
+    
+    override fun closeDefaultInterfaceMonitor(listener: InterfaceUpdateListener?) { }
+    
+    override fun findConnectionOwner(ipProtocol: Int, sourceAddress: String?, sourcePort: Int, destinationAddress: String?, destinationPort: Int): Int = 0
+    
+    override fun getInterfaces(): NetworkInterfaceIterator { return StubNetworkInterfaceIterator() }
+    
+    override fun includeAllNetworks(): Boolean = false
+    
+    override fun localDNSTransport(): LocalDNSTransport? = null
+    
+    override fun packageNameByUid(uid: Int): String = "unknown"
+    
+    override fun uidByPackageName(packageName: String?): Int = 0
+    
+    // Uses aliased import to avoid conflict with android.app.Notification
+    override fun sendNotification(notification: LibboxNotification?) { } 
+    
+    override fun startDefaultInterfaceMonitor(listener: InterfaceUpdateListener?) { }
+    
+    override fun systemCertificates(): StringIterator { return StubStringIterator() }
+    
+    override fun underNetworkExtension(): Boolean = false
 }
