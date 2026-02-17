@@ -136,9 +136,6 @@ jobs:
           flutter pub get
           yes | flutter doctor --android-licenses || true
           flutter build apk --release --target-platform android-arm64
-        env:
-          GITHUB_ACTOR: ${{ github.actor }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Rename APK
         run: mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/iVPN.apk
