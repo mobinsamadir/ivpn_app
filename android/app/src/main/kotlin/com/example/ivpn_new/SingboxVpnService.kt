@@ -260,7 +260,7 @@ class StubNetworkInterfaceIterator : NetworkInterfaceIterator {
     override fun hasNext(): Boolean = false
 }
 
-// 3. Main Platform Stub (Implementing ALL missing methods from logs)
+// 3. Main Platform Stub
 class StubPlatformInterface : PlatformInterface {
     
     // Original methods
@@ -274,8 +274,8 @@ class StubPlatformInterface : PlatformInterface {
         return WIFIState("wlan0", "00:00:00:00:00:00") 
     }
     
-    // WIFI State - FIXED: Removed '?' to make it non-nullable
-    override fun writeWIFIState(state: WIFIState) { }
+    // REMOVED: writeWIFIState does not exist in the interface
+    // override fun writeWIFIState(state: WIFIState) { }
 
     // NEWLY ADDED METHODS (From previous Error Logs)
     override fun useProcFS(): Boolean = false
