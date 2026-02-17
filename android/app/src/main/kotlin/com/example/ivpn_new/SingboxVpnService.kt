@@ -94,10 +94,7 @@ class SingboxVpnService : VpnService() {
 
                     // START LIBBOX
                     // If Libbox is a singleton, we must ensure we stop it after.
-                    // Use -1 or a safe invalid FD to indicate no TUN interface
-                    Libbox.newService(testConfigFile.absolutePath, -1)
-                    // If newService expects FD, maybe we should use a different method for SOCKS.
-                    // Assuming newService is generic.
+                    Libbox.newService(testConfigFile.absolutePath)
 
                     // Give it a moment to initialize
                     delay(500)
@@ -133,7 +130,7 @@ class SingboxVpnService : VpnService() {
                 } finally {
                     // 5. Stop Libbox
                     try {
-                        Libbox.stopService()
+                        Libbox.newService("")
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
@@ -183,10 +180,23 @@ class SingboxVpnService : VpnService() {
                 val fd = vpnInterface!!.fd
                 val configDir = getExternalFilesDir(null)!!
                 val configFile = File(configDir, "config.json")
-                configFile.writeText(configJson)
 
-                // 2. Start Libbox with TUN FD
-                Libbox.newService(configFile.absolutePath, fd.toLong())
+                // Inject TUN File Descriptor
+                val jsonObject = JSONObject(configJson)
+                if (jsonObject.has("inbounds")) {
+                    val inbounds = jsonObject.getJSONArray("inbounds")
+                    for (i in 0 until inbounds.length()) {
+                        val inbound = inbounds.getJSONObject(i)
+                        if (inbound.optString("type") == "tun") {
+                            inbound.put("file_descriptor", fd)
+                        }
+                    }
+                }
+
+                configFile.writeText(jsonObject.toString())
+
+                // 2. Start Libbox
+                Libbox.newService(configFile.absolutePath)
 
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -200,7 +210,7 @@ class SingboxVpnService : VpnService() {
         isVpnRunning.set(false)
 
         try {
-            Libbox.stopService()
+            Libbox.newService("")
             vpnInterface?.close()
             vpnInterface = null
             stopForeground(true)
