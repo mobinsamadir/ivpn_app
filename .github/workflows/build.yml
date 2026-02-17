@@ -127,8 +127,23 @@ jobs:
       - name: Download all local dependencies
         if: steps.aar-cache.outputs.cache-hit != 'true'
         run: |
+          # 1. Create libs folder
           mkdir -p android/app/libs
-          curl -L "https://raw.githubusercontent.com/singbox-android/libbox/refs/heads/main/libbox.aar" -o android/app/libs/libbox.aar
+
+          # 2. Download Libbox (VPN Core) - As requested, place securely in libs
+          echo "Downloading Libbox..."
+          curl -L -o android/app/libs/libbox.aar "https://raw.githubusercontent.com/singbox-android/libbox/refs/heads/main/libbox.aar"
+
+          # 3. Download Terminal View (UI) - Update to v0.118.3
+          echo "Downloading Terminal View..."
+          curl -L -A "Mozilla/5.0" -o android/app/libs/terminal-view.aar "https://jitpack.io/com/github/termux/termux-app/terminal-view/v0.118.3/terminal-view-v0.118.3.aar"
+
+          # 4. Download Terminal Emulator (Logic) - Update to v0.118.3
+          echo "Downloading Terminal Emulator..."
+          curl -L -A "Mozilla/5.0" -o android/app/libs/terminal-emulator.aar "https://jitpack.io/com/github/termux/termux-app/terminal-emulator/v0.118.3/terminal-emulator-v0.118.3.aar"
+
+          # 5. Verify file sizes (Ensure they are not 35 bytes error messages)
+          ls -lh android/app/libs/
 
       - name: Verify AARs
         run: ls -lh android/app/libs/

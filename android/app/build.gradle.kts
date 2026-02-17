@@ -42,8 +42,8 @@ flutter {
 }
 
 dependencies {
-    implementation(mapOf("name" to "libbox", "ext" to "aar"))
-    implementation("com.github.termux:terminal-view:0.118.0")
-    implementation("com.github.termux:terminal-emulator:0.118.0")
+    implementation(files("libs/libbox.aar"))
+    implementation(files("libs/terminal-view.aar"))
+    implementation(files("libs/terminal-emulator.aar"))
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }
