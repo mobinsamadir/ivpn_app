@@ -137,6 +137,10 @@ jobs:
           flutter pub get
           yes | flutter doctor --android-licenses || true
           flutter build apk --release --target-platform android-arm64
+        env:
+          # EXPLICITLY set to empty string to prevent inheritance/injection
+          GITHUB_TOKEN: ""
+          GITHUB_ACTOR: ""
 
       - name: Rename APK
         run: mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/iVPN.apk
