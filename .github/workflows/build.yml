@@ -115,7 +115,21 @@ jobs:
           flutter pub get
           dart run tool/setup_core.dart
 
+      - name: Diagnostic
+        run: |
+          free -m
+          df -h
+          ls -R android/app/libs || true
+
+      - name: Cache AARs
+        id: aar-cache
+        uses: actions/cache@v4
+        with:
+          path: android/app/libs
+          key: ${{ runner.os }}-aar-${{ hashFiles('android/app/build.gradle.kts') }}
+
       - name: Download all local dependencies
+        if: steps.aar-cache.outputs.cache-hit != 'true'
         run: |
           mkdir -p android/app/libs
           curl -L "https://raw.githubusercontent.com/singbox-android/libbox/refs/heads/main/libbox.aar" -o android/app/libs/libbox.aar
@@ -127,14 +141,16 @@ jobs:
         run: |
           flutter pub get
           yes | flutter doctor --android-licenses || true
-          # Build APK with new name iVPN
-          flutter build apk --release --no-tree-shake-icons
+          cd android
+          gradle wrapper --gradle-version 8.14
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Rename APK
-        run: mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/iVPN.apk
+        run: mv android/app/build/outputs/apk/release/app-release.apk android/app/build/outputs/apk/release/iVPN.apk
 
       - name: Create Release and Upload APK
         uses: softprops/action-gh-release@v1
@@ -142,7 +158,7 @@ jobs:
         with:
           tag_name: v1.0.${{ github.run_number }}
           name: Release v1.0.${{ github.run_number }}
-          files: build/app/outputs/flutter-apk/iVPN.apk
+          files: android/app/build/outputs/apk/release/iVPN.apk
           draft: false
           prerelease: false
         env:
