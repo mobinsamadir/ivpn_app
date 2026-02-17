@@ -22,11 +22,14 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import okhttp3.OkHttpClient
 import okhttp3.Request
-// Assuming Libbox is the main entry point. If the package/class differs, this needs adjustment.
 import io.nekohasekai.libbox.Libbox
+import io.nekohasekai.libbox.PlatformInterface
+import io.nekohasekai.libbox.TunOptions
+import io.nekohasekai.libbox.StringIterator
+import io.nekohasekai.libbox.NetworkInterfaceIterator
 
 // Updated for Libbox single-arg
-class SingboxVpnService : VpnService() {
+class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterface() {
 
     private var vpnInterface: ParcelFileDescriptor? = null
     private val serviceScope = CoroutineScope(Dispatchers.IO + Job())
@@ -95,7 +98,7 @@ class SingboxVpnService : VpnService() {
 
                     // START LIBBOX
                     // If Libbox is a singleton, we must ensure we stop it after.
-                    Libbox.newService(testConfigFile.absolutePath)
+                    Libbox.newService(testConfigFile.absolutePath, StubPlatformInterface())
 
                     // Give it a moment to initialize
                     delay(500)
@@ -131,13 +134,18 @@ class SingboxVpnService : VpnService() {
                 } finally {
                     // 5. Stop Libbox
                     try {
-                        Libbox.newService("")
+                        Libbox.newService("", StubPlatformInterface())
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
                 }
             }
         }
+    }
+
+    override fun autoDetectInterfaceControl(fd: Int) {
+        // Essential: Protect the VPN tunnel socket
+        this.protect(fd)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -197,7 +205,7 @@ class SingboxVpnService : VpnService() {
                 configFile.writeText(jsonObject.toString())
 
                 // 2. Start Libbox
-                Libbox.newService(configFile.absolutePath)
+                Libbox.newService(configFile.absolutePath, this@SingboxVpnService)
 
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -211,7 +219,7 @@ class SingboxVpnService : VpnService() {
         isVpnRunning.set(false)
 
         try {
-            Libbox.newService("")
+            Libbox.newService("", this)
             vpnInterface?.close()
             vpnInterface = null
             stopForeground(true)
@@ -254,4 +262,28 @@ class SingboxVpnService : VpnService() {
         stopVpn()
         serviceScope.cancel()
     }
+}
+
+// 1. String Iterator Stub
+class StubStringIterator : StringIterator {
+    override fun next(): String = ""
+    override fun hasNext(): Boolean = false
+}
+
+// 2. Network Interface Iterator Stub
+class StubNetworkInterfaceIterator : NetworkInterfaceIterator {
+    override fun next(): io.nekohasekai.libbox.NetworkInterface? = null
+    override fun hasNext(): Boolean = false
+}
+
+// 3. Main Platform Stub
+class StubPlatformInterface : PlatformInterface {
+    override fun autoDetectInterfaceControl(fd: Int) { }
+    override fun openTun(options: TunOptions): Int = -1
+    override fun usePlatformAutoDetectInterfaceControl(): Boolean = true
+    override fun readWIFIState(): String = ""
+    override fun writeWIFIState(s: String) {}
+    override fun clearDNSCache() {}
+    // Only implement getInterfaces if required by the interface version you downloaded
+    // override fun getInterfaces(): NetworkInterfaceIterator = StubNetworkInterfaceIterator()
 }
