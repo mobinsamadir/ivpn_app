@@ -25,6 +25,7 @@ import okhttp3.Request
 // Assuming Libbox is the main entry point. If the package/class differs, this needs adjustment.
 import io.github.sagernet.libbox.Libbox
 
+// Updated for Libbox single-arg
 class SingboxVpnService : VpnService() {
 
     private var vpnInterface: ParcelFileDescriptor? = null
