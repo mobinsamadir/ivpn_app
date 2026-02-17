@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import okhttp3.OkHttpClient
 import okhttp3.Request
 
-// --- LIBBOX IMPORTS (CRITICAL FIXES) ---
+// --- LIBBOX IMPORTS ---
 import io.nekohasekai.libbox.Libbox
 import io.nekohasekai.libbox.PlatformInterface
 import io.nekohasekai.libbox.TunOptions
@@ -52,7 +52,6 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
         val isVpnRunning = AtomicBoolean(false)
 
         suspend fun measurePing(configJson: String, tempDir: File): Int = withContext(Dispatchers.IO) {
-            // Prevent testing if VPN is running to avoid conflicts
             if (isVpnRunning.get()) {
                 return@withContext -1
             }
@@ -82,7 +81,7 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
                     val testConfigFile = File(tempDir, "test_${System.currentTimeMillis()}.json")
                     testConfigFile.writeText(testConfigStr)
 
-                    // Use StubPlatformInterface for static context (Fixes crash)
+                    // Use StubPlatformInterface for static context
                     Libbox.newService(testConfigFile.absolutePath, StubPlatformInterface())
 
                     delay(500)
@@ -126,7 +125,6 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
     }
 
     // --- CRITICAL OVERRIDE FOR VPN TRAFFIC ---
-    // Without this, the VPN connects but no data flows.
     override fun autoDetectInterfaceControl(fd: Int) {
         this.protect(fd)
     }
@@ -185,7 +183,7 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
 
                 configFile.writeText(jsonObject.toString())
 
-                // Pass 'this' as PlatformInterface (Required by new Libbox API)
+                // Pass 'this' as PlatformInterface
                 Libbox.newService(configFile.absolutePath, this@SingboxVpnService)
 
             } catch (e: Exception) {
@@ -253,7 +251,7 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
 class StubStringIterator : StringIterator {
     override fun next(): String = ""
     override fun hasNext(): Boolean = false
-    override fun len(): Int = 0 // Fixed: Added missing method
+    override fun len(): Int = 0 
 }
 
 // 2. Network Interface Iterator Stub
@@ -271,11 +269,15 @@ class StubPlatformInterface : PlatformInterface {
     override fun usePlatformAutoDetectInterfaceControl(): Boolean = true
     override fun clearDNSCache() {}
 
-    // WIFI State (Fixed types: Returns Object, Not String)
-    override fun readWIFIState(): WIFIState { return WIFIState() }
-    override fun writeWIFIState(state: WIFIState?) { }
+    // WIFI State - FIXED: Added dummy arguments to constructor
+    override fun readWIFIState(): WIFIState { 
+        return WIFIState("wlan0", "00:00:00:00:00:00") 
+    }
+    
+    // WIFI State - FIXED: Removed '?' to make it non-nullable
+    override fun writeWIFIState(state: WIFIState) { }
 
-    // NEWLY ADDED METHODS (Fixes "Abstract member not implemented" errors)
+    // NEWLY ADDED METHODS (From previous Error Logs)
     override fun useProcFS(): Boolean = false
     override fun writeLog(message: String?) { }
     
