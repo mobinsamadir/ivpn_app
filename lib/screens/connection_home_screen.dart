@@ -18,6 +18,7 @@ import '../services/ad_manager_service.dart';
 import '../services/funnel_service.dart'; // NEW: Funnel Service
 import '../services/testers/ephemeral_tester.dart'; // NEW: Ephemeral Tester
 import '../services/update_service.dart'; // NEW: Update Service
+import '../utils/connectivity_utils.dart';
 
 // Top-level function for sorting in background isolate
 List<VpnConfigWithMetrics> _sortConfigs(List<VpnConfigWithMetrics> configs) {
@@ -100,14 +101,6 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     // Listen to Funnel Progress
     _funnelService.progressStream.listen((msg) {
        if (mounted) setState(() => _testProgress = msg);
-    });
-
-    // Fire and forget: fetch startup configs from GitHub, then trigger auto-test
-    _configManager.fetchStartupConfigs().then((hasNewConfigs) {
-       if (hasNewConfigs && _autoTestOnStartup && !_configManager.isConnected && mounted) {
-           AdvancedLogger.info("[HomeScreen] Startup configs loaded. Triggering Auto-Test...");
-           _runFunnelTest();
-       }
     });
 
     // VPN Connection Status Listener
@@ -325,10 +318,37 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
 
   Future<void> _initAppSequence() async {
     if (!mounted) return;
+
+    // 1. Fire & Forget Services (Parallel Startup)
+    AdManagerService().initialize();
+    UpdateService.checkAndShowUpdateDialog(context);
+
     setState(() {});
 
-    // Check for updates after UI is ready
-    UpdateService.checkAndShowUpdateDialog(context);
+    // 2. Pre-flight Connectivity Check
+    final bool hasInternet = await ConnectivityUtils.hasInternet();
+
+    if (!hasInternet) {
+       if (mounted) {
+         ScaffoldMessenger.of(context).showSnackBar(
+           const SnackBar(
+             content: Text("No Internet Connection. Testing Aborted."),
+             backgroundColor: Colors.redAccent,
+             duration: Duration(seconds: 4),
+           ),
+         );
+       }
+       return; // Stop here. Do not load configs or start funnel.
+    }
+
+    // 3. Load Configs & Start Funnel (Only if Internet OK)
+    // fetchStartupConfigs now uses compute() internally to prevent UI freeze
+    _configManager.fetchStartupConfigs().then((hasNewConfigs) {
+       if (hasNewConfigs && _autoTestOnStartup && !_configManager.isConnected && mounted) {
+           AdvancedLogger.info("[HomeScreen] Startup configs loaded. Triggering Auto-Test...");
+           _runFunnelTest();
+       }
+    });
   }
 
   Future<void> _runSmartAutoTest() async {
@@ -1882,7 +1902,15 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
       final result = await _ephemeralTester.runTest(config);
       await _configManager.updateConfigDirectly(result);
 
-      _showToast('Test complete. Stage: ${result.funnelStage}');
+      String stageName;
+      switch (result.funnelStage) {
+        case 0: stageName = "Failed"; break;
+        case 1: stageName = "TCP Connected"; break;
+        case 2: stageName = "Deep Testing Verified"; break;
+        case 3: stageName = "Speed Verified"; break;
+        default: stageName = "Unknown Status";
+      }
+      _showToast('Test complete. Result: $stageName');
       
     } catch (e) {
       _showToast('Test failed: $e');

@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
-import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:device_info_plus/device_info_plus.dart';
@@ -13,6 +12,88 @@ import '../models/vpn_config_with_metrics.dart';
 import '../utils/advanced_logger.dart';
 import '../utils/cancellable_operation.dart';
 import 'config_parser.dart';
+
+// --- TOP-LEVEL HELPER FUNCTIONS FOR ISOLATE ---
+
+String _extractServerName(String raw) {
+  try {
+    final uri = Uri.parse(raw);
+    if (uri.fragment.isNotEmpty) return Uri.decodeComponent(uri.fragment);
+  } catch(e) {}
+
+  // Fallback name
+  final type = raw.split('://').first.toUpperCase();
+  return '$type Server ${DateTime.now().millisecondsSinceEpoch % 1000}';
+}
+
+String? _extractCountryCode(String name) {
+  final map = {
+    '🇺🇸': 'US', '🇩🇪': 'DE', '🇬🇧': 'GB', '🇫🇷': 'FR', '🇯🇵': 'JP',
+    '🇨🇦': 'CA', '🇦🇺': 'AU', '🇳🇱': 'NL', '🇸🇪': 'SE', '🇨🇭': 'CH',
+    '🇸🇬': 'SG', '🇭🇰': 'HK', '🇰🇷': 'KR', '🇮🇳': 'IN', '🇧🇷': 'BR',
+    '🇹🇷': 'TR', '🇮🇹': 'IT', '🇪🇸': 'ES', '🇵🇱': 'PL', '🇷🇺': 'RU', '🇮🇷': 'IR',
+  };
+  for (final e in map.entries) {
+    if (name.contains(e.key)) return e.value;
+  }
+  return null;
+}
+
+/// Isolate entry point for processing configs
+Future<Map<String, dynamic>> _processConfigsInIsolate(Map<String, dynamic> args) async {
+  final List<String> configStrings = args['configStrings'] as List<String>;
+  final Set<String> blockedHashes = (args['blockedHashes'] as List).cast<String>().toSet();
+  final bool checkBlacklist = args['checkBlacklist'] as bool;
+  final Set<String> existingConfigs = (args['existingConfigs'] as List).cast<String>().toSet();
+  int addedCount = args['initialAddedCount'] as int;
+
+  final List<VpnConfigWithMetrics> newConfigs = [];
+  final List<String> hashesToRemoveFromBlacklist = [];
+
+  // Local set to avoid duplicates within the new batch
+  final Set<String> batchConfigs = {};
+
+  for (final raw in configStrings) {
+    final trimmedRaw = raw.trim();
+    if (trimmedRaw.isEmpty) continue;
+
+    // HASH Check for Blacklist
+    final hash = md5.convert(utf8.encode(trimmedRaw)).toString();
+
+    if (checkBlacklist && blockedHashes.contains(hash)) {
+       // Silently skip blacklisted config
+       continue;
+    }
+
+    // Manual Overwrite: If adding with checkBlacklist=false, we mark hash for removal
+    if (!checkBlacklist && blockedHashes.contains(hash)) {
+       hashesToRemoveFromBlacklist.add(hash);
+    }
+
+    if (existingConfigs.contains(trimmedRaw)) continue;
+    if (batchConfigs.contains(trimmedRaw)) continue;
+
+    final name = _extractServerName(trimmedRaw);
+    final id = 'config_${DateTime.now().millisecondsSinceEpoch}_$addedCount';
+
+    newConfigs.add(VpnConfigWithMetrics(
+      id: id,
+      rawConfig: trimmedRaw,
+      name: name,
+      countryCode: _extractCountryCode(name),
+      addedDate: DateTime.now(), // Ensure addedDate is set
+    ));
+
+    batchConfigs.add(trimmedRaw);
+    addedCount++;
+  }
+
+  return {
+    'newConfigs': newConfigs,
+    'hashesToRemoveFromBlacklist': hashesToRemoveFromBlacklist,
+    'addedCount': addedCount,
+  };
+}
 
 class ConfigManager extends ChangeNotifier {
   static final ConfigManager _instance = ConfigManager._internal();
@@ -332,58 +413,49 @@ class ConfigManager extends ChangeNotifier {
 
   // --- DATABASE OPERATIONS ---
   Future<int> addConfigs(List<String> configStrings, {bool checkBlacklist = true}) async {
-    int addedCount = 0;
-    bool blacklistUpdated = false;
-    
-    // Use Set for faster lookup of existing configs
-    final existingConfigs = allConfigs.map((c) => c.rawConfig.trim()).toSet();
-    
-    for (final raw in configStrings) {
-      final trimmedRaw = raw.trim();
-      if (trimmedRaw.isEmpty) continue;
+    // Prepare data for Isolate
+    // We pass list versions of Sets because Sets aren't always transferrable if they contain custom objects,
+    // but Strings are fine. Just to be safe and consistent with typical isolate args.
+    final args = {
+      'configStrings': configStrings,
+      'blockedHashes': _blockedConfigs.toList(),
+      'checkBlacklist': checkBlacklist,
+      'existingConfigs': allConfigs.map((c) => c.rawConfig.trim()).toList(),
+      'initialAddedCount': 0, // We can let the isolate handle local count, or pass a global counter if needed.
+                              // Current logic uses local addedCount in loop, let's stick to that but we risk ID collisions if we added multiple batches very fast.
+                              // Actually the ID uses DateTime.now() inside the loop. In isolate, DateTime.now() is fine.
+    };
 
-      // HASH Check for Blacklist
-      final hash = md5.convert(utf8.encode(trimmedRaw)).toString();
+    AdvancedLogger.info('[ConfigManager] Spawning isolate to process ${configStrings.length} configs...');
 
-      if (checkBlacklist && _blockedConfigs.contains(hash)) {
-         // Silently skip blacklisted config
-         continue;
+    try {
+      final result = await compute(_processConfigsInIsolate, args);
+
+      final newConfigs = result['newConfigs'] as List<VpnConfigWithMetrics>;
+      final hashesToRemove = result['hashesToRemoveFromBlacklist'] as List<String>;
+
+      // Update Blacklist
+      if (hashesToRemove.isNotEmpty) {
+         _blockedConfigs.removeAll(hashesToRemove);
+         await _saveBlacklist();
+         AdvancedLogger.info("[ConfigManager] Manual overwrite: Removed ${hashesToRemove.length} configs from blacklist.");
       }
 
-      // Manual Overwrite: If adding with checkBlacklist=false, we remove from blacklist
-      if (!checkBlacklist && _blockedConfigs.contains(hash)) {
-         _blockedConfigs.remove(hash);
-         blacklistUpdated = true;
-         AdvancedLogger.info("[ConfigManager] Manual overwrite: Removed config from blacklist.");
+      // Add New Configs
+      if (newConfigs.isNotEmpty) {
+         allConfigs.addAll(newConfigs);
+         _updateListsSync();
+         await _saveAllConfigs();
+         notifyListeners();
+         AdvancedLogger.info('[ConfigManager] Successfully added ${newConfigs.length} configs via Isolate.');
       }
 
-      if (existingConfigs.contains(trimmedRaw)) continue;
+      return newConfigs.length;
 
-      final name = _extractServerName(trimmedRaw);
-      final id = 'config_${DateTime.now().millisecondsSinceEpoch}_$addedCount';
-
-      allConfigs.add(VpnConfigWithMetrics(
-        id: id,
-        rawConfig: trimmedRaw,
-        name: name,
-        countryCode: _extractCountryCode(name),
-        addedDate: DateTime.now(), // Ensure addedDate is set
-      ));
-      
-      existingConfigs.add(trimmedRaw);
-      addedCount++;
+    } catch (e) {
+      AdvancedLogger.error('[ConfigManager] Error in addConfigs isolate: $e');
+      return 0;
     }
-
-    if (blacklistUpdated) {
-       await _saveBlacklist();
-    }
-
-    if (addedCount > 0) {
-      _updateListsSync();
-      await _saveAllConfigs();
-      notifyListeners();
-    }
-    return addedCount;
   }
 
   Future<void> updateConfigMetrics(String id, {int? ping, double? speed, bool? connectionSuccess}) async {
@@ -530,32 +602,6 @@ class ConfigManager extends ChangeNotifier {
      return currentList[(currentIndex + 1) % currentList.length];
   }
 
-  // --- HELPERS ---
-
-  String _extractServerName(String raw) {
-     try {
-       final uri = Uri.parse(raw);
-       if (uri.fragment.isNotEmpty) return Uri.decodeComponent(uri.fragment);
-     } catch(e) {}
-     
-     // Fallback name
-     final type = raw.split('://').first.toUpperCase();
-     return '$type Server ${DateTime.now().millisecondsSinceEpoch % 1000}';
-  }
-
-  String? _extractCountryCode(String name) {
-     final map = {
-       '🇺🇸': 'US', '🇩🇪': 'DE', '🇬🇧': 'GB', '🇫🇷': 'FR', '🇯🇵': 'JP',
-       '🇨🇦': 'CA', '🇦🇺': 'AU', '🇳🇱': 'NL', '🇸🇪': 'SE', '🇨🇭': 'CH',
-       '🇸🇬': 'SG', '🇭🇰': 'HK', '🇰🇷': 'KR', '🇮🇳': 'IN', '🇧🇷': 'BR',
-       '🇹🇷': 'TR', '🇮🇹': 'IT', '🇪🇸': 'ES', '🇵🇱': 'PL', '🇷🇺': 'RU', '🇮🇷': 'IR',
-     };
-     for (final e in map.entries) {
-       if (name.contains(e.key)) return e.value;
-     }
-     return null;
-  }
-  
   // --- PERSISTENCE ---
   Future<void> _initDeviceId() async {
      final info = DeviceInfoPlugin();
