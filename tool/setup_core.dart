@@ -163,12 +163,13 @@ Future<bool> _checkBinaryExecution(File binary) async {
       return true; // Assume valid on non-Windows build envs
   }
 
-  print('Running execution check on ${binary.path}...');
+  final absolutePath = binary.absolute.path;
+  print('Running execution check on $absolutePath ...');
   try {
     final result = await Process.run(
-      binary.path,
+      absolutePath,
       ['version'],
-      runInShell: true,
+      runInShell: false,
     ).timeout(const Duration(seconds: 30), onTimeout: () {
        throw TimeoutException("Execution timed out");
     });
