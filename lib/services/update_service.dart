@@ -7,7 +7,7 @@ import 'package:pub_semver/pub_semver.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:open_file/open_file.dart';
+import 'package:open_file/open_file.dart'; // Fixed import
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:http/http.dart' as http;
 import '../widgets/update_dialog.dart';
@@ -54,8 +54,8 @@ class UpdateService {
             version: latestVersion.toString(),
             releaseNotes: releaseData['body'] ?? 'No release notes available.',
             onUpdate: () {
-               Navigator.of(context).pop(); // Close dialog
-               _performUpdate(context, releaseData);
+              Navigator.of(context).pop(); // Close dialog
+              _performUpdate(context, releaseData);
             },
           ),
         );
@@ -84,28 +84,21 @@ class UpdateService {
         final String? downloadUrl = await _getAndroidAssetUrl(releaseData['assets']);
 
         if (downloadUrl == null) {
-          _showError(context, "No compatible APK found for your device.");
+          if (context.mounted) _showError(context, "No compatible APK found for your device.");
           return;
         }
-
-        // Request Install Packages Permission
-        // Note: On Android 8+, this is a special permission.
-        // We request storage first if needed, but for install packages, we might need to guide user.
-        // package_info_plus handles the intent, but we need to ensure we can write to external storage or app directory.
-        // Actually, open_file handles the intent.
 
         // Request Permission to Install Packages
         if (await Permission.requestInstallPackages.request().isGranted) {
            await _downloadAndInstallApk(context, downloadUrl);
         } else {
-           // Guide user to settings if denied?
            // On some devices, requesting it opens the settings page.
-           // Let's try to proceed, open_file might trigger the system dialog.
+           // We try to proceed, open_file might trigger the system dialog.
            await _downloadAndInstallApk(context, downloadUrl);
         }
 
       } catch (e) {
-        _showError(context, "Update failed: $e");
+        if (context.mounted) _showError(context, "Update failed: $e");
       }
     }
   }
@@ -120,10 +113,6 @@ class UpdateService {
     AdvancedLogger.info("UpdateService: Device ABIs: $supportedAbis");
 
     // Map ABI to Filename Suffix
-    // 'app-arm64-v8a-release.apk'
-    // 'app-armeabi-v7a-release.apk'
-    // 'app-x86_64-release.apk'
-
     for (String abi in supportedAbis) {
        String targetName = "";
        if (abi.contains("arm64")) targetName = "app-arm64-v8a-release.apk";
