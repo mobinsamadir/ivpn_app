@@ -29,8 +29,6 @@ class EphemeralTester {
   factory EphemeralTester() => _instance;
   EphemeralTester._internal();
 
-  final NativeVpnService _nativeVpnService = NativeVpnService();
-
   /// Finds a free port on the localhost loopback interface.
   Future<int> findFreePort() async {
     ServerSocket? socket;
@@ -130,7 +128,8 @@ class EphemeralTester {
              deviceMetrics: config.updateMetrics(
                 deviceId: "android_dart_socket",
                 ping: ping,
-                speed: 0
+                speed: 0,
+                connectionSuccess: true
              ).deviceMetrics
           );
        } catch (e) {
@@ -140,10 +139,13 @@ class EphemeralTester {
              lastFailedStage: "Stage1_TCP",
              failureCount: config.failureCount + 1,
              lastTestedAt: DateTime.now(),
+             // FORCE -1 PING on failure
+             ping: -1,
              deviceMetrics: config.updateMetrics(
                 deviceId: "android_dart_socket",
-                ping: -1, // Force -1 on failure
-                speed: 0
+                ping: -1,
+                speed: 0,
+                connectionSuccess: false
              ).deviceMetrics
           );
        }

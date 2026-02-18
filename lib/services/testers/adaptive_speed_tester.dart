@@ -47,14 +47,14 @@ class AdaptiveSpeedTester {
 
       // Stage 2: 1MB
       cancelToken?.throwIfCancelled();
-      AdvancedLogger.info("Proceeding to Stage 2 (1MB)...");
+      AdvancedLogger.info("Proceeding to Deep Testing (1MB)...");
       final s2 = await _testDownload(
         TestEndpoints.speedMedium.first, 
         onProgress: onProgress, 
         cancelToken: cancelToken
       );
 
-      AdvancedLogger.info("Stage 2 (1MB) complete: ${s2.mbps.toStringAsFixed(2)} Mbps");
+      AdvancedLogger.info("Deep Testing (1MB) complete: ${s2.mbps.toStringAsFixed(2)} Mbps");
 
       if (s2.mbps < 2.0) {
         return _buildMetrics(s2);
@@ -62,14 +62,14 @@ class AdaptiveSpeedTester {
 
       // Stage 3: 10MB
       cancelToken?.throwIfCancelled();
-      AdvancedLogger.info("Proceeding to Stage 3 (10MB)...");
+      AdvancedLogger.info("Proceeding to Final Speed Test (10MB)...");
       final s3 = await _testDownload(
         TestEndpoints.speedLarge.first, 
         onProgress: onProgress, 
         cancelToken: cancelToken
       );
 
-      AdvancedLogger.info("Stage 3 (10MB) complete: ${s3.mbps.toStringAsFixed(2)} Mbps");
+      AdvancedLogger.info("Final Speed Test (10MB) complete: ${s3.mbps.toStringAsFixed(2)} Mbps");
       return _buildMetrics(s3);
 
     } on OperationCancelledException {
