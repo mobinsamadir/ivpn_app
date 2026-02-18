@@ -1,6 +1,6 @@
 name: ivpn_new
 description: iVPN Client - High Performance VPN
-version: 1.0.159+1 # <--- تغییر مهم: یک شماره بالاتر از نسخه فعلی
+version: 1.0.160+1 # یک شماره نسخه را بالا بردم تا تداخل ایجاد نشود
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -9,17 +9,18 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # Networking & API (Optimized)
+  # Networking & API
   html: ^0.15.4
   dio: ^5.7.0
   http: ^1.2.2
-  connectivity_plus: ^6.1.0 # حیاتی برای تشخیص درست قطع و وصل
+  connectivity_plus: ^6.1.0
 
   # UI & State Management
   provider: ^6.1.2
   window_manager: ^0.4.3
   webview_flutter: ^4.9.0
   webview_windows: ^0.4.0
+  flutter_markdown: ^0.7.4 # اضافه شد برای رفع ارور دیالوگ آپدیت
 
   # Media & Ads
   video_player: ^2.8.6
@@ -37,19 +38,23 @@ dependencies:
   crypto: ^3.0.5
   package_info_plus: ^8.0.0
   pub_semver: ^2.1.4
-  open_file: ^4.0.0
   permission_handler: ^11.3.1
-  flutter_markdown: ^0.7.4
+  
+  # File Opening (Fixed for Android)
+  open_file: ^4.0.0 # جایگزین نسخه Plus شد
 
 dev_dependencies:
-  http: ^1.2.2
-  archive: ^3.6.1
   flutter_test:
     sdk: flutter
   flutter_launcher_icons: ^0.14.2
   flutter_lints: ^5.0.0
   build_runner: ^2.4.13
   mockito: ^5.4.4
+  
+  # Build Script Requirements (حیاتی برای setup_core.dart)
+  http: ^1.2.2
+  archive: ^3.6.1
+  path: ^1.9.0 # اضافه شد تا اسکریپت بیلد به مشکل نخورد
 
 # تنظیمات آیکون
 flutter_launcher_icons:
@@ -65,7 +70,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/icon.png
-    # Windows Assets (Explicit for build output)
+    # Windows Assets
     - assets/executables/windows/sing-box.exe
     - assets/executables/windows/geoip.db
     - assets/executables/windows/geosite.db
