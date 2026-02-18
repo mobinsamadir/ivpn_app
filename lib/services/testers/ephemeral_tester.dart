@@ -49,11 +49,12 @@ class EphemeralTester {
   /// Helper to extract host/port from config string
   Map<String, dynamic>? _extractHostPort(String config) {
     // 1. Try parsing as JSON first (if it looks like JSON)
-    if (config.trim().startsWith('{')) {
+    final trimmed = config.trim();
+    if (trimmed.startsWith('{')) {
       try {
-        final json = jsonDecode(config);
+        final json = jsonDecode(trimmed);
         if (json is Map<String, dynamic>) {
-          // Direct fields
+          // Direct fields (server, remote_addr, address)
           if (json.containsKey('server')) {
              return {'host': json['server'], 'port': int.tryParse(json['server_port']?.toString() ?? '443') ?? 443};
           }
@@ -63,22 +64,31 @@ class EphemeralTester {
                  return {'host': parts[0], 'port': int.tryParse(parts[1]) ?? 443};
               }
           }
+          if (json.containsKey('address')) {
+              return {'host': json['address'], 'port': int.tryParse(json['port']?.toString() ?? '443') ?? 443};
+          }
+
           // Check outbounds
           if (json['outbounds'] is List) {
             for (var outbound in json['outbounds']) {
                if (outbound['type'] == 'selector' || outbound['type'] == 'urltest') continue;
                if (outbound['type'] == 'direct' || outbound['type'] == 'block') continue;
+
                if (outbound.containsKey('server')) {
                    return {'host': outbound['server'], 'port': int.tryParse(outbound['server_port']?.toString() ?? '443') ?? 443};
+               }
+               if (outbound.containsKey('address')) {
+                   return {'host': outbound['address'], 'port': int.tryParse(outbound['port']?.toString() ?? '443') ?? 443};
                }
             }
           }
         }
-      } catch (_) {}
+      } catch (_) {
+        // Fallback or ignore JSON parsing error
+      }
     }
 
     // 2. Delegate to SingboxConfigGenerator for URI schemes (vmess, vless, ss, etc.)
-    // It handles Base64 decoding for vmess:// internally.
     return SingboxConfigGenerator.extractServerDetails(config);
   }
 
@@ -130,6 +140,11 @@ class EphemeralTester {
              lastFailedStage: "Stage1_TCP",
              failureCount: config.failureCount + 1,
              lastTestedAt: DateTime.now(),
+             deviceMetrics: config.updateMetrics(
+                deviceId: "android_dart_socket",
+                ping: -1, // Force -1 on failure
+                speed: 0
+             ).deviceMetrics
           );
        }
     }

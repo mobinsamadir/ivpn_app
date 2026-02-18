@@ -206,7 +206,7 @@ class UpdateService {
       AdvancedLogger.info("UpdateService: Download complete. Installing...");
 
       // Install
-      final result = await OpenFile.open(savePath);
+      final result = await OpenFile.open(savePath, type: "application/vnd.android.package-archive");
       if (result.type != ResultType.done) {
          if (context.mounted) _showError(context, "Install failed: ${result.message}");
       }
