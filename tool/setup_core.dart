@@ -5,8 +5,7 @@ import 'package:archive/archive_io.dart';
 import 'package:path/path.dart' as p;
 
 const singboxVersion = 'v1.10.1';
-const androidUrl =
-    'https://github.com/SagerNet/sing-box/releases/download/$singboxVersion/sing-box-1.10.1-android-arm64.tar.gz';
+// Android binary download removed as we use JNI (libbox.aar) now.
 const windowsUrl =
     'https://github.com/SagerNet/sing-box/releases/download/$singboxVersion/sing-box-1.10.1-windows-amd64.zip';
 const geoipUrl =
@@ -17,13 +16,9 @@ const geositeUrl =
 void main() async {
   print('Starting setup_core...');
 
-  final androidDir = Directory('assets/executables/android');
   final windowsDir = Directory('assets/executables/windows');
 
   try {
-    if (!await androidDir.exists()) {
-      await androidDir.create(recursive: true);
-    }
     if (!await windowsDir.exists()) {
       await windowsDir.create(recursive: true);
     }
@@ -32,53 +27,8 @@ void main() async {
     exit(1);
   }
 
-  // 1. Android Sing-box
-  final androidBinary = File(p.join(androidDir.path, 'libsingbox.so'));
-  if (!await androidBinary.exists()) {
-    print('Downloading Android Sing-box ($androidUrl)...');
-    try {
-      final bytes = await downloadFile(androidUrl);
-      print('Extracting Android Sing-box...');
-      final archive = TarDecoder().decodeBytes(
-        GZipDecoder().decodeBytes(bytes),
-      );
-
-      // Find 'sing-box' executable in the archive
-      ArchiveFile? singboxFile;
-      for (final file in archive) {
-        if (file.name.endsWith('sing-box')) {
-          singboxFile = file;
-          break;
-        }
-      }
-
-      if (singboxFile != null) {
-        await File(
-          androidBinary.path,
-        ).writeAsBytes(singboxFile.content as List<int>);
-        print('Saved to ${androidBinary.path}');
-
-        if (Platform.isLinux || Platform.isMacOS) {
-          try {
-            await Process.run('chmod', ['+x', androidBinary.path]);
-            print('Set executable permissions for Android binary.');
-          } catch (e) {
-            print('Warning: chmod failed: $e');
-            // Not critical if chmod fails in CI environment where permissions might be handled differently,
-            // but we proceed.
-          }
-        }
-      } else {
-        print('Critical Error: sing-box binary not found in Android archive.');
-        exit(1);
-      }
-    } catch (e) {
-      print('Critical Error setting up Android Sing-box: $e');
-      exit(1);
-    }
-  } else {
-    print('Android Sing-box already exists.');
-  }
+  // 1. Android Sing-box (REMOVED)
+  // Logic removed to save APK size (~15MB). Android uses libbox.aar via JNI.
 
   // 2. Windows Sing-box
   final windowsBinary = File(p.join(windowsDir.path, 'sing-box.exe'));
