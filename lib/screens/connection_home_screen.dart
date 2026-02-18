@@ -6,7 +6,7 @@ import 'dart:io';
 import '../models/vpn_config_with_metrics.dart';
 import '../providers/home_provider.dart';
 import '../services/config_manager.dart';
-import '../services/windows_vpn_service.dart';
+import '../services/native_vpn_service.dart';
 import '../widgets/universal_ad_widget.dart';
 import '../widgets/config_card.dart';
 import '../utils/advanced_logger.dart';
@@ -34,7 +34,7 @@ class ConnectionHomeScreen extends StatefulWidget {
 
 class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   // 1. Initialize services IMMEDIATELY
-  final WindowsVpnService _windowsVpnService = WindowsVpnService();
+  final NativeVpnService _nativeVpnService = NativeVpnService();
   final FunnelService _funnelService = FunnelService();
   final EphemeralTester _ephemeralTester = EphemeralTester();
 
@@ -86,7 +86,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     AccessManager().addListener(_onTimeChanged);
 
     // Register Stop Callback
-    _configManager.stopVpnCallback = _windowsVpnService.stopVpn;
+    _configManager.stopVpnCallback = _nativeVpnService.disconnect;
 
     // Auto-Switch Callback
     _configManager.onAutoSwitch = (config) {
@@ -110,7 +110,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     });
 
     // VPN Connection Status Listener
-    _windowsVpnService.statusStream.listen((status) {
+    _nativeVpnService.connectionStatusStream.listen((status) {
       AdvancedLogger.info('[ConnectionHomeScreen] Received VPN status update: $status');
       if (mounted) {
         setState(() {
@@ -194,7 +194,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
 
     try {
       // Stop current VPN connection
-      await _windowsVpnService.stopVpn();
+      await _nativeVpnService.disconnect();
 
       // ADD THIS DELAY: Cool-down period to allow OS to release TUN interface
       AdvancedLogger.info('Waiting for port release...');
@@ -538,9 +538,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
                         splashRadius: 20,
                       ),
                       IconButton(
-                        icon: const Icon(Icons.delete_forever, color: Colors.redAccent),
-                        onPressed: _showDeleteAllConfirmationDialog,
-                        tooltip: 'Delete All Configurations',
+                        icon: const Icon(Icons.delete_sweep, color: Colors.redAccent), // NEW: Use delete_sweep icon
+                        onPressed: _showSmartCleanupDialog, // NEW: Call Smart Cleanup Dialog
+                        tooltip: 'Cleanup Configs',
                         splashRadius: 20,
                       ),
                     ],
@@ -688,6 +688,110 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
   }
 
   // --- Helper Methods ---
+
+  // NEW: Smart Cleanup Dialog
+  Future<void> _showSmartCleanupDialog() async {
+    // Calculate counts for preview
+    // Failed TCP: attempted (failureCount > 0) AND (funnelStage == 0 i.e. didn't pass TCP)
+    final failedTcpCount = _configManager.allConfigs.where((c) => c.funnelStage == 0 && c.failureCount > 0).length;
+    // Dead: Real Ping is -1
+    final deadCount = _configManager.allConfigs.where((c) => c.currentPing == -1).length;
+
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E1E),
+        title: const Text('Smart Cleanup', style: TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Select cleanup criteria:',
+              style: TextStyle(color: Colors.grey),
+            ),
+            const SizedBox(height: 20),
+            _buildCleanupOption(
+              context: context,
+              title: "Remove Failed TCP",
+              subtitle: "Deletes configs that failed handshake ($failedTcpCount items)",
+              icon: Icons.network_locked,
+              color: Colors.orangeAccent,
+              onTap: () async {
+                Navigator.pop(context);
+                final removed = await _configManager.removeConfigs(failedTcp: true);
+                _showToast("Removed $removed configs");
+                setState(() {});
+              },
+            ),
+            const SizedBox(height: 12),
+            _buildCleanupOption(
+              context: context,
+              title: "Remove All Dead",
+              subtitle: "Deletes all configs with -1 ping ($deadCount items)",
+              icon: Icons.delete_forever,
+              color: Colors.redAccent,
+              onTap: () async {
+                Navigator.pop(context);
+                final removed = await _configManager.removeConfigs(dead: true);
+                _showToast("Removed $removed configs");
+                setState(() {});
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCleanupOption({
+    required BuildContext context,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.3)),
+        ),
+        child: Row(
+          children: [
+             Icon(icon, color: color, size: 28),
+             const SizedBox(width: 16),
+             Expanded(
+               child: Column(
+                 crossAxisAlignment: CrossAxisAlignment.start,
+                 children: [
+                   Text(
+                     title,
+                     style: TextStyle(color: color, fontSize: 16, fontWeight: FontWeight.bold),
+                   ),
+                   const SizedBox(height: 4),
+                   Text(
+                     subtitle,
+                     style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                   ),
+                 ],
+               ),
+             ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Future<void> _showDeleteAllConfirmationDialog() async {
     final confirm = await showDialog<bool>(
@@ -1556,7 +1660,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
       _isConnectionCancelled = false;
       // Check admin privileges (Windows)
       if (Platform.isWindows) {
-        if (!await _windowsVpnService.isAdmin()) {
+        if (!await _nativeVpnService.isAdmin()) {
            _showToast("Administrator privileges required.");
            return;
         }
@@ -1624,7 +1728,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
           _configManager.setConnected(false, status: 'Connecting to ${currentConfig.name} (Attempt ${attempts + 1}/$maxAttempts)...');
         });
 
-        await _windowsVpnService.startVpn(currentConfig.rawConfig);
+        await _nativeVpnService.connect(currentConfig.rawConfig);
 
         _configManager.updateConfigMetrics(
           currentConfig.id,
@@ -1707,7 +1811,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
 
     if (_configManager.isConnected || _configManager.connectionStatus == 'Connecting...') {
         _isConnectionCancelled = true;
-        await _windowsVpnService.stopVpn();
+        await _nativeVpnService.disconnect();
         await Future.delayed(const Duration(milliseconds: 500));
         _isConnectionCancelled = false;
     }

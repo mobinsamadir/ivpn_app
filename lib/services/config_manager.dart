@@ -344,6 +344,7 @@ class ConfigManager extends ChangeNotifier {
         rawConfig: trimmedRaw,
         name: name,
         countryCode: _extractCountryCode(name),
+        addedDate: DateTime.now(), // Ensure addedDate is set
       ));
       
       existingConfigs.add(trimmedRaw);
@@ -417,7 +418,34 @@ class ConfigManager extends ChangeNotifier {
      notifyListeners();
      return true;
   }
-  
+
+  // --- CLEANUP METHODS ---
+  Future<int> removeConfigs({bool failedTcp = false, bool dead = false}) async {
+    final initialCount = allConfigs.length;
+    allConfigs.removeWhere((c) {
+      // Failed TCP: Attempted (failureCount > 0) AND (funnelStage == 0 i.e. TCP didn't pass to become 1, OR funnelStage == 1 but we treat only stage 0 as 'failed to connect')
+      // User definition: "Failed TCP". TCP pass moves to Stage 1. So Stage 0 is "Failed TCP" ONLY IF tested (failureCount > 0).
+      // Actually FunnelService: Stage 0 -> TCP -> Stage 1 (Passed TCP, in HTTP queue).
+      // So if FunnelStage is 0 AND failureCount > 0, it failed TCP.
+      if (failedTcp && c.funnelStage == 0 && c.failureCount > 0) return true;
+
+      // Dead: Real Ping is -1
+      if (dead && c.currentPing == -1) return true;
+
+      return false;
+    });
+
+    if (allConfigs.length < initialCount) {
+        if (_selectedConfig != null && !allConfigs.contains(_selectedConfig)) {
+            _selectedConfig = null;
+        }
+        _updateListsSync();
+        await _saveAllConfigs();
+        notifyListeners();
+    }
+    return initialCount - allConfigs.length;
+  }
+
   Future<void> toggleFavorite(String id) async {
       final index = allConfigs.indexWhere((c) => c.id == id);
       if (index != -1) {
@@ -531,15 +559,44 @@ class ConfigManager extends ChangeNotifier {
   }
 
   void _updateListsSync() {
-    // Main thread sorting (fast for <5000 items)
+    // 1. Prioritize New Items (Added within last 1 hour)
+    // We will separate the "New" items first.
+    final now = DateTime.now();
+    final newCutoff = now.subtract(const Duration(hours: 1));
+
+    // Sort logic helper
+    int compareScore(VpnConfigWithMetrics a, VpnConfigWithMetrics b) => b.score.compareTo(a.score);
+
+    // Split list
+    final newConfigs = <VpnConfigWithMetrics>[];
+    final oldConfigs = <VpnConfigWithMetrics>[];
+
+    for (var c in allConfigs) {
+      if (c.addedDate.isAfter(newCutoff)) {
+        newConfigs.add(c);
+      } else {
+        oldConfigs.add(c);
+      }
+    }
+
+    // Sort subsets
+    newConfigs.sort((a, b) {
+      // Sort new items by newest first
+      return b.addedDate.compareTo(a.addedDate);
+    });
+    oldConfigs.sort(compareScore);
+
+    // Reassemble Main List (New First)
+    allConfigs = [...newConfigs, ...oldConfigs];
+
+    // Filter sublists
     validatedConfigs = allConfigs.where((c) => c.isValidated).toList();
     favoriteConfigs = allConfigs.where((c) => c.isFavorite).toList();
 
-    int compare(VpnConfigWithMetrics a, VpnConfigWithMetrics b) => b.score.compareTo(a.score);
-
-    allConfigs.sort(compare);
-    validatedConfigs.sort(compare);
-    favoriteConfigs.sort(compare);
+    // Note: sublists usually keep the order of the parent list if filter is used,
+    // but just in case we want them sorted by score primarily within their categories:
+    validatedConfigs.sort(compareScore);
+    favoriteConfigs.sort(compareScore);
   }
 
   Future<void> _loadAutoSwitchSetting() async {

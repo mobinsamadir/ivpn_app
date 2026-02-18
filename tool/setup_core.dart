@@ -9,14 +9,15 @@ const singboxVersion = 'v1.10.1';
 const windowsUrl =
     'https://github.com/SagerNet/sing-box/releases/download/$singboxVersion/sing-box-1.10.1-windows-amd64.zip';
 const geoipUrl =
-    'https://github.com/v2fly/geoip/releases/latest/download/geoip.dat';
+    'https://github.com/SagerNet/sing-geoip/releases/latest/download/geoip.db';
 const geositeUrl =
-    'https://github.com/v2fly/domain-list-community/releases/latest/download/dlc.dat';
+    'https://github.com/SagerNet/sing-geosite/releases/latest/download/geosite.db';
 
 void main() async {
   print('Starting setup_core...');
 
   final windowsDir = Directory('assets/executables/windows');
+  final assetsDir = Directory('assets');
 
   try {
     if (!await windowsDir.exists()) {
@@ -65,7 +66,8 @@ void main() async {
   }
 
   // 3. GeoIP
-  final geoipFile = File(p.join(windowsDir.path, 'geoip.db'));
+  final geoipFile = File(p.join(assetsDir.path, 'geoip.db'));
+  // Always check if it exists in assets folder first
   if (!await geoipFile.exists()) {
     print('Downloading GeoIP ($geoipUrl)...');
     try {
@@ -77,11 +79,12 @@ void main() async {
       exit(1);
     }
   } else {
-    print('GeoIP already exists.');
+    print('GeoIP already exists in assets.');
   }
 
   // 4. Geosite
-  final geositeFile = File(p.join(windowsDir.path, 'geosite.db'));
+  final geositeFile = File(p.join(assetsDir.path, 'geosite.db'));
+  // Always check if it exists in assets folder first
   if (!await geositeFile.exists()) {
     print('Downloading Geosite ($geositeUrl)...');
     try {
@@ -93,7 +96,20 @@ void main() async {
       exit(1);
     }
   } else {
-    print('Geosite already exists.');
+    print('Geosite already exists in assets.');
+  }
+
+  // Also copy to windows executable dir for compatibility if needed by WindowsVpnService
+  // although newer logic should look in assets/ or bundled path.
+  // But for safety, let's keep them in assets/ and ensure WindowsVpnService looks there.
+  // The WindowsVpnService checks multiple locations, including local path.
+  // We will duplicate them to windowsDir just in case the service looks specifically there during dev.
+  try {
+     await geoipFile.copy(p.join(windowsDir.path, 'geoip.db'));
+     await geositeFile.copy(p.join(windowsDir.path, 'geosite.db'));
+     print('Copied geo assets to windows executable folder for dev compatibility.');
+  } catch (e) {
+     print('Warning: Could not copy geo assets to windows folder: $e');
   }
 
   print('Setup complete.');

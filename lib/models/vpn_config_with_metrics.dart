@@ -246,7 +246,10 @@ class VpnConfigWithMetrics implements Comparable<VpnConfigWithMetrics> {
       name: json['name'] as String,
       countryCode: json['countryCode'] as String?,
       isFavorite: json['isFavorite'] as bool? ?? false,
-      addedDate: DateTime.parse(json['addedDate'] as String),
+      // Default to Epoch 0 for migration safety (existing configs won't have this field)
+      addedDate: json['addedDate'] != null
+          ? DateTime.parse(json['addedDate'] as String)
+          : DateTime.fromMillisecondsSinceEpoch(0),
       deviceMetrics: (json['deviceMetrics'] as Map<String, dynamic>?)?.map(
         (k, v) => MapEntry<String, DeviceMetrics>(k, DeviceMetrics.fromJson(v as Map<String, dynamic>)),
       ) ?? {},
