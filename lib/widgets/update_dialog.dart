@@ -88,6 +88,7 @@ class UpdateDialog extends StatelessWidget {
                       h3: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                       listBullet: const TextStyle(color: Colors.white70),
                       strong: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                      a: const TextStyle(color: Colors.blueAccent, decoration: TextDecoration.underline),
                     ),
                   ),
                 ),
