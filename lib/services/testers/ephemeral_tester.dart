@@ -61,13 +61,20 @@ class EphemeralTester {
   // Track active processes to kill on exit
   static final List<Process> _activeProcesses = [];
 
+  /// Registers a process to be killed later
+  static void registerProcess(Process p) {
+    _activeProcesses.add(p);
+  }
+
+  /// Kills all registered processes (Windows only)
   static void killAll() {
+    if (!Platform.isWindows) return; // Safety check
     AdvancedLogger.info("EphemeralTester: Killing all ${_activeProcesses.length} active processes...");
-    for (final p in List.from(_activeProcesses)) {
+    for (var p in _activeProcesses) {
       try {
         p.kill(ProcessSignal.sigkill);
       } catch (e) {
-        AdvancedLogger.warn("EphemeralTester: Error killing process in killAll: $e");
+        AdvancedLogger.warn("Failed to kill process: $e");
       }
     }
     _activeProcesses.clear();
@@ -211,6 +218,12 @@ class EphemeralTester {
     File? tempConfigFile;
     final dartHttpClient = HttpClient();
 
+    // Results containers
+    bool stage1Success = (mode == TestMode.speed);
+    bool stage2Success = (mode == TestMode.speed);
+    double speedMbps = 0.0;
+    int latency = (mode == TestMode.speed) ? (config.stageResults['HTTP']?.latency ?? 0) : 0;
+
     try {
         port = await findFreePort();
         if (port == 0) {
@@ -224,12 +237,6 @@ class EphemeralTester {
         }
 
         final testId = DateTime.now().millisecondsSinceEpoch;
-
-        // Results containers
-        bool stage1Success = (mode == TestMode.speed);
-        bool stage2Success = (mode == TestMode.speed);
-        double speedMbps = 0.0;
-        int latency = (mode == TestMode.speed) ? (config.stageResults['HTTP']?.latency ?? 0) : 0;
 
         // 1. Prepare Config (JSON)
         final binPath = await BinaryManager.ensureBinary();
@@ -283,7 +290,7 @@ class EphemeralTester {
            throw TimeoutException("Process spawn timed out");
         });
 
-        _activeProcesses.add(process);
+        registerProcess(process!);
 
         await Future.delayed(const Duration(milliseconds: 500));
 
