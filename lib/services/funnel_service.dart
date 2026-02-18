@@ -52,6 +52,12 @@ class FunnelService {
     _tcpQueue.clear();
     _httpQueue.clear();
     _speedQueue.clear();
+
+    // Kill any zombie processes (Windows)
+    if (!Platform.isAndroid) {
+       EphemeralTester.killAll();
+    }
+
     _progressController.add("Stopped");
     AdvancedLogger.info("FunnelService: Stopped by user.");
   }

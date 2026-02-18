@@ -1747,6 +1747,11 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
         final testResult = await _ephemeralTester.runTest(currentConfig, mode: TestMode.connectivity);
         await _configManager.updateConfigDirectly(testResult);
 
+        // RACE CONDITION CHECK: Did user cancel?
+        if (_isConnectionCancelled || _configManager.isGlobalStopRequested) {
+           return;
+        }
+
         // Strict Check: Must pass Stage 2 (HTTP) or have valid ping
         if (testResult.funnelStage < 2 || testResult.currentPing == -1) {
              throw Exception("Pre-flight check failed (Ghost/Dead - Ping: ${testResult.currentPing})");

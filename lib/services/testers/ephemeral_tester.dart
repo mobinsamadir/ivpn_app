@@ -58,6 +58,21 @@ class EphemeralTester {
   // Limit Windows concurrent processes to 5 to prevent UI freeze
   static final Semaphore _windowsSemaphore = Semaphore(5);
 
+  // Track active processes to kill on exit
+  static final List<Process> _activeProcesses = [];
+
+  static void killAll() {
+    AdvancedLogger.info("EphemeralTester: Killing all ${_activeProcesses.length} active processes...");
+    for (final p in List.from(_activeProcesses)) {
+      try {
+        p.kill(ProcessSignal.sigkill);
+      } catch (e) {
+        AdvancedLogger.warn("EphemeralTester: Error killing process in killAll: $e");
+      }
+    }
+    _activeProcesses.clear();
+  }
+
   /// Finds a free port on the localhost loopback interface.
   Future<int> findFreePort() async {
     ServerSocket? socket;
@@ -268,6 +283,8 @@ class EphemeralTester {
            throw TimeoutException("Process spawn timed out");
         });
 
+        _activeProcesses.add(process);
+
         await Future.delayed(const Duration(milliseconds: 500));
 
         dartHttpClient.findProxy = (uri) => "PROXY 127.0.0.1:${port + 1}";
@@ -398,6 +415,7 @@ class EphemeralTester {
       try {
         if (process != null) {
           process!.kill(ProcessSignal.sigkill);
+          _activeProcesses.remove(process);
         }
       } catch (e) {
         AdvancedLogger.warn("EphemeralTester: Error killing process: $e");

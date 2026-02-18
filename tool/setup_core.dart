@@ -45,6 +45,13 @@ void main() async {
   }
 
   if (!validExe) {
+    if (Platform.isWindows && await windowsBinary.exists()) {
+       print('Ensuring no zombie processes are locking the file...');
+       try {
+         await Process.run('taskkill', ['/F', '/IM', 'sing-box.exe']);
+       } catch (_) {}
+    }
+
     if (await windowsBinary.exists()) {
        print('Corrupt/Invalid binary detected. Deleting to force re-download...');
        try { await windowsBinary.delete(); } catch(e) { print('Error deleting binary: $e'); }
