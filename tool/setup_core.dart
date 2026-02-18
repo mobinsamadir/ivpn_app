@@ -169,7 +169,7 @@ Future<bool> _checkBinaryExecution(File binary) async {
       binary.path,
       ['version'],
       runInShell: true,
-    ).timeout(const Duration(seconds: 5), onTimeout: () {
+    ).timeout(const Duration(seconds: 30), onTimeout: () {
        throw TimeoutException("Execution timed out");
     });
 
