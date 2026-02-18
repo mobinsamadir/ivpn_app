@@ -8,6 +8,7 @@ import '../../models/vpn_config_with_metrics.dart';
 import '../singbox_config_generator.dart';
 import '../../utils/advanced_logger.dart';
 import '../binary_manager.dart';
+import '../native_vpn_service.dart';
 
 /// Test Modes
 /// - `connectivity`: Stages 1 (TCP) & 2 (HTTP) only. Used for validation.
@@ -28,6 +29,8 @@ class EphemeralTester {
   factory EphemeralTester() => _instance;
   EphemeralTester._internal();
 
+  final NativeVpnService _nativeVpnService = NativeVpnService();
+
   /// Finds a free port on the localhost loopback interface.
   Future<int> findFreePort() async {
     ServerSocket? socket;
@@ -46,6 +49,60 @@ class EphemeralTester {
   /// Runs the Funnel Test on a specific config based on the mode.
   /// Returns a VpnConfigWithMetrics object with updated stageResults and scores.
   Future<VpnConfigWithMetrics> runTest(VpnConfigWithMetrics config, {TestMode mode = TestMode.speed}) async {
+    // --- ANDROID NATIVE PATH ---
+    if (Platform.isAndroid) {
+       try {
+          // Generate JSON config in background isolate
+          // Native Service expects a JSON string to parse and inject test inbounds
+          final jsonConfig = await compute(_generateConfigWrapper, {
+             'rawConfig': config.rawConfig,
+             'listenPort': 0, // Port is irrelevant, Native overrides it
+             'isTest': true,
+          });
+
+          // Call Native Ping with timeout
+          // Using 8 seconds timeout to account for JSON generation + Native Overhead + Network RTT
+          final ping = await _nativeVpnService.getPing(jsonConfig)
+             .timeout(const Duration(seconds: 8));
+
+          if (ping > 0) {
+             // Success (Stage 2 equivalent)
+             final newStageResults = Map<String, TestResult>.from(config.stageResults);
+             newStageResults['TCP'] = TestResult(success: true);
+             newStageResults['HTTP'] = TestResult(success: true, latency: ping);
+
+             // Calculate partial score
+             int score = (1000 ~/ ping).clamp(0, 50).toInt();
+
+             return config.copyWith(
+                funnelStage: 2,
+                speedScore: score, // Use latency score as partial speed score
+                stageResults: newStageResults,
+                failureCount: 0,
+                isAlive: true,
+                lastTestedAt: DateTime.now(),
+                // Update metrics
+                deviceMetrics: config.updateMetrics(
+                   deviceId: "android_native",
+                   ping: ping,
+                   speed: 0 // Native ping doesn't provide speed
+                ).deviceMetrics
+             );
+          } else {
+             throw Exception("Native Ping Failed (-1)");
+          }
+       } catch (e) {
+          AdvancedLogger.warn("EphemeralTester (Android) Error: $e");
+          return config.copyWith(
+             failureReason: "Native Test Failed: $e",
+             lastFailedStage: "Stage2_Native",
+             failureCount: config.failureCount + 1,
+             lastTestedAt: DateTime.now(),
+          );
+       }
+    }
+
+    // --- WINDOWS / DESKTOP PATH ---
     int port = await findFreePort();
     if (port == 0) {
       return config.copyWith(

@@ -5,7 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/ad_config.dart';
 import '../utils/advanced_logger.dart';
-import '../widgets/ad_dialog.dart';
+import '../widgets/full_screen_ad_dialog.dart';
 import 'windows_vpn_service.dart';
 
 class AdManagerService {
@@ -161,17 +161,19 @@ class AdManagerService {
   Future<bool> showPreConnectionAd(BuildContext context) async {
     if (!context.mounted) return false;
 
-    AdvancedLogger.info("[AdManager] Requesting Pre-Connection Ad (Dialog)...");
+    AdvancedLogger.info("[AdManager] Requesting Pre-Connection Ad (Full Screen Wall)...");
     try {
-       final result = await showDialog<bool>(
-         context: context,
-         barrierDismissible: false,
-         builder: (context) => const AdDialog(unitId: 'reward_ad'),
+       // Using Navigator.push with FullScreenAdDialog for "The Wall" experience
+       final result = await Navigator.of(context).push<bool>(
+         MaterialPageRoute(
+           fullscreenDialog: true,
+           builder: (context) => const FullScreenAdDialog(unitId: 'reward_ad'),
+         ),
        );
 
        return result ?? false;
     } catch (e) {
-       AdvancedLogger.error("[AdManager] Ad Dialog Exception: $e - Fail Open");
+       AdvancedLogger.error("[AdManager] Ad Exception: $e - Fail Open");
        return true; // Fail Open on error
     }
   }

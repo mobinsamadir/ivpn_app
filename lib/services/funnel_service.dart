@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:flutter/foundation.dart'; // Added for compute if needed, though tester handles it
 import '../models/vpn_config_with_metrics.dart';
 import 'config_manager.dart';
 import 'singbox_config_generator.dart';
@@ -99,12 +100,11 @@ class FunnelService {
     await _spawnWorkers(_maxSpeedWorkers, _speedWorker, "Speed");
   }
 
-  // Optimized Android Pipeline using Native MethodChannel
+  // Optimized Android Pipeline using EphemeralTester (Delegates to Native)
   Future<void> _runAndroidFunnel(bool retestDead) async {
     _progressController.add("Android Pipeline: Initializing...");
     final all = _buildPriorityQueue(retestDead);
     _totalConfigs = all.length;
-    final nativeService = NativeVpnService();
     AdvancedLogger.info("FunnelService (Android): Loaded $_totalConfigs configs.");
 
     // Batch processing
@@ -119,17 +119,12 @@ class FunnelService {
       await Future.wait(batch.map((config) async {
         if (!_isRunning) return;
         try {
-          final ping = await nativeService.getPing(config.rawConfig);
-          if (ping > 0) {
+          // Delegate to EphemeralTester which now handles Android Native Pings correctly
+          final result = await _tester.runTest(config, mode: TestMode.connectivity);
+
+          if (result.funnelStage >= 2) {
             _httpPassed++;
-            // Mark as valid (Stage 2 passed equivalent)
-            final updated = config.copyWith(
-              funnelStage: 2,
-              ping: ping,
-              lastTestedAt: DateTime.now(),
-              failureCount: 0
-            );
-            await _configManager.updateConfigDirectly(updated);
+            await _configManager.updateConfigDirectly(result);
           } else {
              await _configManager.markFailure(config.id);
           }

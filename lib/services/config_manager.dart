@@ -8,6 +8,7 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:http/http.dart' as http;
 import 'package:collection/collection.dart';
 import 'package:html/parser.dart' as html_parser;
+import 'package:crypto/crypto.dart'; // Import crypto for MD5
 import '../models/vpn_config_with_metrics.dart';
 import '../utils/advanced_logger.dart';
 import '../utils/cancellable_operation.dart';
@@ -23,6 +24,7 @@ class ConfigManager extends ChangeNotifier {
   List<VpnConfigWithMetrics> validatedConfigs = [];
   List<VpnConfigWithMetrics> favoriteConfigs = [];
   List<VpnConfigWithMetrics> reserveList = []; // Fallback servers
+  Set<String> _blockedConfigs = {}; // Blacklist for deleted configs
 
   CancelToken? _scanCancelToken;
 
@@ -65,6 +67,7 @@ class ConfigManager extends ChangeNotifier {
 
   // --- CONSTANTS ---
   static const String _configsKey = 'vpn_configs';
+  static const String _blacklistKey = 'config_blacklist';
   static const String _autoSwitchKey = 'auto_switch_enabled';
 
   // --- INITIALIZATION ---
@@ -72,6 +75,7 @@ class ConfigManager extends ChangeNotifier {
     AdvancedLogger.info('[ConfigManager] Initializing...');
     await _initDeviceId();
     await _loadAutoSwitchSetting();
+    await _loadBlacklist(); // Load Blacklist
     await _loadConfigs();
     _updateListsSync();
     AdvancedLogger.info('[ConfigManager] Initialization complete. Loaded ${allConfigs.length} configs.');
@@ -140,7 +144,8 @@ class ConfigManager extends ChangeNotifier {
                }).toList();
 
                // 3. Add to Database
-               int added = await addConfigs(cleanedConfigs);
+               // Using checkBlacklist: true (Default) to prevent Ghost Configs
+               int added = await addConfigs(cleanedConfigs, checkBlacklist: true);
                if (added > 0) {
                   AdvancedLogger.info('[ConfigManager] Import finished: Added $added new configs from $url.');
                   anyConfigAdded = true;
@@ -326,15 +331,33 @@ class ConfigManager extends ChangeNotifier {
   }
 
   // --- DATABASE OPERATIONS ---
-  Future<int> addConfigs(List<String> configStrings) async {
+  Future<int> addConfigs(List<String> configStrings, {bool checkBlacklist = true}) async {
     int addedCount = 0;
+    bool blacklistUpdated = false;
     
     // Use Set for faster lookup of existing configs
     final existingConfigs = allConfigs.map((c) => c.rawConfig.trim()).toSet();
     
     for (final raw in configStrings) {
       final trimmedRaw = raw.trim();
-      if (trimmedRaw.isEmpty || existingConfigs.contains(trimmedRaw)) continue;
+      if (trimmedRaw.isEmpty) continue;
+
+      // HASH Check for Blacklist
+      final hash = md5.convert(utf8.encode(trimmedRaw)).toString();
+
+      if (checkBlacklist && _blockedConfigs.contains(hash)) {
+         // Silently skip blacklisted config
+         continue;
+      }
+
+      // Manual Overwrite: If adding with checkBlacklist=false, we remove from blacklist
+      if (!checkBlacklist && _blockedConfigs.contains(hash)) {
+         _blockedConfigs.remove(hash);
+         blacklistUpdated = true;
+         AdvancedLogger.info("[ConfigManager] Manual overwrite: Removed config from blacklist.");
+      }
+
+      if (existingConfigs.contains(trimmedRaw)) continue;
 
       final name = _extractServerName(trimmedRaw);
       final id = 'config_${DateTime.now().millisecondsSinceEpoch}_$addedCount';
@@ -349,6 +372,10 @@ class ConfigManager extends ChangeNotifier {
       
       existingConfigs.add(trimmedRaw);
       addedCount++;
+    }
+
+    if (blacklistUpdated) {
+       await _saveBlacklist();
     }
 
     if (addedCount > 0) {
@@ -411,27 +438,32 @@ class ConfigManager extends ChangeNotifier {
   }
 
   Future<bool> deleteConfig(String id) async {
-     allConfigs.removeWhere((c) => c.id == id);
-     if (_selectedConfig?.id == id) _selectedConfig = null;
-     _updateListsSync();
-     await _saveAllConfigs();
-     notifyListeners();
-     return true;
+     final configIndex = allConfigs.indexWhere((c) => c.id == id);
+     if (configIndex != -1) {
+        final config = allConfigs[configIndex];
+
+        // BLACKLIST LOGIC: Add hash to persistent blacklist
+        final hash = md5.convert(utf8.encode(config.rawConfig.trim())).toString();
+        _blockedConfigs.add(hash);
+        await _saveBlacklist();
+        AdvancedLogger.info("[ConfigManager] Config deleted and blacklisted: ${config.name} ($hash)");
+
+        allConfigs.removeAt(configIndex);
+        if (_selectedConfig?.id == id) _selectedConfig = null;
+        _updateListsSync();
+        await _saveAllConfigs();
+        notifyListeners();
+        return true;
+     }
+     return false;
   }
 
   // --- CLEANUP METHODS ---
   Future<int> removeConfigs({bool failedTcp = false, bool dead = false}) async {
     final initialCount = allConfigs.length;
     allConfigs.removeWhere((c) {
-      // Failed TCP: Attempted (failureCount > 0) AND (funnelStage == 0 i.e. TCP didn't pass to become 1, OR funnelStage == 1 but we treat only stage 0 as 'failed to connect')
-      // User definition: "Failed TCP". TCP pass moves to Stage 1. So Stage 0 is "Failed TCP" ONLY IF tested (failureCount > 0).
-      // Actually FunnelService: Stage 0 -> TCP -> Stage 1 (Passed TCP, in HTTP queue).
-      // So if FunnelStage is 0 AND failureCount > 0, it failed TCP.
       if (failedTcp && c.funnelStage == 0 && c.failureCount > 0) return true;
-
-      // Dead: Real Ping is -1
       if (dead && c.currentPing == -1) return true;
-
       return false;
     });
 
@@ -597,6 +629,25 @@ class ConfigManager extends ChangeNotifier {
     // but just in case we want them sorted by score primarily within their categories:
     validatedConfigs.sort(compareScore);
     favoriteConfigs.sort(compareScore);
+  }
+
+  Future<void> _loadBlacklist() async {
+     try {
+       final prefs = await SharedPreferences.getInstance();
+       final list = prefs.getStringList(_blacklistKey) ?? [];
+       _blockedConfigs = list.toSet();
+     } catch(e) {
+       AdvancedLogger.warn('[ConfigManager] Failed to load blacklist: $e');
+     }
+  }
+
+  Future<void> _saveBlacklist() async {
+     try {
+       final prefs = await SharedPreferences.getInstance();
+       await prefs.setStringList(_blacklistKey, _blockedConfigs.toList());
+     } catch(e) {
+       AdvancedLogger.warn('[ConfigManager] Failed to save blacklist: $e');
+     }
   }
 
   Future<void> _loadAutoSwitchSetting() async {

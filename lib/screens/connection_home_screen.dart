@@ -1588,7 +1588,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
       final configs = await ConfigManager.parseAndFetchConfigs(clipboardText);
 
       if (configs.isNotEmpty) {
-        final importedCount = await _configManager.addConfigs(configs);
+        // Manual override: Disable blacklist check
+        final importedCount = await _configManager.addConfigs(configs, checkBlacklist: false);
 
         if (importedCount > 0) {
           _showToast('$importedCount servers added successfully');
