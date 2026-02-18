@@ -23,6 +23,15 @@ class NativeVpnService {
 
   final StreamController<String> _statusController = StreamController<String>.broadcast();
 
+  Future<bool> isAdmin() async {
+    if (Platform.isWindows) {
+      return await _windowsVpnService.isAdmin();
+    }
+    // On Android/iOS/Linux/macOS, we don't need to check for admin privileges in the same way
+    // or it's handled by the OS/system prompts.
+    return true;
+  }
+
   Future<int> getPing(String config) async {
     if (Platform.isWindows) {
       // Delegate to Windows service or EphemeralTester (usually handled in HomeProvider)
