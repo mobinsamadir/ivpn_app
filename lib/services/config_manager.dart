@@ -637,42 +637,26 @@ class ConfigManager extends ChangeNotifier {
   }
 
   void _updateListsSync() {
-    // 1. Prioritize New Items (Added within last 1 hour)
-    // We will separate the "New" items first.
-    final now = DateTime.now();
-    final newCutoff = now.subtract(const Duration(hours: 1));
+    // SORTING LOGIC:
+    // 1. Verified (High Score)
+    // 2. Purgatory (Medium Score)
+    // 3. Others (Low Score) -> Sorted by Added Date
 
-    // Sort logic helper
-    int compareScore(VpnConfigWithMetrics a, VpnConfigWithMetrics b) => b.score.compareTo(a.score);
-
-    // Split list
-    final newConfigs = <VpnConfigWithMetrics>[];
-    final oldConfigs = <VpnConfigWithMetrics>[];
-
-    for (var c in allConfigs) {
-      if (c.addedDate.isAfter(newCutoff)) {
-        newConfigs.add(c);
-      } else {
-        oldConfigs.add(c);
-      }
+    // Sort logic helper: Score Descending, then Date Descending
+    int compareScore(VpnConfigWithMetrics a, VpnConfigWithMetrics b) {
+       final scoreCmp = b.score.compareTo(a.score);
+       if (scoreCmp != 0) return scoreCmp;
+       return b.addedDate.compareTo(a.addedDate);
     }
 
-    // Sort subsets
-    newConfigs.sort((a, b) {
-      // Sort new items by newest first
-      return b.addedDate.compareTo(a.addedDate);
-    });
-    oldConfigs.sort(compareScore);
-
-    // Reassemble Main List (New First)
-    allConfigs = [...newConfigs, ...oldConfigs];
+    // Sort the main list directly
+    allConfigs.sort(compareScore);
 
     // Filter sublists
     validatedConfigs = allConfigs.where((c) => c.isValidated).toList();
     favoriteConfigs = allConfigs.where((c) => c.isFavorite).toList();
 
-    // Note: sublists usually keep the order of the parent list if filter is used,
-    // but just in case we want them sorted by score primarily within their categories:
+    // Ensure sublists are also sorted
     validatedConfigs.sort(compareScore);
     favoriteConfigs.sort(compareScore);
   }

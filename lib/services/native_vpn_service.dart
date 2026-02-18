@@ -75,15 +75,16 @@ class NativeVpnService {
   }
 
   Future<void> disconnect() async {
+    // 1. Immediate UI Feedback
+    _statusController.add("DISCONNECTED");
+
     if (Platform.isWindows) {
       await _windowsVpnService.stopVpn();
-      _statusController.add("DISCONNECTED");
       return;
     }
 
     try {
       await _methodChannel.invokeMethod('stopVpn');
-      _statusController.add("DISCONNECTED");
       print("Disconnect command sent.");
     } catch (e) {
       print("Failed to send disconnect command: $e");

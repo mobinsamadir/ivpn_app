@@ -71,6 +71,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
   void initState() {
     super.initState();
 
+    // 1. Initialize Ad Service IMMEDIATELY
+    AdManagerService().initialize();
+
     _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
@@ -320,7 +323,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     if (!mounted) return;
 
     // 1. Fire & Forget Services (Parallel Startup)
-    AdManagerService().initialize();
+    // AdManagerService initialized in initState
     UpdateService.checkAndShowUpdateDialog(context);
 
     setState(() {});
@@ -1741,11 +1744,12 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
         });
 
         // Use EphemeralTester to check if it's REALLY alive (not ghost)
-        final testResult = await _ephemeralTester.runTest(currentConfig);
+        final testResult = await _ephemeralTester.runTest(currentConfig, mode: TestMode.connectivity);
         await _configManager.updateConfigDirectly(testResult);
 
-        if (testResult.funnelStage < 2) {
-             throw Exception("Pre-flight check failed (Ghost/Dead)");
+        // Strict Check: Must pass Stage 2 (HTTP) or have valid ping
+        if (testResult.funnelStage < 2 || testResult.currentPing == -1) {
+             throw Exception("Pre-flight check failed (Ghost/Dead - Ping: ${testResult.currentPing})");
         }
 
         // 2. Connect

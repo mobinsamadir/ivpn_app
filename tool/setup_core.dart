@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:archive/archive.dart';
@@ -5,7 +6,6 @@ import 'package:archive/archive_io.dart';
 import 'package:path/path.dart' as p;
 
 const singboxVersion = 'v1.10.1';
-// Android binary download removed as we use JNI (libbox.aar) now.
 const windowsUrl =
     'https://github.com/SagerNet/sing-box/releases/download/$singboxVersion/sing-box-1.10.1-windows-amd64.zip';
 const geoipUrl =
@@ -13,8 +13,12 @@ const geoipUrl =
 const geositeUrl =
     'https://github.com/SagerNet/sing-geosite/releases/latest/download/geosite.db';
 
+// Thresholds
+const int minExeSize = 5 * 1024 * 1024; // 5MB
+const int minDbSize = 2 * 1024 * 1024;  // 2MB
+
 void main() async {
-  print('Starting setup_core...');
+  print('Starting robust setup_core...');
 
   final windowsDir = Directory('assets/executables/windows');
   final assetsDir = Directory('assets');
@@ -23,17 +27,29 @@ void main() async {
     if (!await windowsDir.exists()) {
       await windowsDir.create(recursive: true);
     }
+    if (!await assetsDir.exists()) {
+      await assetsDir.create(recursive: true);
+    }
   } catch (e) {
     print('Critical Error: Failed to create directories: $e');
     exit(1);
   }
 
-  // 1. Android Sing-box (REMOVED)
-  // Logic removed to save APK size (~15MB). Android uses libbox.aar via JNI.
-
-  // 2. Windows Sing-box
+  // --- 1. WINDOWS BINARY (Crucial) ---
   final windowsBinary = File(p.join(windowsDir.path, 'sing-box.exe'));
-  if (!await windowsBinary.exists()) {
+  bool validExe = await _validateFile(windowsBinary, minExeSize, 'Windows Sing-box');
+
+  if (validExe) {
+    // Perform Execution Check (The "Gold Standard")
+    validExe = await _checkBinaryExecution(windowsBinary);
+  }
+
+  if (!validExe) {
+    if (await windowsBinary.exists()) {
+       print('Corrupt/Invalid binary detected. Deleting to force re-download...');
+       try { await windowsBinary.delete(); } catch(e) { print('Error deleting binary: $e'); }
+    }
+
     print('Downloading Windows Sing-box ($windowsUrl)...');
     try {
       final bytes = await downloadFile(windowsUrl);
@@ -49,10 +65,13 @@ void main() async {
       }
 
       if (singboxFile != null) {
-        await File(
-          windowsBinary.path,
-        ).writeAsBytes(singboxFile.content as List<int>);
+        await File(windowsBinary.path).writeAsBytes(singboxFile.content as List<int>);
         print('Saved to ${windowsBinary.path}');
+
+        // Final Validation
+        if (!await _checkBinaryExecution(windowsBinary)) {
+           throw Exception("Newly downloaded binary failed execution check.");
+        }
       } else {
         print('Critical Error: sing-box.exe not found in Windows archive.');
         exit(1);
@@ -62,57 +81,105 @@ void main() async {
       exit(1);
     }
   } else {
-    print('Windows Sing-box already exists.');
+    print('Windows Sing-box is valid and healthy.');
   }
 
-  // 3. GeoIP
+  // --- 2. GEOIP ---
   final geoipFile = File(p.join(assetsDir.path, 'geoip.db'));
-  // Always check if it exists in assets folder first
-  if (!await geoipFile.exists()) {
+  bool validGeoip = await _validateFile(geoipFile, minDbSize, 'GeoIP');
+
+  if (!validGeoip) {
+    if (await geoipFile.exists()) await geoipFile.delete();
     print('Downloading GeoIP ($geoipUrl)...');
     try {
       final bytes = await downloadFile(geoipUrl);
       await geoipFile.writeAsBytes(bytes);
       print('Saved to ${geoipFile.path}');
+      if (!await _validateFile(geoipFile, minDbSize, 'GeoIP (Post-Download)')) {
+         throw Exception("Downloaded GeoIP is too small/corrupt.");
+      }
     } catch (e) {
       print('Critical Error downloading GeoIP: $e');
       exit(1);
     }
   } else {
-    print('GeoIP already exists in assets.');
+    print('GeoIP is valid.');
   }
 
-  // 4. Geosite
+  // --- 3. GEOSITE ---
   final geositeFile = File(p.join(assetsDir.path, 'geosite.db'));
-  // Always check if it exists in assets folder first
-  if (!await geositeFile.exists()) {
+  bool validGeosite = await _validateFile(geositeFile, minDbSize, 'Geosite');
+
+  if (!validGeosite) {
+    if (await geositeFile.exists()) await geositeFile.delete();
     print('Downloading Geosite ($geositeUrl)...');
     try {
       final bytes = await downloadFile(geositeUrl);
       await geositeFile.writeAsBytes(bytes);
       print('Saved to ${geositeFile.path}');
+      if (!await _validateFile(geositeFile, minDbSize, 'Geosite (Post-Download)')) {
+         throw Exception("Downloaded Geosite is too small/corrupt.");
+      }
     } catch (e) {
       print('Critical Error downloading Geosite: $e');
       exit(1);
     }
   } else {
-    print('Geosite already exists in assets.');
+    print('Geosite is valid.');
   }
 
-  // Also copy to windows executable dir for compatibility if needed by WindowsVpnService
-  // although newer logic should look in assets/ or bundled path.
-  // But for safety, let's keep them in assets/ and ensure WindowsVpnService looks there.
-  // The WindowsVpnService checks multiple locations, including local path.
-  // We will duplicate them to windowsDir just in case the service looks specifically there during dev.
+  // --- 4. COPY ASSETS TO WINDOWS DIR ---
   try {
      await geoipFile.copy(p.join(windowsDir.path, 'geoip.db'));
      await geositeFile.copy(p.join(windowsDir.path, 'geosite.db'));
-     print('Copied geo assets to windows executable folder for dev compatibility.');
+     print('Copied geo assets to windows executable folder.');
   } catch (e) {
      print('Warning: Could not copy geo assets to windows folder: $e');
   }
 
   print('Setup complete.');
+}
+
+Future<bool> _validateFile(File file, int minSize, String label) async {
+  if (!await file.exists()) return false;
+  final size = await file.length();
+  if (size < minSize) {
+    print('[Validation Fail] $label is too small (${(size / 1024 / 1024).toStringAsFixed(2)}MB < ${(minSize / 1024 / 1024).toStringAsFixed(2)}MB). Treating as corrupt.');
+    return false;
+  }
+  return true;
+}
+
+Future<bool> _checkBinaryExecution(File binary) async {
+  if (!Platform.isWindows) {
+      print('[Skip] Execution check skipped (Not on Windows).');
+      return true; // Assume valid on non-Windows build envs
+  }
+
+  print('Running execution check on ${binary.path}...');
+  try {
+    final result = await Process.run(
+      binary.path,
+      ['version'],
+      runInShell: true,
+    ).timeout(const Duration(seconds: 5), onTimeout: () {
+       throw TimeoutException("Execution timed out");
+    });
+
+    if (result.exitCode == 0) {
+       print('Execution check passed: ${result.stdout.toString().trim()}');
+       return true;
+    } else {
+       print('Execution check failed (Exit Code ${result.exitCode}): ${result.stderr}');
+       return false;
+    }
+  } catch (e) {
+    print('Execution check failed/crashed: $e');
+    if (e is TimeoutException) {
+       print('FATAL: Binary hung during version check. Treating as corrupt.');
+    }
+    return false;
+  }
 }
 
 Future<List<int>> downloadFile(String url) async {
