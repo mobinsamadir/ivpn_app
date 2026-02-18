@@ -1791,7 +1791,16 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
           _showToast('Connection to ${currentConfig.name} failed. Trying ${nextBest.name}...');
           currentConfig = nextBest;
         } else {
-          _showToast('Connection failed: $e');
+          // User-friendly error message
+          String errorMsg = "Connection failed";
+          final eStr = e.toString().toLowerCase();
+          if (eStr.contains("socketexception") || eStr.contains("os error")) {
+             errorMsg = "Server unreachable";
+          } else if (eStr.contains("pre-flight")) {
+             errorMsg = "Server is dead (Pre-check failed)";
+          }
+
+          _showToast(errorMsg);
           _configManager.setConnected(false, status: 'Connection failed');
           return;
         }
