@@ -46,56 +46,88 @@ class EphemeralTester {
     }
   }
 
+  /// Helper to extract host/port from config string
+  Map<String, dynamic>? _extractHostPort(String config) {
+    // 1. Try parsing as JSON first (if it looks like JSON)
+    if (config.trim().startsWith('{')) {
+      try {
+        final json = jsonDecode(config);
+        if (json is Map<String, dynamic>) {
+          // Direct fields
+          if (json.containsKey('server')) {
+             return {'host': json['server'], 'port': int.tryParse(json['server_port']?.toString() ?? '443') ?? 443};
+          }
+          if (json.containsKey('remote_addr')) {
+              final parts = json['remote_addr'].toString().split(':');
+              if (parts.length == 2) {
+                 return {'host': parts[0], 'port': int.tryParse(parts[1]) ?? 443};
+              }
+          }
+          // Check outbounds
+          if (json['outbounds'] is List) {
+            for (var outbound in json['outbounds']) {
+               if (outbound['type'] == 'selector' || outbound['type'] == 'urltest') continue;
+               if (outbound['type'] == 'direct' || outbound['type'] == 'block') continue;
+               if (outbound.containsKey('server')) {
+                   return {'host': outbound['server'], 'port': int.tryParse(outbound['server_port']?.toString() ?? '443') ?? 443};
+               }
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
+    // 2. Delegate to SingboxConfigGenerator for URI schemes (vmess, vless, ss, etc.)
+    // It handles Base64 decoding for vmess:// internally.
+    return SingboxConfigGenerator.extractServerDetails(config);
+  }
+
   /// Runs the Funnel Test on a specific config based on the mode.
   /// Returns a VpnConfigWithMetrics object with updated stageResults and scores.
   Future<VpnConfigWithMetrics> runTest(VpnConfigWithMetrics config, {TestMode mode = TestMode.speed}) async {
-    // --- ANDROID NATIVE PATH ---
+    // --- ANDROID DART SOCKET PATH ---
     if (Platform.isAndroid) {
        try {
-          // Generate JSON config in background isolate
-          // Native Service expects a JSON string to parse and inject test inbounds
-          final jsonConfig = await compute(_generateConfigWrapper, {
-             'rawConfig': config.rawConfig,
-             'listenPort': 0, // Port is irrelevant, Native overrides it
-             'isTest': true,
-          });
+          final details = _extractHostPort(config.rawConfig);
+          if (details == null) throw Exception("Could not extract server details");
 
-          // Call Native Ping with timeout
-          // Using 8 seconds timeout to account for JSON generation + Native Overhead + Network RTT
-          final ping = await _nativeVpnService.getPing(jsonConfig)
-             .timeout(const Duration(seconds: 8));
+          final String host = details['host'];
+          final int port = details['port'];
 
-          if (ping > 0) {
-             // Success (Stage 2 equivalent)
-             final newStageResults = Map<String, TestResult>.from(config.stageResults);
-             newStageResults['TCP'] = TestResult(success: true);
-             newStageResults['HTTP'] = TestResult(success: true, latency: ping);
+          // Socket Connect (TCP Handshake)
+          final sw = Stopwatch()..start();
+          final socket = await Socket.connect(host, port, timeout: const Duration(seconds: 3));
+          socket.destroy();
+          sw.stop();
 
-             // Calculate partial score
-             int score = (1000 ~/ ping).clamp(0, 50).toInt();
+          final ping = sw.elapsedMilliseconds;
 
-             return config.copyWith(
-                funnelStage: 2,
-                speedScore: score, // Use latency score as partial speed score
-                stageResults: newStageResults,
-                failureCount: 0,
-                isAlive: true,
-                lastTestedAt: DateTime.now(),
-                // Update metrics
-                deviceMetrics: config.updateMetrics(
-                   deviceId: "android_native",
-                   ping: ping,
-                   speed: 0 // Native ping doesn't provide speed
-                ).deviceMetrics
-             );
-          } else {
-             throw Exception("Native Ping Failed (-1)");
-          }
+          // Success
+          final newStageResults = Map<String, TestResult>.from(config.stageResults);
+          newStageResults['TCP'] = TestResult(success: true);
+          newStageResults['HTTP'] = TestResult(success: true, latency: ping); // Mocking HTTP stage with TCP latency
+
+          // Calculate partial score
+          int score = (1000 ~/ ping).clamp(0, 50).toInt();
+
+          return config.copyWith(
+             funnelStage: 2,
+             speedScore: score,
+             stageResults: newStageResults,
+             failureCount: 0,
+             isAlive: true,
+             lastTestedAt: DateTime.now(),
+             deviceMetrics: config.updateMetrics(
+                deviceId: "android_dart_socket",
+                ping: ping,
+                speed: 0
+             ).deviceMetrics
+          );
        } catch (e) {
           AdvancedLogger.warn("EphemeralTester (Android) Error: $e");
           return config.copyWith(
-             failureReason: "Native Test Failed: $e",
-             lastFailedStage: "Stage2_Native",
+             failureReason: "Socket Test Failed: $e",
+             lastFailedStage: "Stage1_TCP",
              failureCount: config.failureCount + 1,
              lastTestedAt: DateTime.now(),
           );

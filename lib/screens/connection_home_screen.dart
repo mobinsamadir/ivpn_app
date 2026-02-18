@@ -17,6 +17,7 @@ import '../services/access_manager.dart';
 import '../services/ad_manager_service.dart';
 import '../services/funnel_service.dart'; // NEW: Funnel Service
 import '../services/testers/ephemeral_tester.dart'; // NEW: Ephemeral Tester
+import '../services/update_service.dart'; // NEW: Update Service
 
 // Top-level function for sorting in background isolate
 List<VpnConfigWithMetrics> _sortConfigs(List<VpnConfigWithMetrics> configs) {
@@ -325,6 +326,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
   Future<void> _initAppSequence() async {
     if (!mounted) return;
     setState(() {});
+
+    // Check for updates after UI is ready
+    UpdateService.checkAndShowUpdateDialog(context);
   }
 
   Future<void> _runSmartAutoTest() async {
