@@ -1,5 +1,9 @@
 # Project-level configuration.
 cmake_minimum_required(VERSION 3.14)
+
+# Static Link MSVC Runtime to avoid missing VCRUNTIME140.dll
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
 project(ivpn_new LANGUAGES CXX)
 
 # The name of the executable created for the application. Change this to change
