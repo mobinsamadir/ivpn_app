@@ -7,7 +7,7 @@ import 'package:pub_semver/pub_semver.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:open_file_plus/open_file_plus.dart';
+import 'package:open_file/open_file.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:http/http.dart' as http;
 import '../widgets/update_dialog.dart';
@@ -92,7 +92,7 @@ class UpdateService {
         // Note: On Android 8+, this is a special permission.
         // We request storage first if needed, but for install packages, we might need to guide user.
         // package_info_plus handles the intent, but we need to ensure we can write to external storage or app directory.
-        // Actually, open_file_plus handles the intent.
+        // Actually, open_file handles the intent.
 
         // Request Permission to Install Packages
         if (await Permission.requestInstallPackages.request().isGranted) {
@@ -100,7 +100,7 @@ class UpdateService {
         } else {
            // Guide user to settings if denied?
            // On some devices, requesting it opens the settings page.
-           // Let's try to proceed, open_file_plus might trigger the system dialog.
+           // Let's try to proceed, open_file might trigger the system dialog.
            await _downloadAndInstallApk(context, downloadUrl);
         }
 

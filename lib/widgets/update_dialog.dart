@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_markdown/flutter_markdown.dart'; // Optional, but text is fine too if markdown package not added.
-// Note: flutter_markdown is not in pubspec, so I will use Text/SelectableText.
+import 'package:flutter_markdown/flutter_markdown.dart';
 
 class UpdateDialog extends StatelessWidget {
   final String version;
@@ -80,9 +79,16 @@ class UpdateDialog extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: SingleChildScrollView(
-                  child: Text(
-                    releaseNotes,
-                    style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
+                  child: MarkdownBody(
+                    data: releaseNotes,
+                    styleSheet: MarkdownStyleSheet(
+                      p: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
+                      h1: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                      h2: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                      h3: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                      listBullet: const TextStyle(color: Colors.white70),
+                      strong: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
                   ),
                 ),
               ),
