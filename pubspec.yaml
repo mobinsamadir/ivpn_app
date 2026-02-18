@@ -41,7 +41,7 @@ dependencies:
   permission_handler: ^11.3.1
   
   # File Opening (Fixed for Android)
-  open_file: ^4.0.0 # جایگزین نسخه Plus شد
+  open_file: ^3.5.10 # جایگزین نسخه Plus شد
 
 dev_dependencies:
   flutter_test:
@@ -52,7 +52,7 @@ dev_dependencies:
   mockito: ^5.4.4
   
   # Build Script Requirements (حیاتی برای setup_core.dart)
-  http: ^1.2.2
+  http: ^1.2.0
   archive: ^3.6.1
   path: ^1.9.0 # اضافه شد تا اسکریپت بیلد به مشکل نخورد
 
