@@ -1,13 +1,12 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:flutter/foundation.dart'; // Added for compute if needed, though tester handles it
+import 'package:flutter/foundation.dart';
 import '../models/vpn_config_with_metrics.dart';
 import 'config_manager.dart';
 import 'singbox_config_generator.dart';
 import 'testers/ephemeral_tester.dart';
 import '../utils/advanced_logger.dart';
 import '../utils/cancellable_operation.dart';
-import 'native_vpn_service.dart';
 
 class FunnelService {
   static final FunnelService _instance = FunnelService._internal();
@@ -22,19 +21,19 @@ class FunnelService {
   final List<VpnConfigWithMetrics> _httpQueue = [];
   final List<VpnConfigWithMetrics> _speedQueue = [];
 
-  // Active Worker Counts
+  // Active Worker Counts (Windows)
   int _activeTcpWorkers = 0;
   int _activeHttpWorkers = 0;
   int _activeSpeedWorkers = 0;
 
   // Limits
-  static const int _maxTcpWorkers = 20;
   static const int _maxHttpWorkers = 5;
   static const int _maxSpeedWorkers = 2;
 
   // State
   bool _isRunning = false;
   CancelToken? _cancelToken;
+  Timer? _uiThrottleTimer; // Throttled UI updater
 
   // Stats
   int _totalConfigs = 0;
@@ -49,9 +48,16 @@ class FunnelService {
   Future<void> stop() async {
     _isRunning = false;
     _cancelToken?.cancel();
+    _uiThrottleTimer?.cancel();
     _tcpQueue.clear();
     _httpQueue.clear();
     _speedQueue.clear();
+
+    // Kill any zombie processes (Windows)
+    if (!Platform.isAndroid) {
+       EphemeralTester.killAll();
+    }
+
     _progressController.add("Stopped");
     AdvancedLogger.info("FunnelService: Stopped by user.");
   }
@@ -70,9 +76,12 @@ class FunnelService {
 
     AdvancedLogger.info("FunnelService: Starting Pipeline (RetestDead: $retestDead)");
 
+    // Start UI Throttle Timer (500ms)
+    _startUiThrottle();
+
     // Android-specific parallel pipeline
     if (Platform.isAndroid) {
-      // Don't await here so it runs in background like the original implementation
+      // Don't await here so it runs in background
       _runAndroidFunnel(retestDead).ignore();
       return;
     }
@@ -85,9 +94,8 @@ class FunnelService {
     _tcpQueue.addAll(all);
 
     AdvancedLogger.info("FunnelService: Loaded ${_totalConfigs} configs into TCP Queue.");
-    _progressController.add("Queue: $_totalConfigs configs");
 
-    // 2. Start Worker Pools
+    // 2. Start Worker Pools (Windows)
     // Reduce TCP workers on Windows to prevent port exhaustion
     int tcpWorkers;
     if (Platform.isWindows) {
@@ -100,48 +108,108 @@ class FunnelService {
     await _spawnWorkers(_maxSpeedWorkers, _speedWorker, "Speed");
   }
 
-  // Optimized Android Pipeline using EphemeralTester (Delegates to Native)
+  void _startUiThrottle() {
+    _uiThrottleTimer?.cancel();
+    _uiThrottleTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
+        if (!_isRunning) {
+           timer.cancel();
+           return;
+        }
+
+        if (Platform.isAndroid) {
+             final msg = "Testing: $_httpPassed/${_totalConfigs} (Active Futures: $_activeHttpWorkers)";
+             _progressController.add(msg);
+
+             // Check completion
+             if (_tcpQueue.isEmpty && _activeHttpWorkers == 0 && _httpPassed > 0) { // Naive completion check
+                 // The main loop handles completion message
+             }
+        } else {
+             final msg = "TCP: $_tcpPassed | Valid: $_httpPassed | Speed: $_speedFinished | Queued: ${_tcpQueue.length + _httpQueue.length + _speedQueue.length}";
+             _progressController.add(msg);
+
+             // Check completion
+             if (_tcpQueue.isEmpty && _httpQueue.isEmpty && _speedQueue.isEmpty &&
+                 _activeTcpWorkers == 0 && _activeHttpWorkers == 0 && _activeSpeedWorkers == 0) {
+                 // Debounce completion to ensure no race condition
+                 Future.delayed(const Duration(seconds: 2), () {
+                    if (_tcpQueue.isEmpty && _activeTcpWorkers == 0 && _isRunning) {
+                       stop();
+                       _progressController.add("Completed");
+                    }
+                 });
+             }
+        }
+    });
+  }
+
+  // --- ANDROID PIPELINE (Refactored for Safety & Concurrency) ---
   Future<void> _runAndroidFunnel(bool retestDead) async {
     _progressController.add("Android Pipeline: Initializing...");
-    final all = _buildPriorityQueue(retestDead);
-    _totalConfigs = all.length;
-    AdvancedLogger.info("FunnelService (Android): Loaded $_totalConfigs configs.");
 
-    // Batch processing
-    const int batchSize = 4;
-    for (int i = 0; i < all.length; i += batchSize) {
-      if (!_isRunning || _cancelToken!.isCancelled) break;
+    final allConfigs = _buildPriorityQueue(retestDead);
+    _totalConfigs = allConfigs.length;
 
-      final batch = all.skip(i).take(batchSize).toList();
-      _activeHttpWorkers = batch.length; // Reuse this counter for UI visibility
-      _updateProgress();
+    // Populate the queue first
+    _tcpQueue.addAll(allConfigs); // Reuse TCP queue for source
 
-      await Future.wait(batch.map((config) async {
-        if (!_isRunning) return;
-        try {
-          // Delegate to EphemeralTester which now handles Android Native Pings correctly
-          final result = await _tester.runTest(config, mode: TestMode.connectivity);
+    // Bounded Concurrency Pool
+    const int maxConcurrent = 15;
+    final List<Future<void>> activeFutures = [];
 
-          if (result.funnelStage >= 2) {
-            _httpPassed++;
-            await _configManager.updateConfigDirectly(result);
-          } else {
-             await _configManager.markFailure(config.id);
-          }
-        } catch (e) {
-          await _configManager.markFailure(config.id);
-        }
-      }));
+    AdvancedLogger.info("FunnelService (Android): Loaded $_totalConfigs configs. Starting pool...");
 
-      _activeHttpWorkers = 0;
-      _updateProgress();
+    while ((_tcpQueue.isNotEmpty || activeFutures.isNotEmpty) && _isRunning && !_cancelToken!.isCancelled) {
+      // 1. Fill Pool
+      while (activeFutures.length < maxConcurrent && _tcpQueue.isNotEmpty) {
+         final config = _tcpQueue.removeAt(0);
+         // Add worker to pool
+         final future = _androidWorkerSafe(config);
+         activeFutures.add(future);
+
+         // Remove future from list when done
+         future.then((_) => activeFutures.remove(future)).catchError((_) => activeFutures.remove(future));
+      }
+
+      // Update Active Counter for UI
+      _activeHttpWorkers = activeFutures.length; // Reuse variable for stats
+
+      // 2. Wait for at least one future to complete before looping?
+      // Or just small delay to prevent tight loop if queue is empty but futures are running.
+      // If we use Future.wait(activeFutures) it blocks.
+      // Instead, we use `Future.any` or just a small delay loop which is safer/simpler.
+      if (activeFutures.isNotEmpty) {
+          await Future.delayed(const Duration(milliseconds: 50));
+      } else if (_tcpQueue.isEmpty) {
+          break; // Done
+      }
     }
 
     if (_isRunning) {
         stop();
-        _progressController.add("Android Pipeline: Completed");
+        _progressController.add("Completed");
     }
   }
+
+  Future<void> _androidWorkerSafe(VpnConfigWithMetrics config) async {
+     try {
+       // Delegate to EphemeralTester (Safe Mode)
+       final result = await _tester.runTest(config, mode: TestMode.connectivity);
+
+       if (result.funnelStage >= 2) {
+          _httpPassed++;
+          await _configManager.updateConfigDirectly(result);
+       } else {
+          // Silent failure
+          // Optionally mark as failed in manager?
+          // await _configManager.markFailure(config.id); // Maybe too much IO?
+       }
+     } catch (e) {
+       AdvancedLogger.warn("Android Worker Exception (Safe Catch): $e");
+     }
+  }
+
+  // --- WINDOWS WORKERS ---
 
   Future<void> _spawnWorkers(int count, Future<void> Function() worker, String name) async {
     for (int i = 0; i < count; i++) {
@@ -151,28 +219,29 @@ class FunnelService {
     AdvancedLogger.info("FunnelService: Spawned $count $name workers.");
   }
 
-  // --- WORKER LOOPS ---
-
   Future<void> _tcpWorker() async {
     while (_isRunning && !_cancelToken!.isCancelled) {
       VpnConfigWithMetrics? config;
 
       // Critical Section: Pop from Queue
       if (_tcpQueue.isNotEmpty) {
+        // RESERVATION LOGIC:
+        // Even if semaphore is "full" (all 5 used), TCP should ideally run fast.
+        // But EphemeralTester uses a global semaphore. We rely on its fairness.
+        // The bottleneck is EphemeralTester ONLY for Stage 2/3 (Process spawn).
+        // Stage 1 (TCP) here is pure Dart socket and does NOT use EphemeralTester's semaphore!
+        // So TCP workers are only limited by _maxTcpWorkers (5) and OS ports.
         config = _tcpQueue.removeAt(0);
         _activeTcpWorkers++;
       } else {
-        // Queue empty? Wait a bit or exit if finished?
-        // For decoupled pipeline, we just wait until everything is done or stopped.
-        // We'll poll with delay.
         await Future.delayed(const Duration(milliseconds: 500));
         continue;
       }
 
       try {
-        _updateProgress();
-
         // STAGE 1: TCP Connect (Raw Dart Socket)
+        // This is FAST and does NOT use the global Semaphore(5) in EphemeralTester.
+        // It runs in parallel with heavy tests.
         final details = SingboxConfigGenerator.extractServerDetails(config.rawConfig);
         bool passed = false;
 
@@ -190,7 +259,6 @@ class FunnelService {
         }
 
         if (passed) {
-           // Push to HTTP Queue
            _tcpPassed++;
            _httpQueue.add(config);
         } else {
@@ -201,7 +269,6 @@ class FunnelService {
          AdvancedLogger.warn("TCP Worker Error: $e");
       } finally {
         _activeTcpWorkers--;
-        _updateProgress();
       }
     }
   }
@@ -210,7 +277,17 @@ class FunnelService {
     while (_isRunning && !_cancelToken!.isCancelled) {
       VpnConfigWithMetrics? config;
 
+      // QUOTA LOGIC:
+      // Limit concurrent heavy tests (HTTP/Speed) to avoid starving the Semaphore completely.
+      // If we have 5 max slots, let's limit HTTP+Speed to 3, leaving 2 free for other things?
+      // Actually, EphemeralTester semaphore controls *execution*.
+      // We should just check queue.
       if (_httpQueue.isNotEmpty) {
+        // Simple Quota: Don't take job if too many active heavy workers?
+        // Let's rely on the worker count passed to spawnWorkers (5).
+        // But wait, spawnWorkers spawns 'n' loops.
+        // If we spawn 5 HTTP workers and 2 Speed workers, that's 7 concurrent loops trying to get the 5 Semaphore slots.
+        // This is fine, they will just queue up at the semaphore.
         config = _httpQueue.removeAt(0);
         _activeHttpWorkers++;
       } else {
@@ -219,10 +296,9 @@ class FunnelService {
       }
 
       try {
-         _updateProgress();
-
          // STAGE 2: HTTP Connectivity (Strict 204)
-         final result = await _tester.runTest(config!, mode: TestMode.connectivity);
+         // This USES the Semaphore(5) inside EphemeralTester
+         final result = await _tester.runTest(config, mode: TestMode.connectivity);
 
          if (result.funnelStage == 2) { // Success
              _httpPassed++;
@@ -236,7 +312,6 @@ class FunnelService {
          AdvancedLogger.warn("HTTP Worker Error: $e");
       } finally {
          _activeHttpWorkers--;
-         _updateProgress();
       }
     }
   }
@@ -254,10 +329,9 @@ class FunnelService {
       }
 
       try {
-         _updateProgress();
-
          // STAGE 3: Speed Test
-         final result = await _tester.runTest(config!, mode: TestMode.speed);
+         // This USES the Semaphore(5) inside EphemeralTester
+         final result = await _tester.runTest(config, mode: TestMode.speed);
 
          _speedFinished++;
          await _configManager.updateConfigDirectly(result);
@@ -266,33 +340,7 @@ class FunnelService {
          AdvancedLogger.warn("Speed Worker Error: $e");
       } finally {
          _activeSpeedWorkers--;
-         _updateProgress();
       }
-    }
-  }
-
-  void _updateProgress() {
-    if (!_isRunning) return;
-
-    if (Platform.isAndroid) {
-        final msg = "Testing: $_httpPassed/${_totalConfigs} | Active: $_activeHttpWorkers";
-        _progressController.add(msg);
-        return;
-    }
-
-    final msg = "TCP: $_tcpPassed | Valid: $_httpPassed | Speed: $_speedFinished | Queued: ${_tcpQueue.length + _httpQueue.length + _speedQueue.length}";
-    _progressController.add(msg);
-
-    // Check completion
-    if (_tcpQueue.isEmpty && _httpQueue.isEmpty && _speedQueue.isEmpty &&
-        _activeTcpWorkers == 0 && _activeHttpWorkers == 0 && _activeSpeedWorkers == 0) {
-        // Debounce completion to ensure no race condition
-        Future.delayed(const Duration(seconds: 2), () {
-           if (_tcpQueue.isEmpty && _activeTcpWorkers == 0) {
-              stop();
-              _progressController.add("Completed");
-           }
-        });
     }
   }
 

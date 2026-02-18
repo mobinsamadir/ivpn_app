@@ -110,18 +110,26 @@ class VpnConfigWithMetrics implements Comparable<VpnConfigWithMetrics> {
 
   // Legacy Score (Deprecated usage but kept for backward compat if needed)
   double get score {
-    // New scoring logic primarily relies on funnelStage and speedScore
-    // But we map it to a double for compatibility with legacy sort functions if any remain
+    // 1. Funnel Stage (0-3) - Biggest Factor (1000 points per stage)
     double baseScore = funnelStage * 1000.0;
+
+    // 2. Speed Score (0-50) - (10 points per unit)
     baseScore += speedScore * 10.0;
 
+    // 3. Ping Bonus
     if (currentPing > 0) {
       baseScore += (2000 - currentPing) / 10.0; // Lower ping gives slightly more points
+    } else {
+      // 4. PURGATORY BONUS: Not Verified (-1 Ping), but has History
+      if (lastSuccessfulConnectionTime > 0) {
+         baseScore += 100.0; // Rank above purely random/dead configs
+      }
     }
 
+    // 5. Favorite Override
     if (isFavorite) baseScore += 5000;
 
-    // Penalize failures
+    // 6. Failure Penalty
     baseScore -= (failureCount * 50);
 
     return baseScore;
@@ -272,21 +280,34 @@ class VpnConfigWithMetrics implements Comparable<VpnConfigWithMetrics> {
 
   @override
   int compareTo(VpnConfigWithMetrics other) {
-    // 1. Funnel Stage (Higher is better)
-    if (this.funnelStage != other.funnelStage) {
-      return other.funnelStage.compareTo(this.funnelStage);
+    // 1. Alive/Verified (Funnel > 0 OR Ping > 0)
+    bool amAlive = this.funnelStage > 0 || this.currentPing > 0;
+    bool otherAlive = other.funnelStage > 0 || other.currentPing > 0;
+
+    if (amAlive != otherAlive) {
+        return amAlive ? -1 : 1; // Alive comes first
     }
 
-    // 2. Speed Score (Higher is better)
-    if (this.speedScore != other.speedScore) {
-      return other.speedScore.compareTo(this.speedScore);
+    // If both Alive: Sort by Funnel/Speed/Ping
+    if (amAlive) {
+        if (this.funnelStage != other.funnelStage) {
+            return other.funnelStage.compareTo(this.funnelStage); // Descending
+        }
+        if (this.speedScore != other.speedScore) {
+            return other.speedScore.compareTo(this.speedScore); // Descending
+        }
+        int myPing = (this.currentPing <= 0) ? 999999 : this.currentPing;
+        int otherPing = (other.currentPing <= 0) ? 999999 : other.currentPing;
+        return myPing.compareTo(otherPing); // Ascending (Lower is better)
     }
 
-    // 3. Latency (Lower is better)
-    // Handle -1 or 0 (invalid/timeout) as MAX_INT
-    int myPing = (this.currentPing <= 0) ? 999999 : this.currentPing;
-    int otherPing = (other.currentPing <= 0) ? 999999 : other.currentPing;
+    // If both Dead/Unknown (Not Alive):
+    // 2. PURGATORY CHECK: Last Success Time (Desc)
+    if (this.lastSuccessfulConnectionTime != other.lastSuccessfulConnectionTime) {
+        return other.lastSuccessfulConnectionTime.compareTo(this.lastSuccessfulConnectionTime);
+    }
 
-    return myPing.compareTo(otherPing);
+    // 3. Fallback: Added Date (Newer first)
+    return other.addedDate.compareTo(this.addedDate);
   }
 }
