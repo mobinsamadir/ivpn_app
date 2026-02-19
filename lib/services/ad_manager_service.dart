@@ -15,8 +15,8 @@ class AdManagerService {
 
   final ValueNotifier<AdConfig?> configNotifier = ValueNotifier<AdConfig?>(null);
 
-  static const String _remoteConfigUrl =
-      "https://gist.githubusercontent.com/mobinsamadir/037cdab8b8713e1c5a52d815539f5638/raw/086833a97d236d9cf57d427c46c2268904244a7e/ad_config.json";
+  // Base64 Encoded Ad Config URL
+  static final String _adUrl = utf8.decode(base64.decode('aHR0cHM6Ly9naXN0LmdpdGh1YnVzZXJjb250ZW50LmNvbS9tb2JpbnNhbWFkaXIvMDM3Y2RhYjhiODcxM2UxYzVhNTJkODE1NTM5ZjU2MzgvcmF3LzA4NjgzM2E5N2QyMzZkOWNmNTdkNDI3YzQ2YzIyNjg5MDQyNDRhN2UvYWRfY29uZmlnLmpzb24='));
 
   static const String _storageKey = "ad_config_cache";
 
@@ -86,23 +86,12 @@ class AdManagerService {
     // 2. Layer 2: Load from Cache
     await _loadFromCache();
 
-    // 3. Layer 3: Fetch Remote
-    // We don't await this to keep startup fast
-    fetchRemoteConfig();
+    // 3. Layer 3: Network Fetch Removed from Startup
+    // Only fetchLatestAds() will call network, triggered post-connect.
 
-    // 4. Start Monitoring VPN Status
-    _startMonitoring();
+    // 4. Monitoring removed here. Managed by global ConfigManager hook.
 
     _initialized = true;
-  }
-
-  void _startMonitoring() {
-    WindowsVpnService().statusStream.listen((status) {
-      if (status == "CONNECTED") {
-        AdvancedLogger.info("[AdManager] VPN Connected. Retrying fetch...");
-        fetchRemoteConfig();
-      }
-    });
   }
 
   Future<void> _loadFromCache() async {
@@ -120,10 +109,10 @@ class AdManagerService {
     }
   }
 
-  Future<void> fetchRemoteConfig() async {
-    AdvancedLogger.info("[AdManager] Requesting: $_remoteConfigUrl");
+  Future<void> fetchLatestAds() async {
+    AdvancedLogger.info("[AdManager] Requesting: $_adUrl");
     try {
-      final response = await _dio.get(_remoteConfigUrl);
+      final response = await _dio.get(_adUrl);
 
       AdvancedLogger.info("[AdManager] HTTP Status: ${response.statusCode}");
       if (response.data != null) {
