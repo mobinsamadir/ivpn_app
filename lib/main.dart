@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -7,7 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:window_manager/window_manager.dart';
 
-import 'services/advanced_logger.dart';
+import 'utils/advanced_logger.dart';
 import 'services/file_logger.dart';
 import 'services/storage_service.dart';
 import 'services/config_manager.dart';
