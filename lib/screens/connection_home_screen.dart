@@ -115,11 +115,19 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
           _configManager.setConnected(status == 'CONNECTED', status: _getConnectionStatusMessage(status));
         });
 
-        // NEW: Retry Config Fetch on Connect (Anti-Censorship)
+        // NEW: Post-Connect Logic (Anti-Censorship)
         if (status == 'CONNECTED') {
            AdvancedLogger.info("[HomeScreen] VPN Connected. Retrying config fetch...");
            _configManager.fetchStartupConfigs();
-           // Note: AdManagerService has its own listener for retrying ads.
+
+           // Trigger Updates & Ads with Delay
+           Future.delayed(const Duration(seconds: 3), () {
+             if (mounted) {
+               AdvancedLogger.info("[HomeScreen] Triggering Post-Connect Update & Ad Check...");
+               UpdateService.checkForUpdatesSilently(context);
+               AdManagerService().fetchLatestAds();
+             }
+           });
         }
       }
     });
@@ -324,7 +332,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
 
     // 1. Fire & Forget Services (Parallel Startup)
     // AdManagerService initialized in initState
-    UpdateService.checkAndShowUpdateDialog(context);
+    // UpdateService check removed from startup. Now handled post-connection.
 
     setState(() {});
 
