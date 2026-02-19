@@ -263,16 +263,6 @@ class WindowsVpnService {
       AdvancedLogger.info('[WindowsVpnService] Working directory: $binDir');
       AdvancedLogger.info('[WindowsVpnService] Environment: {ENABLE_DEPRECATED_SPECIAL_OUTBOUNDS: true}');
 
-      // Log the generated config content to verify it's valid
-      try {
-        final configContent = await File(configFile.path).readAsString();
-        AdvancedLogger.info('--- GENERATED SING-BOX CONFIG ---');
-        AdvancedLogger.info(configContent);
-        AdvancedLogger.info('---------------------------------');
-      } catch (e) {
-        AdvancedLogger.error('Failed to read generated config for logging: $e');
-      }
-
       AdvancedLogger.info('[WindowsVpnService] Starting Sing-box in: $binDir');
       _process = await Process.start(
         exePath,
