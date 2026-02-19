@@ -199,11 +199,10 @@ class ConfigManager extends ChangeNotifier {
       AdvancedLogger.info('[ConfigManager] Downloading configs from mirrors...');
       
       // Mirrors List (GitHub -> Gist -> MyFiles -> Drive API)
+      // Note: Removed Drive and MyFiles as they were returning HTML error pages causing parser crashes
       final mirrors = [
         'https://raw.githubusercontent.com/mobinsamadir/ivpn-servers/refs/heads/main/servers.txt',
         'https://gist.githubusercontent.com/mobinsamadir/687a7ef199d6eaf6d1912e36151a9327/raw/servers.txt',
-        'https://my.files.ir/drive/s/D7zxAbnxHc4y4353UkL2RZ21MrjxJz',
-        'https://drive.google.com/uc?export=download&id=1S7CI5xq4bbnERZ1i1eGuYn5bhluh2LaW',
       ];
 
       for (var url in mirrors) {
@@ -618,12 +617,21 @@ class ConfigManager extends ChangeNotifier {
       final str = prefs.getString(_configsKey);
       if (str != null) {
         final list = jsonDecode(str) as List;
-        allConfigs = list.map((e) => VpnConfigWithMetrics.fromJson(e)).toList();
+        allConfigs = [];
+        for (var e in list) {
+          try {
+            // Defensively parse each config so one bad entry doesn't kill the whole list
+            allConfigs.add(VpnConfigWithMetrics.fromJson(e));
+          } catch (innerError) {
+            AdvancedLogger.warn('[ConfigManager] Skipped corrupted config during load: $innerError');
+          }
+        }
         AdvancedLogger.info('[ConfigManager] Loaded ${allConfigs.length} from storage');
       }
     } catch(e) {
        AdvancedLogger.error('[ConfigManager] Load error: $e');
-       allConfigs = [];
+       // If critical failure (e.g. JSON decode), fallback to empty list but keep app running
+       if (allConfigs.isEmpty) allConfigs = [];
     }
   }
 

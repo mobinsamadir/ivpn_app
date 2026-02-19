@@ -249,9 +249,9 @@ class VpnConfigWithMetrics implements Comparable<VpnConfigWithMetrics> {
 
   factory VpnConfigWithMetrics.fromJson(Map<String, dynamic> json) {
     return VpnConfigWithMetrics(
-      id: json['id'] as String,
-      rawConfig: json['rawConfig'] as String,
-      name: json['name'] as String,
+      id: json['id']?.toString() ?? '',
+      rawConfig: json['rawConfig']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
       countryCode: json['countryCode'] as String?,
       isFavorite: json['isFavorite'] as bool? ?? false,
       // Default to Epoch 0 for migration safety (existing configs won't have this field)
