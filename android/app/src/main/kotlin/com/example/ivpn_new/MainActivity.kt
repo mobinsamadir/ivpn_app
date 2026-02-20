@@ -42,16 +42,34 @@ class MainActivity : FlutterActivity() {
                     result.success(null)
                 }
                 "testConfig" -> {
+                    // LEGACY: Keep for compatibility if needed, but EphemeralTester prefers startTestProxy
                     val config = call.argument<String>("config")
                     if (config != null) {
                         scope.launch {
-                            // Call the suspend function in SingboxVpnService
-                            // Using cacheDir as temp directory
                             val ping = SingboxVpnService.measurePing(config, cacheDir)
                             result.success(ping)
                         }
                     } else {
                         result.error("INVALID_ARGUMENT", "Config is null", null)
+                    }
+                }
+                // --- NEW METHODS ---
+                "startTestProxy" -> {
+                    val config = call.argument<String>("config")
+                    if (config != null) {
+                         scope.launch {
+                             // Returns port (>0) or error code (<0)
+                             val port = SingboxVpnService.startTestProxy(config, cacheDir)
+                             result.success(port)
+                         }
+                    } else {
+                        result.error("INVALID_ARGUMENT", "Config is null", null)
+                    }
+                }
+                "stopTestProxy" -> {
+                    scope.launch {
+                        SingboxVpnService.stopTestProxy()
+                        result.success(null)
                     }
                 }
                 else -> result.notImplemented()
@@ -85,8 +103,6 @@ class MainActivity : FlutterActivity() {
                 }
             } else {
                 // Permission denied or config missing
-                // In a real app we might want to notify Flutter, but MethodChannel result is already returned.
-                // We could use an EventChannel for status updates.
             }
             pendingConfig = null
         }

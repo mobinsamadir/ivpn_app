@@ -27,17 +27,12 @@ class NativeVpnService {
     if (Platform.isWindows) {
       return await _windowsVpnService.isAdmin();
     }
-    // On Android/iOS/Linux/macOS, we don't need to check for admin privileges in the same way
-    // or it's handled by the OS/system prompts.
     return true;
   }
 
+  // Legacy Ping (One-shot)
   Future<int> getPing(String config) async {
-    if (Platform.isWindows) {
-      // Delegate to Windows service or EphemeralTester (usually handled in HomeProvider)
-      // But if called here, return failure or implement windows logic if needed.
-      return failedPingValue;
-    }
+    if (Platform.isWindows) return failedPingValue;
 
     try {
       final int latency = await _methodChannel.invokeMethod('testConfig', {'config': config});
@@ -45,6 +40,33 @@ class NativeVpnService {
     } catch (e) {
       print("Failed to get latency: $e");
       return failedPingValue;
+    }
+  }
+
+  // --- NEW: Granular Test Control ---
+
+  /// Starts a lightweight Sing-box proxy for testing.
+  /// Returns the SOCKS port on success, or negative error code.
+  Future<int> startTestProxy(String configJson) async {
+    if (Platform.isWindows) return -1; // Handled by EphemeralTester directly on Windows
+
+    try {
+       final int result = await _methodChannel.invokeMethod('startTestProxy', {'config': configJson});
+       return result;
+    } catch (e) {
+       print("Failed to start test proxy: $e");
+       return -1;
+    }
+  }
+
+  /// Stops the testing proxy.
+  Future<void> stopTestProxy() async {
+    if (Platform.isWindows) return;
+
+    try {
+      await _methodChannel.invokeMethod('stopTestProxy');
+    } catch (e) {
+      print("Failed to stop test proxy: $e");
     }
   }
 
@@ -57,7 +79,6 @@ class NativeVpnService {
 
     try {
       // Generate Sing-box JSON config from raw link using shared logic in a background isolate
-      // This prevents the UI from freezing during the heavy JSON generation
       final String configJson = await compute(_generateConfigWrapper, {
         'rawLink': rawLink,
         'listenPort': 10808,
@@ -75,7 +96,6 @@ class NativeVpnService {
   }
 
   Future<void> disconnect() async {
-    // 1. Immediate UI Feedback
     _statusController.add("DISCONNECTED");
 
     if (Platform.isWindows) {
