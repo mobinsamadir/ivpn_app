@@ -24,37 +24,20 @@ void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
   // 2. Fail-Safe: Inject Global Error UI immediately to prevent Black Screen on render errors
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+  };
   ErrorWidget.builder = (FlutterErrorDetails details) {
     return Material(
-      color: Colors.deepPurple.shade900,
       child: SafeArea(
-        child: Center(
+        child: Container(
+          color: Colors.red.shade900,
+          padding: const EdgeInsets.all(16),
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.error_outline, color: Colors.redAccent, size: 64),
-                const SizedBox(height: 16),
-                const Text(
-                  "CRITICAL APPLICATION ERROR",
-                  style: TextStyle(color: Colors.redAccent, fontSize: 20, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.black26,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.white10),
-                  ),
-                  child: Text(
-                    details.exceptionAsString(),
-                    style: const TextStyle(color: Colors.white70, fontSize: 13, fontFamily: 'monospace'),
-                  ),
-                ),
-              ],
+            child: Text(
+              details.exceptionAsString() + '\n\n' + (details.stack.toString()),
+              style: const TextStyle(color: Colors.white, fontSize: 12),
+              textDirection: TextDirection.ltr,
             ),
           ),
         ),
@@ -88,13 +71,13 @@ void main() {
     }
 
     // Setup Global Crash Recovery
-    FlutterError.onError = (details) {
-      FlutterError.presentError(details);
-      try {
-        AdvancedLogger.error("GLOBAL FLUTTER ERROR", error: details.exception, stackTrace: details.stack);
-        CleanupUtils.emergencyCleanup();
-      } catch (_) {}
-    };
+    // FlutterError.onError = (details) {
+    //   FlutterError.presentError(details);
+    //   try {
+    //     AdvancedLogger.error("GLOBAL FLUTTER ERROR", error: details.exception, stackTrace: details.stack);
+    //     CleanupUtils.emergencyCleanup();
+    //   } catch (_) {}
+    // };
 
     // Initialize Core Services Globally
     SharedPreferences? prefs;

@@ -95,6 +95,33 @@ Future<Map<String, dynamic>> _processConfigsInIsolate(Map<String, dynamic> args)
   };
 }
 
+/// Isolate entry point for sorting configs
+Map<String, List<VpnConfigWithMetrics>> _sortConfigsInIsolate(List<VpnConfigWithMetrics> configs) {
+  // Sort logic helper: Score Descending, then Date Descending
+  int compareScore(VpnConfigWithMetrics a, VpnConfigWithMetrics b) {
+     final scoreCmp = b.score.compareTo(a.score);
+     if (scoreCmp != 0) return scoreCmp;
+     return b.addedDate.compareTo(a.addedDate);
+  }
+
+  // Create local copy to sort
+  final allConfigs = List<VpnConfigWithMetrics>.from(configs);
+  allConfigs.sort(compareScore);
+
+  final validatedConfigs = allConfigs.where((c) => c.isValidated).toList();
+  final favoriteConfigs = allConfigs.where((c) => c.isFavorite).toList();
+
+  // Ensure sublists are also sorted
+  validatedConfigs.sort(compareScore);
+  favoriteConfigs.sort(compareScore);
+
+  return {
+    'all': allConfigs,
+    'validated': validatedConfigs,
+    'favorite': favoriteConfigs,
+  };
+}
+
 class ConfigManager extends ChangeNotifier {
   static final ConfigManager _instance = ConfigManager._internal();
   factory ConfigManager() => _instance;
@@ -158,7 +185,7 @@ class ConfigManager extends ChangeNotifier {
     await _loadAutoSwitchSetting();
     await _loadBlacklist(); // Load Blacklist
     await _loadConfigs();
-    _updateListsSync();
+    await _updateLists();
     AdvancedLogger.info('[ConfigManager] Initialization complete. Loaded ${allConfigs.length} configs.');
   }
 
@@ -397,8 +424,8 @@ class ConfigManager extends ChangeNotifier {
     _throttleTimer = Timer(const Duration(milliseconds: 500), _onThrottleTick);
   }
 
-  void _onThrottleTick() {
-    _updateListsSync(); // Sync update to avoid race conditions
+  Future<void> _onThrottleTick() async {
+    await _updateLists(); // Async update via isolate
     notifyListeners();
 
     _throttleTimer = null;
@@ -443,7 +470,7 @@ class ConfigManager extends ChangeNotifier {
       // Add New Configs
       if (newConfigs.isNotEmpty) {
          allConfigs.addAll(newConfigs);
-         _updateListsSync();
+         await _updateLists();
          await _saveAllConfigs();
          notifyListeners();
          AdvancedLogger.info('[ConfigManager] Successfully added ${newConfigs.length} configs via Isolate.');
@@ -489,7 +516,7 @@ class ConfigManager extends ChangeNotifier {
             lastSuccessfulConnectionTime: DateTime.now().millisecondsSinceEpoch,
             isAlive: true
          );
-         _updateListsSync();
+         await _updateLists();
          await _saveAllConfigs();
          notifyListeners();
       }
@@ -502,7 +529,7 @@ class ConfigManager extends ChangeNotifier {
             failureCount: allConfigs[index].failureCount + 1,
             isAlive: false
          );
-         _updateListsSync();
+         await _updateLists();
          await _saveAllConfigs();
          notifyListeners();
       }
@@ -521,7 +548,7 @@ class ConfigManager extends ChangeNotifier {
 
         allConfigs.removeAt(configIndex);
         if (_selectedConfig?.id == id) _selectedConfig = null;
-        _updateListsSync();
+        await _updateLists();
         await _saveAllConfigs();
         notifyListeners();
         return true;
@@ -542,7 +569,7 @@ class ConfigManager extends ChangeNotifier {
         if (_selectedConfig != null && !allConfigs.contains(_selectedConfig)) {
             _selectedConfig = null;
         }
-        _updateListsSync();
+        await _updateLists();
         await _saveAllConfigs();
         notifyListeners();
     }
@@ -555,7 +582,7 @@ class ConfigManager extends ChangeNotifier {
          allConfigs[index] = allConfigs[index].copyWith(
             isFavorite: !allConfigs[index].isFavorite
          );
-         _updateListsSync();
+         await _updateLists();
          await _saveAllConfigs();
          notifyListeners();
       }
@@ -644,29 +671,16 @@ class ConfigManager extends ChangeNotifier {
      }
   }
 
-  void _updateListsSync() {
-    // SORTING LOGIC:
-    // 1. Verified (High Score)
-    // 2. Purgatory (Medium Score)
-    // 3. Others (Low Score) -> Sorted by Added Date
-
-    // Sort logic helper: Score Descending, then Date Descending
-    int compareScore(VpnConfigWithMetrics a, VpnConfigWithMetrics b) {
-       final scoreCmp = b.score.compareTo(a.score);
-       if (scoreCmp != 0) return scoreCmp;
-       return b.addedDate.compareTo(a.addedDate);
+  Future<void> _updateLists() async {
+    // Offload heavy sorting to isolate
+    try {
+      final result = await compute(_sortConfigsInIsolate, allConfigs);
+      allConfigs = result['all']!;
+      validatedConfigs = result['validated']!;
+      favoriteConfigs = result['favorite']!;
+    } catch (e) {
+      AdvancedLogger.error("[ConfigManager] Sorting isolate failed: $e");
     }
-
-    // Sort the main list directly
-    allConfigs.sort(compareScore);
-
-    // Filter sublists
-    validatedConfigs = allConfigs.where((c) => c.isValidated).toList();
-    favoriteConfigs = allConfigs.where((c) => c.isFavorite).toList();
-
-    // Ensure sublists are also sorted
-    validatedConfigs.sort(compareScore);
-    favoriteConfigs.sort(compareScore);
   }
 
   Future<void> _loadBlacklist() async {
@@ -783,7 +797,7 @@ class ConfigManager extends ChangeNotifier {
      await p.remove(_configsKey);
      _selectedConfig = null;
      allConfigs.clear();
-     _updateListsSync();
+     await _updateLists();
      notifyListeners();
   }
   

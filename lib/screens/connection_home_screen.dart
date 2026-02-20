@@ -21,13 +21,6 @@ import '../services/update_service.dart';
 import '../utils/connectivity_utils.dart';
 import 'settings_screen.dart';
 
-// Top-level function for sorting in background isolate
-List<VpnConfigWithMetrics> _sortConfigs(List<VpnConfigWithMetrics> configs) {
-  final sorted = List<VpnConfigWithMetrics>.from(configs);
-  sorted.sort((a, b) => a.compareTo(b));
-  return sorted;
-}
-
 class ConnectionHomeScreen extends StatefulWidget {
   const ConnectionHomeScreen({super.key});
 
