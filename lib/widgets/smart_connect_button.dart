@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../services/config_manager.dart';
 import '../models/vpn_config_with_metrics.dart';
 import '../utils/advanced_logger.dart';
-import '../services/ad_service.dart';
 import '../services/access_manager.dart';
 
 class SmartConnectButton extends StatefulWidget {
@@ -160,14 +159,7 @@ class _SmartConnectButtonState extends State<SmartConnectButton> {
       } else {
         // If no server selected, run Fastest logic first, then connect
         _connectionStatus = 'Finding fastest server...';
-        configToUse = await configManager.runQuickTestOnAllConfigs((log) {
-          // Update status with test progress
-          if (mounted) {
-            setState(() {
-              _connectionStatus = log;
-            });
-          }
-        });
+        configToUse = await configManager.getBestConfig();
 
         if (configToUse != null) {
           // Select the found config so it's remembered for future connections
@@ -218,83 +210,6 @@ class _SmartConnectButtonState extends State<SmartConnectButton> {
     }
   }
   
-  Future<void> _handleQuickConnect() async {
-    final configManager = ConfigManager();
-
-    // Fastest button: Only selects the best server, doesn't connect
-    if (configManager.allConfigs.isEmpty) {
-      setState(() {
-        _connectionStatus = 'No configs available';
-      });
-      return;
-    }
-
-    // Run quick test to find the best server
-    final bestConfig = await configManager.runQuickTestOnAllConfigs((log) {
-      if (mounted) {
-        setState(() {
-          _connectionStatus = log;
-        });
-      }
-    });
-
-    if (bestConfig != null) {
-      configManager.selectConfig(bestConfig); // Only select, don't connect
-      setState(() {
-        _connectionStatus = 'Best server selected: ${bestConfig.name}';
-      });
-
-      // Show success message
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Best server selected: ${bestConfig.name} (${bestConfig.currentPing}ms)'),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    } else {
-      setState(() {
-        _connectionStatus = 'No valid config found';
-      });
-    }
-  }
-  
-  Future<void> _handleFavoriteConnect() async {
-    final configManager = ConfigManager();
-    final selectedConfig = configManager.selectedConfig;
-
-    if (selectedConfig != null) {
-      await configManager.toggleFavorite(selectedConfig.id);
-
-      // Re-fetch the config to ensure we have the LATEST state after the toggle
-      final updatedConfig = configManager.getConfigById(selectedConfig.id);
-      final isFavorite = updatedConfig?.isFavorite ?? false;
-      final message = isFavorite ? "Added to Favorites" : "Removed from Favorites";
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(message),
-            backgroundColor: isFavorite ? Colors.green : Colors.orange,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-    } else {
-      // Show feedback that no server is selected
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text("No server selected"),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-    }
-  }
   
   Color _getButtonColor() {
     if (_isConnecting) return Colors.orange;

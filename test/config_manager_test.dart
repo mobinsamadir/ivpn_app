@@ -42,12 +42,13 @@ void main() {
       await manager.addConfig('vless://uuid@127.0.0.1:443?query=1#Config%201', 'Config 1');
       await manager.addConfig('vless://uuid@127.0.0.1:443?query=1#Config%202', 'Config 2');
 
-      final idToDelete = manager.allConfigs.first.id;
-      final result = await manager.deleteConfig(idToDelete);
+      // Find Config 1 by name to ensure we delete the correct one regardless of sort order
+      final config1 = manager.allConfigs.firstWhere((c) => c.name == 'Config 1');
+      final result = await manager.deleteConfig(config1.id);
 
       expect(result, isTrue);
       expect(manager.allConfigs.length, 1);
-      expect(manager.allConfigs.first.name, 'Config 2'); // Assuming order preserved
+      expect(manager.allConfigs.first.name, 'Config 2');
     });
     
     test('toggleFavorite updates list and storage', () async {
