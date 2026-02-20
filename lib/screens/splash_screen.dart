@@ -40,7 +40,14 @@ class _SplashScreenState extends State<SplashScreen> {
       
       // 2. Initialize Config Logic
       setState(() => _statusMessage = 'Loading configs...');
-      await configManager.init();
+      // Robust init with timeout to prevent hang
+      await configManager.init().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          AdvancedLogger.error("ConfigManager.init timed out!");
+          // Don't throw, just proceed. Some configs might be missing but app won't hang.
+        }
+      );
 
       // NEW: Start Funnel immediately
       FunnelService().startFunnel();

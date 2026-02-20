@@ -20,32 +20,108 @@ import 'screens/splash_screen.dart'; // Ensure this import exists
 import 'services/windows_vpn_service.dart';
 
 void main() {
+  // 1. Ensure bindings first (Must be first)
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // 2. Fail-Safe: Inject Global Error UI immediately to prevent Black Screen on render errors
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    return Material(
+      color: Colors.deepPurple.shade900,
+      child: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error_outline, color: Colors.redAccent, size: 64),
+                const SizedBox(height: 16),
+                const Text(
+                  "CRITICAL APPLICATION ERROR",
+                  style: TextStyle(color: Colors.redAccent, fontSize: 20, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.black26,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.white10),
+                  ),
+                  child: Text(
+                    details.exceptionAsString(),
+                    style: const TextStyle(color: Colors.white70, fontSize: 13, fontFamily: 'monospace'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  };
+
   runZonedGuarded(() async {
-    WidgetsFlutterBinding.ensureInitialized();
+    // 3. Robust Initialization with Timeouts & Try-Catch
+    // WindowManager (Desktop)
     if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-      await windowManager.ensureInitialized();
+      try {
+        await windowManager.ensureInitialized().timeout(const Duration(seconds: 2));
+      } catch (e) {
+        debugPrint("WindowManager init failed or timed out: $e");
+      }
     }
 
-    // Initialize Loggers
-    await AdvancedLogger.init();
-    AdvancedLogger.info('🚀 IVPN App Initialized', metadata: {
-      'platform': Platform.operatingSystem,
-      'version': Platform.operatingSystemVersion,
-    });
-    
-    await FileLogger.init();
-    FileLogger.log("Application starting...");
+    // Initialize Loggers (Non-critical: Don't block app start)
+    try {
+      await AdvancedLogger.init().timeout(const Duration(seconds: 2));
+      AdvancedLogger.info('🚀 IVPN App Initialized', metadata: {
+        'platform': Platform.operatingSystem,
+        'version': Platform.operatingSystemVersion,
+      });
+
+      await FileLogger.init().timeout(const Duration(seconds: 2));
+      FileLogger.log("Application starting...");
+    } catch (e) {
+      debugPrint("Logger initialization warning: $e");
+    }
 
     // Setup Global Crash Recovery
     FlutterError.onError = (details) {
       FlutterError.presentError(details);
-      AdvancedLogger.error("GLOBAL FLUTTER ERROR", error: details.exception, stackTrace: details.stack);
-      CleanupUtils.emergencyCleanup();
+      try {
+        AdvancedLogger.error("GLOBAL FLUTTER ERROR", error: details.exception, stackTrace: details.stack);
+        CleanupUtils.emergencyCleanup();
+      } catch (_) {}
     };
 
     // Initialize Core Services Globally
-    final prefs = await SharedPreferences.getInstance();
-    final storageService = StorageService(prefs: prefs);
+    SharedPreferences? prefs;
+    try {
+      // Critical: SharedPreferences with Timeout
+      prefs = await SharedPreferences.getInstance().timeout(const Duration(seconds: 5));
+    } catch (e) {
+      debugPrint("CRITICAL: SharedPreferences failed to load: $e");
+      // Fallback: If SharedPreferences fails, show Fatal Error Screen via runApp
+      runApp(
+        MaterialApp(
+          home: Scaffold(
+            backgroundColor: Colors.black,
+            body: Center(
+              child: Text(
+                "Fatal Error: Storage Initialization Failed.\n$e",
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.red),
+              ),
+            ),
+          ),
+        )
+      );
+      return; // Stop execution
+    }
+
+    final storageService = StorageService(prefs: prefs!); // Safe due to return above
     final configManager = ConfigManager(); // Create Global Instance Here
 
     runApp(
