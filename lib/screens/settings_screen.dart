@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart'; // برای دسترسی به ThemeProvider
+import '../services/config_manager.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -14,11 +15,11 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   // متغیر برای کنترل وضعیت‌های جدید
   bool _killSwitchEnabled = false;
-  String _selectedProtocol = 'Automatic';
 
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final configManager = Provider.of<ConfigManager>(context);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
@@ -69,7 +70,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             leading: const Icon(Icons.settings_ethernet_outlined),
             title: const Text('Protocol'),
             trailing: DropdownButton<String>(
-              value: _selectedProtocol,
+              value: configManager.connectionProtocol,
               items: ['Automatic', 'UDP', 'TCP'].map((String value) {
                 return DropdownMenuItem<String>(
                   value: value,
@@ -77,10 +78,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 );
               }).toList(),
               onChanged: (newValue) {
-                setState(() {
-                  _selectedProtocol = newValue!;
-                });
-                // TODO: Add logic to change connection protocol
+                if (newValue != null) {
+                  configManager.setConnectionProtocol(newValue);
+                }
               },
             ),
           ),

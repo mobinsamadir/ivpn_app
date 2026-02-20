@@ -39,15 +39,21 @@ void main() {
       await manager.init();
       // clearAllData handled in setUp
 
+      // Add two configs
       await manager.addConfig('vless://uuid@127.0.0.1:443?query=1#Config%201', 'Config 1');
-      await manager.addConfig('vless://uuid@127.0.0.1:443?query=1#Config%202', 'Config 2');
+      await manager.addConfig('vless://uuid@127.0.0.1:443?query=2#Config%202', 'Config 2');
 
-      final idToDelete = manager.allConfigs.first.id;
+      // Sort order is Date Descending, so Config 2 might be first.
+      // Instead of assuming order, let's find Config 1 explicitly.
+      final config1 = manager.allConfigs.firstWhere((c) => c.name == 'Config 1');
+      final idToDelete = config1.id;
+
       final result = await manager.deleteConfig(idToDelete);
 
       expect(result, isTrue);
       expect(manager.allConfigs.length, 1);
-      expect(manager.allConfigs.first.name, 'Config 2'); // Assuming order preserved
+      // The remaining config should be Config 2
+      expect(manager.allConfigs.first.name, 'Config 2');
     });
     
     test('toggleFavorite updates list and storage', () async {
@@ -56,6 +62,9 @@ void main() {
       // clearAllData handled in setUp
       
       await manager.addConfig('vless://uuid@127.0.0.1:443?query=1#Fav%20Config', 'Fav Config');
+      // Wait for async update
+      await Future.delayed(Duration(milliseconds: 100));
+
       final config = manager.allConfigs.first;
       
       expect(config.isFavorite, isFalse);
@@ -80,6 +89,31 @@ void main() {
       await manager.addConfig('vless://uuid@127.0.0.1:443?query=1#Best%20Config', 'Best Config');
       best = await manager.getBestConfig();
       expect(best, isNotNull);
+    });
+
+    test('connectionProtocol saves and loads', () async {
+      final manager = ConfigManager();
+      await manager.init();
+
+      // Default
+      expect(manager.connectionProtocol, 'Automatic');
+
+      // Set to TCP
+      await manager.setConnectionProtocol('TCP');
+      expect(manager.connectionProtocol, 'TCP');
+
+      // Verify persistence
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('connection_protocol'), 'TCP');
+
+      // Reload logic (simulate app restart by manually loading)
+      // Note: We can't easily re-instantiate ConfigManager due to Singleton,
+      // but we can verify the underlying storage is correct.
+
+      // Set to UDP
+      await manager.setConnectionProtocol('UDP');
+      expect(manager.connectionProtocol, 'UDP');
+      expect(prefs.getString('connection_protocol'), 'UDP');
     });
   });
 }

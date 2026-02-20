@@ -177,12 +177,39 @@ class ConfigManager extends ChangeNotifier {
   static const String _configsKey = 'vpn_configs';
   static const String _blacklistKey = 'config_blacklist';
   static const String _autoSwitchKey = 'auto_switch_enabled';
+  static const String _protocolKey = 'connection_protocol';
+
+  // --- PROTOCOL SETTINGS ---
+  String _connectionProtocol = 'Automatic';
+  String get connectionProtocol => _connectionProtocol;
+
+  Future<void> setConnectionProtocol(String protocol) async {
+    _connectionProtocol = protocol;
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_protocolKey, protocol);
+      AdvancedLogger.info('[ConfigManager] Connection Protocol saved: $protocol');
+    } catch (e) {
+      AdvancedLogger.warn('[ConfigManager] Failed to save protocol: $e');
+    }
+  }
+
+  Future<void> _loadProtocolSetting() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _connectionProtocol = prefs.getString(_protocolKey) ?? 'Automatic';
+    } catch (e) {
+      AdvancedLogger.warn('[ConfigManager] Failed to load protocol setting: $e');
+    }
+  }
 
   // --- INITIALIZATION ---
   Future<void> init() async {
     AdvancedLogger.info('[ConfigManager] Initializing...');
     await _initDeviceId();
     await _loadAutoSwitchSetting();
+    await _loadProtocolSetting(); // Load Protocol
     await _loadBlacklist(); // Load Blacklist
     await _loadConfigs();
     await _updateLists();
