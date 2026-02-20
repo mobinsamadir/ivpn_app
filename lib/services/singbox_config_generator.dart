@@ -253,46 +253,60 @@ class SingboxConfigGenerator {
   static Map<String, dynamic>? extractServerDetails(String link) {
     try {
       final uri = Uri.tryParse(link);
-      if (uri == null) return null;
 
+      // 1. VMess (Base64 JSON)
       if (link.toLowerCase().startsWith('vmess://')) {
         final String decoded = Base64Utils.safeDecode(link.substring(8));
         if (decoded.isEmpty) return null;
 
-        final Map<String, dynamic> data = jsonDecode(decoded);
-        return {
-          'host': data['add'],
-          'port': int.tryParse(data['port']?.toString() ?? '443') ?? 443
-        };
+        try {
+          final Map<String, dynamic> data = jsonDecode(decoded);
+          return {
+            'host': data['add'],
+            'port': int.tryParse(data['port']?.toString() ?? '443') ?? 443
+          };
+        } catch (_) {
+          // If JSON decode fails, maybe it's not JSON (legacy format not supported)
+          return null;
+        }
       } 
       
+      // 2. Shadowsocks (SS)
       if (link.toLowerCase().startsWith('ss://')) {
-        String content = link.substring(5);
-        String host;
-        int port;
+        try {
+          String content = link.substring(5);
+          String host;
+          int port;
 
-        if (content.contains('@')) {
-          final parts = content.split('@');
-          final serverParts = parts[1].split(':');
-          host = serverParts[0].split('#').first;
-          port = int.parse(serverParts[1].split('#').first);
-        } else {
-          final decoded = Base64Utils.safeDecode(content.split('#').first);
-          if (decoded.isEmpty) return null;
+          if (content.contains('@')) {
+            final parts = content.split('@');
+            final serverParts = parts[1].split(':');
+            host = serverParts[0].split('#').first;
+            port = int.parse(serverParts[1].split('#').first);
+          } else {
+            final decoded = Base64Utils.safeDecode(content.split('#').first);
+            if (decoded.isEmpty) return null;
 
-          final mainParts = decoded.split('@');
-          final serverParts = mainParts[1].split(':');
-          host = serverParts[0];
-          port = int.parse(serverParts[1]);
+            final mainParts = decoded.split('@');
+            final serverParts = mainParts[1].split(':');
+            host = serverParts[0];
+            port = int.parse(serverParts[1]);
+          }
+          return {'host': host, 'port': port};
+        } catch (_) {
+          return null;
         }
-        return {'host': host, 'port': port};
       }
 
-      // VLESS / Trojan / generic URI
-      return {
-        'host': uri.host,
-        'port': uri.port > 0 ? uri.port : 443
-      };
+      // 3. Generic URI (VLESS / Trojan / Hysteria / etc)
+      if (uri != null && uri.host.isNotEmpty) {
+          return {
+            'host': uri.host,
+            'port': uri.port > 0 ? uri.port : 443
+          };
+      }
+
+      return null;
     } catch (e) {
       print('[CONFIG-GEN] Error extracting server details: $e');
       return null;

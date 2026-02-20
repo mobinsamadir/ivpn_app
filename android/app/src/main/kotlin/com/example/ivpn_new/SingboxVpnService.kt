@@ -48,78 +48,152 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
         const val ACTION_START = "start"
         const val ACTION_STOP = "stop"
 
-        private val testMutex = Mutex()
+        // VPN State
         val isVpnRunning = AtomicBoolean(false)
 
-        suspend fun measurePing(configJson: String, tempDir: File): Int = withContext(Dispatchers.IO) {
+        // Test Proxy State
+        private val isTestRunning = AtomicBoolean(false)
+        private val testMutex = Mutex() // Keep for measurePing backward compatibility if needed
+
+        // --- NEW: Granular Control for Dart-driven Testing ---
+        suspend fun startTestProxy(configJson: String, tempDir: File): Int = withContext(Dispatchers.IO) {
+            // 1. Guard Clauses
             if (isVpnRunning.get()) {
+                println("❌ [Native] Cannot start Test Proxy: VPN is running")
                 return@withContext -1
             }
 
-            testMutex.withLock {
-                var socksPort = 0
+            // 2. atomic check-and-set to ensure strictly one test instance
+            if (!isTestRunning.compareAndSet(false, true)) {
+                 println("❌ [Native] Cannot start Test Proxy: Another test is already running")
+                 return@withContext -2 // Busy code
+            }
+
+            try {
+                // 3. Find Free Port
+                val socket = ServerSocket(0)
+                val socksPort = socket.localPort
+                socket.close()
+
+                // 4. Prepare Config
+                val json = JSONObject(configJson)
+                val inbounds = JSONArray()
+                val socksInbound = JSONObject()
+                socksInbound.put("type", "socks")
+                socksInbound.put("tag", "socks-in")
+                socksInbound.put("listen", "127.0.0.1")
+                socksInbound.put("listen_port", socksPort)
+                inbounds.put(socksInbound)
+                json.put("inbounds", inbounds)
+
+                // Ensure outbounds exist
+                if (!json.has("outbounds")) {
+                    isTestRunning.set(false)
+                    return@withContext -3 // Invalid Config
+                }
+
+                // Set Log Level to Error/Panic to reduce noise/overhead during rapid testing
+                if (json.has("log")) {
+                     val logObj = json.getJSONObject("log")
+                     logObj.put("level", "error")
+                }
+
+                val testConfigStr = json.toString()
+                val testConfigFile = File(tempDir, "test_proxy_${System.currentTimeMillis()}.json")
+                testConfigFile.writeText(testConfigStr)
+
+                // 5. Start Libbox
+                // Use StubPlatformInterface because we don't need VPN features (tun, protect, etc.)
+                // We just need a SOCKS proxy.
+                Libbox.newService(testConfigFile.absolutePath, StubPlatformInterface())
+
+                // Give it a moment to bind
+                delay(200)
+
+                return@withContext socksPort
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+                isTestRunning.set(false) // Release lock on error
+
+                // Try to cleanup
+                try { Libbox.newService("", StubPlatformInterface()) } catch (_: Exception) {}
+
+                return@withContext -4 // Exception
+            }
+        }
+
+        suspend fun stopTestProxy() = withContext(Dispatchers.IO) {
+            if (isTestRunning.get()) {
                 try {
-                    val socket = ServerSocket(0)
-                    socksPort = socket.localPort
-                    socket.close()
-
-                    val json = JSONObject(configJson)
-                    val inbounds = JSONArray()
-                    val socksInbound = JSONObject()
-                    socksInbound.put("type", "socks")
-                    socksInbound.put("tag", "socks-in")
-                    socksInbound.put("listen", "127.0.0.1")
-                    socksInbound.put("listen_port", socksPort)
-                    inbounds.put(socksInbound)
-                    json.put("inbounds", inbounds)
-
-                    if (!json.has("outbounds")) {
-                        return@withLock -1
-                    }
-
-                    val testConfigStr = json.toString()
-                    val testConfigFile = File(tempDir, "test_${System.currentTimeMillis()}.json")
-                    testConfigFile.writeText(testConfigStr)
-
-                    // Use StubPlatformInterface for static context
-                    Libbox.newService(testConfigFile.absolutePath, StubPlatformInterface())
-
-                    delay(500)
-
-                    val client = OkHttpClient.Builder()
-                        .connectTimeout(3, TimeUnit.SECONDS)
-                        .readTimeout(3, TimeUnit.SECONDS)
-                        .proxy(Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", socksPort)))
-                        .build()
-
-                    val request = Request.Builder()
-                        .url("https://www.google.com/generate_204")
-                        .head()
-                        .build()
-
-                    val startTime = System.currentTimeMillis()
-                    val response = client.newCall(request).execute()
-                    val endTime = System.currentTimeMillis()
-
-                    val duration = (endTime - startTime).toInt()
-                    response.close()
-
-                    if (response.isSuccessful || response.code == 204) {
-                        return@withLock duration
-                    } else {
-                        return@withLock -1
-                    }
-
+                    Libbox.newService("", StubPlatformInterface())
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    return@withLock -1
                 } finally {
-                    try {
-                        Libbox.newService("", StubPlatformInterface())
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
+                    isTestRunning.set(false) // Release lock
                 }
+            }
+        }
+
+        // Legacy/Self-contained method (Refactored to use same lock concept if needed,
+        // but for now keeping isolated to avoid breaking existing flows if they are used)
+        suspend fun measurePing(configJson: String, tempDir: File): Int = withContext(Dispatchers.IO) {
+            // We reuse the startTestProxy logic if possible, or keep separate.
+            // To avoid complexity, we keep this separate but respecting the lock.
+
+            if (isVpnRunning.get()) return@withContext -1
+            if (!isTestRunning.compareAndSet(false, true)) return@withContext -1
+
+            try {
+                 // Logic duplicated for safety in this specific "One-shot" function
+                val socket = ServerSocket(0)
+                val socksPort = socket.localPort
+                socket.close()
+
+                val json = JSONObject(configJson)
+                val inbounds = JSONArray()
+                val socksInbound = JSONObject()
+                socksInbound.put("type", "socks")
+                socksInbound.put("tag", "socks-in")
+                socksInbound.put("listen", "127.0.0.1")
+                socksInbound.put("listen_port", socksPort)
+                inbounds.put(socksInbound)
+                json.put("inbounds", inbounds)
+                if (!json.has("outbounds")) return@withContext -1
+
+                val testConfigFile = File(tempDir, "test_${System.currentTimeMillis()}.json")
+                testConfigFile.writeText(json.toString())
+
+                Libbox.newService(testConfigFile.absolutePath, StubPlatformInterface())
+                delay(500)
+
+                val client = OkHttpClient.Builder()
+                    .connectTimeout(3, TimeUnit.SECONDS)
+                    .readTimeout(3, TimeUnit.SECONDS)
+                    .proxy(Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", socksPort)))
+                    .build()
+
+                val request = Request.Builder()
+                    .url("https://www.google.com/generate_204")
+                    .head()
+                    .build()
+
+                val startTime = System.currentTimeMillis()
+                val response = client.newCall(request).execute()
+                val endTime = System.currentTimeMillis()
+
+                response.close()
+
+                if (response.isSuccessful || response.code == 204) {
+                    return@withContext (endTime - startTime).toInt()
+                }
+                return@withContext -1
+
+            } catch (e: Exception) {
+                return@withContext -1
+            } finally {
+                try { Libbox.newService("", StubPlatformInterface()) } catch (_: Exception) {}
+                isTestRunning.set(false)
             }
         }
     }
@@ -144,6 +218,14 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
 
     private fun startVpn(configJson: String) {
         if (isVpnRunning.get()) return
+
+        // Ensure no test is running
+        if (isTestRunning.get()) {
+             // Force stop test to prioritize VPN connection
+             try { Libbox.newService("", StubPlatformInterface()) } catch (_: Exception) {}
+             isTestRunning.set(false)
+        }
+
         isVpnRunning.set(true)
 
         createNotificationChannel()
@@ -269,15 +351,11 @@ class StubPlatformInterface : PlatformInterface {
     override fun usePlatformAutoDetectInterfaceControl(): Boolean = true
     override fun clearDNSCache() {}
 
-    // WIFI State - FIXED: Added dummy arguments to constructor
+    // WIFI State
     override fun readWIFIState(): WIFIState { 
         return WIFIState("wlan0", "00:00:00:00:00:00") 
     }
     
-    // REMOVED: writeWIFIState does not exist in the interface
-    // override fun writeWIFIState(state: WIFIState) { }
-
-    // NEWLY ADDED METHODS (From previous Error Logs)
     override fun useProcFS(): Boolean = false
     override fun writeLog(message: String?) { }
     
@@ -295,7 +373,6 @@ class StubPlatformInterface : PlatformInterface {
     
     override fun uidByPackageName(packageName: String?): Int = 0
     
-    // Uses aliased import to avoid conflict with android.app.Notification
     override fun sendNotification(notification: LibboxNotification?) { } 
     
     override fun startDefaultInterfaceMonitor(listener: InterfaceUpdateListener?) { }
