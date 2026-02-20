@@ -7,6 +7,46 @@ import 'singbox_config_generator.dart';
 import 'testers/ephemeral_tester.dart';
 import '../utils/advanced_logger.dart';
 
+// Top-level function for priority queue building in isolate
+List<VpnConfigWithMetrics> _buildQueueInIsolate(Map<String, dynamic> args) {
+  final List<VpnConfigWithMetrics> allConfigs = args['configs'] as List<VpnConfigWithMetrics>;
+  final bool retestDead = args['retestDead'] as bool;
+
+  // Categorize
+  final tier1 = <VpnConfigWithMetrics>[]; // Retest (Known Good < 24h)
+  final tier2 = <VpnConfigWithMetrics>[]; // Fresh / Untested
+  final tier3 = <VpnConfigWithMetrics>[]; // Retry (Soft Fail)
+  final dead = <VpnConfigWithMetrics>[];  // Dead (Hard Fail)
+
+  final now = DateTime.now();
+
+  for (final c in allConfigs) {
+     if (c.funnelStage > 0) {
+        if (c.lastTestedAt != null && now.difference(c.lastTestedAt!).inHours < 24) {
+           tier1.add(c);
+        } else {
+           tier1.add(c); // Old good configs
+        }
+     } else if (c.funnelStage == 0 && c.failureCount == 0) {
+        tier2.add(c); // Fresh
+     } else if (c.failureCount < 3) {
+        tier3.add(c); // Retry
+     } else {
+        dead.add(c);
+     }
+  }
+
+  // Sort Tier 1 by score (Best first)
+  tier1.sort((a, b) => b.calculatedScore.compareTo(a.calculatedScore));
+
+  final queue = [...tier1, ...tier2, ...tier3];
+  if (retestDead) {
+     queue.addAll(dead);
+  }
+
+  return queue;
+}
+
 class FunnelService {
   static final FunnelService _instance = FunnelService._internal();
   factory FunnelService() => _instance;
@@ -82,7 +122,12 @@ class FunnelService {
     _progressController.add("Initializing Pipeline...");
 
     // 1. Populate TCP Queue (Initial Feed)
-    final all = _buildPriorityQueue(retestDead);
+    // Offload to isolate
+    final all = await compute(_buildQueueInIsolate, {
+       'configs': _configManager.allConfigs,
+       'retestDead': retestDead,
+    });
+
     _totalConfigs = all.length;
     _tcpQueue.addAll(all);
 
@@ -255,42 +300,4 @@ class FunnelService {
     }
   }
 
-  List<VpnConfigWithMetrics> _buildPriorityQueue(bool retestDead) {
-    // Clone list
-    final all = List<VpnConfigWithMetrics>.from(_configManager.allConfigs);
-
-    // Categorize
-    final tier1 = <VpnConfigWithMetrics>[]; // Retest (Known Good < 24h)
-    final tier2 = <VpnConfigWithMetrics>[]; // Fresh / Untested
-    final tier3 = <VpnConfigWithMetrics>[]; // Retry (Soft Fail)
-    final dead = <VpnConfigWithMetrics>[];  // Dead (Hard Fail)
-
-    final now = DateTime.now();
-
-    for (final c in all) {
-       if (c.funnelStage > 0) {
-          if (c.lastTestedAt != null && now.difference(c.lastTestedAt!).inHours < 24) {
-             tier1.add(c);
-          } else {
-             tier1.add(c); // Old good configs
-          }
-       } else if (c.funnelStage == 0 && c.failureCount == 0) {
-          tier2.add(c); // Fresh
-       } else if (c.failureCount < 3) {
-          tier3.add(c); // Retry
-       } else {
-          dead.add(c);
-       }
-    }
-
-    // Sort Tier 1 by score (Best first)
-    tier1.sort((a, b) => b.calculatedScore.compareTo(a.calculatedScore));
-
-    final queue = [...tier1, ...tier2, ...tier3];
-    if (retestDead) {
-       queue.addAll(dead);
-    }
-
-    return queue;
-  }
 }
