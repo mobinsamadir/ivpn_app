@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import '../services/config_manager.dart';
 import '../models/vpn_config_with_metrics.dart';
 import '../utils/advanced_logger.dart';
-import '../services/ad_service.dart';
 import '../services/access_manager.dart';
+import '../services/native_vpn_service.dart';
 
 class SmartConnectButton extends StatefulWidget {
   final double buttonSize;
@@ -121,7 +121,23 @@ class _SmartConnectButtonState extends State<SmartConnectButton> {
         _isConnected = false;
         _connectionStatus = 'Disconnected';
       });
-      // TODO: Implement actual disconnect logic
+
+      try {
+        await NativeVpnService().disconnect();
+        await ConfigManager().stopAllOperations();
+      } catch (e) {
+        AdvancedLogger.error('[SmartConnect] Failed to disconnect: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to disconnect: $e')),
+          );
+          // Revert state on failure
+          setState(() {
+            _isConnected = true;
+            _connectionStatus = 'Connected';
+          });
+        }
+      }
       return;
     }
 
