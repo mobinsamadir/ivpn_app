@@ -17,7 +17,6 @@ class FullScreenAdDialog extends StatefulWidget {
 
 class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
   int _timeLeft = 10;
-  bool _canClose = false;
   Timer? _timer;
 
   @override
@@ -46,9 +45,8 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
       } else {
         _timer?.cancel();
         if (mounted) {
-          setState(() {
-            _canClose = true;
-          });
+          // Failsafe: Auto-dismiss on timeout (Success)
+          Navigator.of(context).pop(true);
         }
       }
     });
@@ -62,7 +60,7 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
 
   @override
   Widget build(BuildContext context) {
-    // PopScope prevents Back Button to enforce "The Wall"
+    // PopScope prevents Back Button to enforce "The Wall" until dismissed or closed
     return PopScope(
       canPop: false,
       onPopInvoked: (didPop) {
@@ -70,118 +68,116 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
          // Optionally block interaction or show toast
       },
       child: Scaffold(
-        backgroundColor: Colors.black,
-        body: SafeArea(
-          child: Column(
-            children: [
-              // Header
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Premium Connection',
-                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: _canClose ? Colors.green : Colors.redAccent.withOpacity(0.8),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        children: [
-                           Icon(_canClose ? Icons.check : Icons.timer, color: Colors.white, size: 14),
-                           const SizedBox(width: 6),
-                           Text(
-                            _canClose ? 'Ready' : '${_timeLeft}s',
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        backgroundColor: Colors.black, // Force solid background
+        body: Stack(
+          children: [
+            // Main Content Layer
+            SafeArea(
+              child: Column(
+                children: [
+                  // Header
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Premium Connection',
+                          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        // Timer Badge
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.redAccent.withOpacity(0.8),
+                            borderRadius: BorderRadius.circular(20),
                           ),
-                        ],
+                          child: Row(
+                            children: [
+                               const Icon(Icons.timer, color: Colors.white, size: 14),
+                               const SizedBox(width: 6),
+                               Text(
+                                '${_timeLeft}s',
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Ad Content
+                  Expanded(
+                    child: Container(
+                      width: double.infinity,
+                      color: const Color(0xFF121212), // Inner background just in case
+                      child: Center(
+                        child: UniversalAdWidget(slot: widget.unitId),
                       ),
                     ),
-                  ],
-                ),
-              ),
+                  ),
 
-              // Ad Content
-              Expanded(
-                child: Container(
-                  width: double.infinity,
-                  color: const Color(0xFF121212),
-                  child: Center(
-                    child: UniversalAdWidget(slot: widget.unitId),
+                  // Footer "The Wall" Action Area
+                  // Modified: Now just shows status, no button needed as it auto-dismisses
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF1E1E1E),
+                      border: Border(top: BorderSide(color: Color(0xFF333333))),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          "Your premium connection is ready in ${_timeLeft}s...",
+                          style: TextStyle(
+                            color: Colors.grey[400],
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        // Visual Indicator that work is happening (or waiting)
+                        const SizedBox(
+                          width: double.infinity,
+                          height: 56,
+                          child: Center(
+                             child: CircularProgressIndicator(color: Colors.blueAccent),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Escapability Layer: Close Button
+            // Positioned relative to the safe area
+            Positioned(
+              top: 0,
+              right: 0,
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Material(
+                    color: Colors.black54, // Semi-transparent for visibility over white ads
+                    shape: const CircleBorder(),
+                    clipBehavior: Clip.hardEdge,
+                    child: IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                      tooltip: 'Close Ad',
+                      onPressed: () {
+                        // User explicitly closed it -> No Reward (False)
+                        Navigator.of(context).pop(false);
+                      },
+                    ),
                   ),
                 ),
               ),
-
-              // Footer "The Wall" Action Area
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: const BoxDecoration(
-                  color: Color(0xFF1E1E1E),
-                  border: Border(top: BorderSide(color: Color(0xFF333333))),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      _canClose
-                        ? "Thank you! You can now connect."
-                        : "Your premium connection is ready in ${_timeLeft}s...",
-                      style: TextStyle(
-                        color: _canClose ? Colors.greenAccent : Colors.grey[400],
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: _canClose
-                            ? () => Navigator.of(context).pop(true)
-                            : null, // Disabled until timer ends
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blueAccent,
-                          disabledBackgroundColor: Colors.grey[800],
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          elevation: _canClose ? 4 : 0,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            if (!_canClose)
-                              const Padding(
-                                padding: EdgeInsets.only(right: 12.0),
-                                child: SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white38)
-                                ),
-                              ),
-                            Text(
-                              _canClose ? 'CONNECT NOW' : 'PLEASE WAIT...',
-                              style: TextStyle(
-                                color: _canClose ? Colors.white : Colors.white38,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 1.2,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
