@@ -16,8 +16,10 @@ import 'providers/theme_provider.dart';
 import 'providers/home_provider.dart';
 import 'screens/connection_home_screen.dart';
 import 'services/background_ad_service.dart';
-import 'screens/splash_screen.dart'; // Ensure this import exists
+import 'screens/splash_screen.dart';
 import 'services/windows_vpn_service.dart';
+import 'services/funnel_service.dart'; // Added
+import 'services/ad_manager_service.dart'; // Added
 
 void main() {
   // 1. Ensure bindings first (Must be first)
@@ -45,95 +47,152 @@ void main() {
     );
   };
 
-  runZonedGuarded(() async {
-    // 3. Robust Initialization with Timeouts & Try-Catch
-    // WindowManager (Desktop)
-    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+  runApp(const AppInitializer());
+}
+
+class AppInitializer extends StatefulWidget {
+  const AppInitializer({super.key});
+
+  @override
+  State<AppInitializer> createState() => _AppInitializerState();
+}
+
+class _AppInitializerState extends State<AppInitializer> {
+  String _bootStatus = "Initializing...";
+  String? _errorMessage;
+  bool _initialized = false;
+
+  // Services
+  StorageService? _storageService;
+  ConfigManager? _configManager;
+
+  @override
+  void initState() {
+    super.initState();
+    // Run async init in a zone to catch errors
+    runZonedGuarded(() {
+      _initApp();
+    }, (error, stack) {
+      if (kDebugMode) {
+        print('CRITICAL STARTUP ERROR: $error');
+      }
       try {
-        await windowManager.ensureInitialized().timeout(const Duration(seconds: 2));
-      } catch (e) {
-        debugPrint("WindowManager init failed or timed out: $e");
+        AdvancedLogger.error("UNCAUGHT ASYNC ERROR", error: error, stackTrace: stack);
+        CleanupUtils.emergencyCleanup();
+      } catch (_) {}
+
+      if (mounted) {
+        setState(() {
+          _errorMessage = "Critical Startup Error:\n$error";
+        });
+      }
+    });
+  }
+
+  Future<void> _initApp() async {
+    try {
+      // 1. Window & Logger Init
+      if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+        try {
+          await windowManager.ensureInitialized().timeout(const Duration(seconds: 2));
+        } catch (_) {}
+      }
+
+      setState(() => _bootStatus = "1/4: Init Local DB...");
+
+      try {
+        await AdvancedLogger.init().timeout(const Duration(seconds: 2));
+        await FileLogger.init().timeout(const Duration(seconds: 2));
+      } catch (_) {}
+
+      // 2. Storage Init
+      final prefs = await SharedPreferences.getInstance().timeout(const Duration(seconds: 5));
+      _storageService = StorageService(prefs: prefs);
+      _configManager = ConfigManager(); // Create Global Instance
+
+      // 3. Config Manager Init
+      setState(() => _bootStatus = "2/4: Fetching Cloud Configs...");
+
+      // We pass the storage service implicitly via injection later, but ConfigManager might need init
+      // Note: ConfigManager usually loads from storage or cloud.
+
+      await _configManager!.init().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          AdvancedLogger.error("ConfigManager.init timed out!");
+        }
+      );
+
+      // Start Funnel (Isolate sorting)
+      setState(() => _bootStatus = "3/4: Sorting (Isolate)...");
+      FunnelService().startFunnel();
+
+      // 4. Ads Init
+      setState(() => _bootStatus = "4/4: Init Ads...");
+      AdManagerService().initialize();
+
+      // Fetch Updates
+      await _configManager!.fetchStartupConfigs().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {
+          return false;
+        }
+      );
+
+      // Complete
+      if (mounted) {
+        setState(() {
+          _initialized = true;
+        });
+      }
+    } catch (e, s) {
+      AdvancedLogger.error("Initialization Failed", error: e, stackTrace: s);
+      if (mounted) {
+        setState(() {
+          _errorMessage = "Initialization Failed:\n$e";
+        });
       }
     }
+  }
 
-    // Initialize Loggers (Non-critical: Don't block app start)
-    try {
-      await AdvancedLogger.init().timeout(const Duration(seconds: 2));
-      AdvancedLogger.info('🚀 IVPN App Initialized', metadata: {
-        'platform': Platform.operatingSystem,
-        'version': Platform.operatingSystemVersion,
-      });
-
-      await FileLogger.init().timeout(const Duration(seconds: 2));
-      FileLogger.log("Application starting...");
-    } catch (e) {
-      debugPrint("Logger initialization warning: $e");
-    }
-
-    // Setup Global Crash Recovery
-    // FlutterError.onError = (details) {
-    //   FlutterError.presentError(details);
-    //   try {
-    //     AdvancedLogger.error("GLOBAL FLUTTER ERROR", error: details.exception, stackTrace: details.stack);
-    //     CleanupUtils.emergencyCleanup();
-    //   } catch (_) {}
-    // };
-
-    // Initialize Core Services Globally
-    SharedPreferences? prefs;
-    try {
-      // Critical: SharedPreferences with Timeout
-      prefs = await SharedPreferences.getInstance().timeout(const Duration(seconds: 5));
-    } catch (e) {
-      debugPrint("CRITICAL: SharedPreferences failed to load: $e");
-      // Fallback: If SharedPreferences fails, show Fatal Error Screen via runApp
-      runApp(
-        MaterialApp(
-          home: Scaffold(
-            backgroundColor: Colors.black,
-            body: Center(
-              child: Text(
-                "Fatal Error: Storage Initialization Failed.\n$e",
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.red),
-              ),
-            ),
-          ),
-        )
+  @override
+  Widget build(BuildContext context) {
+    // Show Splash if not ready or error
+    if (!_initialized || _errorMessage != null) {
+      return MaterialApp(
+        title: 'iVPN Boot',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData.dark(),
+        home: SplashScreen(
+          statusMessage: _bootStatus,
+          errorMessage: _errorMessage,
+          onRetry: _errorMessage != null ? () {
+            setState(() {
+              _errorMessage = null;
+              _bootStatus = "Retrying...";
+            });
+            _initApp();
+          } : null,
+        ),
       );
-      return; // Stop execution
     }
 
-    final storageService = StorageService(prefs: prefs!); // Safe due to return above
-    final configManager = ConfigManager(); // Create Global Instance Here
-
-    runApp(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider(create: (context) => ThemeProvider()),
-          // Inject StorageService
-          Provider<StorageService>.value(value: storageService),
-          // Inject Global ConfigManager (Critical Fix)
-          ChangeNotifierProvider.value(value: configManager),
-          // Inject HomeProvider dependent on StorageService
-          ChangeNotifierProvider(
-            create: (context) => HomeProvider(storageService: storageService),
-          ),
-        ],
-        child: const GlobalWindowListener(child: MyApp()),
-      ),
+    // Launch App Tree
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => ThemeProvider()),
+        // Inject StorageService
+        Provider<StorageService>.value(value: _storageService!),
+        // Inject Global ConfigManager
+        ChangeNotifierProvider.value(value: _configManager!),
+        // Inject HomeProvider dependent on StorageService
+        ChangeNotifierProvider(
+          create: (context) => HomeProvider(storageService: _storageService!),
+        ),
+      ],
+      child: const GlobalWindowListener(child: MyApp()),
     );
-  }, (error, stack) {
-    // Catch-all for async errors
-    if (kDebugMode) {
-      print('CRITICAL STARTUP ERROR: $error');
-    }
-    // Simple error logging to prevent total crash
-    try {
-      AdvancedLogger.error("UNCAUGHT ASYNC ERROR", error: error, stackTrace: stack);
-      CleanupUtils.emergencyCleanup();
-    } catch (_) {}
-  });
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -153,8 +212,8 @@ class MyApp extends StatelessWidget {
       builder: (context, child) {
         return BackgroundAdService(child: child!);
       },
-      // Start with Splash Screen to handle async init safely
-      home: const SplashScreen(),
+      // Direct to Home since we handled Splash in AppInitializer
+      home: const ConnectionHomeScreen(),
     );
   }
 }

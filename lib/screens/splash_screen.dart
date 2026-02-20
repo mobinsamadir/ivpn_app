@@ -1,88 +1,16 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../services/config_manager.dart';
-import '../services/advanced_logger.dart';
-import '../services/ad_manager_service.dart';
-import '../services/funnel_service.dart';
-import 'connection_home_screen.dart';
 
-class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
+class SplashScreen extends StatelessWidget {
+  final String statusMessage;
+  final String? errorMessage;
+  final VoidCallback? onRetry;
 
-  @override
-  State<SplashScreen> createState() => _SplashScreenState();
-}
-
-class _SplashScreenState extends State<SplashScreen> {
-  String _statusMessage = 'Initializing...';
-  bool _hasError = false;
-  String? _errorMessage;
-
-  @override
-  void initState() {
-    super.initState();
-    // Run after first frame render
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializeApp();
-    });
-  }
-
-  Future<void> _initializeApp() async {
-    setState(() {
-      _hasError = false;
-      _statusMessage = 'Initializing services...';
-    });
-
-    try {
-      // 1. Get Global Config Manager (Injected in main.dart)
-      final configManager = context.read<ConfigManager>();
-      
-      // 2. Initialize Config Logic
-      setState(() => _statusMessage = 'Loading configs...');
-      // Robust init with timeout to prevent hang
-      await configManager.init().timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          AdvancedLogger.error("ConfigManager.init timed out!");
-          // Don't throw, just proceed. Some configs might be missing but app won't hang.
-        }
-      );
-
-      // NEW: Start Funnel immediately
-      FunnelService().startFunnel();
-
-      // NEW: Initialize Ads
-      AdManagerService().initialize();
-
-      // 3. Fetch Updates (Non-blocking usually, but good to wait a bit)
-      setState(() => _statusMessage = 'Updating from Cloud...');
-      // We don't await this forever to prevent stuck splash
-      await configManager.fetchStartupConfigs().timeout(
-        const Duration(seconds: 5), 
-        onTimeout: () {
-          AdvancedLogger.warn('Splash fetch timed out, proceeding with cached configs.');
-          return false; // <--- FIX: Explicitly return a boolean (false = failed/timed out)
-        }
-      );
-
-      // 4. Navigate to Home
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const ConnectionHomeScreen()),
-        );
-      }
-    } catch (e, stack) {
-      AdvancedLogger.error("Splash Init Error", error: e, stackTrace: stack);
-      if (mounted) {
-        setState(() {
-          _hasError = true;
-          _statusMessage = '';
-          _errorMessage = 'Initialization Failed:\n$e';
-        });
-      }
-    }
-  }
+  const SplashScreen({
+    super.key,
+    this.statusMessage = 'Initializing...',
+    this.errorMessage,
+    this.onRetry,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -99,29 +27,30 @@ class _SplashScreenState extends State<SplashScreen> {
               const SizedBox(height: 24),
               
               // Status or Error
-              if (_hasError) ...[
+              if (errorMessage != null) ...[
                 const Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
                 const SizedBox(height: 16),
                 Text(
-                  _errorMessage ?? 'Unknown Error',
+                  errorMessage!,
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: Colors.redAccent, fontSize: 16),
                 ),
                 const SizedBox(height: 24),
-                ElevatedButton.icon(
-                  onPressed: _initializeApp,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Retry'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black,
-                  ),
-                )
+                if (onRetry != null)
+                  ElevatedButton.icon(
+                    onPressed: onRetry,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Retry'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.black,
+                    ),
+                  )
               ] else ...[
                 const CircularProgressIndicator(color: Colors.white),
                 const SizedBox(height: 24),
                 Text(
-                  _statusMessage,
+                  statusMessage,
                   style: const TextStyle(color: Colors.white70, fontSize: 16),
                 ),
               ],
