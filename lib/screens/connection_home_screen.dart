@@ -19,6 +19,7 @@ import '../services/funnel_service.dart';
 import '../services/testers/ephemeral_tester.dart';
 import '../services/update_service.dart';
 import '../utils/connectivity_utils.dart';
+import 'settings_screen.dart';
 
 // Top-level function for sorting in background isolate
 List<VpnConfigWithMetrics> _sortConfigs(List<VpnConfigWithMetrics> configs) {
@@ -860,5 +861,274 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     } catch (e) {
       _showToast('Failed to refresh configs: $e');
     }
+  }
+
+  // --- RESTORED UI METHODS ---
+
+  void _showToast(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  Future<void> _runFunnelTest() async {
+    if (_configManager.allConfigs.isEmpty) return;
+    _funnelService.startFunnel();
+  }
+
+  Widget _buildAdBannerSection() {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 8.0),
+      child: UniversalAdWidget(slot: 'home_banner_top'),
+    );
+  }
+
+  Widget _buildAppHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        const Text(
+          'V2Ray',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.settings, color: Colors.white),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SettingsScreen()),
+            );
+          },
+        )
+      ],
+    );
+  }
+
+  Widget _buildSubscriptionCard() {
+    final access = AccessManager();
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E1E1E),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: ListTile(
+        leading: const Icon(Icons.workspace_premium, color: Colors.amber, size: 32),
+        title: const Text('Free Plan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        subtitle: Text(
+          access.hasAccess
+              ? '${access.remainingTime.inHours}h ${access.remainingTime.inMinutes % 60}m remaining'
+              : 'No active plan',
+          style: const TextStyle(color: Colors.grey),
+        ),
+        trailing: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blueAccent,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
+          onPressed: _showAdSequence,
+          child: const Text('Add Time'),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildConnectionStatus() {
+    Color statusColor;
+    if (_configManager.isConnected) {
+      statusColor = Colors.greenAccent;
+    } else if (_configManager.connectionStatus == 'Failed' || _configManager.connectionStatus.contains('Error')) {
+      statusColor = Colors.redAccent;
+    } else {
+      statusColor = Colors.grey;
+    }
+
+    return Center(
+      child: Text(
+        _configManager.connectionStatus,
+        style: TextStyle(
+          color: statusColor,
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildConnectButton() {
+    final isConnected = _configManager.isConnected;
+    final isConnecting = _configManager.connectionStatus.toLowerCase().contains('connecting');
+
+    return Center(
+      child: GestureDetector(
+        onTap: _handleConnection,
+        child: Container(
+          width: 180,
+          height: 180,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: isConnected
+                ? Colors.redAccent
+                : (isConnecting ? Colors.orange : Colors.green),
+            boxShadow: [
+              BoxShadow(
+                color: (isConnected ? Colors.red : Colors.green).withOpacity(0.4),
+                blurRadius: 20,
+                spreadRadius: 5,
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                isConnected ? Icons.power_settings_new : Icons.power_settings_new,
+                size: 60,
+                color: Colors.white,
+              ),
+              const SizedBox(height: 10),
+              Text(
+                isConnected ? 'DISCONNECT' : (isConnecting ? 'CONNECTING' : 'CONNECT'),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSelectedConfig() {
+    final config = _configManager.selectedConfig;
+    if (config == null) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: ConfigCard(
+        config: config,
+        isSelected: true,
+        isTesting: _activeTestIds.contains(config.id),
+        onTap: () {}, // Already selected
+        onTestLatency: () => _runSingleTest(config),
+        onTestSpeed: () => _runSingleTest(config),
+        onToggleFavorite: () async {
+           await _configManager.toggleFavorite(config.id);
+           setState(() {});
+        },
+        onDelete: () async {
+          final confirm = await _showDeleteConfirmationDialog(config);
+          if (confirm && mounted) {
+            await _configManager.deleteConfig(config.id);
+            setState(() {});
+          }
+        },
+      ),
+    );
+  }
+
+  Widget _buildAutoTestToggle() {
+    return SwitchListTile(
+      title: const Text('Auto-Test on Startup', style: TextStyle(color: Colors.white)),
+      value: _autoTestOnStartup,
+      activeColor: Colors.blueAccent,
+      onChanged: (val) {
+        setState(() {
+          _autoTestOnStartup = val;
+        });
+      },
+    );
+  }
+
+  void _showSmartCleanupDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E1E),
+        title: const Text('Smart Cleanup', style: TextStyle(color: Colors.white)),
+        content: const Text(
+          'Remove failed and dead configs?',
+          style: TextStyle(color: Colors.grey),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final removed = await _configManager.removeConfigs(failedTcp: true, dead: true);
+              _showToast("Removed $removed configs");
+            },
+            child: const Text('Cleanup', style: TextStyle(color: Colors.redAccent)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<bool> _showDeleteConfirmationDialog(VpnConfigWithMetrics config) async {
+    return await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E1E),
+        title: const Text('Delete Config', style: TextStyle(color: Colors.white)),
+        content: Text(
+          'Delete ${config.name}?',
+          style: const TextStyle(color: Colors.grey),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
+          ),
+        ],
+      ),
+    ) ?? false;
+  }
+}
+
+class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
+  final TabBar _tabBar;
+
+  _SliverTabBarDelegate(this._tabBar);
+
+  @override
+  double get minExtent => _tabBar.preferredSize.height;
+
+  @override
+  double get maxExtent => _tabBar.preferredSize.height;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(
+      color: const Color(0xFF121212), // Match Scaffold bg
+      child: _tabBar,
+    );
+  }
+
+  @override
+  bool shouldRebuild(_SliverTabBarDelegate oldDelegate) {
+    return false;
   }
 }

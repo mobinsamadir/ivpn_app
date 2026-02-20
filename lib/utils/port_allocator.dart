@@ -22,7 +22,7 @@ class PortAllocator {
 
     int attempts = 0;
     while (attempts < 1000) {
-      int port;
+      int port = 20000;
       synchronized(() {
         if (_currentPort > _maxPort) {
           _currentPort = _startPort;
