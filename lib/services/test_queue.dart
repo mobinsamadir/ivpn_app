@@ -45,11 +45,11 @@ class TestQueue {
     final jobId = '${name ?? 'job'}_${DateTime.now().millisecondsSinceEpoch}';
     final cancelToken = CancelToken();
     final jobTimeout = timeout ?? TestTimeouts.speedTestSingle;
-    
+
     CleanupUtils.registerJob(jobId, cancelToken);
-    
+
     final completer = Completer<void>();
-    
+
     final item = _QueueItem(
       task: task,
       name: name ?? 'Unnamed',
@@ -72,10 +72,11 @@ class TestQueue {
       CleanupUtils.cleanupJobResources(_activeJob!.jobId);
     }
     for (final item in _queue) {
-       CleanupUtils.cleanupJobResources(item.jobId);
-       if (!item.completer.isCompleted) {
-         item.completer.completeError(OperationCancelledException('Queue cancelled'));
-       }
+      CleanupUtils.cleanupJobResources(item.jobId);
+      if (!item.completer.isCompleted) {
+        item.completer
+            .completeError(OperationCancelledException('Queue cancelled'));
+      }
     }
     _queue.clear();
     _activeJob = null;
@@ -86,30 +87,32 @@ class TestQueue {
 
     _activeJob = _queue.removeAt(0);
     final item = _activeJob!;
-    
+
     final timer = Timer(item.timeout, () async {
       if (!item.completer.isCompleted) {
         AdvancedLogger.warn(
           '[$category] Job "${item.name}" timed out after ${item.timeout}',
           metadata: {'jobId': item.jobId, 'type': item.type?.toString()},
         );
-        
+
         item.cancelToken.markAsTimeout();
         await CleanupUtils.cleanupJobResources(item.jobId);
-        
+
         if (item.type != null) {
-          TestFallbackStrategy.triggerFallback(item.type!, item.jobId, item.cancelToken);
+          TestFallbackStrategy.triggerFallback(
+              item.type!, item.jobId, item.cancelToken);
         }
-        
+
         item.completer.completeError(
-          TimeoutException('Job "${item.name}" timed out after ${item.timeout}'),
+          TimeoutException(
+              'Job "${item.name}" timed out after ${item.timeout}'),
         );
       }
     });
 
     try {
       await item.task(item.cancelToken, item.jobId);
-      
+
       if (!item.completer.isCompleted) {
         item.completer.complete();
       }
@@ -123,7 +126,7 @@ class TestQueue {
     } finally {
       timer.cancel();
       _activeJob = null;
-      _processNext(); 
+      _processNext();
     }
   }
 

@@ -9,8 +9,8 @@ class FileLogger {
     try {
       final directory = await getApplicationDocumentsDirectory();
       _logFile = File(p.join(directory.path, 'vpn_debug.log'));
-      
-      // Clear log on startup or keep it? 
+
+      // Clear log on startup or keep it?
       // User likely wants to see the latest attempt, so we append with a separator.
       await log("------------------------------------------");
       await log("Session Started: ${DateTime.now()}");
@@ -22,7 +22,7 @@ class FileLogger {
   static Future<void> log(String message) async {
     final timestamp = DateTime.now().toIso8601String();
     final formattedLine = "[$timestamp] $message\n";
-    
+
     // Also print to console for development
     print(formattedLine.trim());
 

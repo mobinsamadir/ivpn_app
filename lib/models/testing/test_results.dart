@@ -66,7 +66,7 @@ class HealthMetrics {
 
 class SpeedMetrics {
   final double downloadMbps;
-  final double uploadMbps; 
+  final double uploadMbps;
   final String testFileUsed;
   final Duration downloadDuration;
 
@@ -79,10 +79,10 @@ class SpeedMetrics {
 }
 
 class StabilityMetrics {
-  final List<int> samples; 
+  final List<int> samples;
   final int failureCount;
-  final double jitter; 
-  final double packetLoss; 
+  final double jitter;
+  final double packetLoss;
   final double averageLatency;
   final int maxLatency;
   final int minLatency;

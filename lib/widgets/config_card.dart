@@ -121,7 +121,8 @@ class ConfigCard extends StatelessWidget {
                                   height: 12,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.orangeAccent),
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.orangeAccent),
                                   ),
                                 ),
                                 SizedBox(width: 8),
@@ -135,32 +136,43 @@ class ConfigCard extends StatelessWidget {
                                 ),
                               ],
                             )
-                          else if (config.currentPing > 0 || config.currentPing == -1)
+                          else if (config.currentPing > 0 ||
+                              config.currentPing == -1)
                             Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 6,
                                 vertical: 2,
                               ),
                               decoration: BoxDecoration(
-                                color: (config.currentPing == -1 ? Colors.redAccent : _getPingColor(config.currentPing))
+                                color: (config.currentPing == -1
+                                        ? Colors.redAccent
+                                        : _getPingColor(config.currentPing))
                                     .withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(6),
                                 border: Border.all(
-                                  color: (config.currentPing == -1 ? Colors.redAccent : _getPingColor(config.currentPing))
+                                  color: (config.currentPing == -1
+                                          ? Colors.redAccent
+                                          : _getPingColor(config.currentPing))
                                       .withOpacity(0.3),
                                 ),
                               ),
                               child: Text(
-                                config.currentPing == -1 ? 'Timeout' : '${config.currentPing}ms',
+                                config.currentPing == -1
+                                    ? 'Timeout'
+                                    : '${config.currentPing}ms',
                                 style: TextStyle(
-                                  color: config.currentPing == -1 ? Colors.redAccent : _getPingColor(config.currentPing),
+                                  color: config.currentPing == -1
+                                      ? Colors.redAccent
+                                      : _getPingColor(config.currentPing),
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ),
 
-                          if (!isTesting && (config.currentPing > 0 || config.currentPing == -1))
+                          if (!isTesting &&
+                              (config.currentPing > 0 ||
+                                  config.currentPing == -1))
                             const SizedBox(width: 6),
 
                           if (!isTesting && config.currentSpeed > 0)
@@ -254,7 +266,8 @@ class ConfigCard extends StatelessWidget {
                             ? Icons.star_rounded
                             : Icons.star_outline_rounded,
                         size: 20,
-                        color: config.isFavorite ? Colors.amber : Colors.grey[500],
+                        color:
+                            config.isFavorite ? Colors.amber : Colors.grey[500],
                       ),
                       onPressed: onToggleFavorite,
                       splashRadius: 20,
@@ -402,19 +415,27 @@ class ConfigCard extends StatelessWidget {
 
   Color _getTierColor(int tier) {
     switch (tier) {
-      case 3: return Colors.green;
-      case 2: return Colors.yellow;
-      case 1: return Colors.grey;
-      default: return Colors.red;
+      case 3:
+        return Colors.green;
+      case 2:
+        return Colors.yellow;
+      case 1:
+        return Colors.grey;
+      default:
+        return Colors.red;
     }
   }
 
   Color _getTierBorderColor(int tier) {
     switch (tier) {
-      case 3: return Colors.green.shade700;
-      case 2: return Colors.yellow.shade700;
-      case 1: return Colors.grey.shade700;
-      default: return Colors.red.shade700;
+      case 3:
+        return Colors.green.shade700;
+      case 2:
+        return Colors.yellow.shade700;
+      case 1:
+        return Colors.grey.shade700;
+      default:
+        return Colors.red.shade700;
     }
   }
 }

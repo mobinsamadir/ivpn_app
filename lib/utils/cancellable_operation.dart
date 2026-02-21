@@ -1,7 +1,7 @@
 import 'dart:async';
 
 /// A wrapper around a [Future] that allows it to be cancelled.
-/// Note: This doesn't stop the actual async operation (like a network request) 
+/// Note: This doesn't stop the actual async operation (like a network request)
 /// unless the underlying operation explicitly checks for cancellation.
 class CancellableOperation<T> {
   final Completer<T> _completer = Completer<T>();
@@ -76,7 +76,7 @@ typedef VoidCallback = void Function();
 class OperationCancelledException implements Exception {
   final String message;
   OperationCancelledException([this.message = 'Operation cancelled']);
-  
+
   @override
   String toString() => 'OperationCancelledException: $message';
 }

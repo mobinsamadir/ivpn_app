@@ -18,7 +18,7 @@ class ClipboardUtils {
   /// Detects the format of a config string (vmess/vless/ss/trojan)
   static String detectFormat(String config) {
     config = config.trim();
-    
+
     if (config.startsWith('vmess://')) {
       return 'vmess';
     } else if (config.startsWith('vless://')) {
@@ -44,7 +44,7 @@ class ClipboardUtils {
         // Not a valid URI
       }
     }
-    
+
     return 'unknown';
   }
 
@@ -60,9 +60,9 @@ class ClipboardUtils {
   /// Validates if a config string is potentially valid
   static bool validateConfig(String config) {
     config = config.trim();
-    
+
     if (config.isEmpty) return false;
-    
+
     // Basic validation based on format
     switch (detectFormat(config)) {
       case 'vmess':

@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:io';
 import 'singbox_config_generator.dart';
 import 'windows_vpn_service.dart';
+import '../utils/advanced_logger.dart';
 
 // Top-level function for compute to prevent UI lag
 String _generateConfigWrapper(Map<String, dynamic> args) {
@@ -31,7 +32,8 @@ class NativeVpnService {
 
   static const int failedPingValue = -1;
 
-  final StreamController<String> _statusController = StreamController<String>.broadcast();
+  final StreamController<String> _statusController =
+      StreamController<String>.broadcast();
 
   // Initialization logic moved here
   void _init() {
@@ -40,11 +42,11 @@ class NativeVpnService {
       _eventChannel.receiveBroadcastStream().listen(
         (event) {
           final status = event.toString();
-          print("📡 [Native Event] VPN Status Update: $status");
+          AdvancedLogger.info("📡 [Native Event] VPN Status Update: $status");
           _statusController.add(status);
         },
         onError: (error) {
-          print("❌ [Native Event] Error: $error");
+          AdvancedLogger.error("❌ [Native Event] Error: $error");
           _statusController.add("ERROR");
         },
       );
@@ -63,10 +65,11 @@ class NativeVpnService {
     if (Platform.isWindows) return failedPingValue;
 
     try {
-      final int latency = await _methodChannel.invokeMethod('testConfig', {'config': config});
+      final int latency =
+          await _methodChannel.invokeMethod('testConfig', {'config': config});
       return latency <= 0 ? failedPingValue : latency;
     } catch (e) {
-      print("Failed to get latency: $e");
+      AdvancedLogger.error("Failed to get latency: $e");
       return failedPingValue;
     }
   }
@@ -76,14 +79,16 @@ class NativeVpnService {
   /// Starts a lightweight Sing-box proxy for testing.
   /// Returns the SOCKS port on success, or negative error code.
   Future<int> startTestProxy(String configJson) async {
-    if (Platform.isWindows) return -1; // Handled by EphemeralTester directly on Windows
+    if (Platform.isWindows)
+      return -1; // Handled by EphemeralTester directly on Windows
 
     try {
-       final int result = await _methodChannel.invokeMethod('startTestProxy', {'config': configJson});
-       return result;
+      final int result = await _methodChannel
+          .invokeMethod('startTestProxy', {'config': configJson});
+      return result;
     } catch (e) {
-       print("Failed to start test proxy: $e");
-       return -1;
+      AdvancedLogger.error("Failed to start test proxy: $e");
+      return -1;
     }
   }
 
@@ -94,7 +99,7 @@ class NativeVpnService {
     try {
       await _methodChannel.invokeMethod('stopTestProxy');
     } catch (e) {
-      print("Failed to stop test proxy: $e");
+      AdvancedLogger.error("Failed to stop test proxy: $e");
     }
   }
 
@@ -112,14 +117,16 @@ class NativeVpnService {
         'listenPort': 10808,
       });
 
-      print("🚀 [Native] Connecting with config length: ${configJson.length}...");
+      AdvancedLogger.info(
+          "🚀 [Native] Connecting with config length: ${configJson.length}...");
       await _methodChannel.invokeMethod('startVpn', {'config': configJson});
 
       // CRITICAL FIX: Removed fake "CONNECTED" state.
       // Now we wait for the OS to emit the real state via EventChannel.
-      print("✅ [Native] Connect command sent. Waiting for OS confirmation...");
+      AdvancedLogger.info(
+          "✅ [Native] Connect command sent. Waiting for OS confirmation...");
     } catch (e) {
-      print("Failed to send connect command: $e");
+      AdvancedLogger.error("Failed to send connect command: $e");
       _statusController.add("ERROR");
       rethrow;
     }
@@ -136,9 +143,9 @@ class NativeVpnService {
 
     try {
       await _methodChannel.invokeMethod('stopVpn');
-      print("Disconnect command sent.");
+      AdvancedLogger.info("Disconnect command sent.");
     } catch (e) {
-      print("Failed to send disconnect command: $e");
+      AdvancedLogger.error("Failed to send disconnect command: $e");
     }
   }
 

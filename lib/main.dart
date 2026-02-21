@@ -32,7 +32,7 @@ void main() {
           padding: const EdgeInsets.all(16),
           child: SingleChildScrollView(
             child: Text(
-              details.exceptionAsString() + '\n\n' + (details.stack.toString()),
+              '${details.exceptionAsString()}\n\n${details.stack}',
               style: const TextStyle(color: Colors.white, fontSize: 12),
               textDirection: TextDirection.ltr,
             ),
@@ -47,7 +47,9 @@ void main() {
     // WindowManager (Desktop)
     if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
       try {
-        await windowManager.ensureInitialized().timeout(const Duration(seconds: 2));
+        await windowManager
+            .ensureInitialized()
+            .timeout(const Duration(seconds: 2));
       } catch (e) {
         debugPrint("WindowManager init failed or timed out: $e");
       }
@@ -80,24 +82,23 @@ void main() {
     SharedPreferences? prefs;
     try {
       // Critical: SharedPreferences with Timeout
-      prefs = await SharedPreferences.getInstance().timeout(const Duration(seconds: 5));
+      prefs = await SharedPreferences.getInstance()
+          .timeout(const Duration(seconds: 5));
     } catch (e) {
       debugPrint("CRITICAL: SharedPreferences failed to load: $e");
       // Fallback: If SharedPreferences fails, show Fatal Error Screen via runApp
-      runApp(
-        MaterialApp(
-          home: Scaffold(
-            backgroundColor: Colors.black,
-            body: Center(
-              child: Text(
-                "Fatal Error: Storage Initialization Failed.\n$e",
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.red),
-              ),
+      runApp(MaterialApp(
+        home: Scaffold(
+          backgroundColor: Colors.black,
+          body: Center(
+            child: Text(
+              "Fatal Error: Storage Initialization Failed.\n$e",
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.red),
             ),
           ),
-        )
-      );
+        ),
+      ));
       return; // Stop execution
     }
 
@@ -120,7 +121,8 @@ void main() {
     }
     // Simple error logging to prevent total crash
     try {
-      AdvancedLogger.error("UNCAUGHT ASYNC ERROR", error: error, stackTrace: stack);
+      AdvancedLogger.error("UNCAUGHT ASYNC ERROR",
+          error: error, stackTrace: stack);
       CleanupUtils.emergencyCleanup();
     } catch (_) {}
   });
@@ -133,7 +135,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     // Watch ThemeProvider safely
     final themeProvider = context.watch<ThemeProvider>();
-    
+
     return MaterialApp(
       title: 'iVPN',
       debugShowCheckedModeBanner: false,
@@ -157,7 +159,8 @@ class GlobalWindowListener extends StatefulWidget {
   State<GlobalWindowListener> createState() => _GlobalWindowListenerState();
 }
 
-class _GlobalWindowListenerState extends State<GlobalWindowListener> with WindowListener {
+class _GlobalWindowListenerState extends State<GlobalWindowListener>
+    with WindowListener {
   @override
   void initState() {
     super.initState();

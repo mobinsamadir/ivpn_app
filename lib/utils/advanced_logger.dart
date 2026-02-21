@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'dart:developer' as developer;
 
 enum LogLevel { DEBUG, INFO, WARN, ERROR }
 
@@ -24,7 +23,8 @@ class AdvancedLogger {
     _minLevel = minLevel;
     try {
       final directory = await getApplicationDocumentsDirectory();
-      final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-').split('.')[0];
+      final timestamp =
+          DateTime.now().toIso8601String().replaceAll(':', '-').split('.')[0];
       _logFile = File(p.join(directory.path, 'vpn_log_$timestamp.jsonl'));
 
       // Write initial marker
@@ -60,15 +60,18 @@ class AdvancedLogger {
   }
 
   /// Error level logging
-  static void error(String message, {dynamic error, StackTrace? stackTrace, Map<String, dynamic>? metadata}) {
+  static void error(String message,
+      {dynamic error, StackTrace? stackTrace, Map<String, dynamic>? metadata}) {
     final combinedMetadata = metadata ?? {};
     if (error != null) combinedMetadata['error'] = error.toString();
-    if (stackTrace != null) combinedMetadata['stackTrace'] = stackTrace.toString();
+    if (stackTrace != null)
+      combinedMetadata['stackTrace'] = stackTrace.toString();
     _log(LogLevel.ERROR, message, metadata: combinedMetadata);
   }
 
   /// Network request logging
-  static void networkRequest(String method, String url, {Map<String, dynamic>? headers, dynamic body}) {
+  static void networkRequest(String method, String url,
+      {Map<String, dynamic>? headers, dynamic body}) {
     _log(LogLevel.INFO, 'HTTP $method $url', metadata: {
       'type': 'network_request',
       'method': method,
@@ -79,7 +82,8 @@ class AdvancedLogger {
   }
 
   /// Network response logging
-  static void networkResponse(String url, int statusCode, {dynamic body, Duration? duration}) {
+  static void networkResponse(String url, int statusCode,
+      {dynamic body, Duration? duration}) {
     _log(LogLevel.INFO, 'HTTP Response [$statusCode] $url', metadata: {
       'type': 'network_response',
       'url': url,
@@ -97,7 +101,8 @@ class AdvancedLogger {
   }
 
   /// Private logging method
-  static void _log(LogLevel level, String message, {Map<String, dynamic>? metadata}) {
+  static void _log(LogLevel level, String message,
+      {Map<String, dynamic>? metadata}) {
     if (level.index < _minLevel.index) return;
 
     final entry = {
@@ -117,7 +122,8 @@ class AdvancedLogger {
     }
 
     // Format log for in-app viewer: [TIME] [LEVEL] Message
-    final formattedLog = '[${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}:${DateTime.now().second.toString().padLeft(2, '0')}] [${level.toString().split('.').last}] $message';
+    final formattedLog =
+        '[${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}:${DateTime.now().second.toString().padLeft(2, '0')}] [${level.toString().split('.').last}] $message';
 
     // Add to memory buffer
     _logHistory.add(formattedLog);

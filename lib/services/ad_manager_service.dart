@@ -6,17 +6,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/ad_config.dart';
 import '../utils/advanced_logger.dart';
 import '../widgets/full_screen_ad_dialog.dart';
-import 'windows_vpn_service.dart';
 
 class AdManagerService {
   static final AdManagerService _instance = AdManagerService._internal();
   factory AdManagerService() => _instance;
   AdManagerService._internal();
 
-  final ValueNotifier<AdConfig?> configNotifier = ValueNotifier<AdConfig?>(null);
+  final ValueNotifier<AdConfig?> configNotifier =
+      ValueNotifier<AdConfig?>(null);
 
   // Base64 Encoded Ad Config URL
-  static final String _adUrl = utf8.decode(base64.decode('aHR0cHM6Ly9naXN0LmdpdGh1YnVzZXJjb250ZW50LmNvbS9tb2JpbnNhbWFkaXIvMDM3Y2RhYjhiODcxM2UxYzVhNTJkODE1NTM5ZjU2MzgvcmF3LzA4NjgzM2E5N2QyMzZkOWNmNTdkNDI3YzQ2YzIyNjg5MDQyNDRhN2UvYWRfY29uZmlnLmpzb24='));
+  static final String _adUrl = utf8.decode(base64.decode(
+      'aHR0cHM6Ly9naXN0LmdpdGh1YnVzZXJjb250ZW50LmNvbS9tb2JpbnNhbWFkaXIvMDM3Y2RhYjhiODcxM2UxYzVhNTJkODE1NTM5ZjU2MzgvcmF3LzA4NjgzM2E5N2QyMzZkOWNmNTdkNDI3YzQ2YzIyNjg5MDQyNDRhN2UvYWRfY29uZmlnLmpzb24='));
 
   static const String _storageKey = "ad_config_cache";
 
@@ -108,7 +109,8 @@ class AdManagerService {
         final jsonMap = jsonDecode(jsonString);
         final cachedConfig = AdConfig.fromJson(jsonMap);
         configNotifier.value = cachedConfig;
-        AdvancedLogger.info("[AdManager] Loaded cached config: ${cachedConfig.configVersion}");
+        AdvancedLogger.info(
+            "[AdManager] Loaded cached config: ${cachedConfig.configVersion}");
       }
     } catch (e) {
       AdvancedLogger.warn("[AdManager] Cache load failed: $e");
@@ -123,18 +125,20 @@ class AdManagerService {
       AdvancedLogger.info("[AdManager] HTTP Status: ${response.statusCode}");
       if (response.data != null) {
         final raw = response.data.toString();
-        AdvancedLogger.info("[AdManager] Raw Response: ${raw.length > 200 ? raw.substring(0, 200) : raw}");
+        AdvancedLogger.info(
+            "[AdManager] Raw Response: ${raw.length > 200 ? raw.substring(0, 200) : raw}");
       }
 
       if (response.statusCode == 200 && response.data != null) {
         dynamic data = response.data;
         if (data is String) {
-           data = jsonDecode(data);
+          data = jsonDecode(data);
         }
 
         final remoteConfig = AdConfig.fromJson(data);
         configNotifier.value = remoteConfig;
-        AdvancedLogger.info("[AdManager] Success! Updating cache and UI. Version: ${remoteConfig.configVersion}");
+        AdvancedLogger.info(
+            "[AdManager] Success! Updating cache and UI. Version: ${remoteConfig.configVersion}");
 
         // Cache it
         final prefs = await SharedPreferences.getInstance();
@@ -158,15 +162,18 @@ class AdManagerService {
     // If current config exists (from cache or init), keep it.
 
     if (configNotifier.value == null) {
-       AdvancedLogger.info("[AdManager] Fallback Triggered! Using hardcoded HTML.");
-       try {
-         final defaultConfig = AdConfig.fromJson(_defaultFallbackMap);
-         configNotifier.value = defaultConfig;
-       } catch (e) {
-         AdvancedLogger.error("[AdManager] Critical: Failed to apply fallback: $e");
-       }
+      AdvancedLogger.info(
+          "[AdManager] Fallback Triggered! Using hardcoded HTML.");
+      try {
+        final defaultConfig = AdConfig.fromJson(_defaultFallbackMap);
+        configNotifier.value = defaultConfig;
+      } catch (e) {
+        AdvancedLogger.error(
+            "[AdManager] Critical: Failed to apply fallback: $e");
+      }
     } else {
-       AdvancedLogger.info("[AdManager] Network failed, but keeping existing config (Cache/Default).");
+      AdvancedLogger.info(
+          "[AdManager] Network failed, but keeping existing config (Cache/Default).");
     }
   }
 
@@ -177,24 +184,25 @@ class AdManagerService {
   Future<bool> showPreConnectionAd(BuildContext context) async {
     if (!context.mounted) return false;
 
-    AdvancedLogger.info("[AdManager] Requesting Pre-Connection Ad (Full Screen Wall)...");
+    AdvancedLogger.info(
+        "[AdManager] Requesting Pre-Connection Ad (Full Screen Wall)...");
     try {
-       // Using Navigator.push with FullScreenAdDialog for "The Wall" experience
-       final result = await Navigator.of(context).push<bool>(
-         MaterialPageRoute(
-           fullscreenDialog: true,
-           builder: (context) => const FullScreenAdDialog(unitId: 'reward_ad'),
-         ),
-       );
+      // Using Navigator.push with FullScreenAdDialog for "The Wall" experience
+      final result = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(
+          fullscreenDialog: true,
+          builder: (context) => const FullScreenAdDialog(unitId: 'reward_ad'),
+        ),
+      );
 
-       return result ?? false;
+      return result ?? false;
     } catch (e) {
-       AdvancedLogger.error("[AdManager] Ad Exception: $e - Fail Open");
-       return true; // Fail Open on error
+      AdvancedLogger.error("[AdManager] Ad Exception: $e - Fail Open");
+      return true; // Fail Open on error
     }
   }
 
   Future<void> showPostConnectionAd() async {
-     // Placeholder for interstitial logic
+    // Placeholder for interstitial logic
   }
 }

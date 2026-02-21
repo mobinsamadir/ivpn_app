@@ -1,4 +1,3 @@
-
 class DeviceMetrics {
   final int latestPing;
   final double latestSpeed;
@@ -13,11 +12,11 @@ class DeviceMetrics {
   });
 
   Map<String, dynamic> toJson() => {
-    'latestPing': latestPing,
-    'latestSpeed': latestSpeed,
-    'lastUpdated': lastUpdated.toIso8601String(),
-    'usageCount': usageCount,
-  };
+        'latestPing': latestPing,
+        'latestSpeed': latestSpeed,
+        'lastUpdated': lastUpdated.toIso8601String(),
+        'usageCount': usageCount,
+      };
 
   factory DeviceMetrics.fromJson(Map<String, dynamic> json) {
     return DeviceMetrics(
@@ -37,10 +36,10 @@ class TestResult {
   TestResult({required this.success, this.latency = 0, this.error});
 
   Map<String, dynamic> toJson() => {
-    'success': success,
-    'latency': latency,
-    'error': error,
-  };
+        'success': success,
+        'latency': latency,
+        'error': error,
+      };
 
   factory TestResult.fromJson(Map<String, dynamic> json) {
     return TestResult(
@@ -70,7 +69,7 @@ class VpnConfigWithMetrics implements Comparable<VpnConfigWithMetrics> {
 
   // Funnel & Score Fields
   final int funnelStage; // 0=Untested, 1=TCP, 2=HTTP, 3=Speed
-  final int speedScore;  // 0-100
+  final int speedScore; // 0-100
 
   // Pipeline Tester Fields
   final Map<String, TestResult> stageResults;
@@ -103,9 +102,9 @@ class VpnConfigWithMetrics implements Comparable<VpnConfigWithMetrics> {
 
   // Computed properties
   int get currentPing {
-     if (ping != -1) return ping;
-     if (deviceMetrics.isEmpty) return -1;
-     return deviceMetrics.values.first.latestPing; 
+    if (ping != -1) return ping;
+    if (deviceMetrics.isEmpty) return -1;
+    return deviceMetrics.values.first.latestPing;
   }
 
   // Legacy Score (Deprecated usage but kept for backward compat if needed)
@@ -118,11 +117,12 @@ class VpnConfigWithMetrics implements Comparable<VpnConfigWithMetrics> {
 
     // 3. Ping Bonus
     if (currentPing > 0) {
-      baseScore += (2000 - currentPing) / 10.0; // Lower ping gives slightly more points
+      baseScore +=
+          (2000 - currentPing) / 10.0; // Lower ping gives slightly more points
     } else {
       // 4. PURGATORY BONUS: Not Verified (-1 Ping), but has History
       if (lastSuccessfulConnectionTime > 0) {
-         baseScore += 100.0; // Rank above purely random/dead configs
+        baseScore += 100.0; // Rank above purely random/dead configs
       }
     }
 
@@ -155,14 +155,14 @@ class VpnConfigWithMetrics implements Comparable<VpnConfigWithMetrics> {
     double? speed,
     bool connectionSuccess = false,
   }) {
-    final currentMetrics = deviceMetrics[deviceId] ?? 
+    final currentMetrics = deviceMetrics[deviceId] ??
         DeviceMetrics(
-          latestPing: -1, 
-          latestSpeed: 0.0, 
+          latestPing: -1,
+          latestSpeed: 0.0,
           lastUpdated: DateTime.now(),
           usageCount: 0,
         );
-    
+
     final updatedMetrics = DeviceMetrics(
       latestPing: ping ?? currentMetrics.latestPing,
       latestSpeed: speed ?? currentMetrics.latestSpeed,
@@ -213,7 +213,8 @@ class VpnConfigWithMetrics implements Comparable<VpnConfigWithMetrics> {
       addedDate: addedDate ?? this.addedDate,
       deviceMetrics: deviceMetrics ?? this.deviceMetrics,
       failureCount: failureCount ?? this.failureCount,
-      lastSuccessfulConnectionTime: lastSuccessfulConnectionTime ?? this.lastSuccessfulConnectionTime,
+      lastSuccessfulConnectionTime:
+          lastSuccessfulConnectionTime ?? this.lastSuccessfulConnectionTime,
       isAlive: isAlive ?? this.isAlive,
       tier: tier ?? this.tier,
       ping: ping ?? this.ping,
@@ -227,25 +228,27 @@ class VpnConfigWithMetrics implements Comparable<VpnConfigWithMetrics> {
   }
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'rawConfig': rawConfig,
-    'name': name,
-    'countryCode': countryCode,
-    'isFavorite': isFavorite,
-    'addedDate': addedDate.toIso8601String(),
-    'deviceMetrics': deviceMetrics.map((k, v) => MapEntry<String, dynamic>(k, v.toJson())),
-    'failureCount': failureCount,
-    'lastSuccessfulConnectionTime': lastSuccessfulConnectionTime,
-    'isAlive': isAlive,
-    'tier': tier,
-    'ping': ping,
-    'funnelStage': funnelStage,
-    'speedScore': speedScore,
-    'stageResults': stageResults.map((k, v) => MapEntry<String, dynamic>(k, v.toJson())),
-    'lastFailedStage': lastFailedStage,
-    'failureReason': failureReason,
-    'lastTestedAt': lastTestedAt?.toIso8601String(),
-  };
+        'id': id,
+        'rawConfig': rawConfig,
+        'name': name,
+        'countryCode': countryCode,
+        'isFavorite': isFavorite,
+        'addedDate': addedDate.toIso8601String(),
+        'deviceMetrics': deviceMetrics
+            .map((k, v) => MapEntry<String, dynamic>(k, v.toJson())),
+        'failureCount': failureCount,
+        'lastSuccessfulConnectionTime': lastSuccessfulConnectionTime,
+        'isAlive': isAlive,
+        'tier': tier,
+        'ping': ping,
+        'funnelStage': funnelStage,
+        'speedScore': speedScore,
+        'stageResults': stageResults
+            .map((k, v) => MapEntry<String, dynamic>(k, v.toJson())),
+        'lastFailedStage': lastFailedStage,
+        'failureReason': failureReason,
+        'lastTestedAt': lastTestedAt?.toIso8601String(),
+      };
 
   factory VpnConfigWithMetrics.fromJson(Map<String, dynamic> json) {
     return VpnConfigWithMetrics(
@@ -259,10 +262,13 @@ class VpnConfigWithMetrics implements Comparable<VpnConfigWithMetrics> {
           ? DateTime.parse(json['addedDate'] as String)
           : DateTime.fromMillisecondsSinceEpoch(0),
       deviceMetrics: (json['deviceMetrics'] as Map<String, dynamic>?)?.map(
-        (k, v) => MapEntry<String, DeviceMetrics>(k, DeviceMetrics.fromJson(v as Map<String, dynamic>)),
-      ) ?? {},
+            (k, v) => MapEntry<String, DeviceMetrics>(
+                k, DeviceMetrics.fromJson(v as Map<String, dynamic>)),
+          ) ??
+          {},
       failureCount: json['failureCount'] as int? ?? 0,
-      lastSuccessfulConnectionTime: json['lastSuccessfulConnectionTime'] as int? ?? 0,
+      lastSuccessfulConnectionTime:
+          json['lastSuccessfulConnectionTime'] as int? ?? 0,
       isAlive: json['isAlive'] as bool? ?? true,
       tier: json['tier'] as int? ?? 0,
       ping: json['ping'] as int? ?? -1,
@@ -270,44 +276,49 @@ class VpnConfigWithMetrics implements Comparable<VpnConfigWithMetrics> {
       funnelStage: json['funnelStage'] as int? ?? 0,
       speedScore: json['speedScore'] as int? ?? 0,
       stageResults: (json['stageResults'] as Map<String, dynamic>?)?.map(
-        (k, v) => MapEntry<String, TestResult>(k, TestResult.fromJson(v as Map<String, dynamic>)),
-      ) ?? {},
+            (k, v) => MapEntry<String, TestResult>(
+                k, TestResult.fromJson(v as Map<String, dynamic>)),
+          ) ??
+          {},
       lastFailedStage: json['lastFailedStage'] as String?,
       failureReason: json['failureReason'] as String?,
-      lastTestedAt: json['lastTestedAt'] != null ? DateTime.parse(json['lastTestedAt'] as String) : null,
+      lastTestedAt: json['lastTestedAt'] != null
+          ? DateTime.parse(json['lastTestedAt'] as String)
+          : null,
     );
   }
 
   @override
   int compareTo(VpnConfigWithMetrics other) {
     // 1. Alive/Verified (Funnel > 0 OR Ping > 0)
-    bool amAlive = this.funnelStage > 0 || this.currentPing > 0;
+    bool amAlive = funnelStage > 0 || currentPing > 0;
     bool otherAlive = other.funnelStage > 0 || other.currentPing > 0;
 
     if (amAlive != otherAlive) {
-        return amAlive ? -1 : 1; // Alive comes first
+      return amAlive ? -1 : 1; // Alive comes first
     }
 
     // If both Alive: Sort by Funnel/Speed/Ping
     if (amAlive) {
-        if (this.funnelStage != other.funnelStage) {
-            return other.funnelStage.compareTo(this.funnelStage); // Descending
-        }
-        if (this.speedScore != other.speedScore) {
-            return other.speedScore.compareTo(this.speedScore); // Descending
-        }
-        int myPing = (this.currentPing <= 0) ? 999999 : this.currentPing;
-        int otherPing = (other.currentPing <= 0) ? 999999 : other.currentPing;
-        return myPing.compareTo(otherPing); // Ascending (Lower is better)
+      if (funnelStage != other.funnelStage) {
+        return other.funnelStage.compareTo(funnelStage); // Descending
+      }
+      if (speedScore != other.speedScore) {
+        return other.speedScore.compareTo(speedScore); // Descending
+      }
+      int myPing = (currentPing <= 0) ? 999999 : currentPing;
+      int otherPing = (other.currentPing <= 0) ? 999999 : other.currentPing;
+      return myPing.compareTo(otherPing); // Ascending (Lower is better)
     }
 
     // If both Dead/Unknown (Not Alive):
     // 2. PURGATORY CHECK: Last Success Time (Desc)
-    if (this.lastSuccessfulConnectionTime != other.lastSuccessfulConnectionTime) {
-        return other.lastSuccessfulConnectionTime.compareTo(this.lastSuccessfulConnectionTime);
+    if (lastSuccessfulConnectionTime != other.lastSuccessfulConnectionTime) {
+      return other.lastSuccessfulConnectionTime
+          .compareTo(lastSuccessfulConnectionTime);
     }
 
     // 3. Fallback: Added Date (Newer first)
-    return other.addedDate.compareTo(this.addedDate);
+    return other.addedDate.compareTo(addedDate);
   }
 }

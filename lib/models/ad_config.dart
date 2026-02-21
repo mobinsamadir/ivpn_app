@@ -10,7 +10,8 @@ class AdConfig {
   factory AdConfig.fromJson(Map<String, dynamic> json) {
     final adsJson = json['ads'] as Map<String, dynamic>? ?? {};
     final adsMap = adsJson.map(
-      (key, value) => MapEntry(key, AdUnit.fromJson(value as Map<String, dynamic>)),
+      (key, value) =>
+          MapEntry(key, AdUnit.fromJson(value as Map<String, dynamic>)),
     );
 
     return AdConfig(

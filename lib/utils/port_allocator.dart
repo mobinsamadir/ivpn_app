@@ -44,7 +44,8 @@ class PortAllocator {
       attempts++;
     }
 
-    throw Exception("PortAllocator: Failed to find a free port after 1000 attempts");
+    throw Exception(
+        "PortAllocator: Failed to find a free port after 1000 attempts");
   }
 
   void release(int port) {
@@ -56,7 +57,8 @@ class PortAllocator {
 
   Future<bool> _isPortFree(int port) async {
     try {
-      final socket = await ServerSocket.bind(InternetAddress.loopbackIPv4, port);
+      final socket =
+          await ServerSocket.bind(InternetAddress.loopbackIPv4, port);
       await socket.close();
       return true;
     } catch (e) {
@@ -66,9 +68,9 @@ class PortAllocator {
 
   // Simple synchronization helper
   void synchronized(void Function() action) {
-     // In Dart, code is single-threaded within an isolate, but async gaps exist.
-     // However, the critical section here (reading/writing _currentPort)
-     // is synchronous, so no race condition within the same isolate.
-     action();
+    // In Dart, code is single-threaded within an isolate, but async gaps exist.
+    // However, the critical section here (reading/writing _currentPort)
+    // is synchronous, so no race condition within the same isolate.
+    action();
   }
 }

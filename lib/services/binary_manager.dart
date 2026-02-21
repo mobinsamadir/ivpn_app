@@ -8,9 +8,10 @@ class BinaryManager {
     if (Platform.isWindows) {
       return await WindowsVpnService.getExecutablePath();
     } else if (Platform.isAndroid) {
-       // On Android, we now use JNI (libbox.aar) via NativeVpnService.
-       // The standalone binary is no longer bundled to save space.
-       throw UnsupportedError("BinaryManager.ensureBinary() is not supported on Android. Use NativeVpnService instead.");
+      // On Android, we now use JNI (libbox.aar) via NativeVpnService.
+      // The standalone binary is no longer bundled to save space.
+      throw UnsupportedError(
+          "BinaryManager.ensureBinary() is not supported on Android. Use NativeVpnService instead.");
     } else {
       // Fallback for Linux/MacOS (assume installed in PATH or relative)
       return "sing-box";
