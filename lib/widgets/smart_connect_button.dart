@@ -164,7 +164,7 @@ class _SmartConnectButtonState extends State<SmartConnectButton> {
         AdvancedLogger.info('[SmartConnect] Using selected config: ${configToUse!.name}');
       } else {
         // If no server selected, run Fastest logic first, then connect
-        _connectionStatus = 'Finding fastest server...';
+        configManager.setConnected(false, status: 'Finding fastest server...');
         configToUse = await configManager.getBestConfig();
 
         if (configToUse != null) {
@@ -190,10 +190,9 @@ class _SmartConnectButtonState extends State<SmartConnectButton> {
 
     } catch (e) {
       AdvancedLogger.error('[SmartConnect] Connection failed: $e');
-      setState(() {
-        _isConnecting = false;
-        _connectionStatus = 'Connection failed';
-      });
+      if (mounted) {
+        configManager.setConnected(false, status: 'Connection failed');
+      }
     }
   }
   
