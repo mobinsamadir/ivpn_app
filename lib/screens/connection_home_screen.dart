@@ -45,6 +45,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
 
   // Connection Control
   bool _isConnectionCancelled = false;
+  // CRITICAL FIX: Debounce Auto-Switch
+  bool _isSwitching = false;
+  String _lastNativeStatus = "DISCONNECTED";
 
   // Parallel Intelligence Variables
   VpnConfigWithMetrics? _fastestInBackground;
@@ -105,6 +108,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
       AdvancedLogger.info('[ConnectionHomeScreen] Received VPN status update: $status');
       if (mounted) {
         setState(() {
+          _lastNativeStatus = status;
           // Update the connection status in ConfigManager to reflect the actual VPN status
           _configManager.setConnected(status == 'CONNECTED', status: _getConnectionStatusMessage(status));
         });
@@ -164,6 +168,12 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
       return;
     }
 
+    // CRITICAL FIX: Only check ping if we are TRULY connected reported by Native OS
+    if (_lastNativeStatus != "CONNECTED") {
+      _highPingCounter = 0;
+      return;
+    }
+
     if (!_configManager.isConnected) {
       _highPingCounter = 0;
       return;
@@ -188,6 +198,13 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
 
   // Perform auto-switch to best server
   Future<void> _performAutoSwitch() async {
+    // CRITICAL FIX: Prevent concurrent switching (Infinite Loop Protection)
+    if (_isSwitching) {
+      AdvancedLogger.warn('[AutoSwitch] Already switching. Ignored.');
+      return;
+    }
+
+    _isSwitching = true;
     AdvancedLogger.info('[ConnectionHomeScreen] Initiating auto-switch due to high ping');
     _showToast("High ping detected. Switching to best server...");
 
@@ -197,7 +214,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
 
       // Cool-down period to allow OS to release TUN interface
       AdvancedLogger.info('Waiting for port release...');
-      await Future.delayed(const Duration(seconds: 1));
+      await Future.delayed(const Duration(seconds: 2)); // Increased delay for safety
 
       // Find the fastest server
       final newConfig = await _findFastestServerEager();
@@ -210,6 +227,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     } catch (e, stackTrace) {
       AdvancedLogger.error('[ConnectionHomeScreen] Auto-switch failed: $e', error: e, stackTrace: stackTrace);
       _showToast("Auto-switch failed: $e");
+    } finally {
+      _isSwitching = false;
     }
   }
 
@@ -760,9 +779,6 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     // Just return best config as Manager already sorts it
     return _configManager.getBestConfig();
   }
-
-  // ... (Rest of existing methods: _handleNextServer, _handleMainButtonAction, etc. kept as is) ...
-  // Re-pasting standard methods for completeness of file context
 
   Future<void> _handleNextServer() async {
     List<VpnConfigWithMetrics> currentList;

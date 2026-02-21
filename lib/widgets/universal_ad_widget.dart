@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -65,11 +67,12 @@ class _UniversalAdWidgetState extends State<UniversalAdWidget> {
     }
 
     final ad = _currentAd!;
+    // CRITICAL FIX: Fallback to a default height if null to prevent unconstrained expansion (Black Screen)
+    final double effectiveHeight = widget.height ?? 250.0;
 
-    return Container(
-      width: widget.width,
-      height: widget.height,
-      color: Colors.transparent,
+    return SizedBox(
+      width: widget.width ?? double.infinity,
+      height: effectiveHeight,
       child: _buildContent(ad),
     );
   }
@@ -255,7 +258,7 @@ class _WindowsWebViewState extends State<_WindowsWebView> {
       await _controller.clearCache();
       await _controller.clearCookies();
 
-      AdvancedLogger.info('[AdWidget] Loading HTML: ${widget.htmlContent}');
+      AdvancedLogger.info('[AdWidget] Loading Windows HTML...');
       await _controller.loadStringContent(widget.htmlContent);
 
       _controller.url.listen((url) {
@@ -294,10 +297,10 @@ class _WindowsWebViewState extends State<_WindowsWebView> {
   @override
   Widget build(BuildContext context) {
     if (!_isInitialized) {
-      return const SizedBox();
+      return const Center(child: CircularProgressIndicator());
     }
     return Container(
-      color: Colors.grey[900], // Prevent white flash
+      color: Colors.transparent,
       child: Webview(_controller),
     );
   }
@@ -313,16 +316,21 @@ class _MobileWebView extends StatefulWidget {
 
 class _MobileWebViewState extends State<_MobileWebView> {
   late final WebViewController _controller;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    AdvancedLogger.info('[AdWidget] Loading HTML: ${widget.htmlContent}');
+    AdvancedLogger.info('[AdWidget] Loading Mobile HTML...');
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(Colors.transparent)
       ..setNavigationDelegate(
         NavigationDelegate(
+          onPageFinished: (_) {
+            AdvancedLogger.info('[AdWidget] Mobile Page Loaded.');
+            if (mounted) setState(() => _isLoading = false);
+          },
           onNavigationRequest: (NavigationRequest request) {
             final url = request.url;
             if (url.startsWith('data:') || url.contains('acceptable.a-ads.com')) {
@@ -338,6 +346,19 @@ class _MobileWebViewState extends State<_MobileWebView> {
 
   @override
   Widget build(BuildContext context) {
-    return WebViewWidget(controller: _controller);
+    return Stack(
+      children: [
+        WebViewWidget(
+          controller: _controller,
+          gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{}, // Prevent scroll hijacking
+        ),
+        if (_isLoading)
+          const Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.blueAccent),
+            ),
+          ),
+      ],
+    );
   }
 }
