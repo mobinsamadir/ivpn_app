@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import '../services/config_manager.dart';
-import '../services/advanced_logger.dart';
+import '../utils/advanced_logger.dart';
 import '../services/ad_manager_service.dart';
 import '../services/funnel_service.dart';
 import 'connection_home_screen.dart';

@@ -12,6 +12,8 @@ import '../models/vpn_config_with_metrics.dart';
 import '../utils/advanced_logger.dart';
 import '../utils/cancellable_operation.dart';
 import 'config_parser.dart';
+import 'native_vpn_service.dart';
+import 'testers/ephemeral_tester.dart';
 
 // --- TOP-LEVEL HELPER FUNCTIONS FOR ISOLATE ---
 
@@ -226,7 +228,6 @@ class ConfigManager extends ChangeNotifier {
       AdvancedLogger.info('[ConfigManager] Downloading configs from mirrors...');
       
       // Mirrors List (GitHub -> Gist -> MyFiles -> Drive API)
-      // Note: Removed Drive and MyFiles as they were returning HTML error pages causing parser crashes
       final mirrors = [
         'https://raw.githubusercontent.com/mobinsamadir/ivpn-servers/refs/heads/main/servers.txt',
         'https://gist.githubusercontent.com/mobinsamadir/687a7ef199d6eaf6d1912e36151a9327/raw/servers.txt',
@@ -799,6 +800,86 @@ class ConfigManager extends ChangeNotifier {
      allConfigs.clear();
      await _updateLists();
      notifyListeners();
+  }
+
+  // --- SMART FAILOVER CONNECTION ---
+  Future<void> connectWithSmartFailover() async {
+    AdvancedLogger.info('[ConfigManager] Starting Smart Failover Connection...');
+    _isGlobalStopRequested = false;
+
+    // 1. Notify UI
+    setConnected(false, status: 'Optimizing connection...');
+
+    // 2. Get best available config
+    // If user already selected a valid one, getBestConfig honors it.
+    VpnConfigWithMetrics? target = await getBestConfig();
+
+    if (target == null) {
+       AdvancedLogger.warn('[ConfigManager] No configs available for connection.');
+       setConnected(false, status: 'No servers available');
+       return;
+    }
+
+    int attempts = 0;
+    const maxAttempts = 3;
+    final NativeVpnService nativeService = NativeVpnService();
+    final EphemeralTester tester = EphemeralTester();
+
+    while (attempts < maxAttempts && target != null && !_isGlobalStopRequested) {
+      try {
+        selectConfig(target); // Update UI selection
+
+        // 3. Pre-flight Check (Strict - Stage 2 Connectivity)
+        setConnected(false, status: 'Verifying ${target.name}...');
+        final testResult = await tester.runTest(target, mode: TestMode.connectivity);
+
+        if (testResult.funnelStage < 2 || testResult.currentPing == -1) {
+             // Mark failure and throw to trigger failover
+             await markFailure(target.id);
+             throw Exception("Pre-flight check failed (Ghost/Dead)");
+        }
+
+        // Update metrics
+        await updateConfigDirectly(testResult);
+
+        if (_isGlobalStopRequested) return;
+
+        // 4. Connect
+        setConnected(false, status: 'Connecting to ${target.name}...');
+        await nativeService.connect(target.rawConfig);
+
+        // 5. Success
+        // Mark success is assumed if command doesn't throw. Real verification is via UI listener.
+        await updateConfigMetrics(target.id, connectionSuccess: true);
+        await markSuccess(target.id);
+
+        return;
+
+      } catch (e) {
+        // 6. Handle Failure
+        AdvancedLogger.warn('[ConfigManager] Connection failed to ${target.name}: $e');
+        await markFailure(target.id);
+
+        if (_isGlobalStopRequested) return;
+
+        // 7. Prepare next
+        attempts++;
+        target = await getBestConfig(); // Get NEW best
+
+        if (target != null && target.id != _selectedConfig?.id) {
+           setConnected(false, status: 'Switching to ${target.name}...');
+           // Brief delay to let UI show the status
+           await Future.delayed(const Duration(milliseconds: 500));
+        } else if (target == null) {
+           break;
+        }
+      }
+    }
+
+    // 8. Final Failure State
+    if (!_isGlobalStopRequested) {
+       setConnected(false, status: 'Connection Failed');
+    }
   }
   
   // Aliases for compatibility
