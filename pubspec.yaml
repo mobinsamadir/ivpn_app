@@ -12,7 +12,6 @@ dependencies:
   # Networking & API
   html: ^0.15.4
   dio: ^5.7.0
-  http: ^1.2.2
   connectivity_plus: ^6.1.0
 
   # UI & State Management
@@ -30,7 +29,6 @@ dependencies:
 
   # Utilities & Storage
   path_provider: ^2.1.5
-  path: ^1.9.0
   file_picker: ^8.1.4
   device_info_plus: ^11.1.0
   url_launcher: ^6.3.1
@@ -43,6 +41,9 @@ dependencies:
   # File Opening (Fixed for Android)
   open_file: ^3.5.10 # جایگزین نسخه Plus شد
 
+  collection: any
+  http: ^1.6.0
+  path: ^1.9.1
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -52,9 +53,8 @@ dev_dependencies:
   mockito: ^5.4.4
   
   # Build Script Requirements (حیاتی برای setup_core.dart)
-  http: ^1.2.0
   archive: ^3.6.1
-  path: ^1.9.0 # اضافه شد تا اسکریپت بیلد به مشکل نخورد
+  mocktail: ^1.0.4
 
 # تنظیمات آیکون
 flutter_launcher_icons:

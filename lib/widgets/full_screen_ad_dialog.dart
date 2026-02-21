@@ -63,9 +63,9 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
     // PopScope prevents Back Button to enforce "The Wall" until dismissed or closed
     return PopScope(
       canPop: false,
-      onPopInvoked: (didPop) {
-         if (didPop) return;
-         // Optionally block interaction or show toast
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        // Optionally block interaction or show toast
       },
       child: Scaffold(
         backgroundColor: Colors.black, // Force solid background
@@ -83,22 +83,29 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
                       children: [
                         const Text(
                           'Premium Connection',
-                          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold),
                         ),
                         // Timer Badge
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: Colors.redAccent.withOpacity(0.8),
+                            color: Colors.redAccent.withValues(alpha: 0.8),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Row(
                             children: [
-                               const Icon(Icons.timer, color: Colors.white, size: 14),
-                               const SizedBox(width: 6),
-                               Text(
+                              const Icon(Icons.timer,
+                                  color: Colors.white, size: 14),
+                              const SizedBox(width: 6),
+                              Text(
                                 '${_timeLeft}s',
-                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold),
                               ),
                             ],
                           ),
@@ -111,7 +118,8 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
                   Expanded(
                     child: Container(
                       width: double.infinity,
-                      color: const Color(0xFF121212), // Inner background just in case
+                      color: const Color(
+                          0xFF121212), // Inner background just in case
                       child: Center(
                         child: UniversalAdWidget(slot: widget.unitId),
                       ),
@@ -132,10 +140,9 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
                         Text(
                           "Your premium connection is ready in ${_timeLeft}s...",
                           style: TextStyle(
-                            color: Colors.grey[400],
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500
-                          ),
+                              color: Colors.grey[400],
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500),
                         ),
                         const SizedBox(height: 20),
                         // Visual Indicator that work is happening (or waiting)
@@ -143,7 +150,8 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
                           width: double.infinity,
                           height: 56,
                           child: Center(
-                             child: CircularProgressIndicator(color: Colors.blueAccent),
+                            child: CircularProgressIndicator(
+                                color: Colors.blueAccent),
                           ),
                         ),
                       ],
@@ -162,11 +170,13 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Material(
-                    color: Colors.black54, // Semi-transparent for visibility over white ads
+                    color: Colors
+                        .black54, // Semi-transparent for visibility over white ads
                     shape: const CircleBorder(),
                     clipBehavior: Clip.hardEdge,
                     child: IconButton(
-                      icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                      icon: const Icon(Icons.close,
+                          color: Colors.white, size: 28),
                       tooltip: 'Close Ad',
                       onPressed: () {
                         // User explicitly closed it -> No Reward (False)

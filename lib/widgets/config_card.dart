@@ -32,14 +32,14 @@ class ConfigCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isSelected
-              ? Colors.blueAccent.withOpacity(0.5)
+              ? Colors.blueAccent.withValues(alpha: 0.5)
               : const Color(0xFF2A2A2A),
           width: isSelected ? 1.5 : 1,
         ),
         boxShadow: isSelected
             ? [
                 BoxShadow(
-                  color: Colors.blueAccent.withOpacity(0.2),
+                  color: Colors.blueAccent.withValues(alpha: 0.2),
                   blurRadius: 8,
                   spreadRadius: 1,
                 ),
@@ -51,7 +51,7 @@ class ConfigCard extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(12),
-          splashColor: Colors.blueAccent.withOpacity(0.1),
+          splashColor: Colors.blueAccent.withValues(alpha: 0.1),
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Row(
@@ -61,10 +61,10 @@ class ConfigCard extends StatelessWidget {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: Colors.blueAccent.withOpacity(0.1),
+                    color: Colors.blueAccent.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: Colors.blueAccent.withOpacity(0.3),
+                      color: Colors.blueAccent.withValues(alpha: 0.3),
                     ),
                   ),
                   child: Center(
@@ -121,7 +121,8 @@ class ConfigCard extends StatelessWidget {
                                   height: 12,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.orangeAccent),
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.orangeAccent),
                                   ),
                                 ),
                                 SizedBox(width: 8),
@@ -135,32 +136,43 @@ class ConfigCard extends StatelessWidget {
                                 ),
                               ],
                             )
-                          else if (config.currentPing > 0 || config.currentPing == -1)
+                          else if (config.currentPing > 0 ||
+                              config.currentPing == -1)
                             Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 6,
                                 vertical: 2,
                               ),
                               decoration: BoxDecoration(
-                                color: (config.currentPing == -1 ? Colors.redAccent : _getPingColor(config.currentPing))
-                                    .withOpacity(0.1),
+                                color: (config.currentPing == -1
+                                        ? Colors.redAccent
+                                        : _getPingColor(config.currentPing))
+                                      .withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(6),
                                 border: Border.all(
-                                  color: (config.currentPing == -1 ? Colors.redAccent : _getPingColor(config.currentPing))
-                                      .withOpacity(0.3),
+                                  color: (config.currentPing == -1
+                                          ? Colors.redAccent
+                                          : _getPingColor(config.currentPing))
+                                        .withValues(alpha: 0.3),
                                 ),
                               ),
                               child: Text(
-                                config.currentPing == -1 ? 'Timeout' : '${config.currentPing}ms',
+                                config.currentPing == -1
+                                    ? 'Timeout'
+                                    : '${config.currentPing}ms',
                                 style: TextStyle(
-                                  color: config.currentPing == -1 ? Colors.redAccent : _getPingColor(config.currentPing),
+                                  color: config.currentPing == -1
+                                      ? Colors.redAccent
+                                      : _getPingColor(config.currentPing),
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ),
 
-                          if (!isTesting && (config.currentPing > 0 || config.currentPing == -1))
+                          if (!isTesting &&
+                              (config.currentPing > 0 ||
+                                  config.currentPing == -1))
                             const SizedBox(width: 6),
 
                           if (!isTesting && config.currentSpeed > 0)
@@ -170,10 +182,10 @@ class ConfigCard extends StatelessWidget {
                                 vertical: 2,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.greenAccent.withOpacity(0.1),
+                                color: Colors.greenAccent.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(6),
                                 border: Border.all(
-                                  color: Colors.greenAccent.withOpacity(0.3),
+                                  color: Colors.greenAccent.withValues(alpha: 0.3),
                                 ),
                               ),
                               child: Text(
@@ -254,7 +266,8 @@ class ConfigCard extends StatelessWidget {
                             ? Icons.star_rounded
                             : Icons.star_outline_rounded,
                         size: 20,
-                        color: config.isFavorite ? Colors.amber : Colors.grey[500],
+                        color:
+                            config.isFavorite ? Colors.amber : Colors.grey[500],
                       ),
                       onPressed: onToggleFavorite,
                       splashRadius: 20,
@@ -282,7 +295,7 @@ class ConfigCard extends StatelessWidget {
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.blueAccent.withOpacity(0.5),
+                              color: Colors.blueAccent.withValues(alpha: 0.5),
                               blurRadius: 4,
                               spreadRadius: 1,
                             ),
@@ -323,8 +336,8 @@ class ConfigCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         gradient: LinearGradient(
           colors: [
-            Colors.blueAccent.withOpacity(0.3),
-            Colors.indigoAccent.withOpacity(0.2),
+            Colors.blueAccent.withValues(alpha: 0.3),
+            Colors.indigoAccent.withValues(alpha: 0.2),
           ],
         ),
       ),
@@ -402,19 +415,27 @@ class ConfigCard extends StatelessWidget {
 
   Color _getTierColor(int tier) {
     switch (tier) {
-      case 3: return Colors.green;
-      case 2: return Colors.yellow;
-      case 1: return Colors.grey;
-      default: return Colors.red;
+      case 3:
+        return Colors.green;
+      case 2:
+        return Colors.yellow;
+      case 1:
+        return Colors.grey;
+      default:
+        return Colors.red;
     }
   }
 
   Color _getTierBorderColor(int tier) {
     switch (tier) {
-      case 3: return Colors.green.shade700;
-      case 2: return Colors.yellow.shade700;
-      case 1: return Colors.grey.shade700;
-      default: return Colors.red.shade700;
+      case 3:
+        return Colors.green.shade700;
+      case 2:
+        return Colors.yellow.shade700;
+      case 1:
+        return Colors.grey.shade700;
+      default:
+        return Colors.red.shade700;
     }
   }
 }

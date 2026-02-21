@@ -13,7 +13,7 @@ class AccessManager extends ChangeNotifier {
 
   // Getters
   DateTime? get expirationDate => _expirationDate;
-  
+
   bool get hasAccess {
     if (_expirationDate == null) return false;
     return _expirationDate!.isAfter(DateTime.now());
@@ -31,10 +31,11 @@ class AccessManager extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       final expirationTs = prefs.getInt(_prefsKey);
-      
+
       if (expirationTs != null) {
         _expirationDate = DateTime.fromMillisecondsSinceEpoch(expirationTs);
-        AdvancedLogger.info("🕒 [AccessManager] Loaded expiration: $_expirationDate");
+        AdvancedLogger.info(
+            "🕒 [AccessManager] Loaded expiration: $_expirationDate");
       } else {
         AdvancedLogger.info("🕒 [AccessManager] No active plan found.");
       }
@@ -47,16 +48,17 @@ class AccessManager extends ChangeNotifier {
   // Add Time (Rewards)
   Future<void> addTime(Duration duration) async {
     final now = DateTime.now();
-    
+
     if (_expirationDate == null || _expirationDate!.isBefore(now)) {
       _expirationDate = now.add(duration);
     } else {
       _expirationDate = _expirationDate!.add(duration);
     }
-    
+
     await _save();
     notifyListeners();
-    AdvancedLogger.info("🎁 [AccessManager] Time added! New expiry: $_expirationDate");
+    AdvancedLogger.info(
+        "🎁 [AccessManager] Time added! New expiry: $_expirationDate");
   }
 
   // Internal Save

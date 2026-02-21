@@ -18,12 +18,14 @@ class AdvancedHealthChecker {
     int successCount = 0;
     int totalLatency = 0;
 
-    onLog?.call("🌐 [HEALTH] Starting Resilient Multi-Endpoint Health Check...");
+    onLog
+        ?.call("🌐 [HEALTH] Starting Resilient Multi-Endpoint Health Check...");
 
     // Parallel execution with independent fault tolerance
-    final futures = TestEndpoints.pingEndpoints.map((endpoint) =>
-      _measureEndpointSafely(endpoint, cancelToken: cancelToken)
-    ).toList();
+    final futures = TestEndpoints.pingEndpoints
+        .map((endpoint) =>
+            _measureEndpointSafely(endpoint, cancelToken: cancelToken))
+        .toList();
 
     final measuredLatencies = await Future.wait(futures, eagerError: false);
 
@@ -48,7 +50,8 @@ class AdvancedHealthChecker {
     } else {
       // If all endpoints returned -1 (filtered out as too fast), try a different approach
       // This could happen if all connectivity check endpoints respond too quickly
-      onLog?.call("⚠️ [HEALTH] All endpoints filtered as too fast, trying alternative measurement...");
+      onLog?.call(
+          "⚠️ [HEALTH] All endpoints filtered as too fast, trying alternative measurement...");
 
       // Try a different approach - maybe use a larger payload or different endpoint
       avgLatency = await _tryAlternativeMeasurement(cancelToken);
@@ -56,7 +59,8 @@ class AdvancedHealthChecker {
 
     bool dnsWorking = await _testDns();
 
-    onLog?.call("📊 [HEALTH] Result: $successCount/${TestEndpoints.pingEndpoints.length} OK, Avg Latency: ${avgLatency}ms");
+    onLog?.call(
+        "📊 [HEALTH] Result: $successCount/${TestEndpoints.pingEndpoints.length} OK, Avg Latency: ${avgLatency}ms");
 
     return HealthMetrics(
       endpointLatencies: results,
@@ -70,9 +74,9 @@ class AdvancedHealthChecker {
   Future<int> _tryAlternativeMeasurement(CancelToken? cancelToken) async {
     // Try with a larger payload to get a more realistic latency measurement
     final alternativeEndpoints = [
-      'http://httpbin.org/delay/0',  // Small delay test
-      'https://www.google.com/generate_204',  // Alternative connectivity check
-      'http://1.1.1.1',  // Cloudflare DNS over HTTP
+      'http://httpbin.org/delay/0', // Small delay test
+      'https://www.google.com/generate_204', // Alternative connectivity check
+      'http://1.1.1.1', // Cloudflare DNS over HTTP
     ];
 
     for (final endpoint in alternativeEndpoints) {
@@ -83,7 +87,8 @@ class AdvancedHealthChecker {
           onTimeout: () => -1,
         );
 
-        if (latency > 50) {  // Only accept if it's above our threshold
+        if (latency > 50) {
+          // Only accept if it's above our threshold
           return latency;
         }
       } catch (e) {
@@ -96,7 +101,8 @@ class AdvancedHealthChecker {
   }
 
   // Method to ping with a larger payload to get more realistic latency
-  Future<int> _doPingWithLargerPayload(String url, CancelToken? cancelToken) async {
+  Future<int> _doPingWithLargerPayload(
+      String url, CancelToken? cancelToken) async {
     final client = HttpClient();
     if (jobId != null) CleanupUtils.registerResource(jobId!, client);
 
@@ -135,7 +141,8 @@ class AdvancedHealthChecker {
     }
   }
 
-  Future<int> _measureEndpointSafely(String url, {CancelToken? cancelToken, int maxRetries = 3}) async {
+  Future<int> _measureEndpointSafely(String url,
+      {CancelToken? cancelToken, int maxRetries = 3}) async {
     for (int attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         final latency = await TestTimeouts.withTimeout<int>(
@@ -163,7 +170,7 @@ class AdvancedHealthChecker {
   Future<int> _doPing(String url, CancelToken? cancelToken) async {
     final client = HttpClient();
     if (jobId != null) CleanupUtils.registerResource(jobId!, client);
-    
+
     final stopwatch = Stopwatch();
     client.findProxy = (uri) => "PROXY 127.0.0.1:$httpPort;";
     client.connectionTimeout = TestTimeouts.tcpHandshake;
@@ -172,7 +179,7 @@ class AdvancedHealthChecker {
     try {
       stopwatch.start();
       final request = await client.getUrl(Uri.parse(url));
-      
+
       cancelToken?.addOnCancel(() {
         client.close(force: true);
       });
@@ -188,7 +195,8 @@ class AdvancedHealthChecker {
         if (rawLatency < 50) {
           // This is likely a local loopback measurement, not real VPN latency
           // Retry with a different approach or return a value indicating retest needed
-          onLog?.call("⚠️ $url -> ${rawLatency}ms (filtered: likely local loopback, retrying)");
+          onLog?.call(
+              "⚠️ $url -> ${rawLatency}ms (filtered: likely local loopback, retrying)");
           return -1; // Return -1 to indicate this measurement should be ignored
         }
 
@@ -200,7 +208,7 @@ class AdvancedHealthChecker {
       }
     } catch (e) {
       if (e is! TimeoutException && e is! OperationCancelledException) {
-         onLog?.call("❌ $url -> Error: $e");
+        onLog?.call("❌ $url -> Error: $e");
       }
       return -1;
     } finally {
@@ -210,6 +218,6 @@ class AdvancedHealthChecker {
 
   Future<bool> _testDns() async {
     // Simple DNS test
-    return true; 
+    return true;
   }
 }

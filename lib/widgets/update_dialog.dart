@@ -7,11 +7,11 @@ class UpdateDialog extends StatelessWidget {
   final VoidCallback onUpdate;
 
   const UpdateDialog({
-    Key? key,
+    super.key,
     required this.version,
     required this.releaseNotes,
     required this.onUpdate,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -31,10 +31,11 @@ class UpdateDialog extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.blueAccent.withOpacity(0.1),
+                    color: Colors.blueAccent.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.system_update, color: Colors.blueAccent, size: 28),
+                  child: const Icon(Icons.system_update,
+                      color: Colors.blueAccent, size: 28),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -68,7 +69,10 @@ class UpdateDialog extends StatelessWidget {
             // Release Notes
             const Text(
               'What\'s New:',
-              style: TextStyle(color: Colors.grey, fontSize: 14, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                  color: Colors.grey,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Flexible(
@@ -82,13 +86,26 @@ class UpdateDialog extends StatelessWidget {
                   child: MarkdownBody(
                     data: releaseNotes,
                     styleSheet: MarkdownStyleSheet(
-                      p: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
-                      h1: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-                      h2: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                      h3: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                      p: const TextStyle(
+                          color: Colors.white70, fontSize: 14, height: 1.4),
+                      h1: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold),
+                      h2: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold),
+                      h3: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold),
                       listBullet: const TextStyle(color: Colors.white70),
-                      strong: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-                      a: const TextStyle(color: Colors.blueAccent, decoration: TextDecoration.underline),
+                      strong: const TextStyle(
+                          fontWeight: FontWeight.bold, color: Colors.white),
+                      a: const TextStyle(
+                          color: Colors.blueAccent,
+                          decoration: TextDecoration.underline),
                     ),
                   ),
                 ),
@@ -102,7 +119,8 @@ class UpdateDialog extends StatelessWidget {
               children: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Later', style: TextStyle(color: Colors.grey)),
+                  child:
+                      const Text('Later', style: TextStyle(color: Colors.grey)),
                 ),
                 const SizedBox(width: 12),
                 ElevatedButton.icon(
@@ -110,8 +128,10 @@ class UpdateDialog extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blueAccent,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 12),
                   ),
                   icon: const Icon(Icons.download, size: 18),
                   label: const Text('Update Now'),

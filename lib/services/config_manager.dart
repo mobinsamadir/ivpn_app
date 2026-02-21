@@ -21,7 +21,9 @@ String _extractServerName(String raw) {
   try {
     final uri = Uri.parse(raw);
     if (uri.fragment.isNotEmpty) return Uri.decodeComponent(uri.fragment);
-  } catch(e) {}
+  } catch (e) {
+    // ignore: empty_catches
+  }
 
   // Fallback name
   final type = raw.split('://').first.toUpperCase();
@@ -30,10 +32,27 @@ String _extractServerName(String raw) {
 
 String? _extractCountryCode(String name) {
   final map = {
-    '🇺🇸': 'US', '🇩🇪': 'DE', '🇬🇧': 'GB', '🇫🇷': 'FR', '🇯🇵': 'JP',
-    '🇨🇦': 'CA', '🇦🇺': 'AU', '🇳🇱': 'NL', '🇸🇪': 'SE', '🇨🇭': 'CH',
-    '🇸🇬': 'SG', '🇭🇰': 'HK', '🇰🇷': 'KR', '🇮🇳': 'IN', '🇧🇷': 'BR',
-    '🇹🇷': 'TR', '🇮🇹': 'IT', '🇪🇸': 'ES', '🇵🇱': 'PL', '🇷🇺': 'RU', '🇮🇷': 'IR',
+    '🇺🇸': 'US',
+    '🇩🇪': 'DE',
+    '🇬🇧': 'GB',
+    '🇫🇷': 'FR',
+    '🇯🇵': 'JP',
+    '🇨🇦': 'CA',
+    '🇦🇺': 'AU',
+    '🇳🇱': 'NL',
+    '🇸🇪': 'SE',
+    '🇨🇭': 'CH',
+    '🇸🇬': 'SG',
+    '🇭🇰': 'HK',
+    '🇰🇷': 'KR',
+    '🇮🇳': 'IN',
+    '🇧🇷': 'BR',
+    '🇹🇷': 'TR',
+    '🇮🇹': 'IT',
+    '🇪🇸': 'ES',
+    '🇵🇱': 'PL',
+    '🇷🇺': 'RU',
+    '🇮🇷': 'IR',
   };
   for (final e in map.entries) {
     if (name.contains(e.key)) return e.value;
@@ -42,11 +61,14 @@ String? _extractCountryCode(String name) {
 }
 
 /// Isolate entry point for processing configs
-Future<Map<String, dynamic>> _processConfigsInIsolate(Map<String, dynamic> args) async {
+Future<Map<String, dynamic>> _processConfigsInIsolate(
+    Map<String, dynamic> args) async {
   final List<String> configStrings = args['configStrings'] as List<String>;
-  final Set<String> blockedHashes = (args['blockedHashes'] as List).cast<String>().toSet();
+  final Set<String> blockedHashes =
+      (args['blockedHashes'] as List).cast<String>().toSet();
   final bool checkBlacklist = args['checkBlacklist'] as bool;
-  final Set<String> existingConfigs = (args['existingConfigs'] as List).cast<String>().toSet();
+  final Set<String> existingConfigs =
+      (args['existingConfigs'] as List).cast<String>().toSet();
   int addedCount = args['initialAddedCount'] as int;
 
   final List<VpnConfigWithMetrics> newConfigs = [];
@@ -63,17 +85,21 @@ Future<Map<String, dynamic>> _processConfigsInIsolate(Map<String, dynamic> args)
     final hash = md5.convert(utf8.encode(trimmedRaw)).toString();
 
     if (checkBlacklist && blockedHashes.contains(hash)) {
-       // Silently skip blacklisted config
-       continue;
+      // Silently skip blacklisted config
+      continue;
     }
 
     // Manual Overwrite: If adding with checkBlacklist=false, we mark hash for removal
     if (!checkBlacklist && blockedHashes.contains(hash)) {
-       hashesToRemoveFromBlacklist.add(hash);
+      hashesToRemoveFromBlacklist.add(hash);
     }
 
-    if (existingConfigs.contains(trimmedRaw)) continue;
-    if (batchConfigs.contains(trimmedRaw)) continue;
+    if (existingConfigs.contains(trimmedRaw)) {
+      continue;
+    }
+    if (batchConfigs.contains(trimmedRaw)) {
+      continue;
+    }
 
     final name = _extractServerName(trimmedRaw);
     final id = 'config_${DateTime.now().millisecondsSinceEpoch}_$addedCount';
@@ -98,12 +124,13 @@ Future<Map<String, dynamic>> _processConfigsInIsolate(Map<String, dynamic> args)
 }
 
 /// Isolate entry point for sorting configs
-Map<String, List<VpnConfigWithMetrics>> _sortConfigsInIsolate(List<VpnConfigWithMetrics> configs) {
+Map<String, List<VpnConfigWithMetrics>> _sortConfigsInIsolate(
+    List<VpnConfigWithMetrics> configs) {
   // Sort logic helper: Score Descending, then Date Descending
   int compareScore(VpnConfigWithMetrics a, VpnConfigWithMetrics b) {
-     final scoreCmp = b.score.compareTo(a.score);
-     if (scoreCmp != 0) return scoreCmp;
-     return b.addedDate.compareTo(a.addedDate);
+    final scoreCmp = b.score.compareTo(a.score);
+    if (scoreCmp != 0) return scoreCmp;
+    return b.addedDate.compareTo(a.addedDate);
   }
 
   // Create local copy to sort
@@ -146,7 +173,7 @@ class ConfigManager extends ChangeNotifier {
 
   bool _isConnected = false;
   bool get isConnected => _isConnected;
-  
+
   String _connectionStatus = 'Ready';
   String get connectionStatus => _connectionStatus;
 
@@ -188,7 +215,8 @@ class ConfigManager extends ChangeNotifier {
     await _loadBlacklist(); // Load Blacklist
     await _loadConfigs();
     await _updateLists();
-    AdvancedLogger.info('[ConfigManager] Initialization complete. Loaded ${allConfigs.length} configs.');
+    AdvancedLogger.info(
+        '[ConfigManager] Initialization complete. Loaded ${allConfigs.length} configs.');
   }
 
   CancelToken getScanCancelToken() {
@@ -225,8 +253,9 @@ class ConfigManager extends ChangeNotifier {
     bool anyConfigAdded = false;
 
     try {
-      AdvancedLogger.info('[ConfigManager] Downloading configs from mirrors...');
-      
+      AdvancedLogger.info(
+          '[ConfigManager] Downloading configs from mirrors...');
+
       // Mirrors List (GitHub -> Gist -> MyFiles -> Drive API)
       final mirrors = [
         'https://raw.githubusercontent.com/mobinsamadir/ivpn-servers/refs/heads/main/servers.txt',
@@ -234,34 +263,42 @@ class ConfigManager extends ChangeNotifier {
       ];
 
       for (var url in mirrors) {
-        if (anyConfigAdded) break; // Chain Breaking: Stop if we already have configs
+        if (anyConfigAdded) {
+          break; // Chain Breaking: Stop if we already have configs
+        }
 
         try {
           String? content = await _robustFetch(url);
-          
+
           if (content != null && content.isNotEmpty) {
-            AdvancedLogger.info('✅ Downloaded ${content.length} bytes successfully from $url.');
+            AdvancedLogger.info(
+                '✅ Downloaded ${content.length} bytes successfully from $url.');
 
             // 1. Parse Mixed Content (Configs ONLY - No Recursion)
             final configUrls = await parseMixedContent(content);
 
             if (configUrls.isNotEmpty) {
-               // 2. SANITIZE: Remove malicious fields
-               final cleanedConfigs = configUrls.map((c) {
-                 return c.replaceAll(RegExp(r'"spider_x":\s*("[^"]*"|[^,{}]+),?'), '');
-               }).toList();
+              // 2. SANITIZE: Remove malicious fields
+              final cleanedConfigs = configUrls.map((c) {
+                return c.replaceAll(
+                    RegExp(r'"spider_x":\s*("[^"]*"|[^,{}]+),?'), '');
+              }).toList();
 
-               // 3. Add to Database
-               // Using checkBlacklist: true (Default) to prevent Ghost Configs
-               int added = await addConfigs(cleanedConfigs, checkBlacklist: true);
-               if (added > 0) {
-                  AdvancedLogger.info('[ConfigManager] Import finished: Added $added new configs from $url.');
-                  anyConfigAdded = true;
-               } else {
-                  AdvancedLogger.warn('[ConfigManager] Configs found but were duplicates/invalid.');
-               }
+              // 3. Add to Database
+              // Using checkBlacklist: true (Default) to prevent Ghost Configs
+              int added =
+                  await addConfigs(cleanedConfigs, checkBlacklist: true);
+              if (added > 0) {
+                AdvancedLogger.info(
+                    '[ConfigManager] Import finished: Added $added new configs from $url.');
+                anyConfigAdded = true;
+              } else {
+                AdvancedLogger.warn(
+                    '[ConfigManager] Configs found but were duplicates/invalid.');
+              }
             } else {
-               AdvancedLogger.warn('[ConfigManager] No valid configs found in content from $url.');
+              AdvancedLogger.warn(
+                  '[ConfigManager] No valid configs found in content from $url.');
             }
           }
         } catch (e) {
@@ -270,11 +307,12 @@ class ConfigManager extends ChangeNotifier {
       }
 
       if (!anyConfigAdded) {
-        AdvancedLogger.error('[ConfigManager] All attempts to fetch configs failed or yielded 0 new configs.');
+        AdvancedLogger.error(
+            '[ConfigManager] All attempts to fetch configs failed or yielded 0 new configs.');
       }
-
     } catch (e) {
-       AdvancedLogger.error('[ConfigManager] Critical error in fetchStartupConfigs: $e');
+      AdvancedLogger.error(
+          '[ConfigManager] Critical error in fetchStartupConfigs: $e');
     } finally {
       _isRefreshing = false;
       notifyListeners();
@@ -289,12 +327,14 @@ class ConfigManager extends ChangeNotifier {
 
     // 1. Auto-convert Google Drive /view links to direct download
     if (targetUrl.contains('drive.google.com') && targetUrl.contains('/view')) {
-        final fileIdMatch = RegExp(r'\/d\/([a-zA-Z0-9_-]+)').firstMatch(targetUrl);
-        if (fileIdMatch != null) {
-          final fileId = fileIdMatch.group(1);
-          targetUrl = 'https://drive.google.com/uc?export=download&id=$fileId';
-          AdvancedLogger.info('[ConfigManager] Converted Drive View Link to: $targetUrl');
-        }
+      final fileIdMatch =
+          RegExp(r'\/d\/([a-zA-Z0-9_-]+)').firstMatch(targetUrl);
+      if (fileIdMatch != null) {
+        final fileId = fileIdMatch.group(1);
+        targetUrl = 'https://drive.google.com/uc?export=download&id=$fileId';
+        AdvancedLogger.info(
+            '[ConfigManager] Converted Drive View Link to: $targetUrl');
+      }
     }
 
     try {
@@ -303,8 +343,10 @@ class ConfigManager extends ChangeNotifier {
       final response = await http.get(
         Uri.parse(targetUrl),
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+          'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+          'Accept':
+              'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
           'Accept-Language': 'en-US,en;q=0.9',
           'Sec-Fetch-Dest': 'document',
           'Sec-Fetch-Mode': 'navigate',
@@ -312,64 +354,74 @@ class ConfigManager extends ChangeNotifier {
       ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode != 200) {
-         AdvancedLogger.warn('[ConfigManager] HTTP Error ${response.statusCode} from $targetUrl');
-         return null;
+        AdvancedLogger.warn(
+            '[ConfigManager] HTTP Error ${response.statusCode} from $targetUrl');
+        return null;
       }
 
       String content = response.body;
 
       // 2. Google Drive "Virus Scan / Large File" Warning Handler
       if (targetUrl.contains('drive.google.com') &&
-         (content.contains('confirm=') || content.contains('Virus scan warning'))) {
+          (content.contains('confirm=') ||
+              content.contains('Virus scan warning'))) {
+        AdvancedLogger.info(
+            '[ConfigManager] Detected Drive Warning. Attempting to extract confirm token...');
 
-          AdvancedLogger.info('[ConfigManager] Detected Drive Warning. Attempting to extract confirm token...');
+        String? confirmToken;
 
-          String? confirmToken;
+        // Strategy A: Regex for confirm=XXXX
+        final confirmMatch =
+            RegExp(r'confirm=([a-zA-Z0-9_-]+)').firstMatch(content);
+        if (confirmMatch != null) {
+          confirmToken = confirmMatch.group(1);
+        }
 
-          // Strategy A: Regex for confirm=XXXX
-          final confirmMatch = RegExp(r'confirm=([a-zA-Z0-9_-]+)').firstMatch(content);
-          if (confirmMatch != null) {
-            confirmToken = confirmMatch.group(1);
+        // Strategy B: Form Action or Link
+        confirmToken ??= _extractDriveTokenFromHtml(content);
+
+        if (confirmToken != null) {
+          final fileIdMatch =
+              RegExp(r'id=([a-zA-Z0-9_-]+)').firstMatch(targetUrl);
+          final fileId = fileIdMatch?.group(1);
+
+          if (fileId != null) {
+            final confirmUrl =
+                'https://drive.google.com/uc?export=download&id=$fileId&confirm=$confirmToken';
+            AdvancedLogger.info(
+                '[ConfigManager] Retrying with confirm token: $confirmToken');
+
+            final retryResponse =
+                await http.get(Uri.parse(confirmUrl), headers: {
+              'User-Agent':
+                  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+            }).timeout(const Duration(seconds: 30));
+
+            if (retryResponse.statusCode == 200) {
+              content = retryResponse.body;
+            } else {
+              AdvancedLogger.warn(
+                  '[ConfigManager] Failed to fetch confirmed link. Status: ${retryResponse.statusCode}');
+              return null;
+            }
           }
-
-          // Strategy B: Form Action or Link
-          if (confirmToken == null) {
-             confirmToken = _extractDriveTokenFromHtml(content);
-          }
-
-          if (confirmToken != null) {
-             final fileIdMatch = RegExp(r'id=([a-zA-Z0-9_-]+)').firstMatch(targetUrl);
-             final fileId = fileIdMatch?.group(1);
-
-             if (fileId != null) {
-                final confirmUrl = 'https://drive.google.com/uc?export=download&id=$fileId&confirm=$confirmToken';
-                AdvancedLogger.info('[ConfigManager] Retrying with confirm token: $confirmToken');
-
-                final retryResponse = await http.get(Uri.parse(confirmUrl), headers: {
-                   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-                }).timeout(const Duration(seconds: 30));
-
-                if (retryResponse.statusCode == 200) {
-                   content = retryResponse.body;
-                } else {
-                   AdvancedLogger.warn('[ConfigManager] Failed to fetch confirmed link. Status: ${retryResponse.statusCode}');
-                   return null;
-                }
-             }
-          } else {
-             AdvancedLogger.warn('[ConfigManager] Could not extract confirm token from Drive page.');
-             return null;
-          }
+        } else {
+          AdvancedLogger.warn(
+              '[ConfigManager] Could not extract confirm token from Drive page.');
+          return null;
+        }
       }
 
       // 3. Validation: Ensure content isn't just an error page HTML
-      if (content.trim().toLowerCase().startsWith('<!doctype html>') && !content.contains('vmess://') && !content.contains('vless://')) {
-          AdvancedLogger.warn('[ConfigManager] Fetched content appears to be a generic HTML page, not config.');
-          return null;
+      if (content.trim().toLowerCase().startsWith('<!doctype html>') &&
+          !content.contains('vmess://') &&
+          !content.contains('vless://')) {
+        AdvancedLogger.warn(
+            '[ConfigManager] Fetched content appears to be a generic HTML page, not config.');
+        return null;
       }
 
       return content;
-
     } catch (e) {
       AdvancedLogger.warn('[ConfigManager] Fetch error: $e');
       return null;
@@ -377,38 +429,42 @@ class ConfigManager extends ChangeNotifier {
   }
 
   String? _extractDriveTokenFromHtml(String html) {
-     try {
-       // Check for any link or form action containing 'confirm='
-       final document = html_parser.parse(html);
+    try {
+      // Check for any link or form action containing 'confirm='
+      final document = html_parser.parse(html);
 
-       // Check links
-       final anchors = document.querySelectorAll('a[href*="confirm="]');
-       for (var a in anchors) {
-          final href = a.attributes['href'];
-          if (href != null) {
-             final uri = Uri.parse(href);
-             if (uri.queryParameters.containsKey('confirm')) {
-                return uri.queryParameters['confirm'];
-             }
+      // Check links
+      final anchors = document.querySelectorAll('a[href*="confirm="]');
+      for (var a in anchors) {
+        final href = a.attributes['href'];
+        if (href != null) {
+          final uri = Uri.parse(href);
+          if (uri.queryParameters.containsKey('confirm')) {
+            return uri.queryParameters['confirm'];
           }
-       }
+        }
+      }
 
-       // Check forms
-       final forms = document.querySelectorAll('form[action*="confirm="]');
-       for (var f in forms) {
-          final action = f.attributes['action'];
-          if (action != null) {
-             final uri = Uri.parse(action);
-             if (uri.queryParameters.containsKey('confirm')) {
-                return uri.queryParameters['confirm'];
-             }
+      // Check forms
+      final forms = document.querySelectorAll('form[action*="confirm="]');
+      for (var f in forms) {
+        final action = f.attributes['action'];
+        if (action != null) {
+          final uri = Uri.parse(action);
+          if (uri.queryParameters.containsKey('confirm')) {
+            return uri.queryParameters['confirm'];
           }
-       }
-     } catch(e) {
-       AdvancedLogger.warn('[ConfigManager] HTML parsing error for token: $e');
-     }
-     return null;
+        }
+      }
+    } catch (e) {
+      AdvancedLogger.warn('[ConfigManager] HTML parsing error for token: $e');
+    }
+    return null;
   }
+
+  @visibleForTesting
+  static String? extractDriveConfirmationLink(String html) =>
+      ConfigManager()._extractDriveTokenFromHtml(html);
 
   static Future<List<String>> parseMixedContent(String text) async {
     // Offload heavy parsing (HTML, Base64, Regex) to background isolate
@@ -439,7 +495,8 @@ class ConfigManager extends ChangeNotifier {
   }
 
   // --- DATABASE OPERATIONS ---
-  Future<int> addConfigs(List<String> configStrings, {bool checkBlacklist = true}) async {
+  Future<int> addConfigs(List<String> configStrings,
+      {bool checkBlacklist = true}) async {
     // Prepare data for Isolate
     // We pass list versions of Sets because Sets aren't always transferrable if they contain custom objects,
     // but Strings are fine. Just to be safe and consistent with typical isolate args.
@@ -448,113 +505,119 @@ class ConfigManager extends ChangeNotifier {
       'blockedHashes': _blockedConfigs.toList(),
       'checkBlacklist': checkBlacklist,
       'existingConfigs': allConfigs.map((c) => c.rawConfig.trim()).toList(),
-      'initialAddedCount': 0, // We can let the isolate handle local count, or pass a global counter if needed.
-                              // Current logic uses local addedCount in loop, let's stick to that but we risk ID collisions if we added multiple batches very fast.
-                              // Actually the ID uses DateTime.now() inside the loop. In isolate, DateTime.now() is fine.
+      'initialAddedCount':
+          0, // We can let the isolate handle local count, or pass a global counter if needed.
+      // Current logic uses local addedCount in loop, let's stick to that but we risk ID collisions if we added multiple batches very fast.
+      // Actually the ID uses DateTime.now() inside the loop. In isolate, DateTime.now() is fine.
     };
 
-    AdvancedLogger.info('[ConfigManager] Spawning isolate to process ${configStrings.length} configs...');
+    AdvancedLogger.info(
+        '[ConfigManager] Spawning isolate to process ${configStrings.length} configs...');
 
     try {
       final result = await compute(_processConfigsInIsolate, args);
 
       final newConfigs = result['newConfigs'] as List<VpnConfigWithMetrics>;
-      final hashesToRemove = result['hashesToRemoveFromBlacklist'] as List<String>;
+      final hashesToRemove =
+          result['hashesToRemoveFromBlacklist'] as List<String>;
 
       // Update Blacklist
       if (hashesToRemove.isNotEmpty) {
-         _blockedConfigs.removeAll(hashesToRemove);
-         await _saveBlacklist();
-         AdvancedLogger.info("[ConfigManager] Manual overwrite: Removed ${hashesToRemove.length} configs from blacklist.");
+        _blockedConfigs.removeAll(hashesToRemove);
+        await _saveBlacklist();
+        AdvancedLogger.info(
+            "[ConfigManager] Manual overwrite: Removed ${hashesToRemove.length} configs from blacklist.");
       }
 
       // Add New Configs
       if (newConfigs.isNotEmpty) {
-         allConfigs.addAll(newConfigs);
-         await _updateLists();
-         await _saveAllConfigs();
-         notifyListeners();
-         AdvancedLogger.info('[ConfigManager] Successfully added ${newConfigs.length} configs via Isolate.');
+        allConfigs.addAll(newConfigs);
+        await _updateLists();
+        await _saveAllConfigs();
+        notifyListeners();
+        AdvancedLogger.info(
+            '[ConfigManager] Successfully added ${newConfigs.length} configs via Isolate.');
       }
 
       return newConfigs.length;
-
     } catch (e) {
       AdvancedLogger.error('[ConfigManager] Error in addConfigs isolate: $e');
       return 0;
     }
   }
 
-  Future<void> updateConfigMetrics(String id, {int? ping, double? speed, bool? connectionSuccess}) async {
-     final index = allConfigs.indexWhere((c) => c.id == id);
-     if (index != -1) {
-        // Update in-place
-        allConfigs[index] = allConfigs[index].updateMetrics(
-           deviceId: _currentDeviceId,
-           ping: ping, 
-           speed: speed, 
-           connectionSuccess: connectionSuccess ?? false
-        );
-        // Don't sort immediately, use throttling
-        notifyListenersThrottled();
-     }
+  Future<void> updateConfigMetrics(String id,
+      {int? ping, double? speed, bool? connectionSuccess}) async {
+    final index = allConfigs.indexWhere((c) => c.id == id);
+    if (index != -1) {
+      // Update in-place
+      allConfigs[index] = allConfigs[index].updateMetrics(
+          deviceId: _currentDeviceId,
+          ping: ping,
+          speed: speed,
+          connectionSuccess: connectionSuccess ?? false);
+      // Don't sort immediately, use throttling
+      notifyListenersThrottled();
+    }
   }
 
   Future<void> updateConfigDirectly(VpnConfigWithMetrics config) async {
-     final index = allConfigs.indexWhere((c) => c.id == config.id);
-     if (index != -1) {
-        allConfigs[index] = config;
-     }
-     // Don't sort immediately, use throttling
-     notifyListenersThrottled();
+    final index = allConfigs.indexWhere((c) => c.id == config.id);
+    if (index != -1) {
+      allConfigs[index] = config;
+      // Also update selected config to keep state consistent
+      if (_selectedConfig?.id == config.id) {
+        _selectedConfig = config;
+      }
+    }
+    // Don't sort immediately, use throttling
+    notifyListenersThrottled();
   }
-  
+
   Future<void> markSuccess(String id) async {
-      final index = allConfigs.indexWhere((c) => c.id == id);
-      if (index != -1) {
-         allConfigs[index] = allConfigs[index].copyWith(
-            failureCount: 0,
-            lastSuccessfulConnectionTime: DateTime.now().millisecondsSinceEpoch,
-            isAlive: true
-         );
-         await _updateLists();
-         await _saveAllConfigs();
-         notifyListeners();
-      }
+    final index = allConfigs.indexWhere((c) => c.id == id);
+    if (index != -1) {
+      allConfigs[index] = allConfigs[index].copyWith(
+          failureCount: 0,
+          lastSuccessfulConnectionTime: DateTime.now().millisecondsSinceEpoch,
+          isAlive: true);
+      await _updateLists();
+      await _saveAllConfigs();
+      notifyListeners();
+    }
   }
-  
+
   Future<void> markFailure(String id) async {
-      final index = allConfigs.indexWhere((c) => c.id == id);
-      if (index != -1) {
-         allConfigs[index] = allConfigs[index].copyWith(
-            failureCount: allConfigs[index].failureCount + 1,
-            isAlive: false
-         );
-         await _updateLists();
-         await _saveAllConfigs();
-         notifyListeners();
-      }
+    final index = allConfigs.indexWhere((c) => c.id == id);
+    if (index != -1) {
+      allConfigs[index] = allConfigs[index].copyWith(
+          failureCount: allConfigs[index].failureCount + 1, isAlive: false);
+      await _updateLists();
+      await _saveAllConfigs();
+      notifyListeners();
+    }
   }
 
   Future<bool> deleteConfig(String id) async {
-     final configIndex = allConfigs.indexWhere((c) => c.id == id);
-     if (configIndex != -1) {
-        final config = allConfigs[configIndex];
+    final configIndex = allConfigs.indexWhere((c) => c.id == id);
+    if (configIndex != -1) {
+      final config = allConfigs[configIndex];
 
-        // BLACKLIST LOGIC: Add hash to persistent blacklist
-        final hash = md5.convert(utf8.encode(config.rawConfig.trim())).toString();
-        _blockedConfigs.add(hash);
-        await _saveBlacklist();
-        AdvancedLogger.info("[ConfigManager] Config deleted and blacklisted: ${config.name} ($hash)");
+      // BLACKLIST LOGIC: Add hash to persistent blacklist
+      final hash = md5.convert(utf8.encode(config.rawConfig.trim())).toString();
+      _blockedConfigs.add(hash);
+      await _saveBlacklist();
+      AdvancedLogger.info(
+          "[ConfigManager] Config deleted and blacklisted: ${config.name} ($hash)");
 
-        allConfigs.removeAt(configIndex);
-        if (_selectedConfig?.id == id) _selectedConfig = null;
-        await _updateLists();
-        await _saveAllConfigs();
-        notifyListeners();
-        return true;
-     }
-     return false;
+      allConfigs.removeAt(configIndex);
+      if (_selectedConfig?.id == id) _selectedConfig = null;
+      await _updateLists();
+      await _saveAllConfigs();
+      notifyListeners();
+      return true;
+    }
+    return false;
   }
 
   // --- CLEANUP METHODS ---
@@ -567,31 +630,30 @@ class ConfigManager extends ChangeNotifier {
     });
 
     if (allConfigs.length < initialCount) {
-        if (_selectedConfig != null && !allConfigs.contains(_selectedConfig)) {
-            _selectedConfig = null;
-        }
-        await _updateLists();
-        await _saveAllConfigs();
-        notifyListeners();
+      if (_selectedConfig != null && !allConfigs.contains(_selectedConfig)) {
+        _selectedConfig = null;
+      }
+      await _updateLists();
+      await _saveAllConfigs();
+      notifyListeners();
     }
     return initialCount - allConfigs.length;
   }
 
   Future<void> toggleFavorite(String id) async {
-      final index = allConfigs.indexWhere((c) => c.id == id);
-      if (index != -1) {
-         allConfigs[index] = allConfigs[index].copyWith(
-            isFavorite: !allConfigs[index].isFavorite
-         );
-         await _updateLists();
-         await _saveAllConfigs();
-         notifyListeners();
-      }
+    final index = allConfigs.indexWhere((c) => c.id == id);
+    if (index != -1) {
+      allConfigs[index] =
+          allConfigs[index].copyWith(isFavorite: !allConfigs[index].isFavorite);
+      await _updateLists();
+      await _saveAllConfigs();
+      notifyListeners();
+    }
   }
 
   void selectConfig(VpnConfigWithMetrics? c) {
-     _selectedConfig = c;
-     notifyListeners();
+    _selectedConfig = c;
+    notifyListeners();
   }
 
   // --- ACTIVE CONNECTION PING & NAVIGATION ---
@@ -601,17 +663,20 @@ class ConfigManager extends ChangeNotifier {
 
     final stopwatch = Stopwatch()..start();
     try {
-      final response = await http.head(
-        Uri.parse('https://www.google.com'),
-      ).timeout(const Duration(seconds: 5));
+      final response = await http
+          .head(
+            Uri.parse('https://www.google.com'),
+          )
+          .timeout(const Duration(seconds: 5));
 
       stopwatch.stop();
       if (response.statusCode == 200) {
-         final ping = stopwatch.elapsedMilliseconds;
-         // Update metrics directly
-         await updateConfigMetrics(_selectedConfig!.id, ping: ping, connectionSuccess: true);
-         AdvancedLogger.info('[ConfigManager] Active ping success: ${ping}ms');
-         return ping;
+        final ping = stopwatch.elapsedMilliseconds;
+        // Update metrics directly
+        await updateConfigMetrics(_selectedConfig!.id,
+            ping: ping, connectionSuccess: true);
+        AdvancedLogger.info('[ConfigManager] Active ping success: ${ping}ms');
+        return ping;
       }
     } catch (e) {
       AdvancedLogger.warn('[ConfigManager] Active ping failed: $e');
@@ -620,23 +685,30 @@ class ConfigManager extends ChangeNotifier {
   }
 
   VpnConfigWithMetrics? getNextConfig(List<VpnConfigWithMetrics> currentList) {
-     if (currentList.isEmpty) return null;
-     if (_selectedConfig == null) return currentList.first;
+    if (currentList.isEmpty) return null;
+    if (_selectedConfig == null) return currentList.first;
 
-     final currentIndex = currentList.indexWhere((c) => c.id == _selectedConfig!.id);
-     if (currentIndex == -1) return currentList.first;
+    final currentIndex =
+        currentList.indexWhere((c) => c.id == _selectedConfig!.id);
+    if (currentIndex == -1) return currentList.first;
 
-     return currentList[(currentIndex + 1) % currentList.length];
+    return currentList[(currentIndex + 1) % currentList.length];
   }
 
   // --- PERSISTENCE ---
   Future<void> _initDeviceId() async {
-     final info = DeviceInfoPlugin();
-     try {
-       if (Platform.isAndroid) _currentDeviceId = 'android_${(await info.androidInfo).id}';
-       else if (Platform.isWindows) _currentDeviceId = 'windows_${(await info.windowsInfo).deviceId}';
-       else if (Platform.isIOS) _currentDeviceId = 'ios_${(await info.iosInfo).identifierForVendor}';
-     } catch(e) { _currentDeviceId = 'unknown'; }
+    final info = DeviceInfoPlugin();
+    try {
+      if (Platform.isAndroid) {
+        _currentDeviceId = 'android_${(await info.androidInfo).id}';
+      } else if (Platform.isWindows) {
+        _currentDeviceId = 'windows_${(await info.windowsInfo).deviceId}';
+      } else if (Platform.isIOS) {
+        _currentDeviceId = 'ios_${(await info.iosInfo).identifierForVendor}';
+      }
+    } catch (e) {
+      _currentDeviceId = 'unknown';
+    }
   }
 
   Future<void> _loadConfigs() async {
@@ -651,25 +723,28 @@ class ConfigManager extends ChangeNotifier {
             // Defensively parse each config so one bad entry doesn't kill the whole list
             allConfigs.add(VpnConfigWithMetrics.fromJson(e));
           } catch (innerError) {
-            AdvancedLogger.warn('[ConfigManager] Skipped corrupted config during load: $innerError');
+            AdvancedLogger.warn(
+                '[ConfigManager] Skipped corrupted config during load: $innerError');
           }
         }
-        AdvancedLogger.info('[ConfigManager] Loaded ${allConfigs.length} from storage');
+        AdvancedLogger.info(
+            '[ConfigManager] Loaded ${allConfigs.length} from storage');
       }
-    } catch(e) {
-       AdvancedLogger.error('[ConfigManager] Load error: $e');
-       // If critical failure (e.g. JSON decode), fallback to empty list but keep app running
-       if (allConfigs.isEmpty) allConfigs = [];
+    } catch (e) {
+      AdvancedLogger.error('[ConfigManager] Load error: $e');
+      // If critical failure (e.g. JSON decode), fallback to empty list but keep app running
+      if (allConfigs.isEmpty) allConfigs = [];
     }
   }
 
   Future<void> _saveAllConfigs() async {
-     try {
-       final prefs = await SharedPreferences.getInstance();
-       await prefs.setString(_configsKey, jsonEncode(allConfigs.map((e)=>e.toJson()).toList()));
-     } catch(e) {
-       AdvancedLogger.error('[ConfigManager] Save error: $e');
-     }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+          _configsKey, jsonEncode(allConfigs.map((e) => e.toJson()).toList()));
+    } catch (e) {
+      AdvancedLogger.error('[ConfigManager] Save error: $e');
+    }
   }
 
   Future<void> _updateLists() async {
@@ -685,54 +760,59 @@ class ConfigManager extends ChangeNotifier {
   }
 
   Future<void> _loadBlacklist() async {
-     try {
-       final prefs = await SharedPreferences.getInstance();
-       final list = prefs.getStringList(_blacklistKey) ?? [];
-       _blockedConfigs = list.toSet();
-     } catch(e) {
-       AdvancedLogger.warn('[ConfigManager] Failed to load blacklist: $e');
-     }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final list = prefs.getStringList(_blacklistKey) ?? [];
+      _blockedConfigs = list.toSet();
+    } catch (e) {
+      AdvancedLogger.warn('[ConfigManager] Failed to load blacklist: $e');
+    }
   }
 
   Future<void> _saveBlacklist() async {
-     try {
-       final prefs = await SharedPreferences.getInstance();
-       await prefs.setStringList(_blacklistKey, _blockedConfigs.toList());
-     } catch(e) {
-       AdvancedLogger.warn('[ConfigManager] Failed to save blacklist: $e');
-     }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(_blacklistKey, _blockedConfigs.toList());
+    } catch (e) {
+      AdvancedLogger.warn('[ConfigManager] Failed to save blacklist: $e');
+    }
   }
 
   Future<void> _loadAutoSwitchSetting() async {
-     final p = await SharedPreferences.getInstance();
-     _isAutoSwitchEnabled = p.getBool(_autoSwitchKey) ?? true;
+    final p = await SharedPreferences.getInstance();
+    _isAutoSwitchEnabled = p.getBool(_autoSwitchKey) ?? true;
   }
+
   Future<void> _saveAutoSwitchSetting() async {
-     final p = await SharedPreferences.getInstance();
-     await p.setBool(_autoSwitchKey, _isAutoSwitchEnabled);
+    final p = await SharedPreferences.getInstance();
+    await p.setBool(_autoSwitchKey, _isAutoSwitchEnabled);
   }
 
   // --- UI & LEGACY COMPATIBILITY METHODS ---
   Future<VpnConfigWithMetrics?> getBestConfig() async {
-     if (_selectedConfig != null && _selectedConfig!.isValidated) return _selectedConfig;
-     if (favoriteConfigs.isNotEmpty) return favoriteConfigs.first;
-     if (validatedConfigs.isNotEmpty) return validatedConfigs.first;
-     if (allConfigs.isNotEmpty) return allConfigs.first;
-     return null;
+    if (_selectedConfig != null && _selectedConfig!.isValidated) {
+      return _selectedConfig;
+    }
+    if (favoriteConfigs.isNotEmpty) return favoriteConfigs.first;
+    if (validatedConfigs.isNotEmpty) return validatedConfigs.first;
+    if (allConfigs.isNotEmpty) return allConfigs.first;
+    return null;
   }
 
   void setConnected(bool c, {String status = 'Connected'}) {
-     _isConnected = c;
-     _connectionStatus = status;
-     if (c) {
-       startSmartMonitor();
-     } else {
-       stopSmartMonitor();
-     }
-     notifyListeners();
+    _isConnected = c;
+    _connectionStatus = status;
+    if (c) {
+      startSmartMonitor();
+    } else {
+      stopSmartMonitor();
+    }
+    notifyListeners();
   }
-  
-  void stopSession() { _sessionTimer?.cancel(); }
+
+  void stopSession() {
+    _sessionTimer?.cancel();
+  }
 
   // --- SMART MONITOR (HEARTBEAT) ---
   void startSmartMonitor() {
@@ -742,27 +822,30 @@ class ConfigManager extends ChangeNotifier {
     AdvancedLogger.info('[ConfigManager] Starting Smart Monitor...');
     int failureCount = 0;
 
-    _heartbeatTimer = Timer.periodic(const Duration(seconds: 30), (timer) async {
-       if (!_isConnected) {
-         timer.cancel();
-         return;
-       }
+    _heartbeatTimer =
+        Timer.periodic(const Duration(seconds: 30), (timer) async {
+      if (!_isConnected) {
+        timer.cancel();
+        return;
+      }
 
-       final ping = await measureActivePing();
+      final ping = await measureActivePing();
 
-       // Logic: Fail ONLY if ping is -1 (error/timeout). Do NOT fail on high ping alone.
-       if (ping == -1) {
-          failureCount++;
-          AdvancedLogger.warn('[Smart Monitor] Heartbeat failed. Count: $failureCount');
+      // Logic: Fail ONLY if ping is -1 (error/timeout). Do NOT fail on high ping alone.
+      if (ping == -1) {
+        failureCount++;
+        AdvancedLogger.warn(
+            '[Smart Monitor] Heartbeat failed. Count: $failureCount');
 
-          if (failureCount >= 10) {
-             AdvancedLogger.warn('[Smart Monitor] Threshold reached. Initiating Auto-Switch...');
-             failureCount = 0;
-             await _performAutoSwitch();
-          }
-       } else {
-          failureCount = 0; // Reset on success
-       }
+        if (failureCount >= 10) {
+          AdvancedLogger.warn(
+              '[Smart Monitor] Threshold reached. Initiating Auto-Switch...');
+          failureCount = 0;
+          await _performAutoSwitch();
+        }
+      } else {
+        failureCount = 0; // Reset on success
+      }
     });
   }
 
@@ -770,20 +853,22 @@ class ConfigManager extends ChangeNotifier {
     _heartbeatTimer?.cancel();
     _heartbeatTimer = null;
   }
-  
+
   Future<void> _performAutoSwitch() async {
     // 1. Check Reserve List
     if (reserveList.isNotEmpty) {
-       final nextBest = reserveList.removeAt(0);
-       AdvancedLogger.info('[Smart Monitor] Switching to reserve config: ${nextBest.name}');
-       _selectedConfig = nextBest;
-       notifyListeners();
+      final nextBest = reserveList.removeAt(0);
+      AdvancedLogger.info(
+          '[Smart Monitor] Switching to reserve config: ${nextBest.name}');
+      _selectedConfig = nextBest;
+      notifyListeners();
 
-       onAutoSwitch?.call(nextBest);
+      onAutoSwitch?.call(nextBest);
     } else {
-       // 2. No reserves -> Trigger Funnel
-       AdvancedLogger.info('[Smart Monitor] Reserve list empty. Triggering Funnel...');
-       onTriggerFunnel?.call();
+      // 2. No reserves -> Trigger Funnel
+      AdvancedLogger.info(
+          '[Smart Monitor] Reserve list empty. Triggering Funnel...');
+      onTriggerFunnel?.call();
     }
   }
 
@@ -794,17 +879,29 @@ class ConfigManager extends ChangeNotifier {
   }
 
   Future<void> clearAllData() async {
-     final p = await SharedPreferences.getInstance();
-     await p.remove(_configsKey);
-     _selectedConfig = null;
-     allConfigs.clear();
-     await _updateLists();
-     notifyListeners();
+    final p = await SharedPreferences.getInstance();
+    await p.remove(_configsKey);
+    _selectedConfig = null;
+    allConfigs.clear();
+    await _updateLists();
+    notifyListeners();
+  }
+
+  // --- DEPENDENCY INJECTION FOR TESTING ---
+  NativeVpnService? _nativeVpnService;
+  EphemeralTester? _ephemeralTester;
+
+  @visibleForTesting
+  void setDependencies(
+      {NativeVpnService? vpnService, EphemeralTester? tester}) {
+    _nativeVpnService = vpnService;
+    _ephemeralTester = tester;
   }
 
   // --- SMART FAILOVER CONNECTION ---
   Future<void> connectWithSmartFailover() async {
-    AdvancedLogger.info('[ConfigManager] Starting Smart Failover Connection...');
+    AdvancedLogger.info(
+        '[ConfigManager] Starting Smart Failover Connection...');
     _isGlobalStopRequested = false;
 
     // 1. Notify UI
@@ -815,28 +912,36 @@ class ConfigManager extends ChangeNotifier {
     VpnConfigWithMetrics? target = await getBestConfig();
 
     if (target == null) {
-       AdvancedLogger.warn('[ConfigManager] No configs available for connection.');
-       setConnected(false, status: 'No servers available');
-       return;
+      AdvancedLogger.warn(
+          '[ConfigManager] No configs available for connection.');
+      setConnected(false, status: 'No servers available');
+      return;
     }
 
     int attempts = 0;
     const maxAttempts = 3;
-    final NativeVpnService nativeService = NativeVpnService();
-    final EphemeralTester tester = EphemeralTester();
+    // Use injected dependencies or default singletons
+    final NativeVpnService nativeService =
+        _nativeVpnService ?? NativeVpnService();
+    final EphemeralTester tester = _ephemeralTester ?? EphemeralTester();
 
-    while (attempts < maxAttempts && target != null && !_isGlobalStopRequested) {
+    while (
+        attempts < maxAttempts && target != null && !_isGlobalStopRequested) {
       try {
         selectConfig(target); // Update UI selection
 
         // 3. Pre-flight Check (Strict - Stage 2 Connectivity)
         setConnected(false, status: 'Verifying ${target.name}...');
-        final testResult = await tester.runTest(target, mode: TestMode.connectivity);
+        final testResult =
+            await tester.runTest(target, mode: TestMode.connectivity);
 
         if (testResult.funnelStage < 2 || testResult.currentPing == -1) {
-             // Mark failure and throw to trigger failover
-             await markFailure(target.id);
-             throw Exception("Pre-flight check failed (Ghost/Dead)");
+          // UPDATE CONFIG WITH FAILURE RESULT FIRST so it is no longer 'validated'
+          await updateConfigDirectly(testResult);
+
+          // Mark failure and throw to trigger failover
+          await markFailure(target.id);
+          throw Exception("Pre-flight check failed (Ghost/Dead)");
         }
 
         // Update metrics
@@ -854,10 +959,10 @@ class ConfigManager extends ChangeNotifier {
         await markSuccess(target.id);
 
         return;
-
       } catch (e) {
         // 6. Handle Failure
-        AdvancedLogger.warn('[ConfigManager] Connection failed to ${target.name}: $e');
+        AdvancedLogger.warn(
+            '[ConfigManager] Connection failed to ${target.name}: $e');
         await markFailure(target.id);
 
         if (_isGlobalStopRequested) return;
@@ -867,24 +972,26 @@ class ConfigManager extends ChangeNotifier {
         target = await getBestConfig(); // Get NEW best
 
         if (target != null && target.id != _selectedConfig?.id) {
-           setConnected(false, status: 'Switching to ${target.name}...');
-           // Brief delay to let UI show the status
-           await Future.delayed(const Duration(milliseconds: 500));
+          setConnected(false, status: 'Switching to ${target.name}...');
+          // Brief delay to let UI show the status
+          await Future.delayed(const Duration(milliseconds: 500));
         } else if (target == null) {
-           break;
+          break;
         }
       }
     }
 
     // 8. Final Failure State
     if (!_isGlobalStopRequested) {
-       setConnected(false, status: 'Connection Failed');
+      setConnected(false, status: 'Connection Failed');
     }
   }
-  
+
   // Aliases for compatibility
   Future<void> refreshAllConfigs() => fetchStartupConfigs();
-  static Future<List<String>> parseAndFetchConfigs(String text) => parseMixedContent(text);
-  Future<void> addConfig(String raw, String name) => addConfigs([raw]); 
-  VpnConfigWithMetrics? getConfigById(String id) => allConfigs.firstWhereOrNull((c) => c.id == id);
+  static Future<List<String>> parseAndFetchConfigs(String text) =>
+      parseMixedContent(text);
+  Future<void> addConfig(String raw, String name) => addConfigs([raw]);
+  VpnConfigWithMetrics? getConfigById(String id) =>
+      allConfigs.firstWhereOrNull((c) => c.id == id);
 }

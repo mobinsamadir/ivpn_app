@@ -23,21 +23,23 @@ class StabilityMonitor {
     final List<int> samples = [];
     int failureCount = 0;
     final startTime = DateTime.now();
-    final totalSamples = (duration.inMilliseconds / interval.inMilliseconds).round();
+    final totalSamples =
+        (duration.inMilliseconds / interval.inMilliseconds).round();
 
-    onLog?.call("📈 [STABILITY] Starting Stability Monitor (${duration.inSeconds}s, $totalSamples samples)...");
+    onLog?.call(
+        "📈 [STABILITY] Starting Stability Monitor (${duration.inSeconds}s, $totalSamples samples)...");
 
     for (int i = 0; i < totalSamples; i++) {
-       if (cancelToken?.isCancelled == true) {
+      if (cancelToken?.isCancelled == true) {
         onLog?.call("🛑 [STABILITY] Monitor cancelled.");
         break;
       }
-      
+
       try {
         final latency = await _measureSinglePing(cancelToken: cancelToken);
         samples.add(latency);
         onSample?.call(latency);
-        
+
         if (latency == -1) {
           failureCount++;
           onProgress?.call(i + 1, -1); // Report failure as per convention
@@ -60,13 +62,15 @@ class StabilityMonitor {
 
     final endTime = DateTime.now();
     final validSamples = samples.where((s) => s > 0).toList();
-    
-    final avgLatency = validSamples.isEmpty 
-        ? 0.0 
+
+    final avgLatency = validSamples.isEmpty
+        ? 0.0
         : validSamples.reduce((a, b) => a + b) / validSamples.length;
-    
-    final maxLatency = validSamples.isEmpty ? 0 : validSamples.reduce((a, b) => a > b ? a : b);
-    final minLatency = validSamples.isEmpty ? 0 : validSamples.reduce((a, b) => a < b ? a : b);
+
+    final maxLatency =
+        validSamples.isEmpty ? 0 : validSamples.reduce((a, b) => a > b ? a : b);
+    final minLatency =
+        validSamples.isEmpty ? 0 : validSamples.reduce((a, b) => a < b ? a : b);
 
     final metrics = StabilityMetrics(
       samples: samples,
@@ -81,8 +85,9 @@ class StabilityMonitor {
       endTime: endTime,
     );
 
-    onLog?.call("📊 [STABILITY] Done. Jitter: ${metrics.jitter.toStringAsFixed(2)}ms, Loss: ${metrics.packetLoss.toStringAsFixed(1)}%");
-    
+    onLog?.call(
+        "📊 [STABILITY] Done. Jitter: ${metrics.jitter.toStringAsFixed(2)}ms, Loss: ${metrics.packetLoss.toStringAsFixed(1)}%");
+
     return metrics;
   }
 
@@ -97,7 +102,7 @@ class StabilityMonitor {
   Future<int> _doSinglePing(CancelToken? cancelToken) async {
     final client = HttpClient();
     if (jobId != null) CleanupUtils.registerResource(jobId!, client);
-    
+
     final stopwatch = Stopwatch();
     client.findProxy = (uri) => "PROXY 127.0.0.1:$httpPort;";
     client.connectionTimeout = TestTimeouts.tcpHandshake;
@@ -105,8 +110,9 @@ class StabilityMonitor {
 
     try {
       stopwatch.start();
-      final request = await client.getUrl(Uri.parse("http://cp.cloudflare.com"));
-      
+      final request =
+          await client.getUrl(Uri.parse("http://cp.cloudflare.com"));
+
       cancelToken?.addOnCancel(() {
         client.close(force: true);
       });

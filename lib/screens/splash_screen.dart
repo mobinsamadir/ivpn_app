@@ -41,17 +41,15 @@ class _SplashScreenState extends State<SplashScreen> {
 
       // 0. Request Notification Permission (Android 13+)
       await Permission.notification.request();
-      
+
       // 2. Initialize Config Logic
       setState(() => _statusMessage = 'Loading configs...');
       // Robust init with timeout to prevent hang
-      await configManager.init().timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          AdvancedLogger.error("ConfigManager.init timed out!");
-          // Don't throw, just proceed. Some configs might be missing but app won't hang.
-        }
-      );
+      await configManager.init().timeout(const Duration(seconds: 10),
+          onTimeout: () {
+        AdvancedLogger.error("ConfigManager.init timed out!");
+        // Don't throw, just proceed. Some configs might be missing but app won't hang.
+      });
 
       // NEW: Start Funnel immediately
       FunnelService().startFunnel();
@@ -62,13 +60,13 @@ class _SplashScreenState extends State<SplashScreen> {
       // 3. Fetch Updates (Non-blocking usually, but good to wait a bit)
       setState(() => _statusMessage = 'Updating from Cloud...');
       // We don't await this forever to prevent stuck splash
-      await configManager.fetchStartupConfigs().timeout(
-        const Duration(seconds: 5), 
-        onTimeout: () {
-          AdvancedLogger.warn('Splash fetch timed out, proceeding with cached configs.');
-          return false; // <--- FIX: Explicitly return a boolean (false = failed/timed out)
-        }
-      );
+      await configManager
+          .fetchStartupConfigs()
+          .timeout(const Duration(seconds: 5), onTimeout: () {
+        AdvancedLogger.warn(
+            'Splash fetch timed out, proceeding with cached configs.');
+        return false; // <--- FIX: Explicitly return a boolean (false = failed/timed out)
+      });
 
       // 4. Navigate to Home
       if (mounted) {
@@ -101,10 +99,11 @@ class _SplashScreenState extends State<SplashScreen> {
               // Logo
               const Icon(Icons.vpn_lock, size: 80, color: Colors.white),
               const SizedBox(height: 24),
-              
+
               // Status or Error
               if (_hasError) ...[
-                const Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
+                const Icon(Icons.error_outline,
+                    size: 48, color: Colors.redAccent),
                 const SizedBox(height: 16),
                 Text(
                   _errorMessage ?? 'Unknown Error',

@@ -9,14 +9,14 @@ class SmartConnectButton extends StatefulWidget {
   final double buttonSize;
   final bool showStatus;
   final VoidCallback? onPressed;
-  
+
   const SmartConnectButton({
     super.key,
     this.buttonSize = 200.0,
     this.showStatus = true,
     this.onPressed,
   });
-  
+
   @override
   State<SmartConnectButton> createState() => _SmartConnectButtonState();
 }
@@ -33,16 +33,18 @@ class _SmartConnectButtonState extends State<SmartConnectButton> {
         final isConnected = configManager.isConnected;
         final connectionStatus = configManager.connectionStatus;
         // Determine isConnecting based on status text
-        final isConnecting = connectionStatus.toLowerCase().contains('connecting') ||
-                             connectionStatus.toLowerCase().contains('finding') ||
-                             connectionStatus.toLowerCase().contains('preparing') ||
-                             connectionStatus.toLowerCase().contains('testing');
+        final isConnecting =
+            connectionStatus.toLowerCase().contains('connecting') ||
+                connectionStatus.toLowerCase().contains('finding') ||
+                connectionStatus.toLowerCase().contains('preparing') ||
+                connectionStatus.toLowerCase().contains('testing');
 
         return Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             // Status indicator
-            if (widget.showStatus) _buildStatusIndicator(isConnected, connectionStatus),
+            if (widget.showStatus)
+              _buildStatusIndicator(isConnected, connectionStatus),
 
             const SizedBox(height: 20),
 
@@ -92,7 +94,7 @@ class _SmartConnectButtonState extends State<SmartConnectButton> {
       },
     );
   }
-  
+
   Widget _buildStatusIndicator(bool isConnected, String status) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -120,8 +122,7 @@ class _SmartConnectButtonState extends State<SmartConnectButton> {
       ),
     );
   }
-  
-  
+
   Future<void> _handleConnection(ConfigManager configManager) async {
     // If already connected, disconnect
     if (configManager.isConnected) {
@@ -145,7 +146,8 @@ class _SmartConnectButtonState extends State<SmartConnectButton> {
       // In a real implementation, you might want to have a callback to the parent or show ad
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Access required. Please use main screen.')),
+          const SnackBar(
+              content: Text('Access required. Please use main screen.')),
         );
       }
       return;
@@ -161,7 +163,8 @@ class _SmartConnectButtonState extends State<SmartConnectButton> {
 
       if (configManager.selectedConfig != null) {
         configToUse = configManager.selectedConfig;
-        AdvancedLogger.info('[SmartConnect] Using selected config: ${configToUse!.name}');
+        AdvancedLogger.info(
+            '[SmartConnect] Using selected config: ${configToUse!.name}');
       } else {
         // If no server selected, run Fastest logic first, then connect
         configManager.setConnected(false, status: 'Finding fastest server...');
@@ -169,9 +172,11 @@ class _SmartConnectButtonState extends State<SmartConnectButton> {
 
         if (configToUse != null) {
           configManager.selectConfig(configToUse);
-          AdvancedLogger.info('[SmartConnect] Auto-selected best server: ${configToUse.name} (${configToUse.currentPing}ms)');
+          AdvancedLogger.info(
+              '[SmartConnect] Auto-selected best server: ${configToUse.name} (${configToUse.currentPing}ms)');
         } else {
-          AdvancedLogger.info('[SmartConnect] No valid config found after testing');
+          AdvancedLogger.info(
+              '[SmartConnect] No valid config found after testing');
         }
       }
 
@@ -181,13 +186,13 @@ class _SmartConnectButtonState extends State<SmartConnectButton> {
       }
 
       // Update status to connecting
-      configManager.setConnected(false, status: 'Connecting to ${configToUse.name}...');
+      configManager.setConnected(false,
+          status: 'Connecting to ${configToUse.name}...');
 
       // Connect using NativeVpnService
       await NativeVpnService().connect(configToUse.rawConfig);
 
       // Removed optimistic success setting, relying on ConfigManager/NativeVpnService streams.
-
     } catch (e) {
       AdvancedLogger.error('[SmartConnect] Connection failed: $e');
       if (mounted) {
@@ -195,20 +200,19 @@ class _SmartConnectButtonState extends State<SmartConnectButton> {
       }
     }
   }
-  
-  
+
   Color _getButtonColor(bool isConnected, bool isConnecting) {
     if (isConnecting) return Colors.orange;
     if (isConnected) return Colors.redAccent;
     return Colors.green;
   }
-  
+
   IconData _getButtonIcon(bool isConnected, bool isConnecting) {
     if (isConnecting) return Icons.sync;
     if (isConnected) return Icons.power_settings_new;
     return Icons.power_settings_new;
   }
-  
+
   String _getButtonText(bool isConnected, bool isConnecting) {
     if (isConnecting) return 'Connecting...';
     if (isConnected) return 'Disconnect';

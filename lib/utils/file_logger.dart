@@ -9,12 +9,13 @@ class FileLogger {
     try {
       final directory = await getApplicationDocumentsDirectory();
       _logFile = File(p.join(directory.path, 'vpn_debug.log'));
-      
-      // Clear log on startup or keep it? 
+
+      // Clear log on startup or keep it?
       // User likely wants to see the latest attempt, so we append with a separator.
       await log("------------------------------------------");
       await log("Session Started: ${DateTime.now()}");
     } catch (e) {
+      // ignore: avoid_print
       print("Error initializing FileLogger: $e");
     }
   }
@@ -22,14 +23,16 @@ class FileLogger {
   static Future<void> log(String message) async {
     final timestamp = DateTime.now().toIso8601String();
     final formattedLine = "[$timestamp] $message\n";
-    
+
     // Also print to console for development
+    // ignore: avoid_print
     print(formattedLine.trim());
 
     if (_logFile != null) {
       try {
         await _logFile!.writeAsString(formattedLine, mode: FileMode.append);
       } catch (e) {
+        // ignore: avoid_print
         print("Failed to write to log file: $e");
       }
     }
