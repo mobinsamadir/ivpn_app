@@ -6,3 +6,8 @@ build/
 .dart_tool/
 .idea/
 *.apk
+bin/
+local_results/
+__pycache__/
+unique_configs.json
+real_delay_passed.txt
