@@ -17,16 +17,38 @@ class NativeVpnService {
   // Singleton
   static final NativeVpnService _instance = NativeVpnService._internal();
   factory NativeVpnService() => _instance;
-  NativeVpnService._internal();
+
+  NativeVpnService._internal() {
+    _init();
+  }
 
   // Updated channel name to match Kotlin side
   static const _methodChannel = MethodChannel('com.example.ivpn/vpn');
+  // CRITICAL FIX: Real-time status updates from Native OS
+  static const _eventChannel = EventChannel('com.example.ivpn/vpn_status');
 
   final WindowsVpnService _windowsVpnService = WindowsVpnService();
 
   static const int failedPingValue = -1;
 
   final StreamController<String> _statusController = StreamController<String>.broadcast();
+
+  void _init() {
+    // Initialize Event Channel Listener for Android
+    if (!Platform.isWindows) {
+      _eventChannel.receiveBroadcastStream().listen(
+        (event) {
+          final status = event.toString();
+          print("📡 [Native Event] VPN Status Update: $status");
+          _statusController.add(status);
+        },
+        onError: (error) {
+          print("❌ [Native Event] Error: $error");
+          _statusController.add("ERROR");
+        },
+      );
+    }
+  }
 
   Future<bool> isAdmin() async {
     if (Platform.isWindows) {
@@ -78,7 +100,7 @@ class NativeVpnService {
   Future<void> connect(String rawLink) async {
     if (Platform.isWindows) {
       await _windowsVpnService.startVpn(rawLink);
-      _statusController.add("CONNECTED");
+      // Windows service handles its own stream updates
       return;
     }
 
@@ -91,8 +113,10 @@ class NativeVpnService {
 
       print("🚀 [Native] Connecting with config length: ${configJson.length}...");
       await _methodChannel.invokeMethod('startVpn', {'config': configJson});
-      _statusController.add("CONNECTED");
-      print("✅ [Native] Connect command sent.");
+
+      // CRITICAL FIX: Removed fake "CONNECTED" state.
+      // Now we wait for the OS to emit the real state via EventChannel.
+      print("✅ [Native] Connect command sent. Waiting for OS confirmation...");
     } catch (e) {
       print("Failed to send connect command: $e");
       _statusController.add("ERROR");
@@ -101,7 +125,8 @@ class NativeVpnService {
   }
 
   Future<void> disconnect() async {
-    _statusController.add("DISCONNECTED");
+    // CRITICAL FIX: Removed fake "DISCONNECTED" state.
+    // The OS will emit DISCONNECTED when the interface goes down.
 
     if (Platform.isWindows) {
       await _windowsVpnService.stopVpn();
