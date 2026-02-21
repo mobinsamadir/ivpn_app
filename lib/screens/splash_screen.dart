@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import '../services/config_manager.dart';
 import '../services/advanced_logger.dart';
@@ -37,6 +38,9 @@ class _SplashScreenState extends State<SplashScreen> {
     try {
       // 1. Get Global Config Manager (Injected in main.dart)
       final configManager = context.read<ConfigManager>();
+
+      // 0. Request Notification Permission (Android 13+)
+      await Permission.notification.request();
       
       // 2. Initialize Config Logic
       setState(() => _statusMessage = 'Loading configs...');

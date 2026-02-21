@@ -62,6 +62,10 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
   // Progress State
   String _testProgress = "";
 
+  // Stream Subscriptions
+  StreamSubscription? _funnelSubscription;
+  StreamSubscription? _vpnStatusSubscription;
+
   late TabController _tabController;
 
   @override
@@ -99,12 +103,12 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     };
 
     // Listen to Funnel Progress
-    _funnelService.progressStream.listen((msg) {
+    _funnelSubscription = _funnelService.progressStream.listen((msg) {
        if (mounted) setState(() => _testProgress = msg);
     });
 
     // VPN Connection Status Listener
-    _nativeVpnService.connectionStatusStream.listen((status) {
+    _vpnStatusSubscription = _nativeVpnService.connectionStatusStream.listen((status) {
       AdvancedLogger.info('[ConnectionHomeScreen] Received VPN status update: $status');
       if (mounted) {
         setState(() {
@@ -144,6 +148,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
 
   @override
   void dispose() {
+    _funnelSubscription?.cancel();
+    _vpnStatusSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     AccessManager().removeListener(_onTimeChanged);
     _timerUpdater?.cancel();
