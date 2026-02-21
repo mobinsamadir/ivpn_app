@@ -5,8 +5,8 @@ import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/ad_config.dart';
 import '../utils/advanced_logger.dart';
-import '../widgets/full_screen_ad_dialog.dart';
-import 'windows_vpn_service.dart';
+// import '../widgets/full_screen_ad_dialog.dart'; // Disabled for Killswitch
+// import 'windows_vpn_service.dart'; // Disabled for Killswitch
 
 class AdManagerService {
   static final AdManagerService _instance = AdManagerService._internal();
@@ -175,6 +175,11 @@ class AdManagerService {
   }
 
   Future<bool> showPreConnectionAd(BuildContext context) async {
+    // KILLSWITCH ENGAGED: Bypassing Ad for debugging
+    AdvancedLogger.warn("[AdManager] KILLSWITCH: Bypassing Pre-Connection Ad.");
+    return true;
+
+    /*
     if (!context.mounted) return false;
 
     AdvancedLogger.info("[AdManager] Requesting Pre-Connection Ad (Full Screen Wall)...");
@@ -192,6 +197,7 @@ class AdManagerService {
        AdvancedLogger.error("[AdManager] Ad Exception: $e - Fail Open");
        return true; // Fail Open on error
     }
+    */
   }
 
   Future<void> showPostConnectionAd() async {

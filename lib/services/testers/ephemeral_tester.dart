@@ -8,6 +8,7 @@ import '../../models/vpn_config_with_metrics.dart';
 import '../singbox_config_generator.dart';
 import '../../utils/advanced_logger.dart';
 import '../../utils/port_allocator.dart'; // NEW
+import '../../utils/endpoints.dart';
 import '../binary_manager.dart';
 import '../native_vpn_service.dart';
 
@@ -158,7 +159,7 @@ class EphemeralTester {
           // Test HTTP (Stage 2)
           final sw = Stopwatch()..start();
           try {
-             final req = await client.getUrl(Uri.parse('https://www.google.com/generate_204'));
+             final req = await client.getUrl(Uri.parse(TestEndpoints.connectivityCheck));
              final resp = await req.close();
              sw.stop();
 
@@ -179,7 +180,7 @@ class EphemeralTester {
              try {
                 speedSw.start();
                 // Download ~1MB test file
-                final speedReq = await client.getUrl(Uri.parse('http://speed.cloudflare.com/__down?bytes=1000000'));
+                final speedReq = await client.getUrl(Uri.parse(TestEndpoints.speedCloudflare));
                 final speedResp = await speedReq.close();
 
                 await speedResp.listen((chunk) {
@@ -340,7 +341,7 @@ class EphemeralTester {
         // --- STAGE 2 (HTTP) ---
         final sw = Stopwatch()..start();
         try {
-            final req = await dartHttpClient.getUrl(Uri.parse('https://www.google.com/generate_204'));
+            final req = await dartHttpClient.getUrl(Uri.parse(TestEndpoints.connectivityCheck));
             final resp = await req.close();
             sw.stop();
 
@@ -361,7 +362,7 @@ class EphemeralTester {
 
            try {
               speedSw.start();
-              final speedReq = await dartHttpClient.getUrl(Uri.parse('http://speed.cloudflare.com/__down?bytes=1000000'));
+              final speedReq = await dartHttpClient.getUrl(Uri.parse(TestEndpoints.speedCloudflare));
               final speedResp = await speedReq.close();
 
               await speedResp.listen((chunk) {

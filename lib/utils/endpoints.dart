@@ -10,9 +10,13 @@ final List<String> adaptiveSpeedTestEndpoints = [
 ];
 
 class TestEndpoints {
+  // New Constants (Extracted)
+  static const String connectivityCheck = 'http://connectivitycheck.gstatic.com/generate_204';
+  static const String speedCloudflare = 'http://speed.cloudflare.com/__down?bytes=1000000';
+
   static const List<String> pingEndpoints = [
     'http://www.gstatic.com/generate_204',
-    'http://connectivitycheck.gstatic.com/generate_204',
+    connectivityCheck,
     'http://cp.cloudflare.com',
     'http://api.ipify.org?format=json',
   ];
