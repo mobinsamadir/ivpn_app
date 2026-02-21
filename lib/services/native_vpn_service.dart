@@ -33,7 +33,8 @@ class NativeVpnService {
 
   final StreamController<String> _statusController = StreamController<String>.broadcast();
 
-  NativeVpnService() {
+  // Initialization logic moved here
+  void _init() {
     // Initialize Event Channel Listener for Android
     if (!Platform.isWindows) {
       _eventChannel.receiveBroadcastStream().listen(
