@@ -4,9 +4,12 @@ import android.app.Activity
 import android.content.Intent
 import android.net.VpnService
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import androidx.annotation.NonNull
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugins.GeneratedPluginRegistrant
@@ -16,14 +19,44 @@ import kotlinx.coroutines.launch
 
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.example.ivpn/vpn"
+    private val EVENT_CHANNEL = "com.example.ivpn/vpn_status"
     private val VPN_REQUEST_CODE = 0x0F
     private var pendingConfig: String? = null
 
     // Scope for launching coroutines on the Main thread
     private val scope = CoroutineScope(Dispatchers.Main)
 
+    companion object {
+        var eventSink: EventChannel.EventSink? = null
+
+        fun sendVpnStatus(status: String) {
+            Handler(Looper.getMainLooper()).post {
+                eventSink?.success(status)
+            }
+        }
+    }
+
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+
+        // Setup EventChannel for VPN Status Updates
+        EventChannel(flutterEngine.dartExecutor.binaryMessenger, EVENT_CHANNEL).setStreamHandler(
+            object : EventChannel.StreamHandler {
+                override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
+                    eventSink = events
+                    // Send current state if known (optional, but good practice)
+                    if (SingboxVpnService.isVpnRunning.get()) {
+                         events?.success("CONNECTED")
+                    } else {
+                         events?.success("DISCONNECTED")
+                    }
+                }
+
+                override fun onCancel(arguments: Any?) {
+                    eventSink = null
+                }
+            }
+        )
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
@@ -42,41 +75,47 @@ class MainActivity : FlutterActivity() {
                     result.success(null)
                 }
                 "testConfig" -> {
-                    // LEGACY: Keep for compatibility if needed, but EphemeralTester prefers startTestProxy
                     val config = call.argument<String>("config")
                     if (config != null) {
-                        scope.launch {
+                        // Launch in IO scope properly via a wrapper or direct call
+                        // Since measurePing is suspend, we need a scope.
+                        // However, setMethodCallHandler runs on Main thread.
+                        // We use the activity scope or create a quick one.
+                        CoroutineScope(Dispatchers.IO).launch {
                             val ping = SingboxVpnService.measurePing(config, cacheDir)
-                            result.success(ping)
+                            // Post result back to Main thread
+                            Handler(Looper.getMainLooper()).post {
+                                result.success(ping)
+                            }
                         }
                     } else {
                         result.error("INVALID_ARGUMENT", "Config is null", null)
                     }
                 }
-                // --- NEW METHODS ---
                 "startTestProxy" -> {
                     val config = call.argument<String>("config")
                     if (config != null) {
-                         scope.launch {
-                             // Returns port (>0) or error code (<0)
+                         CoroutineScope(Dispatchers.IO).launch {
                              val port = SingboxVpnService.startTestProxy(config, cacheDir)
-                             result.success(port)
+                             Handler(Looper.getMainLooper()).post {
+                                 result.success(port)
+                             }
                          }
                     } else {
                         result.error("INVALID_ARGUMENT", "Config is null", null)
                     }
                 }
                 "stopTestProxy" -> {
-                    scope.launch {
+                    CoroutineScope(Dispatchers.IO).launch {
                         SingboxVpnService.stopTestProxy()
-                        result.success(null)
+                        Handler(Looper.getMainLooper()).post {
+                            result.success(null)
+                        }
                     }
                 }
                 else -> result.notImplemented()
             }
         }
-
-        GeneratedPluginRegistrant.registerWith(flutterEngine)
     }
 
     private fun prepareVpn() {
@@ -89,6 +128,7 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == VPN_REQUEST_CODE) {
             if (resultCode == Activity.RESULT_OK && pendingConfig != null) {
                 val serviceIntent = Intent(this, SingboxVpnService::class.java).apply {
@@ -101,12 +141,9 @@ class MainActivity : FlutterActivity() {
                 } else {
                     startService(serviceIntent)
                 }
-            } else {
-                // Permission denied or config missing
             }
             pendingConfig = null
         }
-        super.onActivityResult(requestCode, resultCode, data)
     }
 
     private fun stopVpnService() {
