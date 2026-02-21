@@ -152,53 +152,57 @@ class EphemeralTester {
 
           // Setup HttpClient with SOCKS Proxy
           final client = HttpClient();
-          client.findProxy = (uri) => "SOCKS5 127.0.0.1:$proxyPort";
-          client.connectionTimeout = const Duration(seconds: 5);
 
-          // Test HTTP (Stage 2)
-          final sw = Stopwatch()..start();
           try {
-             final req = await client.getUrl(Uri.parse('https://www.google.com/generate_204'));
-             final resp = await req.close();
-             sw.stop();
+            client.findProxy = (uri) => "SOCKS5 127.0.0.1:$proxyPort";
+            client.connectionTimeout = const Duration(seconds: 5);
 
-             if (resp.statusCode == 204) {
-                 latency = sw.elapsedMilliseconds;
-                 stage2Success = true;
-             } else {
-                 throw Exception("HTTP Status ${resp.statusCode}");
-             }
-          } catch (e) {
-             throw Exception("Stage 2 (HTTP) Failed: $e");
+            // Test HTTP (Stage 2)
+            final sw = Stopwatch()..start();
+            try {
+              final req = await client.getUrl(Uri.parse('https://www.google.com/generate_204'));
+              final resp = await req.close();
+              sw.stop();
+
+              if (resp.statusCode == 204) {
+                  latency = sw.elapsedMilliseconds;
+                  stage2Success = true;
+              } else {
+                  throw Exception("HTTP Status ${resp.statusCode}");
+              }
+            } catch (e) {
+              throw Exception("Stage 2 (HTTP) Failed: $e");
+            }
+
+            // Test Speed (Stage 3) - Only if requested and Stage 2 passed
+            if (mode == TestMode.speed && stage2Success) {
+              int bytes = 0;
+              final speedSw = Stopwatch();
+              try {
+                  speedSw.start();
+                  // Download ~1MB test file
+                  final speedReq = await client.getUrl(Uri.parse('http://speed.cloudflare.com/__down?bytes=1000000'));
+                  final speedResp = await speedReq.close();
+
+                  await speedResp.listen((chunk) {
+                    bytes += chunk.length;
+                  }).asFuture().timeout(const Duration(seconds: 5));
+
+                  speedSw.stop();
+                  final durationSec = speedSw.elapsedMilliseconds / 1000.0;
+                  if (durationSec > 0 && bytes > 0) {
+                    speedMbps = (bytes * 8) / (durationSec * 1000000); // Mbps
+                    stage3Success = true;
+                  }
+              } catch (e) {
+                  AdvancedLogger.warn("Stage 3 (Speed) Failed: $e");
+                  // Don't fail the whole config if speed test fails, just mark speed 0
+              }
+            }
+          } finally {
+            // FIX: Ensure client is closed to prevent socket leak
+            client.close();
           }
-
-          // Test Speed (Stage 3) - Only if requested and Stage 2 passed
-          if (mode == TestMode.speed && stage2Success) {
-             int bytes = 0;
-             final speedSw = Stopwatch();
-             try {
-                speedSw.start();
-                // Download ~1MB test file
-                final speedReq = await client.getUrl(Uri.parse('http://speed.cloudflare.com/__down?bytes=1000000'));
-                final speedResp = await speedReq.close();
-
-                await speedResp.listen((chunk) {
-                   bytes += chunk.length;
-                }).asFuture().timeout(const Duration(seconds: 5));
-
-                speedSw.stop();
-                final durationSec = speedSw.elapsedMilliseconds / 1000.0;
-                if (durationSec > 0 && bytes > 0) {
-                   speedMbps = (bytes * 8) / (durationSec * 1000000); // Mbps
-                   stage3Success = true;
-                }
-             } catch (e) {
-                AdvancedLogger.warn("Stage 3 (Speed) Failed: $e");
-                // Don't fail the whole config if speed test fails, just mark speed 0
-             }
-          }
-
-          client.close();
 
        } catch (e) {
           errorMsg = e.toString();
@@ -244,202 +248,198 @@ class EphemeralTester {
              speed: speedMbps
           ).deviceMetrics
        );
-    }
+    } else {
+        // --- WINDOWS / DESKTOP PATH ---
+        // Acquire Semaphore
+        await _windowsSemaphore.acquire();
 
-    // --- WINDOWS / DESKTOP PATH ---
-    // Acquire Semaphore
-    await _windowsSemaphore.acquire();
+        int port = 0;
+        Process? process;
+        File? tempConfigFile;
+        final dartHttpClient = HttpClient();
 
-    int port = 0;
-    Process? process;
-    File? tempConfigFile;
-    final dartHttpClient = HttpClient();
+        // Results containers
+        bool stage1Success = false;
+        bool stage2Success = false;
+        double speedMbps = 0.0;
+        int latency = 0;
 
-    // Results containers
-    bool stage1Success = false;
-    bool stage2Success = false;
-    double speedMbps = 0.0;
-    int latency = 0;
-
-    try {
-        // Use Port Allocator
-        port = await PortAllocator().allocate();
-
-        final testId = DateTime.now().millisecondsSinceEpoch;
-
-        // 1. Prepare Config (JSON)
-        final binPath = await BinaryManager.ensureBinary();
-        final tempDir = await getTemporaryDirectory();
-        tempConfigFile = File(p.join(tempDir.path, 'test_${config.id}_$testId.json'));
-
-        final jsonConfig = await compute(_generateConfigWrapper, {
-          'rawConfig': config.rawConfig,
-          'listenPort': port,
-          'isTest': true,
-        });
-
-        final Map<String, dynamic> parsedJson = jsonDecode(jsonConfig);
-
-        parsedJson['log'] = {
-          "level": "fatal",
-          "output": "stderr",
-          "timestamp": true
-        };
-
-        if (parsedJson['inbounds'] is List) {
-          for (var inbound in parsedJson['inbounds']) {
-             inbound['listen'] = "127.0.0.1";
-          }
-        }
-
-        await tempConfigFile.writeAsString(jsonEncode(parsedJson));
-
-        // 2. Spawn Process
-        await Future.delayed(Duration.zero);
-
-        final processFuture = Process.start(
-          binPath,
-          ['run', '-c', tempConfigFile.path],
-          runInShell: false,
-          workingDirectory: p.dirname(binPath),
-          environment: {'ENABLE_DEPRECATED_SPECIAL_OUTBOUNDS': 'true'},
-        );
-
-        process = await processFuture.timeout(const Duration(seconds: 5), onTimeout: () {
-           throw TimeoutException("Process spawn timed out");
-        });
-
-        registerProcess(process!);
-
-        await Future.delayed(const Duration(milliseconds: 500));
-
-        dartHttpClient.findProxy = (uri) => "PROXY 127.0.0.1:${port + 1}"; // Use HTTP port (Socks+1) for simplicity on Windows?
-        // Note: SingboxConfigGenerator sets socks=port, http=port+1.
-        // dartHttpClient supports PROXY (HTTP) or SOCKS. Let's use SOCKS for consistency if possible,
-        // or HTTP proxy if easier. The generator sets HTTP port at socks+1.
-
-        dartHttpClient.connectionTimeout = const Duration(seconds: 5);
-
-        // --- STAGE 1 (TCP) ---
-        // Even though we have a proxy, we want to check if the proxy is LISTENING first.
-        int attempts = 0;
-        while (attempts < 3) {
-          try {
-            final socket = await Socket.connect('127.0.0.1', port, timeout: const Duration(milliseconds: 1500));
-            socket.destroy();
-            stage1Success = true;
-            break;
-          } catch (e) {
-             attempts++;
-             await Future.delayed(const Duration(milliseconds: 500));
-          }
-        }
-
-        if (!stage1Success) throw Exception("Local Proxy failed to start");
-
-        // --- STAGE 2 (HTTP) ---
-        final sw = Stopwatch()..start();
         try {
-            final req = await dartHttpClient.getUrl(Uri.parse('https://www.google.com/generate_204'));
-            final resp = await req.close();
-            sw.stop();
+            // Use Port Allocator
+            port = await PortAllocator().allocate();
 
-            if (resp.statusCode == 204) {
-               latency = sw.elapsedMilliseconds;
-               stage2Success = true;
-            } else {
-               throw Exception("Status ${resp.statusCode}");
-            }
-        } catch (e) {
-            throw Exception("Stage 2 Failed: $e");
-        }
+            final testId = DateTime.now().millisecondsSinceEpoch;
 
-        // --- STAGE 3 (Speed) ---
-        if (mode == TestMode.speed) {
-           int bytes = 0;
-           final speedSw = Stopwatch();
+            // 1. Prepare Config (JSON)
+            // FIX: EnsureBinary is strictly bypassed on Android via the if/else wrapper
+            final binPath = await BinaryManager.ensureBinary();
+            final tempDir = await getTemporaryDirectory();
+            tempConfigFile = File(p.join(tempDir.path, 'test_${config.id}_$testId.json'));
 
-           try {
-              speedSw.start();
-              final speedReq = await dartHttpClient.getUrl(Uri.parse('http://speed.cloudflare.com/__down?bytes=1000000'));
-              final speedResp = await speedReq.close();
+            final jsonConfig = await compute(_generateConfigWrapper, {
+              'rawConfig': config.rawConfig,
+              'listenPort': port,
+              'isTest': true,
+            });
 
-              await speedResp.listen((chunk) {
-                 bytes += chunk.length;
-              }).asFuture().timeout(const Duration(seconds: 5));
+            final Map<String, dynamic> parsedJson = jsonDecode(jsonConfig);
 
-              speedSw.stop();
+            parsedJson['log'] = {
+              "level": "fatal",
+              "output": "stderr",
+              "timestamp": true
+            };
 
-              final durationSec = speedSw.elapsedMilliseconds / 1000.0;
-              if (durationSec > 0 && bytes > 0) {
-                 speedMbps = (bytes * 8) / (durationSec * 1000000);
+            if (parsedJson['inbounds'] is List) {
+              for (var inbound in parsedJson['inbounds']) {
+                inbound['listen'] = "127.0.0.1";
               }
-           } catch (e) {
-              AdvancedLogger.warn("Stage 3 (Speed) failed/timed out: $e");
-           }
+            }
+
+            await tempConfigFile.writeAsString(jsonEncode(parsedJson));
+
+            // 2. Spawn Process
+            await Future.delayed(Duration.zero);
+
+            final processFuture = Process.start(
+              binPath,
+              ['run', '-c', tempConfigFile.path],
+              runInShell: false,
+              workingDirectory: p.dirname(binPath),
+              environment: {'ENABLE_DEPRECATED_SPECIAL_OUTBOUNDS': 'true'},
+            );
+
+            process = await processFuture.timeout(const Duration(seconds: 5), onTimeout: () {
+              throw TimeoutException("Process spawn timed out");
+            });
+
+            registerProcess(process!);
+
+            await Future.delayed(const Duration(milliseconds: 500));
+
+            dartHttpClient.findProxy = (uri) => "PROXY 127.0.0.1:${port + 1}";
+            dartHttpClient.connectionTimeout = const Duration(seconds: 5);
+
+            // --- STAGE 1 (TCP) ---
+            int attempts = 0;
+            while (attempts < 3) {
+              try {
+                final socket = await Socket.connect('127.0.0.1', port, timeout: const Duration(milliseconds: 1500));
+                socket.destroy();
+                stage1Success = true;
+                break;
+              } catch (e) {
+                attempts++;
+                await Future.delayed(const Duration(milliseconds: 500));
+              }
+            }
+
+            if (!stage1Success) throw Exception("Local Proxy failed to start");
+
+            // --- STAGE 2 (HTTP) ---
+            final sw = Stopwatch()..start();
+            try {
+                final req = await dartHttpClient.getUrl(Uri.parse('https://www.google.com/generate_204'));
+                final resp = await req.close();
+                sw.stop();
+
+                if (resp.statusCode == 204) {
+                  latency = sw.elapsedMilliseconds;
+                  stage2Success = true;
+                } else {
+                  throw Exception("Status ${resp.statusCode}");
+                }
+            } catch (e) {
+                throw Exception("Stage 2 Failed: $e");
+            }
+
+            // --- STAGE 3 (Speed) ---
+            if (mode == TestMode.speed) {
+              int bytes = 0;
+              final speedSw = Stopwatch();
+
+              try {
+                  speedSw.start();
+                  final speedReq = await dartHttpClient.getUrl(Uri.parse('http://speed.cloudflare.com/__down?bytes=1000000'));
+                  final speedResp = await speedReq.close();
+
+                  await speedResp.listen((chunk) {
+                    bytes += chunk.length;
+                  }).asFuture().timeout(const Duration(seconds: 5));
+
+                  speedSw.stop();
+
+                  final durationSec = speedSw.elapsedMilliseconds / 1000.0;
+                  if (durationSec > 0 && bytes > 0) {
+                    speedMbps = (bytes * 8) / (durationSec * 1000000);
+                  }
+              } catch (e) {
+                  AdvancedLogger.warn("Stage 3 (Speed) failed/timed out: $e");
+              }
+            }
+
+            // Success Logic
+            int score = 0;
+            if (speedMbps > 0) score += (speedMbps * 5).clamp(0, 50).toInt();
+            if (latency > 0) score += (1000 ~/ latency).clamp(0, 50).toInt();
+
+            final finalStage = (speedMbps > 0) ? 3 : 2;
+            final newStageResults = Map<String, TestResult>.from(config.stageResults);
+            newStageResults['TCP'] = TestResult(success: true);
+            newStageResults['HTTP'] = TestResult(success: true, latency: latency);
+            if (speedMbps > 0) newStageResults['Speed'] = TestResult(success: true, latency: 0);
+
+            return config.copyWith(
+              funnelStage: finalStage,
+              speedScore: score,
+              stageResults: newStageResults,
+              failureCount: 0,
+              isAlive: true,
+              lastTestedAt: DateTime.now(),
+              lastSuccessfulConnectionTime: DateTime.now().millisecondsSinceEpoch,
+              deviceMetrics: config.updateMetrics(
+                  deviceId: "windows_ephemeral",
+                  ping: latency,
+                  speed: speedMbps
+              ).deviceMetrics
+            );
+
+        } catch (e) {
+          AdvancedLogger.warn("EphemeralTester Error (${config.name}): $e");
+
+          String failedStage = "Init";
+          if (!stage1Success) failedStage = "Stage1_ProxyInit";
+          else if (!stage2Success) failedStage = "Stage2_HTTP";
+          else failedStage = "Stage3_Speed";
+
+          return config.copyWith(
+            funnelStage: 0,
+            failureReason: e.toString(),
+            lastFailedStage: failedStage,
+            failureCount: config.failureCount + 1,
+            lastTestedAt: DateTime.now(),
+            ping: -1,
+          );
+        } finally {
+          dartHttpClient.close();
+          try {
+            if (process != null) {
+              process!.kill(ProcessSignal.sigkill);
+              _activeProcesses.remove(process);
+            }
+          } catch (e) {
+            AdvancedLogger.warn("EphemeralTester: Error killing process: $e");
+          }
+          try {
+            if (tempConfigFile != null && await tempConfigFile.exists()) {
+              await tempConfigFile.delete();
+            }
+          } catch (_) {}
+
+          // Release Port & Semaphore
+          if (port > 0) PortAllocator().release(port);
+          _windowsSemaphore.release();
         }
-
-        // Success Logic
-        int score = 0;
-        if (speedMbps > 0) score += (speedMbps * 5).clamp(0, 50).toInt();
-        if (latency > 0) score += (1000 ~/ latency).clamp(0, 50).toInt();
-
-        final finalStage = (speedMbps > 0) ? 3 : 2;
-        final newStageResults = Map<String, TestResult>.from(config.stageResults);
-        newStageResults['TCP'] = TestResult(success: true);
-        newStageResults['HTTP'] = TestResult(success: true, latency: latency);
-        if (speedMbps > 0) newStageResults['Speed'] = TestResult(success: true, latency: 0);
-
-        return config.copyWith(
-           funnelStage: finalStage,
-           speedScore: score,
-           stageResults: newStageResults,
-           failureCount: 0,
-           isAlive: true,
-           lastTestedAt: DateTime.now(),
-           lastSuccessfulConnectionTime: DateTime.now().millisecondsSinceEpoch,
-           deviceMetrics: config.updateMetrics(
-              deviceId: "windows_ephemeral",
-              ping: latency,
-              speed: speedMbps
-           ).deviceMetrics
-        );
-
-    } catch (e) {
-      AdvancedLogger.warn("EphemeralTester Error (${config.name}): $e");
-
-      String failedStage = "Init";
-      if (!stage1Success) failedStage = "Stage1_ProxyInit";
-      else if (!stage2Success) failedStage = "Stage2_HTTP";
-      else failedStage = "Stage3_Speed";
-
-      return config.copyWith(
-         funnelStage: 0,
-         failureReason: e.toString(),
-         lastFailedStage: failedStage,
-         failureCount: config.failureCount + 1,
-         lastTestedAt: DateTime.now(),
-         ping: -1,
-      );
-    } finally {
-      dartHttpClient.close();
-      try {
-        if (process != null) {
-          process!.kill(ProcessSignal.sigkill);
-          _activeProcesses.remove(process);
-        }
-      } catch (e) {
-        AdvancedLogger.warn("EphemeralTester: Error killing process: $e");
-      }
-      try {
-        if (tempConfigFile != null && await tempConfigFile.exists()) {
-           await tempConfigFile.delete();
-        }
-      } catch (_) {}
-
-      // Release Port & Semaphore
-      if (port > 0) PortAllocator().release(port);
-      _windowsSemaphore.release();
     }
   }
 }
