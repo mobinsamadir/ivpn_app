@@ -36,8 +36,7 @@ class LatencyTester {
     final configFile = File(p.join(tempDir.path, 'latency_$port.json'));
     
     try {
-      final service = WindowsVpnService();
-      final exePath = await service.getExecutablePath();
+      final exePath = await WindowsVpnService.getExecutablePath();
       final binDir = p.dirname(exePath);
       
       // Generate config on custom port
@@ -64,7 +63,7 @@ class LatencyTester {
         }
       });
       process.stderr.transform(utf8.decoder).listen((data) {
-        AdvancedLogger.warning("[NEW-TESTER] [CORE-ERR] ${data.trim()}");
+        AdvancedLogger.warn("[NEW-TESTER] [CORE-ERR] ${data.trim()}");
       });
       
       // Early exit detection: if core crashes, complete with -1 immediately

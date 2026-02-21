@@ -4,14 +4,12 @@ import 'package:provider/provider.dart';
 import 'dart:async';
 import 'dart:io';
 import '../models/vpn_config_with_metrics.dart';
-import '../providers/home_provider.dart';
 import '../services/config_manager.dart';
 import '../services/native_vpn_service.dart';
 import '../widgets/universal_ad_widget.dart';
 import '../widgets/config_card.dart';
 import '../utils/advanced_logger.dart';
 import '../utils/clipboard_utils.dart';
-import '../services/config_importer.dart';
 import 'log_viewer_screen.dart';
 import '../services/access_manager.dart';
 import '../services/ad_manager_service.dart';
@@ -222,14 +220,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
       AdvancedLogger.info('Waiting for port release...');
       await Future.delayed(const Duration(seconds: 2)); // Increased delay for safety
 
-      // Find the fastest server
-      final newConfig = await _findFastestServerEager();
-      if (newConfig != null) {
-        _configManager.selectConfig(newConfig);
-        await _handleConnection();
-      } else {
-        _showToast("Could not find a better server to switch to");
-      }
+      // Use Smart Failover
+      await _configManager.connectWithSmartFailover();
+
     } catch (e, stackTrace) {
       AdvancedLogger.error('[ConnectionHomeScreen] Auto-switch failed: $e', error: e, stackTrace: stackTrace);
       _showToast("Auto-switch failed: $e");
@@ -637,9 +630,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
   // --- LOGIC METHODS ---
 
   Future<void> _handleConnection() async {
-    final homeProvider = Provider.of<HomeProvider>(context, listen: false);
-
-    if (homeProvider.isConnected || homeProvider.connectionStatus == ConnectionStatus.connecting) {
+    if (_configManager.isConnected || _configManager.connectionStatus.toLowerCase().contains('connecting')) {
       _isConnectionCancelled = true;
       await _configManager.stopAllOperations();
       return;
@@ -689,101 +680,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
         }
     }
 
-    // 2. Auto-Select Best
-    // Validated list is already sorted by Best (Speed > Ping)
-    final bestConfig = _configManager.validatedConfigs.first;
-    _configManager.selectConfig(bestConfig);
-
-    // 3. Connect with Failover
-    await _connectWithFailover(bestConfig);
-  }
-
-  Future<void> _connectWithFailover(VpnConfigWithMetrics? initialConfig) async {
-    if (initialConfig == null) return;
-
-    VpnConfigWithMetrics currentConfig = initialConfig;
-    int attempts = 0;
-    const maxAttempts = 3;
-
-    while (attempts < maxAttempts) {
-      if (_isConnectionCancelled || _configManager.isGlobalStopRequested) return;
-
-      try {
-        setState(() {
-          _configManager.setConnected(false, status: 'Testing ${currentConfig.name}...');
-        });
-
-        // 1. Pre-flight Check (Strict)
-        // Ensure server didn't die in last few seconds
-        // Use connectivity mode (Stage 2) as it's faster and sufficient for alive check
-        final testResult = await _ephemeralTester.runTest(currentConfig, mode: TestMode.connectivity);
-
-        if (testResult.funnelStage < 2 || testResult.currentPing == -1) {
-             // Mark as failed and throw to trigger failover
-             await _configManager.markFailure(currentConfig.id);
-             throw Exception("Pre-flight check failed (Ghost/Dead)");
-        }
-
-        // Update with latest metrics
-        await _configManager.updateConfigDirectly(testResult);
-
-        if (_isConnectionCancelled) return;
-
-        // 2. Connect
-        setState(() {
-          _configManager.setConnected(false, status: 'Connecting to ${currentConfig.name}...');
-        });
-
-        await _nativeVpnService.connect(currentConfig.rawConfig);
-
-        _configManager.updateConfigMetrics(
-          currentConfig.id,
-          connectionSuccess: true,
-        );
-
-        await _configManager.markSuccess(currentConfig.id);
-        return; // Success!
-
-      } catch (e) {
-        AdvancedLogger.error('Connection Attempt ${attempts+1} Failed: $e');
-
-        // Mark failed
-        await _configManager.markFailure(currentConfig.id);
-
-        if (_isConnectionCancelled) return;
-
-        attempts++;
-        if (attempts >= maxAttempts) {
-           _showToast("Connection failed after $maxAttempts attempts.");
-           _configManager.setConnected(false, status: 'Connection failed');
-           return;
-        }
-
-        // Pick next best
-        // getBestConfig() returns valid.first, which might be the one we just failed
-        // (if markFailure didn't push it down list fast enough or if it's the only one).
-        // markFailure increases failureCount, which reduces score, so it should move down.
-        // We wait a tiny bit for sort to propagate? ConfigManager handles it synchronously in markFailure.
-
-        final nextBest = await _configManager.getBestConfig();
-
-        if (nextBest != null && nextBest.id != currentConfig.id) {
-           _showToast("Server unreachable. Switching to ${nextBest.name}...");
-           currentConfig = nextBest;
-           _configManager.selectConfig(nextBest);
-        } else {
-           // No other good servers
-           _showToast("No other working servers available.");
-           _configManager.setConnected(false, status: 'Connection failed');
-           return;
-        }
-      }
-    }
-  }
-
-  Future<VpnConfigWithMetrics?> _findFastestServerEager() async {
-    // Just return best config as Manager already sorts it
-    return _configManager.getBestConfig();
+    // 2. Delegate to Service (Smart Failover)
+    await _configManager.connectWithSmartFailover();
   }
 
   Future<void> _handleNextServer() async {

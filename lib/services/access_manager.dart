@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'advanced_logger.dart';
+import '../utils/advanced_logger.dart';
 
 class AccessManager extends ChangeNotifier {
   static final AccessManager _instance = AccessManager._internal();

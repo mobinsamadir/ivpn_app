@@ -8,12 +8,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'utils/advanced_logger.dart';
-import 'services/file_logger.dart';
-import 'services/storage_service.dart';
+import 'utils/file_logger.dart';
 import 'services/config_manager.dart';
 import 'utils/cleanup_utils.dart';
 import 'providers/theme_provider.dart';
-import 'providers/home_provider.dart';
 import 'services/background_ad_service.dart';
 import 'screens/splash_screen.dart'; // Ensure this import exists
 import 'services/windows_vpn_service.dart';
@@ -103,21 +101,14 @@ void main() {
       return; // Stop execution
     }
 
-    final storageService = StorageService(prefs: prefs!); // Safe due to return above
     final configManager = ConfigManager(); // Create Global Instance Here
 
     runApp(
       MultiProvider(
         providers: [
           ChangeNotifierProvider(create: (context) => ThemeProvider()),
-          // Inject StorageService
-          Provider<StorageService>.value(value: storageService),
           // Inject Global ConfigManager (Critical Fix)
           ChangeNotifierProvider.value(value: configManager),
-          // Inject HomeProvider dependent on StorageService
-          ChangeNotifierProvider(
-            create: (context) => HomeProvider(storageService: storageService),
-          ),
         ],
         child: const GlobalWindowListener(child: MyApp()),
       ),
