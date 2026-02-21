@@ -1,0 +1,170 @@
+name: Smart Pipeline
+
+on:
+  push:
+    branches: [ "main", "dev" ]
+    paths:
+      - 'lib/**'
+      - 'test/**'
+      - 'pubspec.yaml'
+  pull_request:
+    branches: [ "main", "dev" ]
+    paths:
+      - 'lib/**'
+      - 'test/**'
+      - 'pubspec.yaml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  Static_Analysis:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Analyze Code
+        run: flutter analyze
+
+      - name: Verify Formatting
+        run: dart format --output=none --set-exit-if-changed .
+
+  Unit_Tests:
+    needs: Static_Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Run Tests with Coverage
+        run: flutter test --coverage
+
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/lcov.info
+
+  Build_Android:
+    needs: Unit_Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Cache Android Assets
+        id: android-assets-cache
+        uses: actions/cache@v4
+        with:
+          path: assets
+          key: android-assets-v2-${{ hashFiles('tool/setup_core.dart') }}
+
+      - name: Setup Core Assets
+        run: |
+          flutter pub get
+          dart run tool/setup_core.dart
+
+      - name: Cache AARs
+        id: aar-cache
+        uses: actions/cache@v4
+        with:
+          path: android/app/libs
+          key: ${{ runner.os }}-aar-${{ hashFiles('android/app/build.gradle.kts') }}
+
+      - name: Download all local dependencies
+        if: steps.aar-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p android/app/libs
+          echo "Downloading Libbox..."
+          curl -L -o android/app/libs/libbox.aar "https://raw.githubusercontent.com/singbox-android/libbox/refs/heads/main/libbox.aar"
+          echo "Downloading Terminal View..."
+          curl -L -A "Mozilla/5.0" -o android/app/libs/terminal-view.aar "https://jitpack.io/com/github/termux/termux-app/terminal-view/v0.118.3/terminal-view-v0.118.3.aar"
+          echo "Downloading Terminal Emulator..."
+          curl -L -A "Mozilla/5.0" -o android/app/libs/terminal-emulator.aar "https://jitpack.io/com/github/termux/termux-app/terminal-emulator/v0.118.3/terminal-emulator-v0.118.3.aar"
+
+      - name: Build Debug APK
+        run: |
+          flutter pub get
+          yes | flutter doctor --android-licenses || true
+          flutter build apk --debug
+
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug.apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
+
+  Build_Windows:
+    needs: Unit_Tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Cache Windows Assets
+        id: assets-cache
+        uses: actions/cache@v4
+        with:
+          path: assets
+          key: windows-assets-v2-${{ hashFiles('tool/setup_core.dart') }}
+
+      - name: Setup Core Assets
+        run: |
+          flutter pub get
+          dart run tool/setup_core.dart
+
+      - name: Build Windows Release
+        run: |
+          flutter pub get
+          flutter build windows --release
+
+      - name: Compress Windows Release
+        shell: pwsh
+        run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath ivpn-windows.zip -Force
+
+      - name: Upload Windows Release
+        uses: actions/upload-artifact@v4
+        with:
+          name: ivpn-windows.zip
+          path: ivpn-windows.zip

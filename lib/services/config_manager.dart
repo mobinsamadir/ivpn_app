@@ -504,6 +504,10 @@ class ConfigManager extends ChangeNotifier {
      final index = allConfigs.indexWhere((c) => c.id == config.id);
      if (index != -1) {
         allConfigs[index] = config;
+        // Also update selected config to keep state consistent
+        if (_selectedConfig?.id == config.id) {
+           _selectedConfig = config;
+        }
      }
      // Don't sort immediately, use throttling
      notifyListenersThrottled();
@@ -802,6 +806,16 @@ class ConfigManager extends ChangeNotifier {
      notifyListeners();
   }
 
+  // --- DEPENDENCY INJECTION FOR TESTING ---
+  NativeVpnService? _nativeVpnService;
+  EphemeralTester? _ephemeralTester;
+
+  @visibleForTesting
+  void setDependencies({NativeVpnService? vpnService, EphemeralTester? tester}) {
+    _nativeVpnService = vpnService;
+    _ephemeralTester = tester;
+  }
+
   // --- SMART FAILOVER CONNECTION ---
   Future<void> connectWithSmartFailover() async {
     AdvancedLogger.info('[ConfigManager] Starting Smart Failover Connection...');
@@ -822,8 +836,9 @@ class ConfigManager extends ChangeNotifier {
 
     int attempts = 0;
     const maxAttempts = 3;
-    final NativeVpnService nativeService = NativeVpnService();
-    final EphemeralTester tester = EphemeralTester();
+    // Use injected dependencies or default singletons
+    final NativeVpnService nativeService = _nativeVpnService ?? NativeVpnService();
+    final EphemeralTester tester = _ephemeralTester ?? EphemeralTester();
 
     while (attempts < maxAttempts && target != null && !_isGlobalStopRequested) {
       try {
@@ -834,6 +849,9 @@ class ConfigManager extends ChangeNotifier {
         final testResult = await tester.runTest(target, mode: TestMode.connectivity);
 
         if (testResult.funnelStage < 2 || testResult.currentPing == -1) {
+             // UPDATE CONFIG WITH FAILURE RESULT FIRST so it is no longer 'validated'
+             await updateConfigDirectly(testResult);
+
              // Mark failure and throw to trigger failover
              await markFailure(target.id);
              throw Exception("Pre-flight check failed (Ghost/Dead)");
