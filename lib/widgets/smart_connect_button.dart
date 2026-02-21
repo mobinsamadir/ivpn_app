@@ -163,15 +163,9 @@ class _SmartConnectButtonState extends State<SmartConnectButton> {
         configToUse = configManager.selectedConfig;
         AdvancedLogger.info('[SmartConnect] Using selected config: ${configToUse!.name}');
       } else {
-        configManager.setConnected(false, status: 'Finding fastest server...');
-        configToUse = await configManager.getBestConfig(); // Use getBestConfig instead of runQuickTestOnAllConfigs as per original logic check?
-        // Original logic in SmartConnectButton (reverted version) used getBestConfig in one branch, runQuickTest in another?
-        // Wait, the reverted file I just read used:
-        // `configToUse = await configManager.getBestConfig();` in the `else` block.
-        // My previous implementation used `runQuickTestOnAllConfigs`.
-        // I will stick to my implementation if it's better, or use getBestConfig if safer.
-        // `runQuickTestOnAllConfigs` in ConfigManager is a dummy implementation returning `getBestConfig()` anyway (from memory).
-        // Let's use `getBestConfig()` to be safe and consistent with the "remote" code I saw.
+        // If no server selected, run Fastest logic first, then connect
+        _connectionStatus = 'Finding fastest server...';
+        configToUse = await configManager.getBestConfig();
 
         if (configToUse != null) {
           configManager.selectConfig(configToUse);
@@ -196,9 +190,13 @@ class _SmartConnectButtonState extends State<SmartConnectButton> {
 
     } catch (e) {
       AdvancedLogger.error('[SmartConnect] Connection failed: $e');
-      configManager.setConnected(false, status: 'Connection failed');
+      setState(() {
+        _isConnecting = false;
+        _connectionStatus = 'Connection failed';
+      });
     }
   }
+  
   
   Color _getButtonColor(bool isConnected, bool isConnecting) {
     if (isConnecting) return Colors.orange;
