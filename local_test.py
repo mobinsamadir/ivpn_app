@@ -6,7 +6,7 @@ import datetime
 import aiohttp
 import zipfile
 from collections import Counter
-from v2ray_utils import test_connection, parse_vmess, parse_vless, parse_trojan, parse_shadowsocks, decode_base64
+from v2ray_utils import test_connection, parse_vmess, parse_vless, parse_trojan, parse_shadowsocks, decode_base64, test_tcp_connection
 
 # --- CONFIGURATION ---
 XRAY_BIN_DIR = "bin"
@@ -51,7 +51,7 @@ async def download_xray():
         if os.path.exists(XRAY_ZIP):
             os.remove(XRAY_ZIP)
 
-async def worker(queue, results, log_file_handle, stats, port_offset):
+async def worker(queue, results, log_file_handle, stats, port_offset, session):
     local_port = PORT_START + port_offset
 
     while True:
@@ -76,7 +76,15 @@ async def worker(queue, results, log_file_handle, stats, port_offset):
             queue.task_done()
             continue
 
-        success, delay, error = await test_connection(config, local_port)
+        # TCP Pre-Check
+        if not await test_tcp_connection(config['add'], config['port'], timeout=1.5):
+            log_file_handle.write(f"{datetime.datetime.now()} - TCP Failed - {config_uri[:50]}...\n")
+            stats['TCP_Failed'] += 1
+            stats["total"] += 1
+            queue.task_done()
+            continue
+
+        success, delay, error = await test_connection(config, local_port, session=session)
 
         # Log result
         log_msg = f"Port {local_port}: {error if error else 'SUCCESS'} ({delay}ms) - {config_uri[:50]}..."
@@ -130,18 +138,15 @@ async def main():
     stats = Counter()
 
     with open(log_path, "w") as log_file:
-        tasks = []
-        for i in range(CONCURRENCY):
-            task = asyncio.create_task(worker(queue, results, log_file, stats, i))
-            tasks.append(task)
+        async with aiohttp.ClientSession() as session:
+            tasks = []
+            for i in range(CONCURRENCY):
+                task = asyncio.create_task(worker(queue, results, log_file, stats, i, session))
+                tasks.append(task)
 
-        await asyncio.gather(*tasks)
+            await asyncio.gather(*tasks)
 
     # Sort results by delay (fastest first), pushing errors (-1) to the end?
-    # Actually, errors have delay -1. If we sort ascending, -1 comes first.
-    # We want valid delays (positive) first, sorted ascending.
-    # Then errors.
-
     def sort_key(item):
         d = item["delay_ms"]
         if d == -1:

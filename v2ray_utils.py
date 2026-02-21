@@ -5,6 +5,7 @@ import re
 import hashlib
 import subprocess
 import os
+import aiohttp
 from urllib.parse import urlparse, parse_qs
 
 # --- CONFIGURATION ---
@@ -245,79 +246,96 @@ def generate_xray_config(config, local_port):
         "outbounds": [outbound]
     }
 
-async def test_connection(config, local_port):
+async def test_tcp_connection(host, port, timeout=TCP_TIMEOUT):
+    """
+    Performs a quick TCP handshake to verify the server is reachable.
+    """
+    try:
+        _, writer = await asyncio.wait_for(
+            asyncio.open_connection(host, port),
+            timeout=timeout
+        )
+        writer.close()
+        await writer.wait_closed()
+        return True
+    except:
+        return False
+
+async def test_connection(config, local_port, session=None):
     """
     Tests a configuration by spawning an Xray subprocess, piping the config via stdin,
-    and attempting a curl request through the local HTTP proxy.
+    and attempting an HTTP request through the local HTTP proxy using aiohttp.
     Returns: (success: bool, delay_ms: int, error_reason: str)
     """
+    process = None
     try:
         xray_config = generate_xray_config(config, local_port)
         xray_json = json.dumps(xray_config).encode('utf-8')
 
-        process = None
+        # Start Xray process
+        process = await asyncio.create_subprocess_exec(
+            XRAY_BIN, "-config", "stdin:",
+            stdin=subprocess.PIPE,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE
+        )
+
+        # Write config to stdin and close it
+        process.stdin.write(xray_json)
+        await process.stdin.drain()
+        process.stdin.close()
+
+        # Wait a brief moment for Xray to initialize
+        await asyncio.sleep(0.5)
+
+        # Test connection using aiohttp through the proxy
+        proxy_url = f"http://127.0.0.1:{local_port}"
+        start_time = asyncio.get_event_loop().time()
+
         try:
-            # Start Xray process
-            process = await asyncio.create_subprocess_exec(
-                XRAY_BIN, "-config", "stdin:",
-                stdin=subprocess.PIPE,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.PIPE
-            )
+            # Helper function to perform request
+            async def perform_request(req_session):
+                async with req_session.get(TEST_URL, proxy=proxy_url, timeout=REAL_DELAY_TIMEOUT) as response:
+                    await response.read() # Ensure body is fully read
+                    return response.status
 
-            # Write config to stdin and close it
-            process.stdin.write(xray_json)
-            await process.stdin.drain()
-            process.stdin.close()
+            if session:
+                status = await perform_request(session)
+            else:
+                async with aiohttp.ClientSession() as local_session:
+                    status = await perform_request(local_session)
 
-            # Wait a brief moment for Xray to initialize
-            await asyncio.sleep(0.5)
+            if status == 204 or status == 200:
+                end_time = asyncio.get_event_loop().time()
+                delay = int((end_time - start_time) * 1000)
+                return True, delay, None
+            else:
+                return False, -1, f"HTTP_{status}"
 
-            # Test connection using curl through the proxy
-            # We use curl because it's reliable and available in most environments
-            # Time the request
-            start_time = asyncio.get_event_loop().time()
-
-            curl_cmd = [
-                "curl", "-x", f"http://127.0.0.1:{local_port}",
-                "-s", "-o", "/dev/null", "-w", "%{http_code}",
-                "--max-time", str(REAL_DELAY_TIMEOUT),
-                TEST_URL
-            ]
-
-            curl_process = await asyncio.create_subprocess_exec(
-                *curl_cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
-            )
-
-            try:
-                 stdout, stderr = await asyncio.wait_for(curl_process.communicate(), timeout=REAL_DELAY_TIMEOUT)
-                 end_time = asyncio.get_event_loop().time()
-
-                 if stdout.decode().strip() == str(EXPECTED_RESPONSE_CODE):
-                     delay = int((end_time - start_time) * 1000)
-                     return True, delay, None
-                 else:
-                     return False, -1, "ConnectionError"
-
-            except asyncio.TimeoutError:
-                try:
-                    curl_process.kill()
-                except ProcessLookupError:
-                    pass
-                return False, -1, "Timeout"
-            except Exception as e:
-                 return False, -1, f"CurlError: {str(e)}"
-
+        except asyncio.TimeoutError:
+            return False, -1, "Timeout"
+        except aiohttp.ClientError:
+            return False, -1, "ConnectionError"
         except Exception as e:
-            return False, -1, f"XrayCrash: {str(e)}"
-        finally:
-            if process:
-                try:
-                    process.terminate()
-                    await process.wait()
-                except ProcessLookupError:
-                    pass
+             return False, -1, f"RequestError: {str(e)}"
+
     except Exception as e:
-        return False, -1, f"ConfigError: {str(e)}"
+        return False, -1, f"XrayCrash: {str(e)}"
+    finally:
+        if process:
+            try:
+                # Robust process termination to prevent zombies
+                process.terminate()
+                try:
+                    await asyncio.wait_for(process.wait(), timeout=2.0)
+                except asyncio.TimeoutError:
+                    process.kill()
+                    await process.wait()
+            except ProcessLookupError:
+                pass
+            except Exception as e:
+                # Last resort kill if something weird happens
+                try:
+                    process.kill()
+                except:
+                    pass

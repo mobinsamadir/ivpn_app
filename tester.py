@@ -7,7 +7,7 @@ import shutil
 import aiohttp
 import sys
 from collections import Counter
-from v2ray_utils import test_connection, decode_base64
+from v2ray_utils import test_connection, decode_base64, test_tcp_connection
 
 # --- CONFIGURATION ---
 XRAY_BIN_DIR = "bin"
@@ -52,7 +52,7 @@ async def download_xray():
         if os.path.exists(XRAY_ZIP):
             os.remove(XRAY_ZIP)
 
-async def worker(queue, results, stats, port_offset):
+async def worker(queue, results, stats, port_offset, session):
     """
     Worker to process configs from the queue.
     """
@@ -64,7 +64,31 @@ async def worker(queue, results, stats, port_offset):
         except asyncio.QueueEmpty:
             break
 
-        success, delay, error = await test_connection(config, local_port)
+        # 1. TCP Pre-Check (Fast Fail)
+        host = config.get('add')
+        port = config.get('port')
+
+        if not host or not port:
+            stats['InvalidConfig'] += 1
+            queue.task_done()
+            continue
+
+        # Convert port to int just in case
+        try:
+            port = int(port)
+        except:
+             stats['InvalidConfig'] += 1
+             queue.task_done()
+             continue
+
+        if not await test_tcp_connection(host, port, timeout=1.5):
+            stats['TCP_Failed'] += 1
+            stats["total"] += 1
+            queue.task_done()
+            continue
+
+        # 2. Real Delay Test (Xray)
+        success, delay, error = await test_connection(config, local_port, session=session)
 
         if success:
             results.append((config, delay))
@@ -103,13 +127,15 @@ async def main():
     results = []
     stats = Counter()
 
-    tasks = []
-    for i in range(CONCURRENCY):
-        task = asyncio.create_task(worker(queue, results, stats, i))
-        tasks.append(task)
+    # Shared session for all workers to reuse connections
+    async with aiohttp.ClientSession() as session:
+        tasks = []
+        for i in range(CONCURRENCY):
+            task = asyncio.create_task(worker(queue, results, stats, i, session))
+            tasks.append(task)
 
-    # 3. Wait for Completion
-    await asyncio.gather(*tasks)
+        # 3. Wait for Completion
+        await asyncio.gather(*tasks)
 
     # 4. Summary Report
     print("\n" + "="*40)
@@ -134,7 +160,6 @@ async def main():
             if "raw_uri" in config:
                 f.write(f"{config['raw_uri']}\n")
             else:
-                # Fallback if raw_uri is missing (should not happen with updated v2ray_utils)
                 pass
 
     print(f"Saved {len(results)} passed configs to {OUTPUT_FILE}")
