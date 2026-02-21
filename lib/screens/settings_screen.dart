@@ -14,7 +14,6 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   // متغیر برای کنترل وضعیت‌های جدید
   bool _killSwitchEnabled = false;
-  String _selectedProtocol = 'Automatic';
 
   @override
   Widget build(BuildContext context) {
@@ -64,25 +63,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               );
             },
-          ),
-          ListTile(
-            leading: const Icon(Icons.settings_ethernet_outlined),
-            title: const Text('Protocol'),
-            trailing: DropdownButton<String>(
-              value: _selectedProtocol,
-              items: ['Automatic', 'UDP', 'TCP'].map((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
-              onChanged: (newValue) {
-                setState(() {
-                  _selectedProtocol = newValue!;
-                });
-                // TODO: Add logic to change connection protocol
-              },
-            ),
           ),
           const Divider(),
 
