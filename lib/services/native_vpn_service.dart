@@ -14,6 +14,11 @@ String _generateConfigWrapper(Map<String, dynamic> args) {
 }
 
 class NativeVpnService {
+  // Singleton
+  static final NativeVpnService _instance = NativeVpnService._internal();
+  factory NativeVpnService() => _instance;
+  NativeVpnService._internal();
+
   // Updated channel name to match Kotlin side
   static const _methodChannel = MethodChannel('com.example.ivpn/vpn');
 
