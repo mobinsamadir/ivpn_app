@@ -1,6 +1,5 @@
 package com.example.ivpn_new
 
-// Android Imports
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -24,7 +23,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 import okhttp3.OkHttpClient
 import okhttp3.Request
 
-// --- LIBBOX IMPORTS ---
 import io.nekohasekai.libbox.Libbox
 import io.nekohasekai.libbox.PlatformInterface
 import io.nekohasekai.libbox.TunOptions
@@ -34,7 +32,6 @@ import io.nekohasekai.libbox.WIFIState
 import io.nekohasekai.libbox.InterfaceUpdateListener
 import io.nekohasekai.libbox.LocalDNSTransport
 import io.nekohasekai.libbox.NetworkInterface
-// Alias to avoid conflict with android.app.Notification
 import io.nekohasekai.libbox.Notification as LibboxNotification
 
 class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterface() {
@@ -48,34 +45,27 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
         const val ACTION_START = "start"
         const val ACTION_STOP = "stop"
 
-        // VPN State
         val isVpnRunning = AtomicBoolean(false)
-
-        // Test Proxy State
         private val isTestRunning = AtomicBoolean(false)
-        private val testMutex = Mutex() // Keep for measurePing backward compatibility if needed
+        private val testMutex = Mutex()
 
         // --- NEW: Granular Control for Dart-driven Testing ---
         suspend fun startTestProxy(configJson: String, tempDir: File): Int = withContext(Dispatchers.IO) {
-            // 1. Guard Clauses
             if (isVpnRunning.get()) {
                 println("❌ [Native] Cannot start Test Proxy: VPN is running")
                 return@withContext -1
             }
 
-            // 2. atomic check-and-set to ensure strictly one test instance
             if (!isTestRunning.compareAndSet(false, true)) {
                  println("❌ [Native] Cannot start Test Proxy: Another test is already running")
-                 return@withContext -2 // Busy code
+                 return@withContext -2
             }
 
             try {
-                // 3. Find Free Port
                 val socket = ServerSocket(0)
                 val socksPort = socket.localPort
                 socket.close()
 
-                // 4. Prepare Config
                 val json = JSONObject(configJson)
                 val inbounds = JSONArray()
                 val socksInbound = JSONObject()
@@ -86,13 +76,11 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
                 inbounds.put(socksInbound)
                 json.put("inbounds", inbounds)
 
-                // Ensure outbounds exist
                 if (!json.has("outbounds")) {
                     isTestRunning.set(false)
-                    return@withContext -3 // Invalid Config
+                    return@withContext -3
                 }
 
-                // Set Log Level to Error/Panic to reduce noise/overhead during rapid testing
                 if (json.has("log")) {
                      val logObj = json.getJSONObject("log")
                      logObj.put("level", "error")
@@ -102,24 +90,16 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
                 val testConfigFile = File(tempDir, "test_proxy_${System.currentTimeMillis()}.json")
                 testConfigFile.writeText(testConfigStr)
 
-                // 5. Start Libbox
-                // Use StubPlatformInterface because we don't need VPN features (tun, protect, etc.)
-                // We just need a SOCKS proxy.
                 Libbox.newService(testConfigFile.absolutePath, StubPlatformInterface())
-
-                // Give it a moment to bind
                 delay(200)
 
                 return@withContext socksPort
 
             } catch (e: Exception) {
                 e.printStackTrace()
-                isTestRunning.set(false) // Release lock on error
-
-                // Try to cleanup
+                isTestRunning.set(false)
                 try { Libbox.newService("", StubPlatformInterface()) } catch (_: Exception) {}
-
-                return@withContext -4 // Exception
+                return@withContext -4
             }
         }
 
@@ -130,22 +110,16 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
                 } catch (e: Exception) {
                     e.printStackTrace()
                 } finally {
-                    isTestRunning.set(false) // Release lock
+                    isTestRunning.set(false)
                 }
             }
         }
 
-        // Legacy/Self-contained method (Refactored to use same lock concept if needed,
-        // but for now keeping isolated to avoid breaking existing flows if they are used)
         suspend fun measurePing(configJson: String, tempDir: File): Int = withContext(Dispatchers.IO) {
-            // We reuse the startTestProxy logic if possible, or keep separate.
-            // To avoid complexity, we keep this separate but respecting the lock.
-
             if (isVpnRunning.get()) return@withContext -1
             if (!isTestRunning.compareAndSet(false, true)) return@withContext -1
 
             try {
-                 // Logic duplicated for safety in this specific "One-shot" function
                 val socket = ServerSocket(0)
                 val socksPort = socket.localPort
                 socket.close()
@@ -198,7 +172,6 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
         }
     }
 
-    // --- CRITICAL OVERRIDE FOR VPN TRAFFIC ---
     override fun autoDetectInterfaceControl(fd: Int) {
         this.protect(fd)
     }
@@ -219,9 +192,7 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
     private fun startVpn(configJson: String) {
         if (isVpnRunning.get()) return
 
-        // Ensure no test is running
         if (isTestRunning.get()) {
-             // Force stop test to prioritize VPN connection
              try { Libbox.newService("", StubPlatformInterface()) } catch (_: Exception) {}
              isTestRunning.set(false)
         }
@@ -265,11 +236,15 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
 
                 configFile.writeText(jsonObject.toString())
 
-                // Pass 'this' as PlatformInterface
                 Libbox.newService(configFile.absolutePath, this@SingboxVpnService)
+
+                // CRITICAL FIX: Broadcast "CONNECTED" State to Dart
+                MainActivity.sendVpnStatus("CONNECTED")
 
             } catch (e: Exception) {
                 e.printStackTrace()
+                // CRITICAL FIX: Broadcast "ERROR" State to Dart
+                MainActivity.sendVpnStatus("ERROR")
                 stopVpn()
             }
         }
@@ -285,6 +260,10 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
             vpnInterface = null
             stopForeground(true)
             stopSelf()
+
+            // CRITICAL FIX: Broadcast "DISCONNECTED" State to Dart
+            MainActivity.sendVpnStatus("DISCONNECTED")
+
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -325,59 +304,36 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
     }
 }
 
-// ==========================================
-//           COMPLETE STUB IMPLEMENTATIONS
-// ==========================================
-
-// 1. String Iterator Stub
 class StubStringIterator : StringIterator {
     override fun next(): String = ""
     override fun hasNext(): Boolean = false
     override fun len(): Int = 0 
 }
 
-// 2. Network Interface Iterator Stub
 class StubNetworkInterfaceIterator : NetworkInterfaceIterator {
     override fun next(): NetworkInterface? = null
     override fun hasNext(): Boolean = false
 }
 
-// 3. Main Platform Stub
 class StubPlatformInterface : PlatformInterface {
-    
-    // Original methods
     override fun autoDetectInterfaceControl(fd: Int) { }
     override fun openTun(options: TunOptions): Int = -1
     override fun usePlatformAutoDetectInterfaceControl(): Boolean = true
     override fun clearDNSCache() {}
-
-    // WIFI State
     override fun readWIFIState(): WIFIState { 
         return WIFIState("wlan0", "00:00:00:00:00:00") 
     }
-    
     override fun useProcFS(): Boolean = false
     override fun writeLog(message: String?) { }
-    
     override fun closeDefaultInterfaceMonitor(listener: InterfaceUpdateListener?) { }
-    
     override fun findConnectionOwner(ipProtocol: Int, sourceAddress: String?, sourcePort: Int, destinationAddress: String?, destinationPort: Int): Int = 0
-    
     override fun getInterfaces(): NetworkInterfaceIterator { return StubNetworkInterfaceIterator() }
-    
     override fun includeAllNetworks(): Boolean = false
-    
     override fun localDNSTransport(): LocalDNSTransport? = null
-    
     override fun packageNameByUid(uid: Int): String = "unknown"
-    
     override fun uidByPackageName(packageName: String?): Int = 0
-    
     override fun sendNotification(notification: LibboxNotification?) { } 
-    
     override fun startDefaultInterfaceMonitor(listener: InterfaceUpdateListener?) { }
-    
     override fun systemCertificates(): StringIterator { return StubStringIterator() }
-    
     override fun underNetworkExtension(): Boolean = false
 }

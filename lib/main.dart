@@ -14,7 +14,6 @@ import 'services/config_manager.dart';
 import 'utils/cleanup_utils.dart';
 import 'providers/theme_provider.dart';
 import 'providers/home_provider.dart';
-import 'screens/connection_home_screen.dart';
 import 'services/background_ad_service.dart';
 import 'screens/splash_screen.dart'; // Ensure this import exists
 import 'services/windows_vpn_service.dart';
