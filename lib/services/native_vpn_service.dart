@@ -79,8 +79,9 @@ class NativeVpnService {
   /// Starts a lightweight Sing-box proxy for testing.
   /// Returns the SOCKS port on success, or negative error code.
   Future<int> startTestProxy(String configJson) async {
-    if (Platform.isWindows)
+    if (Platform.isWindows) {
       return -1; // Handled by EphemeralTester directly on Windows
+    }
 
     try {
       final int result = await _methodChannel

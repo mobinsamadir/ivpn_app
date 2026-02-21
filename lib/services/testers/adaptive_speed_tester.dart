@@ -134,8 +134,9 @@ class AdaptiveSpeedTester {
 
       stopwatch.start();
       await for (var chunk in response) {
-        if (cancelToken?.isCancelled == true)
+        if (cancelToken?.isCancelled == true) {
           throw OperationCancelledException();
+        }
 
         bytesReceived += chunk.length;
         final elapsedMs = stopwatch.elapsedMilliseconds;

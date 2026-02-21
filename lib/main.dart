@@ -79,10 +79,10 @@ void main() {
     // };
 
     // Initialize Core Services Globally
-    SharedPreferences? prefs;
     try {
       // Critical: SharedPreferences with Timeout
-      prefs = await SharedPreferences.getInstance()
+      // ignore: unused_local_variable
+      final prefs = await SharedPreferences.getInstance()
           .timeout(const Duration(seconds: 5));
     } catch (e) {
       debugPrint("CRITICAL: SharedPreferences failed to load: $e");
@@ -117,6 +117,7 @@ void main() {
   }, (error, stack) {
     // Catch-all for async errors
     if (kDebugMode) {
+      // ignore: avoid_print
       print('CRITICAL STARTUP ERROR: $error');
     }
     // Simple error logging to prevent total crash
@@ -185,6 +186,7 @@ class _GlobalWindowListenerState extends State<GlobalWindowListener>
 
   @override
   Future<void> onWindowClose() async {
+    // ignore: avoid_print
     print("🧹 Closing app...");
     AdvancedLogger.info("🧹 Closing app - cleaning up VPN...");
 

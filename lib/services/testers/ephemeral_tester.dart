@@ -100,8 +100,9 @@ class EphemeralTester {
       // STAGE 1: TCP Check (Concurrent - No Semaphore)
       try {
         final details = _extractHostPort(config.rawConfig);
-        if (details == null)
+        if (details == null) {
           throw Exception("Could not extract server details");
+        }
 
         final String host = details['host'];
         final int port = details['port'];
@@ -186,16 +187,13 @@ class EphemeralTester {
             try {
               speedSw.start();
               // Download ~1MB test file
-              final speedReq = await client.getUrl(Uri.parse(
-                  'http://speed.cloudflare.com/__down?bytes=1000000'));
+              final speedReq = await client.getUrl(
+                  Uri.parse('http://speed.cloudflare.com/__down?bytes=1000000'));
               final speedResp = await speedReq.close();
 
-              await speedResp
-                  .listen((chunk) {
-                    bytes += chunk.length;
-                  })
-                  .asFuture()
-                  .timeout(const Duration(seconds: 5));
+              await speedResp.listen((chunk) {
+                bytes += chunk.length;
+              }).asFuture().timeout(const Duration(seconds: 5));
 
               speedSw.stop();
               final durationSec = speedSw.elapsedMilliseconds / 1000.0;
@@ -252,7 +250,9 @@ class EphemeralTester {
           lastSuccessfulConnectionTime: DateTime.now().millisecondsSinceEpoch,
           deviceMetrics: config
               .updateMetrics(
-                  deviceId: "android_verified", ping: latency, speed: speedMbps)
+                  deviceId: "android_verified",
+                  ping: latency,
+                  speed: speedMbps)
               .deviceMetrics);
     } else {
       // --- WINDOWS / DESKTOP PATH ---
@@ -374,12 +374,9 @@ class EphemeralTester {
                 Uri.parse('http://speed.cloudflare.com/__down?bytes=1000000'));
             final speedResp = await speedReq.close();
 
-            await speedResp
-                .listen((chunk) {
-                  bytes += chunk.length;
-                })
-                .asFuture()
-                .timeout(const Duration(seconds: 5));
+            await speedResp.listen((chunk) {
+              bytes += chunk.length;
+            }).asFuture().timeout(const Duration(seconds: 5));
 
             speedSw.stop();
 
@@ -402,8 +399,9 @@ class EphemeralTester {
             Map<String, TestResult>.from(config.stageResults);
         newStageResults['TCP'] = TestResult(success: true);
         newStageResults['HTTP'] = TestResult(success: true, latency: latency);
-        if (speedMbps > 0)
+        if (speedMbps > 0) {
           newStageResults['Speed'] = TestResult(success: true, latency: 0);
+        }
 
         return config.copyWith(
             funnelStage: finalStage,
@@ -425,10 +423,11 @@ class EphemeralTester {
         String failedStage = "Init";
         if (!stage1Success) {
           failedStage = "Stage1_ProxyInit";
-        } else if (!stage2Success)
+        } else if (!stage2Success) {
           failedStage = "Stage2_HTTP";
-        else
+        } else {
           failedStage = "Stage3_Speed";
+        }
 
         return config.copyWith(
           funnelStage: 0,

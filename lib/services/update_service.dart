@@ -7,7 +7,7 @@ import 'package:pub_semver/pub_semver.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:open_file/open_file.dart'; // Fixed import
+import 'package:open_file/open_file.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:http/http.dart' as http;
 import '../widgets/update_dialog.dart';
@@ -90,18 +90,23 @@ class UpdateService {
             await _getAndroidAssetUrl(releaseData['assets']);
 
         if (downloadUrl == null) {
-          if (context.mounted)
+          if (context.mounted) {
             _showError(context, "No compatible APK found for your device.");
+          }
           return;
         }
 
         // Request Permission to Install Packages
         if (await Permission.requestInstallPackages.request().isGranted) {
-          await _downloadAndInstallApk(context, downloadUrl);
+          if (context.mounted) {
+            await _downloadAndInstallApk(context, downloadUrl);
+          }
         } else {
           // On some devices, requesting it opens the settings page.
           // We try to proceed, open_file might trigger the system dialog.
-          await _downloadAndInstallApk(context, downloadUrl);
+          if (context.mounted) {
+            await _downloadAndInstallApk(context, downloadUrl);
+          }
         }
       } catch (e) {
         if (context.mounted) _showError(context, "Update failed: $e");
@@ -124,9 +129,11 @@ class UpdateService {
       String targetName = "";
       if (abi.contains("arm64")) {
         targetName = "app-arm64-v8a-release.apk";
-      } else if (abi.contains("armeabi"))
+      } else if (abi.contains("armeabi")) {
         targetName = "app-armeabi-v7a-release.apk";
-      else if (abi.contains("x86_64")) targetName = "app-x86_64-release.apk";
+      } else if (abi.contains("x86_64")) {
+        targetName = "app-x86_64-release.apk";
+      }
 
       if (targetName.isNotEmpty) {
         final asset = assets.firstWhere((a) => a['name'] == targetName,
@@ -226,20 +233,15 @@ class UpdateService {
       AdvancedLogger.info("UpdateService: Download complete. Installing...");
 
       // Install
-      final PackageInfo packageInfo = await PackageInfo.fromPlatform();
-      final String authority = "${packageInfo.packageName}.fileProvider";
-
-      // We rely on OpenFile to handle the intent, but if it needs explicit authority we might need to adjust.
-      // However, OpenFile usually detects the provider if configured correctly in Manifest.
-      // Since we added the provider with authority ${applicationId}.fileProvider, it should work.
-      // If needed, we can pass authority explicitly if the plugin supports it, or use another method.
-      // For now, adhering to the plan: ensuring provider exists.
+      // Unused authority variable removed to fix lint
+      // We rely on OpenFile to handle the intent.
 
       final result = await OpenFile.open(savePath,
           type: "application/vnd.android.package-archive");
       if (result.type != ResultType.done) {
-        if (context.mounted)
+        if (context.mounted) {
           _showError(context, "Install failed: ${result.message}");
+        }
       }
     } catch (e) {
       if (context.mounted) Navigator.pop(context); // Close Progress Dialog

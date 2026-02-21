@@ -15,6 +15,7 @@ class FileLogger {
       await log("------------------------------------------");
       await log("Session Started: ${DateTime.now()}");
     } catch (e) {
+      // ignore: avoid_print
       print("Error initializing FileLogger: $e");
     }
   }
@@ -24,12 +25,14 @@ class FileLogger {
     final formattedLine = "[$timestamp] $message\n";
 
     // Also print to console for development
+    // ignore: avoid_print
     print(formattedLine.trim());
 
     if (_logFile != null) {
       try {
         await _logFile!.writeAsString(formattedLine, mode: FileMode.append);
       } catch (e) {
+        // ignore: avoid_print
         print("Failed to write to log file: $e");
       }
     }

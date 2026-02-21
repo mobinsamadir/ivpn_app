@@ -10,9 +10,8 @@ import 'singbox_config_generator.dart';
 import 'windows_vpn_service.dart';
 
 class LatencyTester {
-  static const int START_PORT = 10850;
-  static const int END_PORT = 10950;
-  static final int _nextPort = 20000;
+  static const int startPort = 10850;
+  static const int endPort = 10950;
   static final Random _rng = Random();
 
   // Returns milliseconds or -1 (Timeout/Error)
@@ -168,14 +167,4 @@ class LatencyTester {
     }
   }
 
-  static Future<void> _killSingboxProcess() async {
-    if (Platform.isWindows) {
-      try {
-        // Forcefully kill any existing sing-box processes to free up ports
-        await Process.run('taskkill', ['/F', '/IM', 'sing-box.exe']);
-      } catch (e) {
-        // Ignore errors if no process is found
-      }
-    }
-  }
 }

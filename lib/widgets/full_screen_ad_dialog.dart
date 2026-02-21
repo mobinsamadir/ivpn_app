@@ -63,7 +63,7 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
     // PopScope prevents Back Button to enforce "The Wall" until dismissed or closed
     return PopScope(
       canPop: false,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
         // Optionally block interaction or show toast
       },
@@ -93,7 +93,7 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: Colors.redAccent.withOpacity(0.8),
+                            color: Colors.redAccent.withValues(alpha: 0.8),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Row(

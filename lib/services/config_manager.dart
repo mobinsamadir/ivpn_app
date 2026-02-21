@@ -21,7 +21,9 @@ String _extractServerName(String raw) {
   try {
     final uri = Uri.parse(raw);
     if (uri.fragment.isNotEmpty) return Uri.decodeComponent(uri.fragment);
-  } catch (e) {}
+  } catch (e) {
+    // ignore: empty_catches
+  }
 
   // Fallback name
   final type = raw.split('://').first.toUpperCase();
@@ -92,8 +94,12 @@ Future<Map<String, dynamic>> _processConfigsInIsolate(
       hashesToRemoveFromBlacklist.add(hash);
     }
 
-    if (existingConfigs.contains(trimmedRaw)) continue;
-    if (batchConfigs.contains(trimmedRaw)) continue;
+    if (existingConfigs.contains(trimmedRaw)) {
+      continue;
+    }
+    if (batchConfigs.contains(trimmedRaw)) {
+      continue;
+    }
 
     final name = _extractServerName(trimmedRaw);
     final id = 'config_${DateTime.now().millisecondsSinceEpoch}_$addedCount';
@@ -257,8 +263,9 @@ class ConfigManager extends ChangeNotifier {
       ];
 
       for (var url in mirrors) {
-        if (anyConfigAdded)
+        if (anyConfigAdded) {
           break; // Chain Breaking: Stop if we already have configs
+        }
 
         try {
           String? content = await _robustFetch(url);
@@ -454,6 +461,10 @@ class ConfigManager extends ChangeNotifier {
     }
     return null;
   }
+
+  @visibleForTesting
+  static String? extractDriveConfirmationLink(String html) =>
+      ConfigManager()._extractDriveTokenFromHtml(html);
 
   static Future<List<String>> parseMixedContent(String text) async {
     // Offload heavy parsing (HTML, Base64, Regex) to background isolate
@@ -690,10 +701,11 @@ class ConfigManager extends ChangeNotifier {
     try {
       if (Platform.isAndroid) {
         _currentDeviceId = 'android_${(await info.androidInfo).id}';
-      } else if (Platform.isWindows)
+      } else if (Platform.isWindows) {
         _currentDeviceId = 'windows_${(await info.windowsInfo).deviceId}';
-      else if (Platform.isIOS)
+      } else if (Platform.isIOS) {
         _currentDeviceId = 'ios_${(await info.iosInfo).identifierForVendor}';
+      }
     } catch (e) {
       _currentDeviceId = 'unknown';
     }
@@ -778,8 +790,9 @@ class ConfigManager extends ChangeNotifier {
 
   // --- UI & LEGACY COMPATIBILITY METHODS ---
   Future<VpnConfigWithMetrics?> getBestConfig() async {
-    if (_selectedConfig != null && _selectedConfig!.isValidated)
+    if (_selectedConfig != null && _selectedConfig!.isValidated) {
       return _selectedConfig;
+    }
     if (favoriteConfigs.isNotEmpty) return favoriteConfigs.first;
     if (validatedConfigs.isNotEmpty) return validatedConfigs.first;
     if (allConfigs.isNotEmpty) return allConfigs.first;
