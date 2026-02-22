@@ -1,0 +1,38 @@
+name: Test Suite
+
+on:
+  push:
+    branches: [ "main", "dev" ]
+    paths:
+      - 'lib/**'
+      - 'test/**'
+  pull_request:
+    branches: [ "main", "dev" ]
+    paths:
+      - 'lib/**'
+      - 'test/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Cache Pub Dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Run Tests
+        run: flutter test --coverage
