@@ -55,6 +55,7 @@ dev_dependencies:
   http: ^1.2.0
   archive: ^3.6.1
   path: ^1.9.0 # اضافه شد تا اسکریپت بیلد به مشکل نخورد
+  mocktail: ^1.0.4
 
 # تنظیمات آیکون
 flutter_launcher_icons:
