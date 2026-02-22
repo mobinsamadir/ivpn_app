@@ -15,25 +15,49 @@ import '../services/access_manager.dart';
 import '../services/ad_manager_service.dart';
 import '../services/funnel_service.dart';
 import '../services/testers/ephemeral_tester.dart';
-import '../services/update_service.dart';
+import '../services/update_service_wrapper.dart';
+import '../services/connectivity_service.dart';
 import '../utils/connectivity_utils.dart';
 import 'settings_screen.dart';
 
 class ConnectionHomeScreen extends StatefulWidget {
-  const ConnectionHomeScreen({super.key});
+  final NativeVpnService? nativeVpnService;
+  final FunnelService? funnelService;
+  final EphemeralTester? ephemeralTester;
+  final ConfigManager? configManager;
+  final AdManagerService? adManagerService;
+  final AccessManager? accessManager;
+  final ConnectivityService? connectivityService;
+  final UpdateServiceWrapper? updateServiceWrapper;
+
+  const ConnectionHomeScreen({
+    super.key,
+    this.nativeVpnService,
+    this.funnelService,
+    this.ephemeralTester,
+    this.configManager,
+    this.adManagerService,
+    this.accessManager,
+    this.connectivityService,
+    this.updateServiceWrapper,
+  });
 
   @override
   State<ConnectionHomeScreen> createState() => _ConnectionHomeScreenState();
 }
 
 class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with WidgetsBindingObserver, SingleTickerProviderStateMixin {
-  // 1. Initialize services IMMEDIATELY
-  final NativeVpnService _nativeVpnService = NativeVpnService();
-  final FunnelService _funnelService = FunnelService();
-  final EphemeralTester _ephemeralTester = EphemeralTester();
+  // 1. Services
+  late final NativeVpnService _nativeVpnService;
+  late final FunnelService _funnelService;
+  late final EphemeralTester _ephemeralTester;
+  late final ConfigManager _configManager;
+  late final AdManagerService _adManagerService;
+  late final AccessManager _accessManager;
+  late final ConnectivityService _connectivityService;
+  late final UpdateServiceWrapper _updateServiceWrapper;
 
   // 2. State Variables
-  final ConfigManager _configManager = ConfigManager();
   bool _isInitialized = false;
   bool _autoTestOnStartup = true;
   bool _isWatchingAd = false;
@@ -70,8 +94,17 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
   void initState() {
     super.initState();
 
+    _nativeVpnService = widget.nativeVpnService ?? NativeVpnService();
+    _funnelService = widget.funnelService ?? FunnelService();
+    _ephemeralTester = widget.ephemeralTester ?? EphemeralTester();
+    _configManager = widget.configManager ?? ConfigManager();
+    _adManagerService = widget.adManagerService ?? AdManagerService();
+    _accessManager = widget.accessManager ?? AccessManager();
+    _connectivityService = widget.connectivityService ?? ConnectivityService();
+    _updateServiceWrapper = widget.updateServiceWrapper ?? UpdateServiceWrapper();
+
     // 1. Initialize Ad Service IMMEDIATELY
-    AdManagerService().initialize();
+    _adManagerService.initialize();
 
     _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(() {
@@ -84,10 +117,10 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     WidgetsBinding.instance.addObserver(this);
 
     // AccessManager Listener
-    AccessManager().init().then((_) {
+    _accessManager.init().then((_) {
       if (mounted) setState(() {});
     });
-    AccessManager().addListener(_onTimeChanged);
+    _accessManager.addListener(_onTimeChanged);
 
     // Register Stop Callback
     _configManager.stopVpnCallback = _nativeVpnService.disconnect;
@@ -124,8 +157,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
            Future.delayed(const Duration(seconds: 3), () {
              if (mounted) {
                AdvancedLogger.info("[HomeScreen] Triggering Post-Connect Update & Ad Check...");
-               UpdateService.checkForUpdatesSilently(context);
-               AdManagerService().fetchLatestAds();
+               _updateServiceWrapper.checkForUpdatesSilently(context);
+               _adManagerService.fetchLatestAds();
              }
            });
         }
@@ -149,7 +182,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     _funnelSubscription?.cancel();
     _vpnStatusSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
-    AccessManager().removeListener(_onTimeChanged);
+    _accessManager.removeListener(_onTimeChanged);
     _timerUpdater?.cancel();
     _backgroundTestTimer?.cancel();
     _pingMonitorTimer?.cancel();
@@ -283,7 +316,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
 
     if (engage == true) {
       if (!mounted) return;
-      final bool adSuccess = await AdManagerService().showPreConnectionAd(context);
+      final bool adSuccess = await _adManagerService.showPreConnectionAd(context);
       if (!adSuccess) return;
       if (!mounted) return;
 
@@ -321,7 +354,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
       );
 
       if (claimed == true) {
-        await AccessManager().addTime(const Duration(hours: 1));
+        await _accessManager.addTime(const Duration(hours: 1));
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -337,7 +370,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
   Future<void> _initAppSequence() async {
     if (!mounted) return;
     setState(() {});
-    final bool hasInternet = await ConnectivityUtils.hasInternet();
+    final bool hasInternet = await _connectivityService.hasInternet();
 
     if (!hasInternet) {
        if (mounted) {
@@ -646,7 +679,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     _configManager.setConnected(false, status: 'Connecting...');
 
     // Access Check
-    final access = AccessManager();
+    final access = _accessManager;
     if (!access.hasAccess) {
       await _showAdSequence();
       if (!access.hasAccess) return;
@@ -827,7 +860,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
   }
 
   Widget _buildSubscriptionCard() {
-    final access = AccessManager();
+    final access = _accessManager;
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF1E1E1E),
