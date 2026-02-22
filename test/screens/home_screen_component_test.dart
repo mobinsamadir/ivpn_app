@@ -83,10 +83,13 @@ void main() {
 
   late StreamController<String> funnelProgressController;
   late StreamController<String> vpnStatusController;
+  // Capture listeners for AccessManager updates
+  final accessListeners = <VoidCallback>[];
 
   setUpAll(() {
     registerFallbackValue(FakeBuildContext());
     registerFallbackValue(FakeVpnConfigWithMetrics());
+    registerFallbackValue(const Duration(seconds: 1));
   });
 
   setUp(() {
@@ -104,12 +107,20 @@ void main() {
 
     funnelProgressController = StreamController<String>.broadcast();
     vpnStatusController = StreamController<String>.broadcast();
+    accessListeners.clear();
 
     // Default Stubs
     when(() => mockAdManagerService.initialize()).thenAnswer((_) async {});
     when(() => mockAccessManager.init()).thenAnswer((_) async {});
-    when(() => mockAccessManager.addListener(any())).thenReturn(null);
-    when(() => mockAccessManager.removeListener(any())).thenReturn(null);
+
+    // Capture listeners
+    when(() => mockAccessManager.addListener(any())).thenAnswer((invocation) {
+      accessListeners.add(invocation.positionalArguments[0] as VoidCallback);
+    });
+    when(() => mockAccessManager.removeListener(any())).thenAnswer((invocation) {
+      accessListeners.remove(invocation.positionalArguments[0] as VoidCallback);
+    });
+
     when(() => mockAccessManager.hasAccess).thenReturn(true);
     when(() => mockAccessManager.remainingTime).thenReturn(const Duration(hours: 1));
 
@@ -165,7 +176,6 @@ void main() {
       await tester.pumpWidget(createWidget());
       await tester.pumpAndSettle();
 
-      // Find Connect Button (It's a Container with a Column inside, text is 'CONNECT')
       final connectTextFinder = find.text('CONNECT');
       expect(connectTextFinder, findsOneWidget);
 
@@ -174,7 +184,6 @@ void main() {
     });
 
     testWidgets('Connect Button triggers connection logic when tapped', (tester) async {
-       // Setup: Add a config so we can connect
        final config = VpnConfigWithMetrics(
           id: 'test_1',
           rawConfig: 'vmess://...',
@@ -182,7 +191,7 @@ void main() {
           addedDate: DateTime.now()
        );
        when(() => mockConfigManager.allConfigs).thenReturn([config]);
-       when(() => mockConfigManager.validatedConfigs).thenReturn([config]); // Valid config exists
+       when(() => mockConfigManager.validatedConfigs).thenReturn([config]);
        when(() => mockConfigManager.getBestConfig()).thenAnswer((_) async => config);
        when(() => mockConfigManager.connectWithSmartFailover()).thenAnswer((_) async {});
        when(() => mockConfigManager.connectionStatus).thenReturn('Disconnected');
@@ -192,25 +201,20 @@ void main() {
        await tester.pumpWidget(createWidget());
        await tester.pumpAndSettle();
 
-       // Tap Connect
        await tester.tap(find.text('CONNECT'));
-       await tester.pump(); // Start animation
+       await tester.pump();
 
-       // Verify Logic Triggered
        verify(() => mockConfigManager.connectWithSmartFailover()).called(1);
     });
 
     testWidgets('UI updates to Connected state when VPN status changes', (tester) async {
-       // Setup initial state
        when(() => mockConfigManager.isConnected).thenReturn(false);
 
        await tester.pumpWidget(createWidget());
        await tester.pumpAndSettle();
 
-       // Initial Check (Mixed Case)
        expect(find.text('Disconnected'), findsOneWidget);
 
-       // Setup side-effects for state change
        var isConnected = false;
        var status = 'Disconnected';
 
@@ -222,24 +226,20 @@ void main() {
             status = invocation.namedArguments[Symbol('status')] as String;
          });
 
-       // Trigger 'CONNECTED'
        vpnStatusController.add('CONNECTED');
-       await tester.pump(); // Process the event
-       await tester.pump(const Duration(seconds: 4)); // Drain the 3s timer in the listener
+       await tester.pump();
+       await tester.pump(const Duration(seconds: 4));
        await tester.pumpAndSettle();
 
-       // Verify UI
-       expect(find.text('Connected'), findsOneWidget); // Status text
-       expect(find.text('DISCONNECT'), findsOneWidget); // Button text
+       expect(find.text('Connected'), findsOneWidget);
+       expect(find.text('DISCONNECT'), findsOneWidget);
     });
 
     testWidgets('Config List renders items and allows selection', (tester) async {
-       // Set a large screen size to avoid overflow and scrolling issues
        tester.view.physicalSize = const Size(2400, 6000);
        tester.view.devicePixelRatio = 3.0;
        addTearDown(() => tester.view.resetPhysicalSize());
 
-       // Setup: 2 configs
        final config1 = VpnConfigWithMetrics(id: 'c1', rawConfig: 'v1', name: 'Server 1', addedDate: DateTime.now());
        final config2 = VpnConfigWithMetrics(id: 'c2', rawConfig: 'v2', name: 'Server 2', addedDate: DateTime.now());
 
@@ -251,16 +251,12 @@ void main() {
        await tester.pumpWidget(createWidget());
        await tester.pumpAndSettle();
 
-       // Verify list items
-       // Server 1 appears twice: once in "Selected Config" area, and once in the list
        expect(find.text('Server 1'), findsNWidgets(2));
        expect(find.text('Server 2'), findsOneWidget);
 
-       // Tap Server 2
        await tester.tap(find.text('Server 2'));
        await tester.pumpAndSettle();
 
-       // Verify selectConfig was called
        verify(() => mockConfigManager.selectConfig(config2)).called(1);
     });
 
@@ -268,21 +264,100 @@ void main() {
        await tester.pumpWidget(createWidget());
        await tester.pumpAndSettle();
 
-       // Find SwitchListTile
        final switchFinder = find.byType(SwitchListTile);
        expect(switchFinder, findsOneWidget);
 
-       // Verify initial value (true)
        final switchWidget = tester.widget<Switch>(find.byType(Switch));
        expect(switchWidget.value, true);
 
-       // Tap it
        await tester.tap(switchFinder);
        await tester.pumpAndSettle();
 
-       // Verify value changed to false
        final switchWidgetAfter = tester.widget<Switch>(find.byType(Switch));
        expect(switchWidgetAfter.value, false);
+    });
+
+    // --- NEW ITERATION 2 TESTS ---
+
+    testWidgets('Scenario: No Access Alert blocks connection (Negative Assertion)', (tester) async {
+       // Setup: No Access
+       when(() => mockAccessManager.hasAccess).thenReturn(false);
+       when(() => mockAccessManager.remainingTime).thenReturn(Duration.zero);
+
+       // Setup: Valid Config exists
+       final config = VpnConfigWithMetrics(id: 'c1', rawConfig: 'v1', name: 'Server 1', addedDate: DateTime.now());
+       when(() => mockConfigManager.allConfigs).thenReturn([config]);
+       when(() => mockConfigManager.validatedConfigs).thenReturn([config]);
+       when(() => mockConfigManager.connectWithSmartFailover()).thenAnswer((_) async {});
+
+       await tester.pumpWidget(createWidget());
+       await tester.pumpAndSettle();
+
+       // Tap Connect
+       await tester.tap(find.text('CONNECT'));
+       await tester.pumpAndSettle();
+
+       // Verify "Add 1 Hour Time" Dialog appears
+       expect(find.text('Add 1 Hour Time'), findsOneWidget);
+       expect(find.textContaining('To keep the service free'), findsOneWidget);
+
+       // Tap Cancel to close dialog without adding time
+       await tester.tap(find.text('Cancel'));
+       await tester.pumpAndSettle();
+
+       // CRITICAL: Verify Connect Logic NEVER called
+       verifyNever(() => mockConfigManager.connectWithSmartFailover());
+    });
+
+    testWidgets('Scenario: Reward Update flow adds time and updates UI', (tester) async {
+       // Setup: No Access initially
+       when(() => mockAccessManager.hasAccess).thenReturn(false);
+       when(() => mockAccessManager.remainingTime).thenReturn(Duration.zero);
+
+       // Setup: Ad Success Logic
+       // When showPreConnectionAd is called, return true (Ad Watched)
+       when(() => mockAdManagerService.showPreConnectionAd(any())).thenAnswer((_) async => true);
+
+       // When addTime is called, update mock state and notify listeners
+       when(() => mockAccessManager.addTime(any())).thenAnswer((invocation) async {
+          when(() => mockAccessManager.hasAccess).thenReturn(true);
+          when(() => mockAccessManager.remainingTime).thenReturn(const Duration(hours: 1));
+          for (final l in accessListeners) l();
+       });
+
+       // Setup: Config
+       final config = VpnConfigWithMetrics(id: 'c1', rawConfig: 'v1', name: 'Server 1', addedDate: DateTime.now());
+       when(() => mockConfigManager.allConfigs).thenReturn([config]);
+       when(() => mockConfigManager.validatedConfigs).thenReturn([config]);
+       when(() => mockConfigManager.connectWithSmartFailover()).thenAnswer((_) async {});
+
+       await tester.pumpWidget(createWidget());
+       await tester.pumpAndSettle();
+
+       // Verify initial state
+       expect(find.text('No active plan'), findsOneWidget);
+
+       // Tap Connect
+       await tester.tap(find.text('CONNECT'));
+       await tester.pumpAndSettle();
+
+       // 1. "Add 1 Hour Time" Dialog -> Tap "View Ad"
+       await tester.tap(find.text('View Ad'));
+       await tester.pumpAndSettle();
+
+       // Verify showPreConnectionAd called
+       verify(() => mockAdManagerService.showPreConnectionAd(any())).called(1);
+
+       // 2. "Claim Reward" Dialog -> Tap "Claim +1 Hour"
+       expect(find.text('Claim Reward'), findsOneWidget);
+       await tester.tap(find.text('Claim +1 Hour'));
+       await tester.pumpAndSettle(); // Triggers addTime -> listener -> setState
+
+       // Verify addTime called
+       verify(() => mockAccessManager.addTime(const Duration(hours: 1))).called(1);
+
+       // Verify UI Update (Reactivity Check)
+       expect(find.text('1h 0m remaining'), findsOneWidget);
     });
   });
 }

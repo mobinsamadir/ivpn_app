@@ -1,0 +1,13 @@
+{
+  "log": {"level": "debug", "output": "stderr"},
+  "inbounds": [{
+    "type": "http",
+    "tag": "test",
+    "listen": "127.0.0.1",
+    "listen_port": 59999
+  }],
+  "outbounds": [{
+    "type": "direct",
+    "tag": "direct"
+  }]
+}
