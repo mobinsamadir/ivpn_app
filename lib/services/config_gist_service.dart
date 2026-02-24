@@ -133,6 +133,7 @@ class ConfigGistService {
 
       return content;
     } catch (e) {
+      AdvancedLogger.warn("Fetch failed for $url: $e");
       return null;
     }
   }

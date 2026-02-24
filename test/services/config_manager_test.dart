@@ -82,5 +82,31 @@ void main() {
       best = await manager.getBestConfig();
       expect(best, isNotNull);
     });
+
+    test('Stress Test: Add 500+ configs', () async {
+      final manager = ConfigManager();
+      await manager.init();
+
+      final List<String> configs = [];
+      for (int i = 0; i < 500; i++) {
+        configs.add('vless://uuid@127.0.0.1:443?query=1#Config_$i');
+      }
+
+      final count = await manager.addConfigs(configs);
+
+      expect(count, 500);
+      expect(manager.allConfigs.length, 500);
+      // Note: Sort order might affect last element if auto-sort is enabled.
+      // Newly added configs usually have similar score/date, so order might be preserved or reversed.
+      // We check that it contains specific one.
+      expect(manager.allConfigs.any((c) => c.name == 'Config_0'), isTrue);
+      expect(manager.allConfigs.any((c) => c.name == 'Config_499'), isTrue);
+
+      // Verify persistence
+      final prefs = await SharedPreferences.getInstance();
+      final savedString = prefs.getString('vpn_configs');
+      expect(savedString, isNotNull);
+      expect(savedString!.length, greaterThan(10000));
+    });
   });
 }

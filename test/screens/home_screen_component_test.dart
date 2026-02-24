@@ -473,5 +473,60 @@ void main() {
        // Verify connectWithSmartFailover NOT called a second time
        verify(() => mockConfigManager.connectWithSmartFailover()).called(1);
     });
+
+    testWidgets('Network Switch: Connect blocked when no internet', (tester) async {
+       // Setup: Internet ON initially (for init)
+       var hasNet = true;
+       when(() => mockConnectivityService.hasInternet()).thenAnswer((_) async => hasNet);
+
+       // Setup: Valid Config and Access
+       final config = VpnConfigWithMetrics(id: 'c1', rawConfig: 'v1', name: 'Server 1', addedDate: DateTime.now());
+       when(() => mockConfigManager.allConfigs).thenReturn([config]);
+       when(() => mockConfigManager.validatedConfigs).thenReturn([config]);
+       when(() => mockConfigManager.getBestConfig()).thenAnswer((_) async => config);
+       when(() => mockConfigManager.isConnected).thenReturn(false);
+       when(() => mockConfigManager.connectionStatus).thenReturn('Disconnected');
+
+       await tester.pumpWidget(createWidget());
+       await tester.pumpAndSettle();
+
+       // Switch Internet OFF
+       hasNet = false;
+
+       // Tap Connect
+       await tester.tap(find.text('CONNECT'));
+       await tester.pump();
+       await tester.pump(); // Frame for snackbar
+
+       // Verify connection NOT attempted
+       verifyNever(() => mockConfigManager.connectWithSmartFailover());
+
+       // Verify Error (SnackBar)
+       expect(find.text('No internet connection'), findsOneWidget);
+    });
+
+    testWidgets('Ad Dialog Disposal: Can be dismissed without error', (tester) async {
+       // Setup: Trigger Ad Dialog via Connect flow (No Access)
+       when(() => mockAccessManager.hasAccess).thenReturn(false);
+       when(() => mockAccessManager.remainingTime).thenReturn(Duration.zero);
+
+       final config = VpnConfigWithMetrics(id: 'c1', rawConfig: 'v1', name: 'Server 1', addedDate: DateTime.now());
+       when(() => mockConfigManager.allConfigs).thenReturn([config]);
+       when(() => mockConfigManager.validatedConfigs).thenReturn([config]);
+
+       await tester.pumpWidget(createWidget());
+       await tester.pumpAndSettle();
+
+       await tester.tap(find.text('CONNECT'));
+       await tester.pumpAndSettle();
+
+       expect(find.byType(AdExplanationDialog), findsOneWidget);
+
+       // Dismiss via Cancel
+       await tester.tap(find.text('Cancel'));
+       await tester.pumpAndSettle();
+
+       expect(find.byType(AdExplanationDialog), findsNothing);
+    });
   });
 }

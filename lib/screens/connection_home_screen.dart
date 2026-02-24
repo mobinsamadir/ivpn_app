@@ -656,6 +656,16 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     }
 
     _isConnectionCancelled = false;
+
+    // Network Check
+    if (!await _connectivityService.hasInternet()) {
+       if (!mounted) return;
+       ScaffoldMessenger.of(context).showSnackBar(
+         const SnackBar(content: Text('No internet connection'), backgroundColor: Colors.redAccent),
+       );
+       return;
+    }
+
     // Admin Check
     if (Platform.isWindows && !await _nativeVpnService.isAdmin()) {
        _showToast("Administrator privileges required.");
