@@ -6,7 +6,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/ad_config.dart';
 import '../utils/advanced_logger.dart';
 import '../widgets/full_screen_ad_dialog.dart';
-import 'windows_vpn_service.dart';
 
 class AdManagerService {
   static final AdManagerService _instance = AdManagerService._internal();

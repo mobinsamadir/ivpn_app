@@ -32,7 +32,7 @@ void main() {
           padding: const EdgeInsets.all(16),
           child: SingleChildScrollView(
             child: Text(
-              details.exceptionAsString() + '\n\n' + (details.stack.toString()),
+              '${details.exceptionAsString()}\n\n${details.stack}',
               style: const TextStyle(color: Colors.white, fontSize: 12),
               textDirection: TextDirection.ltr,
             ),
@@ -77,10 +77,9 @@ void main() {
     // };
 
     // Initialize Core Services Globally
-    SharedPreferences? prefs;
     try {
       // Critical: SharedPreferences with Timeout
-      prefs = await SharedPreferences.getInstance().timeout(const Duration(seconds: 5));
+      await SharedPreferences.getInstance().timeout(const Duration(seconds: 5));
     } catch (e) {
       debugPrint("CRITICAL: SharedPreferences failed to load: $e");
       // Fallback: If SharedPreferences fails, show Fatal Error Screen via runApp
@@ -116,7 +115,7 @@ void main() {
   }, (error, stack) {
     // Catch-all for async errors
     if (kDebugMode) {
-      print('CRITICAL STARTUP ERROR: $error');
+      debugPrint('CRITICAL STARTUP ERROR: $error');
     }
     // Simple error logging to prevent total crash
     try {
@@ -182,7 +181,7 @@ class _GlobalWindowListenerState extends State<GlobalWindowListener> with Window
 
   @override
   Future<void> onWindowClose() async {
-    print("🧹 Closing app...");
+    debugPrint("🧹 Closing app...");
     AdvancedLogger.info("🧹 Closing app - cleaning up VPN...");
 
     // Kill Process

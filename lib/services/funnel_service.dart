@@ -131,7 +131,7 @@ class FunnelService {
     _totalConfigs = all.length;
     _tcpQueue.addAll(all);
 
-    AdvancedLogger.info("FunnelService: Loaded ${_totalConfigs} configs into TCP Queue.");
+    AdvancedLogger.info("FunnelService: Loaded $_totalConfigs configs into TCP Queue.");
 
     // 2. Start Worker Pools
     // We spawn fixed number of loops that pull from queues
@@ -221,7 +221,7 @@ class FunnelService {
            // We don't save to disk yet to avoid IO thrashing
         } else {
            // Failed TCP - Mark Dead
-           await _configManager.markFailure(config!.id);
+           await _configManager.markFailure(config.id);
         }
 
       } catch (e) {

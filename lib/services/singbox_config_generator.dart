@@ -6,10 +6,10 @@ import '../utils/base64_utils.dart';
 
 class SingboxConfigGenerator {
   // Ports
-  static const int LOCAL_SOCKS_PORT = 10808;
-  static const int LOCAL_HTTP_PORT = 10809;
+  static const int localSocksPort = 10808;
+  static const int localHttpPort = 10809;
   
-  static final List<String> FINGERPRINTS = ['chrome', 'firefox', 'edge', 'safari', '360', 'qq'];
+  static final List<String> fingerprints = ['chrome', 'firefox', 'edge', 'safari', '360', 'qq'];
   static final Random _rng = Random();
 
   static String generateConfig(String rawLink, {int listenPort = 10808, bool isTest = false}) {
@@ -132,7 +132,7 @@ class SingboxConfigGenerator {
           "enabled": true, 
           "fingerprint": (params['fp'] != null && params['fp']!.isNotEmpty) 
               ? params['fp']! 
-              : FINGERPRINTS[_rng.nextInt(FINGERPRINTS.length)]
+              : fingerprints[_rng.nextInt(fingerprints.length)]
         }
       };
       
@@ -158,7 +158,7 @@ class SingboxConfigGenerator {
         final pbk = params['pbk'] ?? "";
         // VALIDATION: Prevent crash on invalid Reality configs
         if (pbk.trim().isEmpty) {
-           print('❌ [CONFIG-GEN] Invalid Reality Config: Missing public_key (pbk)');
+           FileLogger.log('❌ [CONFIG-GEN] Invalid Reality Config: Missing public_key (pbk)');
            throw Exception("Reality config missing public_key (pbk)");
         }
 
@@ -308,7 +308,7 @@ class SingboxConfigGenerator {
 
       return null;
     } catch (e) {
-      print('[CONFIG-GEN] Error extracting server details: $e');
+      FileLogger.log('[CONFIG-GEN] Error extracting server details: $e');
       return null;
     }
   }

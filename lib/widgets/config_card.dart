@@ -32,14 +32,14 @@ class ConfigCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isSelected
-              ? Colors.blueAccent.withOpacity(0.5)
+              ? Colors.blueAccent.withValues(alpha: 0.5)
               : const Color(0xFF2A2A2A),
           width: isSelected ? 1.5 : 1,
         ),
         boxShadow: isSelected
             ? [
                 BoxShadow(
-                  color: Colors.blueAccent.withOpacity(0.2),
+                  color: Colors.blueAccent.withValues(alpha: 0.2),
                   blurRadius: 8,
                   spreadRadius: 1,
                 ),
@@ -51,7 +51,7 @@ class ConfigCard extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(12),
-          splashColor: Colors.blueAccent.withOpacity(0.1),
+          splashColor: Colors.blueAccent.withValues(alpha: 0.1),
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Row(
@@ -61,10 +61,10 @@ class ConfigCard extends StatelessWidget {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: Colors.blueAccent.withOpacity(0.1),
+                    color: Colors.blueAccent.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: Colors.blueAccent.withOpacity(0.3),
+                      color: Colors.blueAccent.withValues(alpha: 0.3),
                     ),
                   ),
                   child: Center(
@@ -143,11 +143,11 @@ class ConfigCard extends StatelessWidget {
                               ),
                               decoration: BoxDecoration(
                                 color: (config.currentPing == -1 ? Colors.redAccent : _getPingColor(config.currentPing))
-                                    .withOpacity(0.1),
+                                    .withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(6),
                                 border: Border.all(
                                   color: (config.currentPing == -1 ? Colors.redAccent : _getPingColor(config.currentPing))
-                                      .withOpacity(0.3),
+                                      .withValues(alpha: 0.3),
                                 ),
                               ),
                               child: Text(
@@ -170,10 +170,10 @@ class ConfigCard extends StatelessWidget {
                                 vertical: 2,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.greenAccent.withOpacity(0.1),
+                                color: Colors.greenAccent.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(6),
                                 border: Border.all(
-                                  color: Colors.greenAccent.withOpacity(0.3),
+                                  color: Colors.greenAccent.withValues(alpha: 0.3),
                                 ),
                               ),
                               child: Text(
@@ -282,7 +282,7 @@ class ConfigCard extends StatelessWidget {
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.blueAccent.withOpacity(0.5),
+                              color: Colors.blueAccent.withValues(alpha: 0.5),
                               blurRadius: 4,
                               spreadRadius: 1,
                             ),
@@ -323,8 +323,8 @@ class ConfigCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         gradient: LinearGradient(
           colors: [
-            Colors.blueAccent.withOpacity(0.3),
-            Colors.indigoAccent.withOpacity(0.2),
+            Colors.blueAccent.withValues(alpha: 0.3),
+            Colors.indigoAccent.withValues(alpha: 0.2),
           ],
         ),
       ),

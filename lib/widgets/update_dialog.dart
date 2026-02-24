@@ -7,11 +7,11 @@ class UpdateDialog extends StatelessWidget {
   final VoidCallback onUpdate;
 
   const UpdateDialog({
-    Key? key,
+    super.key,
     required this.version,
     required this.releaseNotes,
     required this.onUpdate,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +31,7 @@ class UpdateDialog extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.blueAccent.withOpacity(0.1),
+                    color: Colors.blueAccent.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.system_update, color: Colors.blueAccent, size: 28),

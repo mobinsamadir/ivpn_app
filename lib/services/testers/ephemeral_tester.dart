@@ -313,7 +313,7 @@ class EphemeralTester {
               throw TimeoutException("Process spawn timed out");
             });
 
-            registerProcess(process!);
+            registerProcess(process);
 
             await Future.delayed(const Duration(milliseconds: 500));
 
@@ -408,9 +408,13 @@ class EphemeralTester {
           AdvancedLogger.warn("EphemeralTester Error (${config.name}): $e");
 
           String failedStage = "Init";
-          if (!stage1Success) failedStage = "Stage1_ProxyInit";
-          else if (!stage2Success) failedStage = "Stage2_HTTP";
-          else failedStage = "Stage3_Speed";
+          if (!stage1Success) {
+            failedStage = "Stage1_ProxyInit";
+          } else if (!stage2Success) {
+            failedStage = "Stage2_HTTP";
+          } else {
+            failedStage = "Stage3_Speed";
+          }
 
           return config.copyWith(
             funnelStage: 0,
@@ -424,7 +428,7 @@ class EphemeralTester {
           dartHttpClient.close();
           try {
             if (process != null) {
-              process!.kill(ProcessSignal.sigkill);
+              process.kill(ProcessSignal.sigkill);
               _activeProcesses.remove(process);
             }
           } catch (e) {

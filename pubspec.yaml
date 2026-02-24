@@ -39,6 +39,7 @@ dependencies:
   package_info_plus: ^8.0.0
   pub_semver: ^2.1.4
   permission_handler: ^11.3.1
+  collection: ^1.17.0
   
   # File Opening (Fixed for Android)
   open_file: ^3.5.10 # جایگزین نسخه Plus شد
@@ -52,10 +53,9 @@ dev_dependencies:
   mockito: ^5.4.4
   
   # Build Script Requirements (حیاتی برای setup_core.dart)
-  http: ^1.2.0
   archive: ^3.6.1
-  path: ^1.9.0 # اضافه شد تا اسکریپت بیلد به مشکل نخورد
   mocktail: ^1.0.4
+  webview_flutter_platform_interface: ^2.9.0
 
 # تنظیمات آیکون
 flutter_launcher_icons:

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
@@ -15,7 +16,7 @@ class FileLogger {
       await log("------------------------------------------");
       await log("Session Started: ${DateTime.now()}");
     } catch (e) {
-      print("Error initializing FileLogger: $e");
+      debugPrint("Error initializing FileLogger: $e");
     }
   }
 
@@ -24,13 +25,13 @@ class FileLogger {
     final formattedLine = "[$timestamp] $message\n";
     
     // Also print to console for development
-    print(formattedLine.trim());
+    debugPrint(formattedLine.trim());
 
     if (_logFile != null) {
       try {
         await _logFile!.writeAsString(formattedLine, mode: FileMode.append);
       } catch (e) {
-        print("Failed to write to log file: $e");
+        debugPrint("Failed to write to log file: $e");
       }
     }
   }

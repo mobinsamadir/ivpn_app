@@ -12,6 +12,10 @@ on:
       - 'lib/**'
       - 'test/**'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -35,4 +39,4 @@ jobs:
         run: flutter pub get
 
       - name: Run Tests
-        run: flutter test --coverage
+        run: flutter test --coverage test/
