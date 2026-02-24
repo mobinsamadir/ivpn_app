@@ -110,8 +110,8 @@ class AdvancedLogger {
 
   /// Private logging method
   static void _log(LogLevel level, String message, {Map<String, dynamic>? metadata}) {
-    // Release Mode: Only allow critical errors
-    if (kReleaseMode && level != LogLevel.error) return;
+    // Release Mode: Only allow critical errors AND warnings (for native logs)
+    if (kReleaseMode && level.index < LogLevel.warn.index) return;
 
     if (level.index < _minLevel.index) return;
 

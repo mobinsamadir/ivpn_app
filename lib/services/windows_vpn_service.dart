@@ -296,7 +296,8 @@ class WindowsVpnService {
               trimmedData.toLowerCase().contains('fatal')) {
             AdvancedLogger.error('[WindowsVpnService] stderr: $trimmedData');
           } else {
-            AdvancedLogger.info('[WindowsVpnService] stderr: $trimmedData');
+            // CRITICAL: Log stderr as WARN so it appears in Release mode (as requested)
+            AdvancedLogger.warn('[WindowsVpnService] stderr: $trimmedData');
           }
 
           if (trimmedData.toLowerCase().contains("started") || trimmedData.toLowerCase().contains("tun")) {

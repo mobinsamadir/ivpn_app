@@ -93,7 +93,90 @@ class EphemeralTester {
   /// Runs the Funnel Test on a specific config based on the mode.
   /// Returns a VpnConfigWithMetrics object with updated stageResults and scores.
   Future<VpnConfigWithMetrics> runTest(VpnConfigWithMetrics config, {TestMode mode = TestMode.speed}) async {
+    final completer = Completer<VpnConfigWithMetrics>();
 
+    // Variables for Watchdog Cleanup
+    Process? processForCleanup;
+    int portForCleanup = 0;
+    bool isCompleted = false;
+
+    // Watchdog Timer
+    final timer = Timer(const Duration(seconds: 10), () {
+      if (!isCompleted) {
+        isCompleted = true;
+        AdvancedLogger.warn("[EphemeralTester] WATCHDOG TRIGGERED for ${config.name}. Killing resources...");
+
+        // Explicit Cleanup
+        if (processForCleanup != null) {
+            try {
+              processForCleanup!.kill(ProcessSignal.sigkill);
+              AdvancedLogger.info("Watchdog: Process killed.");
+            } catch (_) {}
+            _activeProcesses.remove(processForCleanup);
+        }
+
+        if (portForCleanup > 0) {
+           PortAllocator().release(portForCleanup);
+           AdvancedLogger.info("Watchdog: Port released.");
+        }
+
+        // Note: Semaphore release is tricky here if we are not inside the flow.
+        // Ideally _runTestInternal finally block should handle it.
+        // But if we complete here, the caller moves on.
+        // The _runTestInternal logic continues in background!
+        // We rely on process kill to stop _runTestInternal's execution flow (it will crash/exit).
+        // BUT the semaphore release is in finally block of _runTestInternal.
+        // If we kill process, `await process.exitCode` returns, and `finally` block runs!
+        // So Semaphore release SHOULD happen naturally after kill.
+
+        completer.complete(config.copyWith(
+            funnelStage: 0,
+            failureReason: "Strict Watchdog Timeout (10s)",
+            lastFailedStage: "Watchdog_Timeout",
+            failureCount: config.failureCount + 1,
+            lastTestedAt: DateTime.now(),
+            ping: -1,
+        ));
+      }
+    });
+
+    // Helper to capture resources
+    void setProcess(Process? p) => processForCleanup = p;
+    void setPort(int p) => portForCleanup = p;
+
+    // Run Logic
+    _runTestInternal(config, mode, setProcess, setPort).then((result) {
+      if (!isCompleted) {
+        isCompleted = true;
+        timer.cancel();
+        completer.complete(result);
+      }
+    }).catchError((e) {
+      if (!isCompleted) {
+        isCompleted = true;
+        timer.cancel();
+        // If error happens, _runTestInternal's finally block handles cleanup.
+        // We just report error.
+        completer.complete(config.copyWith(
+            funnelStage: 0,
+            failureReason: "Test Error: $e",
+            lastFailedStage: "Error",
+            failureCount: config.failureCount + 1,
+            lastTestedAt: DateTime.now(),
+            ping: -1,
+        ));
+      }
+    });
+
+    return completer.future;
+  }
+
+  Future<VpnConfigWithMetrics> _runTestInternal(
+      VpnConfigWithMetrics config,
+      TestMode mode,
+      Function(Process?) onProcess,
+      Function(int) onPort,
+  ) async {
     // --- ANDROID PATH (STRICT SERIALIZATION FOR STAGE 2/3) ---
     if (Platform.isAndroid) {
        // STAGE 1: TCP Check (Concurrent - No Semaphore)
@@ -137,10 +220,11 @@ class EphemeralTester {
        String? errorMsg;
 
        try {
-          // Allocate dynamic port for Android too (prevents 10808 bind errors)
+          // Allocate dynamic port
           listenPort = await PortAllocator().allocate();
+          onPort(listenPort); // Register for watchdog
 
-          // Generate Test Config (isTest=true for lighter routing)
+          // Generate Test Config
           final jsonConfig = await compute(_generateConfigWrapper, {
             'rawConfig': config.rawConfig,
             'listenPort': listenPort,
@@ -154,7 +238,7 @@ class EphemeralTester {
              throw Exception("Failed to start Native Test Proxy (Code: $proxyPort)");
           }
 
-          // Setup HttpClient with SOCKS Proxy
+          // Setup HttpClient
           final client = HttpClient();
 
           try {
@@ -178,13 +262,12 @@ class EphemeralTester {
               throw Exception("Stage 2 (HTTP) Failed: $e");
             }
 
-            // Test Speed (Stage 3) - Only if requested and Stage 2 passed
+            // Test Speed (Stage 3)
             if (mode == TestMode.speed && stage2Success) {
               int bytes = 0;
               final speedSw = Stopwatch();
               try {
                   speedSw.start();
-                  // Download ~1MB test file
                   final speedReq = await client.getUrl(Uri.parse('http://speed.cloudflare.com/__down?bytes=1000000'));
                   final speedResp = await speedReq.close();
 
@@ -200,11 +283,9 @@ class EphemeralTester {
                   }
               } catch (e) {
                   AdvancedLogger.warn("Stage 3 (Speed) Failed: $e");
-                  // Don't fail the whole config if speed test fails, just mark speed 0
               }
             }
           } finally {
-            // FIX: Ensure client is closed to prevent socket leak
             client.close();
           }
 
@@ -255,7 +336,6 @@ class EphemeralTester {
        );
     } else {
         // --- WINDOWS / DESKTOP PATH ---
-        // Acquire Semaphore
         await _windowsSemaphore.acquire();
 
         int port = 0;
@@ -263,20 +343,17 @@ class EphemeralTester {
         File? tempConfigFile;
         final dartHttpClient = HttpClient();
 
-        // Results containers
         bool stage1Success = false;
         bool stage2Success = false;
         double speedMbps = 0.0;
         int latency = 0;
 
         try {
-            // Use Port Allocator
             port = await PortAllocator().allocate();
+            onPort(port); // Register for watchdog
 
             final testId = DateTime.now().millisecondsSinceEpoch;
 
-            // 1. Prepare Config (JSON)
-            // FIX: EnsureBinary is strictly bypassed on Android via the if/else wrapper
             final binPath = await BinaryManager.ensureBinary();
             final tempDir = await getTemporaryDirectory();
             tempConfigFile = File(p.join(tempDir.path, 'test_${config.id}_$testId.json'));
@@ -288,24 +365,19 @@ class EphemeralTester {
             });
 
             final Map<String, dynamic> parsedJson = jsonDecode(jsonConfig);
-
             parsedJson['log'] = {
               "level": "fatal",
               "output": "stderr",
               "timestamp": true
             };
-
             if (parsedJson['inbounds'] is List) {
               for (var inbound in parsedJson['inbounds']) {
                 inbound['listen'] = "127.0.0.1";
               }
             }
-
             await tempConfigFile.writeAsString(jsonEncode(parsedJson));
 
-            // 2. Spawn Process
-            await Future.delayed(Duration.zero);
-
+            // Start Process
             final processFuture = Process.start(
               binPath,
               ['run', '-c', tempConfigFile.path],
@@ -318,14 +390,18 @@ class EphemeralTester {
               throw TimeoutException("Process spawn timed out");
             });
 
-            registerProcess(process);
-
+            onProcess(process); // Register for watchdog
+            registerProcess(process!);
             await Future.delayed(const Duration(milliseconds: 500));
 
+            // Setup Client
+            // FIX: SingboxConfigGenerator sets HTTP port to listenPort + 1
+            // Use port + 1 for HTTP request
             dartHttpClient.findProxy = (uri) => "PROXY 127.0.0.1:${port + 1}";
             dartHttpClient.connectionTimeout = const Duration(seconds: 5);
 
-            // --- STAGE 1 (TCP) ---
+            // STAGE 1 (TCP)
+            // Just check if port is open
             int attempts = 0;
             while (attempts < 3) {
               try {
@@ -338,10 +414,9 @@ class EphemeralTester {
                 await Future.delayed(const Duration(milliseconds: 500));
               }
             }
+            if (!stage1Success) throw Exception("Local Proxy failed to start on port $port");
 
-            if (!stage1Success) throw Exception("Local Proxy failed to start");
-
-            // --- STAGE 2 (HTTP) ---
+            // STAGE 2 (HTTP)
             final sw = Stopwatch()..start();
             try {
                 final req = await dartHttpClient.getUrl(Uri.parse('https://www.google.com/generate_204'));
@@ -358,32 +433,27 @@ class EphemeralTester {
                 throw Exception("Stage 2 Failed: $e");
             }
 
-            // --- STAGE 3 (Speed) ---
+            // STAGE 3 (Speed)
             if (mode == TestMode.speed) {
               int bytes = 0;
               final speedSw = Stopwatch();
-
               try {
                   speedSw.start();
                   final speedReq = await dartHttpClient.getUrl(Uri.parse('http://speed.cloudflare.com/__down?bytes=1000000'));
                   final speedResp = await speedReq.close();
-
                   await speedResp.listen((chunk) {
                     bytes += chunk.length;
                   }).asFuture().timeout(const Duration(seconds: 5));
-
                   speedSw.stop();
-
                   final durationSec = speedSw.elapsedMilliseconds / 1000.0;
                   if (durationSec > 0 && bytes > 0) {
                     speedMbps = (bytes * 8) / (durationSec * 1000000);
                   }
               } catch (e) {
-                  AdvancedLogger.warn("Stage 3 (Speed) failed/timed out: $e");
+                  AdvancedLogger.warn("Stage 3 (Speed) failed: $e");
               }
             }
 
-            // Success Logic
             int score = 0;
             if (speedMbps > 0) score += (speedMbps * 5).clamp(0, 50).toInt();
             if (latency > 0) score += (1000 ~/ latency).clamp(0, 50).toInt();
@@ -411,15 +481,10 @@ class EphemeralTester {
 
         } catch (e) {
           AdvancedLogger.warn("EphemeralTester Error (${config.name}): $e");
-
           String failedStage = "Init";
-          if (!stage1Success) {
-            failedStage = "Stage1_ProxyInit";
-          } else if (!stage2Success) {
-            failedStage = "Stage2_HTTP";
-          } else {
-            failedStage = "Stage3_Speed";
-          }
+          if (!stage1Success) failedStage = "Stage1_ProxyInit";
+          else if (!stage2Success) failedStage = "Stage2_HTTP";
+          else failedStage = "Stage3_Speed";
 
           return config.copyWith(
             funnelStage: 0,
@@ -445,7 +510,6 @@ class EphemeralTester {
             }
           } catch (_) {}
 
-          // Release Port & Semaphore
           if (port > 0) PortAllocator().release(port);
           _windowsSemaphore.release();
         }
