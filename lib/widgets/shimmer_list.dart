@@ -6,11 +6,13 @@ class ShimmerList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
-      itemCount: 8,
-      physics: const NeverScrollableScrollPhysics(),
-      // Rendering Optimization: RepaintBoundary
-      itemBuilder: (context, index) => const RepaintBoundary(child: ShimmerConfigCard()),
+    return RepaintBoundary(
+      child: ListView.builder(
+        itemCount: 8,
+        physics: const NeverScrollableScrollPhysics(),
+        // Rendering Optimization: RepaintBoundary
+        itemBuilder: (context, index) => const RepaintBoundary(child: ShimmerConfigCard()),
+      ),
     );
   }
 }
