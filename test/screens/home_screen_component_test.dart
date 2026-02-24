@@ -140,7 +140,8 @@ void main() {
     when(() => mockConfigManager.isConnected).thenReturn(false);
     when(() => mockConfigManager.connectionStatus).thenReturn('Disconnected');
     when(() => mockConfigManager.isAutoSwitchEnabled).thenReturn(true);
-    when(() => mockConfigGistService.fetchAndApplyConfigs(any(), force: any(named: 'force'))).thenAnswer((_) async {});
+    // FIXED: Return Future<bool>
+    when(() => mockConfigGistService.fetchAndApplyConfigs(any(), force: any(named: 'force'))).thenAnswer((_) async => true);
 
     // Add Listener to ConfigManager (ChangeNotifier)
     when(() => mockConfigManager.addListener(any())).thenReturn(null);
@@ -199,6 +200,9 @@ void main() {
        when(() => mockConfigManager.setConnected(any(), status: any(named: 'status'))).thenReturn(null);
        when(() => mockConfigManager.selectConfig(any())).thenReturn(null);
 
+       // FIXED: Mock selectedConfig to be not null
+       when(() => mockConfigManager.selectedConfig).thenReturn(config);
+
        await tester.pumpWidget(createWidget());
        await tester.pumpAndSettle();
 
@@ -206,6 +210,28 @@ void main() {
        await tester.pump();
 
        verify(() => mockConfigManager.connectWithSmartFailover()).called(1);
+    });
+
+    testWidgets('Connect Button shows error if no config selected', (tester) async {
+       final config = VpnConfigWithMetrics(
+          id: 'test_1',
+          rawConfig: 'vmess://...',
+          name: 'Test Server',
+          addedDate: DateTime.now()
+       );
+       when(() => mockConfigManager.allConfigs).thenReturn([config]);
+       // Ensure selectedConfig is null
+       when(() => mockConfigManager.selectedConfig).thenReturn(null);
+
+       await tester.pumpWidget(createWidget());
+       await tester.pumpAndSettle();
+
+       await tester.tap(find.text('CONNECT'));
+       await tester.pump();
+       await tester.pump(const Duration(seconds: 1)); // Show snackbar
+
+       expect(find.text('❌ Please select a server from the list first.'), findsOneWidget);
+       verifyNever(() => mockConfigManager.connectWithSmartFailover());
     });
 
     testWidgets('UI updates to Connected state when VPN status changes', (tester) async {
@@ -290,6 +316,8 @@ void main() {
        when(() => mockConfigManager.allConfigs).thenReturn([config]);
        when(() => mockConfigManager.validatedConfigs).thenReturn([config]);
        when(() => mockConfigManager.connectWithSmartFailover()).thenAnswer((_) async {});
+       // Mock selectedConfig
+       when(() => mockConfigManager.selectedConfig).thenReturn(config);
 
        await tester.pumpWidget(createWidget());
        await tester.pumpAndSettle();
@@ -334,6 +362,7 @@ void main() {
        when(() => mockConfigManager.allConfigs).thenReturn([config]);
        when(() => mockConfigManager.validatedConfigs).thenReturn([config]);
        when(() => mockConfigManager.connectWithSmartFailover()).thenAnswer((_) async {});
+       when(() => mockConfigManager.selectedConfig).thenReturn(config);
 
        await tester.pumpWidget(createWidget());
        await tester.pumpAndSettle();
@@ -378,6 +407,7 @@ void main() {
        when(() => mockConfigManager.allConfigs).thenReturn([config]);
        when(() => mockConfigManager.validatedConfigs).thenReturn([config]);
        when(() => mockConfigManager.connectWithSmartFailover()).thenAnswer((_) async {});
+       when(() => mockConfigManager.selectedConfig).thenReturn(config);
 
        await tester.pumpWidget(createWidget());
        await tester.pumpAndSettle();
@@ -437,6 +467,7 @@ void main() {
        when(() => mockConfigManager.allConfigs).thenReturn([config]);
        when(() => mockConfigManager.validatedConfigs).thenReturn([config]);
        when(() => mockConfigManager.getBestConfig()).thenAnswer((_) async => config);
+       when(() => mockConfigManager.selectedConfig).thenReturn(config);
 
        // Setup: connectWithSmartFailover mocks
        when(() => mockConfigManager.setConnected(any(), status: any(named: 'status'))).thenReturn(null);
@@ -513,6 +544,7 @@ void main() {
        final config = VpnConfigWithMetrics(id: 'c1', rawConfig: 'v1', name: 'Server 1', addedDate: DateTime.now());
        when(() => mockConfigManager.allConfigs).thenReturn([config]);
        when(() => mockConfigManager.validatedConfigs).thenReturn([config]);
+       when(() => mockConfigManager.selectedConfig).thenReturn(config);
 
        await tester.pumpWidget(createWidget());
        await tester.pumpAndSettle();
