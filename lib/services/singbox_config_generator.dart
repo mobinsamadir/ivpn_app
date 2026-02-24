@@ -1,6 +1,7 @@
 
 import 'dart:convert';
 import 'dart:math';
+import 'package:flutter/foundation.dart'; // For kDebugMode
 import '../utils/file_logger.dart';
 import '../utils/base64_utils.dart';
 
@@ -17,7 +18,9 @@ class SingboxConfigGenerator {
     final socksPort = listenPort;
     final httpPort = listenPort + 1;
     final link = rawLink.trim();
-    FileLogger.log("--- Parsing Protocol: ${link.split('://').first} ---");
+    if (kDebugMode) {
+      FileLogger.log("--- Parsing Protocol: ${link.split('://').first} ---");
+    }
 
     try {
       if (link.toLowerCase().startsWith('vmess://')) {

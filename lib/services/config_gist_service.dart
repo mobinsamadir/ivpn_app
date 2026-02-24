@@ -19,7 +19,7 @@ class ConfigGistService {
   static const String _lastFetchKey = 'last_config_fetch_timestamp';
   static const String _backupConfigsKey = 'gist_backup_configs';
   static const Duration _fetchInterval = Duration(hours: 24);
-  static const String _updateUrl = 'https://raw.githubusercontent.com/mobinsamadir/ivpn-servers/refs/heads/main/version.json';
+  static const String _updateUrl = 'https://gist.githubusercontent.com/mobinsamadir/1f91132e6d919d2dec5085a90c47ed4a/raw/7a8a456296fdf33ad4dd4d7a447dbfce0e966adb/version.json';
 
   // Mirrors List (GitHub -> Gist -> MyFiles -> Drive API)
   static const List<String> _mirrors = [

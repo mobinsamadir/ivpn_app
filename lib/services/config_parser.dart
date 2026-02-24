@@ -25,7 +25,9 @@ Future<List<String>> parseConfigsInIsolate(String text) async {
        processedText = '$bodyText\n$hrefs';
      } catch (e) {
        // Fallback to raw text if parsing fails
-       debugPrint('[ConfigParser] HTML parsing failed: $e');
+       if (kDebugMode) {
+         debugPrint('[ConfigParser] HTML parsing failed: $e');
+       }
      }
   }
   // 2. CHECK IF ALREADY A PROTOCOL (Before decoding)
@@ -65,7 +67,9 @@ Future<List<String>> parseConfigsInIsolate(String text) async {
            }
            collectedConfigs.add(config);
         } catch (e) {
-           debugPrint("Failed to parse extracted config. Error: $e");
+           if (kDebugMode) {
+             debugPrint("Failed to parse extracted config. Error: $e");
+           }
         }
      }
   }

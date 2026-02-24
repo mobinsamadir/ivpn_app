@@ -43,7 +43,8 @@ class NativeVpnService {
           final String message = event.toString();
 
           // 1. Always log to Console/File (Requirement: Native Log Redirection)
-          AdvancedLogger.info("📡 [Native] $message");
+          // CRITICAL: Use WARN to ensure it shows in Release mode per request
+          AdvancedLogger.warn("📡 [Native] $message");
 
           // 2. Smart Filter: Only update UI for valid status changes to prevent UI jank
           // Known statuses: CONNECTED, CONNECTING, DISCONNECTED, RECONNECTING
@@ -91,7 +92,9 @@ class NativeVpnService {
     if (Platform.isWindows) return -1; // Handled by EphemeralTester directly on Windows
 
     try {
-       AdvancedLogger.info("DEBUG_CONFIG: $configJson");
+       if (kDebugMode) {
+          AdvancedLogger.info("DEBUG_CONFIG: $configJson");
+       }
        final int result = await _methodChannel.invokeMethod('startTestProxy', {'config': configJson});
        return result;
     } catch (e) {
@@ -126,7 +129,9 @@ class NativeVpnService {
       });
 
       AdvancedLogger.info("🚀 [Native] Connecting with config length: ${configJson.length}...");
-      AdvancedLogger.info("DEBUG_CONFIG: $configJson");
+      if (kDebugMode) {
+         AdvancedLogger.info("DEBUG_CONFIG: $configJson");
+      }
       await _methodChannel.invokeMethod('startVpn', {'config': configJson});
 
       // CRITICAL FIX: Removed fake "CONNECTED" state.

@@ -67,6 +67,9 @@ jobs:
           flutter pub get
           dart run tool/setup_core.dart
 
+      - name: Update Version Code (Dynamic)
+        run: dart run tool/update_version.dart
+
       - name: Build iVPN Windows
         run: |
           flutter pub get
@@ -140,6 +143,9 @@ jobs:
         run: |
           flutter pub get
           dart run tool/setup_core.dart
+
+      - name: Update Version Code (Dynamic)
+        run: dart run tool/update_version.dart
 
       - name: Cache AARs
         id: aar-cache
