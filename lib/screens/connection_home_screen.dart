@@ -14,6 +14,7 @@ import '../services/funnel_service.dart';
 import '../services/testers/ephemeral_tester.dart';
 import '../services/update_service_wrapper.dart';
 import '../services/connectivity_service.dart';
+import '../widgets/ad_explanation_dialog.dart';
 import 'settings_screen.dart';
 
 class ConnectionHomeScreen extends StatefulWidget {
@@ -140,13 +141,13 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
         // NEW: Post-Connect Logic (Anti-Censorship)
         if (status == 'CONNECTED') {
            AdvancedLogger.info("[HomeScreen] VPN Connected. Retrying config fetch...");
-           _configManager.fetchStartupConfigs();
+           // _configManager.fetchStartupConfigs(); // Disabled autonomous config fetch
 
            // Trigger Updates & Ads with Delay
            Future.delayed(const Duration(seconds: 3), () {
              if (mounted) {
                AdvancedLogger.info("[HomeScreen] Triggering Post-Connect Update & Ad Check...");
-               _updateServiceWrapper.checkForUpdatesSilently(context);
+               // _updateServiceWrapper.checkForUpdatesSilently(context); // Disabled per Architect Directive Phase 2
                _adManagerService.fetchLatestAds();
              }
            });
@@ -271,28 +272,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     final engage = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E1E),
-        title: const Text('Add 1 Hour Time', style: TextStyle(color: Colors.white)),
-        content: const Text(
-          'To keep the service free, please engage with our sponsor.\n\n'
-          '1. Click "View Ad"\n'
-          '2. Wait 5 seconds\n'
-          '3. Close the ad and claim your reward.',
-          style: TextStyle(color: Colors.grey),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent),
-            child: const Text('View Ad', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+      builder: (context) => const AdExplanationDialog(),
     );
 
     if (engage == true) {

@@ -17,6 +17,7 @@ import 'screens/splash_screen.dart'; // Ensure this import exists
 import 'services/windows_vpn_service.dart';
 
 void main() {
+  // Verified: No periodic update timers found in main.dart
   // 1. Ensure bindings first (Must be first)
   WidgetsFlutterBinding.ensureInitialized();
 

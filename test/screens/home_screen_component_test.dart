@@ -12,6 +12,7 @@ import 'package:ivpn_new/services/access_manager.dart';
 import 'package:ivpn_new/services/connectivity_service.dart';
 import 'package:ivpn_new/services/update_service_wrapper.dart';
 import 'package:ivpn_new/models/vpn_config_with_metrics.dart';
+import 'package:ivpn_new/widgets/ad_explanation_dialog.dart';
 import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
 
 // --- MOCKS ---
@@ -295,7 +296,8 @@ void main() {
        await tester.tap(find.text('CONNECT'));
        await tester.pumpAndSettle();
 
-       // Verify "Add 1 Hour Time" Dialog appears
+       // Verify "Add 1 Hour Time" Dialog appears via Widget Type and Text
+       expect(find.byType(AdExplanationDialog), findsOneWidget);
        expect(find.text('Add 1 Hour Time'), findsOneWidget);
        expect(find.textContaining('To keep the service free'), findsOneWidget);
 
