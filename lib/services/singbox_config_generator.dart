@@ -155,7 +155,7 @@ class SingboxConfigGenerator {
       }
 
       if (security == "reality") {
-        final pbk = params['pbk'] ?? "";
+        final pbk = params['pbk'] ?? params['public_key'] ?? "";
         // VALIDATION: Prevent crash on invalid Reality configs
         if (pbk.trim().isEmpty) {
            FileLogger.log('❌ [CONFIG-GEN] Invalid Reality Config: Missing public_key (pbk)');

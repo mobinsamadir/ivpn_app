@@ -25,6 +25,11 @@ String _generateConfigWrapper(Map<String, dynamic> args) {
   );
 }
 
+// Top-level function for compute to extract server details
+Map<String, dynamic>? _extractHostPortWrapper(String config) {
+  return SingboxConfigGenerator.extractServerDetails(config);
+}
+
 /// Semaphore to limit concurrent operations
 class Semaphore {
   final int max;
@@ -85,11 +90,6 @@ class EphemeralTester {
     _activeProcesses.clear();
   }
 
-  /// Helper to extract host/port using the robust generator logic
-  Map<String, dynamic>? _extractHostPort(String config) {
-    return SingboxConfigGenerator.extractServerDetails(config);
-  }
-
   /// Runs the Funnel Test on a specific config based on the mode.
   /// Returns a VpnConfigWithMetrics object with updated stageResults and scores.
   Future<VpnConfigWithMetrics> runTest(VpnConfigWithMetrics config, {TestMode mode = TestMode.speed}) async {
@@ -98,7 +98,8 @@ class EphemeralTester {
     if (Platform.isAndroid) {
        // STAGE 1: TCP Check (Concurrent - No Semaphore)
        try {
-          final details = _extractHostPort(config.rawConfig);
+          // Offload parsing to Isolate
+          final details = await compute(_extractHostPortWrapper, config.rawConfig);
           if (details == null) throw Exception("Could not extract server details");
 
           final String host = details['host'];

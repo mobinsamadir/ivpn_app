@@ -80,6 +80,7 @@ class NativeVpnService {
     if (Platform.isWindows) return -1; // Handled by EphemeralTester directly on Windows
 
     try {
+       AdvancedLogger.info("DEBUG_CONFIG: $configJson");
        final int result = await _methodChannel.invokeMethod('startTestProxy', {'config': configJson});
        return result;
     } catch (e) {
@@ -114,6 +115,7 @@ class NativeVpnService {
       });
 
       AdvancedLogger.info("🚀 [Native] Connecting with config length: ${configJson.length}...");
+      AdvancedLogger.info("DEBUG_CONFIG: $configJson");
       await _methodChannel.invokeMethod('startVpn', {'config': configJson});
 
       // CRITICAL FIX: Removed fake "CONNECTED" state.
