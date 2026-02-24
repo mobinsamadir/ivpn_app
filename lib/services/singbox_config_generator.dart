@@ -87,22 +87,91 @@ class SingboxConfigGenerator {
   }
 
   static String _parseUriStandard(String link, {required int socksPort, required int httpPort, required bool isTest}) {
-    // print('[CONFIG-GEN] Parsing standard URI: ${link.substring(0, link.length > 30 ? 30 : link.length)}...');
-    
-    Uri uri;
+    Uri? uri;
     try {
       uri = Uri.parse(link);
     } catch (e) {
-      throw FormatException("Invalid URI: $link");
+      // Intentionally ignored, will handle manual parsing or fallback below
     }
 
-    final protocol = uri.scheme;
-    final String userInfo = uri.userInfo;
-    final String host = uri.host;
-    // Fallback port logic
-    final int port = uri.hasPort ? uri.port : 443;
+    String? protocol;
+    String? userInfo;
+    String? host;
+    int port = 443;
+    Map<String, String> params = {};
 
-    final Map<String, String> params = uri.queryParameters;
+    // 1. TRY STANDARD URI PARSING
+    if (uri != null && uri.hasScheme && uri.host.isNotEmpty) {
+       protocol = uri.scheme;
+       userInfo = uri.userInfo;
+       host = uri.host;
+       port = uri.hasPort ? uri.port : 443;
+       params = Map.from(uri.queryParameters); // Copy to allow modification
+    }
+    // 2. FALLBACK: MANUALLY PARSE IF URI FAILED OR LOOKS MALFORMED (e.g. Base64 block)
+    // IMPORTANT: Check if protocol is vless/trojan but NOT followed by typical host (Base64 instead)
+    if (host == null || (host.isNotEmpty && !host.contains('.') && !host.contains(':') && host.length > 20)) {
+       final schemeSplit = link.split('://');
+       if (schemeSplit.length == 2) {
+          protocol = schemeSplit[0];
+          final rest = schemeSplit[1];
+
+          // Check if it's a Base64 blob (common in some subscription formats)
+          final possibleBase64 = rest.split('#').first;
+
+          if (!possibleBase64.contains('?') && !possibleBase64.contains('@')) {
+             try {
+                final decoded = Base64Utils.safeDecode(possibleBase64);
+                if (decoded.startsWith('{')) {
+                   final json = jsonDecode(decoded);
+                   // Extract from JSON
+                   host = json['add'];
+                   port = int.tryParse(json['port']?.toString() ?? '443') ?? 443;
+                   userInfo = json['id']; // UUID
+
+                   // Map JSON fields to params expected by logic below
+                   if (json['scy'] != null) params['security'] = json['scy'];
+                   if (json['net'] != null) params['type'] = json['net'];
+                   if (json['type'] != null) params['type'] = json['type']; // Sometimes 'type'
+                   if (json['tls'] != null && json['tls'] != "none") params['security'] = json['tls'];
+
+                   if (json['sni'] != null) params['sni'] = json['sni'];
+                   if (json['host'] != null) params['host'] = json['host'];
+                   if (json['path'] != null) params['path'] = json['path'];
+                   if (json['pbk'] != null) params['pbk'] = json['pbk'];
+                   if (json['sid'] != null) params['sid'] = json['sid'];
+                   if (json['fp'] != null) params['fp'] = json['fp'];
+                   if (json['alpn'] != null) params['alpn'] = json['alpn'];
+                   if (json['flow'] != null) params['flow'] = json['flow'];
+                }
+             } catch (_) {
+                // Not JSON or decode failed
+             }
+          }
+       }
+    }
+
+    // 3. SPECIAL HANDLING: CASE-INSENSITIVE HOST for VLESS
+    if (host != null && protocol != null && (protocol == 'vless' || protocol == 'trojan')) {
+       if (uri != null) {
+          try {
+             final afterAt = link.split('@');
+             if (afterAt.length > 1) {
+                final hostPart = afterAt.last.split(RegExp(r'[:/?#]')).first;
+                if (hostPart.toLowerCase() == host.toLowerCase()) {
+                   host = hostPart; // Restore original casing
+                }
+             }
+          } catch (_) {}
+       }
+    }
+
+    // If still failed or host is empty (unparsed base64 that wasn't JSON)
+    if (host == null || host.isEmpty || protocol == null) {
+       // Fallback for non-standard URI parsing
+       throw FormatException("Invalid URI or Config Format: $link");
+    }
+
     final String security = params['security'] ?? "none";
 
     final Map<String, dynamic> outbound = {
@@ -162,7 +231,7 @@ class SingboxConfigGenerator {
         final pbk = params['pbk'] ?? params['public_key'] ?? "";
         // VALIDATION: Prevent crash on invalid Reality configs
         if (pbk.trim().isEmpty) {
-           FileLogger.log('❌ [CONFIG-GEN] Invalid Reality Config: Missing public_key (pbk)');
+           FileLogger.log('❌ [CONFIG-GEN] Invalid Reality Config: Missing public_key (pbk). RAW: $link');
            throw Exception("Reality config missing public_key (pbk)");
         }
 

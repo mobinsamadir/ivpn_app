@@ -1,7 +1,7 @@
 # Project-level configuration.
 cmake_minimum_required(VERSION 3.14)
 
-project(ivpn_new LANGUAGES CXX)
+project(iVPN LANGUAGES CXX)
 
 # Force static linking of the MSVC runtime
 set(CompilerFlags
