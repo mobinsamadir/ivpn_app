@@ -78,7 +78,9 @@ class _UniversalAdWidgetState extends State<UniversalAdWidget> {
     return SizedBox(
       width: widget.width ?? double.infinity,
       height: effectiveHeight,
-      child: _buildContent(ad),
+      child: ConstrainedBox(
+          constraints: BoxConstraints.tightFor(height: effectiveHeight),
+          child: _buildContent(ad)),
     );
   }
 

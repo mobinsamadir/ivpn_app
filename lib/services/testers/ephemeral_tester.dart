@@ -129,6 +129,7 @@ class EphemeralTester {
 
        final nativeService = NativeVpnService();
        int proxyPort = -1;
+       int listenPort = 0; // NEW: Dynamic Port Allocation
        int latency = 0;
        double speedMbps = 0.0;
        bool stage2Success = false;
@@ -136,11 +137,13 @@ class EphemeralTester {
        String? errorMsg;
 
        try {
+          // Allocate dynamic port for Android too (prevents 10808 bind errors)
+          listenPort = await PortAllocator().allocate();
+
           // Generate Test Config (isTest=true for lighter routing)
-          // We pass listenPort=0 as Android ignores it and assigns random, but generator needs int
           final jsonConfig = await compute(_generateConfigWrapper, {
             'rawConfig': config.rawConfig,
-            'listenPort': 10808,
+            'listenPort': listenPort,
             'isTest': true,
           });
 
@@ -162,7 +165,7 @@ class EphemeralTester {
             final sw = Stopwatch()..start();
             try {
               final req = await client.getUrl(Uri.parse('https://www.google.com/generate_204'));
-              final resp = await req.close();
+              final resp = await req.close().timeout(const Duration(seconds: 5));
               sw.stop();
 
               if (resp.statusCode == 204) {
@@ -209,6 +212,7 @@ class EphemeralTester {
           errorMsg = e.toString();
        } finally {
           await nativeService.stopTestProxy();
+          if (listenPort > 0) PortAllocator().release(listenPort);
           _androidSemaphore.release();
        }
 
@@ -341,7 +345,7 @@ class EphemeralTester {
             final sw = Stopwatch()..start();
             try {
                 final req = await dartHttpClient.getUrl(Uri.parse('https://www.google.com/generate_204'));
-                final resp = await req.close();
+                final resp = await req.close().timeout(const Duration(seconds: 5));
                 sw.stop();
 
                 if (resp.statusCode == 204) {

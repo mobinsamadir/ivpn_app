@@ -12,7 +12,8 @@ class SingboxConfigGenerator {
   static final List<String> fingerprints = ['chrome', 'firefox', 'edge', 'safari', '360', 'qq'];
   static final Random _rng = Random();
 
-  static String generateConfig(String rawLink, {int listenPort = 10808, bool isTest = false}) {
+  // REMOVED default listenPort=10808 to force dynamic port usage
+  static String generateConfig(String rawLink, {required int listenPort, bool isTest = false}) {
     final socksPort = listenPort;
     final httpPort = listenPort + 1;
     final link = rawLink.trim();
@@ -35,7 +36,7 @@ class SingboxConfigGenerator {
   }
 
   /// Dedicated Ping Config - Minimal structure to avoid conflicts
-  static String generatePingConfig({required String rawLink, int listenPort = 10808}) {
+  static String generatePingConfig({required String rawLink, required int listenPort}) {
       return generateConfig(rawLink, listenPort: listenPort, isTest: true);
   }
 

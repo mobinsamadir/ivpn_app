@@ -40,9 +40,20 @@ class NativeVpnService {
     if (!Platform.isWindows) {
       _eventChannel.receiveBroadcastStream().listen(
         (event) {
-          final status = event.toString();
-          AdvancedLogger.info("📡 [Native Event] VPN Status Update: $status");
-          _statusController.add(status);
+          final String message = event.toString();
+
+          // 1. Always log to Console/File (Requirement: Native Log Redirection)
+          AdvancedLogger.info("📡 [Native] $message");
+
+          // 2. Smart Filter: Only update UI for valid status changes to prevent UI jank
+          // Known statuses: CONNECTED, CONNECTING, DISCONNECTED, RECONNECTING
+          // Errors start with ERROR
+          bool isStatus = ["CONNECTED", "CONNECTING", "DISCONNECTED", "RECONNECTING", "PAUSED"].contains(message)
+                          || message.startsWith("ERROR");
+
+          if (isStatus) {
+             _statusController.add(message);
+          }
         },
         onError: (error) {
           AdvancedLogger.error("❌ [Native Event] Error: $error");
@@ -111,7 +122,7 @@ class NativeVpnService {
       // Generate Sing-box JSON config from raw link using shared logic in a background isolate
       final String configJson = await compute(_generateConfigWrapper, {
         'rawLink': rawLink,
-        'listenPort': 10808,
+        'listenPort': 10808, // Hardcoded for main VPN connection to avoid conflict with random test ports
       });
 
       AdvancedLogger.info("🚀 [Native] Connecting with config length: ${configJson.length}...");
