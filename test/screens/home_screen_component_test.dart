@@ -142,6 +142,8 @@ void main() {
     when(() => mockConfigManager.isAutoSwitchEnabled).thenReturn(true);
     // FIXED: Return Future<bool>
     when(() => mockConfigGistService.fetchAndApplyConfigs(any(), force: any(named: 'force'))).thenAnswer((_) async => true);
+    // Mock checkForUpdates
+    when(() => mockConfigGistService.checkForUpdates(any())).thenAnswer((_) async {});
 
     // Add Listener to ConfigManager (ChangeNotifier)
     when(() => mockConfigManager.addListener(any())).thenReturn(null);

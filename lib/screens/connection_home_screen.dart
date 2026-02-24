@@ -619,6 +619,15 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
                   }
 
                   if (configs.isEmpty) {
+                    if (_isFetching) {
+                      return SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) => const ShimmerConfigCard(),
+                          childCount: 6,
+                        ),
+                      );
+                    }
+
                     return SliverToBoxAdapter(
                       child: Container(
                         padding: const EdgeInsets.all(50),
@@ -792,6 +801,24 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     } finally {
       if (mounted) setState(() { _isFetching = false; });
     }
+  }
+
+  Future<void> _skipServer() async {
+    if (_configManager.isConnected) {
+       await _nativeVpnService.disconnect();
+       // Short delay to allow native cleanup
+       await Future.delayed(const Duration(milliseconds: 500));
+    }
+    await _configManager.skipToNext(sourceList: _getCurrentList());
+  }
+
+  List<VpnConfigWithMetrics> _getCurrentList() {
+     switch (_tabController.index) {
+       case 1: return _configManager.validatedConfigs;
+       case 2: return _configManager.favoriteConfigs;
+       case 0:
+       default: return _configManager.allConfigs;
+     }
   }
 
   // --- RESTORED UI METHODS ---
