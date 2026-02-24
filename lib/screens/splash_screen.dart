@@ -59,16 +59,8 @@ class _SplashScreenState extends State<SplashScreen> {
       // NEW: Initialize Ads
       AdManagerService().initialize();
 
-      // 3. Fetch Updates (Non-blocking usually, but good to wait a bit)
-      setState(() => _statusMessage = 'Updating from Cloud...');
-      // We don't await this forever to prevent stuck splash
-      await configManager.fetchStartupConfigs().timeout(
-        const Duration(seconds: 5), 
-        onTimeout: () {
-          AdvancedLogger.warn('Splash fetch timed out, proceeding with cached configs.');
-          return false; // <--- FIX: Explicitly return a boolean (false = failed/timed out)
-        }
-      );
+      // 3. Fetch Updates (Now handled by ConnectionHomeScreen logic or ConfigGistService)
+      // Removed direct call to fetchStartupConfigs as it was migrated.
 
       // 4. Navigate to Home
       if (mounted) {

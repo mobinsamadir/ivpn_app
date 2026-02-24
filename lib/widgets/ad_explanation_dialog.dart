@@ -1,7 +1,33 @@
 import 'package:flutter/material.dart';
 
-class AdExplanationDialog extends StatelessWidget {
-  const AdExplanationDialog({super.key});
+class AdExplanationDialog extends StatefulWidget {
+  final Future<bool> Function() onAdView;
+
+  const AdExplanationDialog({
+    super.key,
+    required this.onAdView,
+  });
+
+  @override
+  State<AdExplanationDialog> createState() => _AdExplanationDialogState();
+}
+
+class _AdExplanationDialogState extends State<AdExplanationDialog> {
+  bool _isLoading = false;
+
+  Future<void> _handleViewAd() async {
+    setState(() => _isLoading = true);
+    try {
+      final result = await widget.onAdView();
+      if (mounted) {
+        Navigator.pop(context, result);
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context, false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,14 +43,20 @@ class AdExplanationDialog extends StatelessWidget {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context, false),
+          onPressed: _isLoading ? null : () => Navigator.pop(context, false),
           child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
         ),
-        ElevatedButton(
-          onPressed: () => Navigator.pop(context, true),
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent),
-          child: const Text('View Ad', style: TextStyle(color: Colors.white)),
-        ),
+        _isLoading
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : ElevatedButton(
+                onPressed: _handleViewAd,
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent),
+                child: const Text('View Ad', style: TextStyle(color: Colors.white)),
+              ),
       ],
     );
   }

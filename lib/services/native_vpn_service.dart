@@ -46,7 +46,7 @@ class NativeVpnService {
         },
         onError: (error) {
           AdvancedLogger.error("❌ [Native Event] Error: $error");
-          _statusController.add("ERROR");
+          _statusController.add("ERROR: NATIVE_EVENT: $error");
         },
       );
     }
@@ -121,7 +121,7 @@ class NativeVpnService {
       AdvancedLogger.info("✅ [Native] Connect command sent. Waiting for OS confirmation...");
     } catch (e) {
       AdvancedLogger.error("Failed to send connect command: $e");
-      _statusController.add("ERROR");
+      _statusController.add("ERROR: START_FAILED: $e");
       rethrow;
     }
   }
