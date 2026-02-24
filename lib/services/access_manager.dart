@@ -12,17 +12,25 @@ class AccessManager extends ChangeNotifier {
   DateTime? _expirationDate;
   DateTime? _lastRewardTime;
 
+  // Testable Clock
+  DateTime Function() _clock = DateTime.now;
+
+  @visibleForTesting
+  void setClock(DateTime Function() clock) {
+    _clock = clock;
+  }
+
   // Getters
   DateTime? get expirationDate => _expirationDate;
   
   bool get hasAccess {
     if (_expirationDate == null) return false;
-    return _expirationDate!.isAfter(DateTime.now());
+    return _expirationDate!.isAfter(_clock());
   }
 
   Duration get remainingTime {
     if (_expirationDate == null) return Duration.zero;
-    final now = DateTime.now();
+    final now = _clock();
     if (_expirationDate!.isBefore(now)) return Duration.zero;
     return _expirationDate!.difference(now);
   }
@@ -47,7 +55,7 @@ class AccessManager extends ChangeNotifier {
 
   // Add Time (Rewards)
   Future<void> addTime(Duration duration) async {
-    final now = DateTime.now();
+    final now = _clock();
     
     // Double Reward Prevention
     if (_lastRewardTime != null && now.difference(_lastRewardTime!) < const Duration(seconds: 5)) {
@@ -78,6 +86,7 @@ class AccessManager extends ChangeNotifier {
   // Force Clear (Debug/Testing)
   Future<void> clearAccess() async {
     _expirationDate = null;
+    _lastRewardTime = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_prefsKey);
     notifyListeners();
