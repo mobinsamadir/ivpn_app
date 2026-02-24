@@ -13,8 +13,6 @@ import 'package:ivpn_new/services/connectivity_service.dart';
 import 'package:ivpn_new/services/update_service_wrapper.dart';
 import 'package:ivpn_new/models/vpn_config_with_metrics.dart';
 import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
-import 'package:webview_flutter/webview_flutter.dart';
-import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 // --- MOCKS ---
 class MockNativeVpnService extends Mock implements NativeVpnService {}
@@ -322,7 +320,9 @@ void main() {
        when(() => mockAccessManager.addTime(any())).thenAnswer((invocation) async {
           when(() => mockAccessManager.hasAccess).thenReturn(true);
           when(() => mockAccessManager.remainingTime).thenReturn(const Duration(hours: 1));
-          for (final l in accessListeners) l();
+          for (final l in accessListeners) {
+            l();
+          }
        });
 
        // Setup: Config

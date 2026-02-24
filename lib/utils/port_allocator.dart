@@ -13,7 +13,6 @@ class PortAllocator {
   int _currentPort = _startPort;
 
   final Set<int> _activePorts = {};
-  final _lock = Object();
 
   Future<int> allocate() async {
     // Basic loop to find next available port

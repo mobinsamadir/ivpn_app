@@ -20,8 +20,10 @@ import 'testers/ephemeral_tester.dart';
 String _extractServerName(String raw) {
   try {
     final uri = Uri.parse(raw);
-    if (uri.fragment.isNotEmpty) return Uri.decodeComponent(uri.fragment);
-  } catch(e) {}
+    if (uri.fragment.isNotEmpty) {
+      return Uri.decodeComponent(uri.fragment);
+    }
+  } catch(_) {}
 
   // Fallback name
   final type = raw.split('://').first.toUpperCase();
@@ -36,7 +38,9 @@ String? _extractCountryCode(String name) {
     '🇹🇷': 'TR', '🇮🇹': 'IT', '🇪🇸': 'ES', '🇵🇱': 'PL', '🇷🇺': 'RU', '🇮🇷': 'IR',
   };
   for (final e in map.entries) {
-    if (name.contains(e.key)) return e.value;
+    if (name.contains(e.key)) {
+      return e.value;
+    }
   }
   return null;
 }
@@ -72,8 +76,12 @@ Future<Map<String, dynamic>> _processConfigsInIsolate(Map<String, dynamic> args)
        hashesToRemoveFromBlacklist.add(hash);
     }
 
-    if (existingConfigs.contains(trimmedRaw)) continue;
-    if (batchConfigs.contains(trimmedRaw)) continue;
+    if (existingConfigs.contains(trimmedRaw)) {
+      continue;
+    }
+    if (batchConfigs.contains(trimmedRaw)) {
+      continue;
+    }
 
     final name = _extractServerName(trimmedRaw);
     final id = 'config_${DateTime.now().millisecondsSinceEpoch}_$addedCount';
@@ -333,9 +341,7 @@ class ConfigManager extends ChangeNotifier {
           }
 
           // Strategy B: Form Action or Link
-          if (confirmToken == null) {
-             confirmToken = _extractDriveTokenFromHtml(content);
-          }
+          confirmToken ??= _extractDriveTokenFromHtml(content);
 
           if (confirmToken != null) {
              final fileIdMatch = RegExp(r'id=([a-zA-Z0-9_-]+)').firstMatch(targetUrl);
@@ -633,8 +639,9 @@ class ConfigManager extends ChangeNotifier {
   Future<void> _initDeviceId() async {
      final info = DeviceInfoPlugin();
      try {
-       if (Platform.isAndroid) _currentDeviceId = 'android_${(await info.androidInfo).id}';
-       else if (Platform.isWindows) _currentDeviceId = 'windows_${(await info.windowsInfo).deviceId}';
+       if (Platform.isAndroid) {
+         _currentDeviceId = 'android_${(await info.androidInfo).id}';
+       } else if (Platform.isWindows) _currentDeviceId = 'windows_${(await info.windowsInfo).deviceId}';
        else if (Platform.isIOS) _currentDeviceId = 'ios_${(await info.iosInfo).identifierForVendor}';
      } catch(e) { _currentDeviceId = 'unknown'; }
   }
@@ -842,7 +849,9 @@ class ConfigManager extends ChangeNotifier {
         // Update metrics
         await updateConfigDirectly(testResult);
 
-        if (_isGlobalStopRequested) return;
+        if (_isGlobalStopRequested) {
+          return;
+        }
 
         // 4. Connect
         setConnected(false, status: 'Connecting to ${target.name}...');
@@ -860,7 +869,9 @@ class ConfigManager extends ChangeNotifier {
         AdvancedLogger.warn('[ConfigManager] Connection failed to ${target.name}: $e');
         await markFailure(target.id);
 
-        if (_isGlobalStopRequested) return;
+        if (_isGlobalStopRequested) {
+          return;
+        }
 
         // 7. Prepare next
         attempts++;

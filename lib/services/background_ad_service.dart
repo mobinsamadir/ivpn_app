@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 // ✅ اصلاح: ایمپورت‌های صحیح در ابتدای فایل
-import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_windows/webview_windows.dart';
 
 class BackgroundAdService extends StatefulWidget {

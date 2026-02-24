@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:html/parser.dart' as html_parser;
 
 /// Runs in a background isolate to parse configurations without blocking the UI.
@@ -24,7 +25,7 @@ Future<List<String>> parseConfigsInIsolate(String text) async {
        processedText = '$bodyText\n$hrefs';
      } catch (e) {
        // Fallback to raw text if parsing fails
-       print('[ConfigParser] HTML parsing failed: $e');
+       debugPrint('[ConfigParser] HTML parsing failed: $e');
      }
   }
   // 2. CHECK IF ALREADY A PROTOCOL (Before decoding)
@@ -64,7 +65,7 @@ Future<List<String>> parseConfigsInIsolate(String text) async {
            }
            collectedConfigs.add(config);
         } catch (e) {
-           print("Failed to parse extracted config. Error: $e");
+           debugPrint("Failed to parse extracted config. Error: $e");
         }
      }
   }

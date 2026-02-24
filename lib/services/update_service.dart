@@ -45,9 +45,11 @@ class UpdateService {
       if (latestVersion > currentVersion) {
         AdvancedLogger.info('UpdateService: New version available: $latestVersion');
 
+        // ignore: use_build_context_synchronously
         if (!context.mounted) return;
 
         // Show Update Dialog
+        // ignore: use_build_context_synchronously
         showDialog(
           context: context,
           barrierDismissible: false,
@@ -85,6 +87,7 @@ class UpdateService {
         final String? downloadUrl = await _getAndroidAssetUrl(releaseData['assets']);
 
         if (downloadUrl == null) {
+          // ignore: use_build_context_synchronously
           if (context.mounted) _showError(context, "No compatible APK found for your device.");
           return;
         }
@@ -99,6 +102,7 @@ class UpdateService {
         }
 
       } catch (e) {
+        // ignore: use_build_context_synchronously
         if (context.mounted) _showError(context, "Update failed: $e");
       }
     }
@@ -116,9 +120,13 @@ class UpdateService {
     // Map ABI to Filename Suffix
     for (String abi in supportedAbis) {
        String targetName = "";
-       if (abi.contains("arm64")) targetName = "app-arm64-v8a-release.apk";
-       else if (abi.contains("armeabi")) targetName = "app-armeabi-v7a-release.apk";
-       else if (abi.contains("x86_64")) targetName = "app-x86_64-release.apk";
+       if (abi.contains("arm64")) {
+         targetName = "app-arm64-v8a-release.apk";
+       } else if (abi.contains("armeabi")) {
+         targetName = "app-armeabi-v7a-release.apk";
+       } else if (abi.contains("x86_64")) {
+         targetName = "app-x86_64-release.apk";
+       }
 
        if (targetName.isNotEmpty) {
           final asset = assets.firstWhere(
@@ -207,9 +215,6 @@ class UpdateService {
       AdvancedLogger.info("UpdateService: Download complete. Installing...");
 
       // Install
-      final PackageInfo packageInfo = await PackageInfo.fromPlatform();
-      final String authority = "${packageInfo.packageName}.fileProvider";
-
       // We rely on OpenFile to handle the intent, but if it needs explicit authority we might need to adjust.
       // However, OpenFile usually detects the provider if configured correctly in Manifest.
       // Since we added the provider with authority ${applicationId}.fileProvider, it should work.
@@ -218,11 +223,14 @@ class UpdateService {
 
       final result = await OpenFile.open(savePath, type: "application/vnd.android.package-archive");
       if (result.type != ResultType.done) {
+         // ignore: use_build_context_synchronously
          if (context.mounted) _showError(context, "Install failed: ${result.message}");
       }
 
     } catch (e) {
+       // ignore: use_build_context_synchronously
        if (context.mounted) Navigator.pop(context); // Close Progress Dialog
+       // ignore: use_build_context_synchronously
        if (context.mounted) _showError(context, "Download failed: $e");
     }
   }
