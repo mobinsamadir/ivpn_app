@@ -68,7 +68,12 @@ class _UniversalAdWidgetState extends State<UniversalAdWidget> {
 
     final ad = _currentAd!;
     // CRITICAL FIX: Fallback to a default height if null to prevent unconstrained expansion (Black Screen)
-    final double effectiveHeight = widget.height ?? 250.0;
+    double effectiveHeight = widget.height ?? 250.0;
+
+    // Enforce strict 60dp for banner slots
+    if (widget.slot == 'home_banner_top' || widget.slot == 'home_banner_bottom') {
+      effectiveHeight = 60.0;
+    }
 
     return SizedBox(
       width: widget.width ?? double.infinity,
