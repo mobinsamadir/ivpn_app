@@ -6,12 +6,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:http/http.dart' as http;
 import 'package:collection/collection.dart';
-import 'package:html/parser.dart' as html_parser;
 import 'package:crypto/crypto.dart'; // Import crypto for MD5
 import '../models/vpn_config_with_metrics.dart';
 import '../utils/advanced_logger.dart';
 import '../utils/cancellable_operation.dart';
-import 'config_parser.dart';
 import 'native_vpn_service.dart';
 import 'testers/ephemeral_tester.dart';
 
@@ -224,202 +222,7 @@ class ConfigManager extends ChangeNotifier {
   }
 
   // --- CORE: FETCH & PARSE ---
-  Future<bool> fetchStartupConfigs() async {
-    if (_isRefreshing) return false;
-    _isRefreshing = true;
-    _isGlobalStopRequested = false; // Reset flag on new operation
-    notifyListeners();
-
-    bool anyConfigAdded = false;
-
-    try {
-      AdvancedLogger.info('[ConfigManager] Downloading configs from mirrors...');
-      
-      // Mirrors List (GitHub -> Gist -> MyFiles -> Drive API)
-      final mirrors = [
-        'https://raw.githubusercontent.com/mobinsamadir/ivpn-servers/refs/heads/main/servers.txt',
-        'https://gist.githubusercontent.com/mobinsamadir/687a7ef199d6eaf6d1912e36151a9327/raw/servers.txt',
-      ];
-
-      for (var url in mirrors) {
-        if (anyConfigAdded) break; // Chain Breaking: Stop if we already have configs
-
-        try {
-          String? content = await _robustFetch(url);
-          
-          if (content != null && content.isNotEmpty) {
-            AdvancedLogger.info('✅ Downloaded ${content.length} bytes successfully from $url.');
-
-            // 1. Parse Mixed Content (Configs ONLY - No Recursion)
-            final configUrls = await parseMixedContent(content);
-
-            if (configUrls.isNotEmpty) {
-               // 2. SANITIZE: Remove malicious fields
-               final cleanedConfigs = configUrls.map((c) {
-                 return c.replaceAll(RegExp(r'"spider_x":\s*("[^"]*"|[^,{}]+),?'), '');
-               }).toList();
-
-               // 3. Add to Database
-               // Using checkBlacklist: true (Default) to prevent Ghost Configs
-               int added = await addConfigs(cleanedConfigs, checkBlacklist: true);
-               if (added > 0) {
-                  AdvancedLogger.info('[ConfigManager] Import finished: Added $added new configs from $url.');
-                  anyConfigAdded = true;
-               } else {
-                  AdvancedLogger.warn('[ConfigManager] Configs found but were duplicates/invalid.');
-               }
-            } else {
-               AdvancedLogger.warn('[ConfigManager] No valid configs found in content from $url.');
-            }
-          }
-        } catch (e) {
-          AdvancedLogger.warn('[ConfigManager] Failed to fetch from $url: $e');
-        }
-      }
-
-      if (!anyConfigAdded) {
-        AdvancedLogger.error('[ConfigManager] All attempts to fetch configs failed or yielded 0 new configs.');
-      }
-
-    } catch (e) {
-       AdvancedLogger.error('[ConfigManager] Critical error in fetchStartupConfigs: $e');
-    } finally {
-      _isRefreshing = false;
-      notifyListeners();
-    }
-
-    return anyConfigAdded;
-  }
-
-  // --- ROBUST FETCH (Drive + Direct) ---
-  Future<String?> _robustFetch(String url) async {
-    String targetUrl = url;
-
-    // 1. Auto-convert Google Drive /view links to direct download
-    if (targetUrl.contains('drive.google.com') && targetUrl.contains('/view')) {
-        final fileIdMatch = RegExp(r'\/d\/([a-zA-Z0-9_-]+)').firstMatch(targetUrl);
-        if (fileIdMatch != null) {
-          final fileId = fileIdMatch.group(1);
-          targetUrl = 'https://drive.google.com/uc?export=download&id=$fileId';
-          AdvancedLogger.info('[ConfigManager] Converted Drive View Link to: $targetUrl');
-        }
-    }
-
-    try {
-      AdvancedLogger.info('[ConfigManager] Attempting fetch from: $targetUrl');
-
-      final response = await http.get(
-        Uri.parse(targetUrl),
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.9',
-          'Sec-Fetch-Dest': 'document',
-          'Sec-Fetch-Mode': 'navigate',
-        },
-      ).timeout(const Duration(seconds: 30));
-
-      if (response.statusCode != 200) {
-         AdvancedLogger.warn('[ConfigManager] HTTP Error ${response.statusCode} from $targetUrl');
-         return null;
-      }
-
-      String content = response.body;
-
-      // 2. Google Drive "Virus Scan / Large File" Warning Handler
-      if (targetUrl.contains('drive.google.com') &&
-         (content.contains('confirm=') || content.contains('Virus scan warning'))) {
-
-          AdvancedLogger.info('[ConfigManager] Detected Drive Warning. Attempting to extract confirm token...');
-
-          String? confirmToken;
-
-          // Strategy A: Regex for confirm=XXXX
-          final confirmMatch = RegExp(r'confirm=([a-zA-Z0-9_-]+)').firstMatch(content);
-          if (confirmMatch != null) {
-            confirmToken = confirmMatch.group(1);
-          }
-
-          // Strategy B: Form Action or Link
-          confirmToken ??= _extractDriveTokenFromHtml(content);
-
-          if (confirmToken != null) {
-             final fileIdMatch = RegExp(r'id=([a-zA-Z0-9_-]+)').firstMatch(targetUrl);
-             final fileId = fileIdMatch?.group(1);
-
-             if (fileId != null) {
-                final confirmUrl = 'https://drive.google.com/uc?export=download&id=$fileId&confirm=$confirmToken';
-                AdvancedLogger.info('[ConfigManager] Retrying with confirm token: $confirmToken');
-
-                final retryResponse = await http.get(Uri.parse(confirmUrl), headers: {
-                   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-                }).timeout(const Duration(seconds: 30));
-
-                if (retryResponse.statusCode == 200) {
-                   content = retryResponse.body;
-                } else {
-                   AdvancedLogger.warn('[ConfigManager] Failed to fetch confirmed link. Status: ${retryResponse.statusCode}');
-                   return null;
-                }
-             }
-          } else {
-             AdvancedLogger.warn('[ConfigManager] Could not extract confirm token from Drive page.');
-             return null;
-          }
-      }
-
-      // 3. Validation: Ensure content isn't just an error page HTML
-      if (content.trim().toLowerCase().startsWith('<!doctype html>') && !content.contains('vmess://') && !content.contains('vless://')) {
-          AdvancedLogger.warn('[ConfigManager] Fetched content appears to be a generic HTML page, not config.');
-          return null;
-      }
-
-      return content;
-
-    } catch (e) {
-      AdvancedLogger.warn('[ConfigManager] Fetch error: $e');
-      return null;
-    }
-  }
-
-  String? _extractDriveTokenFromHtml(String html) {
-     try {
-       // Check for any link or form action containing 'confirm='
-       final document = html_parser.parse(html);
-
-       // Check links
-       final anchors = document.querySelectorAll('a[href*="confirm="]');
-       for (var a in anchors) {
-          final href = a.attributes['href'];
-          if (href != null) {
-             final uri = Uri.parse(href);
-             if (uri.queryParameters.containsKey('confirm')) {
-                return uri.queryParameters['confirm'];
-             }
-          }
-       }
-
-       // Check forms
-       final forms = document.querySelectorAll('form[action*="confirm="]');
-       for (var f in forms) {
-          final action = f.attributes['action'];
-          if (action != null) {
-             final uri = Uri.parse(action);
-             if (uri.queryParameters.containsKey('confirm')) {
-                return uri.queryParameters['confirm'];
-             }
-          }
-       }
-     } catch(e) {
-       AdvancedLogger.warn('[ConfigManager] HTML parsing error for token: $e');
-     }
-     return null;
-  }
-
-  static Future<List<String>> parseMixedContent(String text) async {
-    // Offload heavy parsing (HTML, Base64, Regex) to background isolate
-    return compute(parseConfigsInIsolate, text);
-  }
+  // Fetching logic migrated to ConfigGistService
 
   // --- THROTTLING LOGIC ---
   void notifyListenersThrottled() {
@@ -894,8 +697,6 @@ class ConfigManager extends ChangeNotifier {
   }
   
   // Aliases for compatibility
-  Future<void> refreshAllConfigs() => fetchStartupConfigs();
-  static Future<List<String>> parseAndFetchConfigs(String text) => parseMixedContent(text);
   Future<void> addConfig(String raw, String name) => addConfigs([raw]); 
   VpnConfigWithMetrics? getConfigById(String id) => allConfigs.firstWhereOrNull((c) => c.id == id);
 }

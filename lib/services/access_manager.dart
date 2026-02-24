@@ -10,6 +10,7 @@ class AccessManager extends ChangeNotifier {
 
   static const String _prefsKey = 'vpn_access_expiration';
   DateTime? _expirationDate;
+  DateTime? _lastRewardTime;
 
   // Getters
   DateTime? get expirationDate => _expirationDate;
@@ -48,12 +49,19 @@ class AccessManager extends ChangeNotifier {
   Future<void> addTime(Duration duration) async {
     final now = DateTime.now();
     
+    // Double Reward Prevention
+    if (_lastRewardTime != null && now.difference(_lastRewardTime!) < const Duration(seconds: 5)) {
+       AdvancedLogger.warn("⚠️ [AccessManager] Double reward prevented.");
+       return;
+    }
+
     if (_expirationDate == null || _expirationDate!.isBefore(now)) {
       _expirationDate = now.add(duration);
     } else {
       _expirationDate = _expirationDate!.add(duration);
     }
     
+    _lastRewardTime = now;
     await _save();
     notifyListeners();
     AdvancedLogger.info("🎁 [AccessManager] Time added! New expiry: $_expirationDate");

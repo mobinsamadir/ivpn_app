@@ -10,7 +10,7 @@ import 'package:ivpn_new/services/config_manager.dart';
 import 'package:ivpn_new/services/ad_manager_service.dart';
 import 'package:ivpn_new/services/access_manager.dart';
 import 'package:ivpn_new/services/connectivity_service.dart';
-import 'package:ivpn_new/services/update_service_wrapper.dart';
+import 'package:ivpn_new/services/config_gist_service.dart';
 import 'package:ivpn_new/models/vpn_config_with_metrics.dart';
 import 'package:ivpn_new/widgets/ad_explanation_dialog.dart';
 import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
@@ -23,7 +23,7 @@ class MockConfigManager extends Mock implements ConfigManager {}
 class MockAdManagerService extends Mock implements AdManagerService {}
 class MockAccessManager extends Mock implements AccessManager {}
 class MockConnectivityService extends Mock implements ConnectivityService {}
-class MockUpdateServiceWrapper extends Mock implements UpdateServiceWrapper {}
+class MockConfigGistService extends Mock implements ConfigGistService {}
 
 // --- FAKE WEBVIEW ---
 class FakeWebViewPlatform extends WebViewPlatform {
@@ -69,6 +69,7 @@ class FakeWebViewWidget extends PlatformWebViewWidget {
 
 class FakeBuildContext extends Fake implements BuildContext {}
 class FakeVpnConfigWithMetrics extends Fake implements VpnConfigWithMetrics {}
+class FakeConfigManager extends Fake implements ConfigManager {}
 
 void main() {
   late MockNativeVpnService mockVpnService;
@@ -78,7 +79,7 @@ void main() {
   late MockAdManagerService mockAdManagerService;
   late MockAccessManager mockAccessManager;
   late MockConnectivityService mockConnectivityService;
-  late MockUpdateServiceWrapper mockUpdateServiceWrapper;
+  late MockConfigGistService mockConfigGistService;
 
   late StreamController<String> funnelProgressController;
   late StreamController<String> vpnStatusController;
@@ -89,6 +90,7 @@ void main() {
     registerFallbackValue(FakeBuildContext());
     registerFallbackValue(FakeVpnConfigWithMetrics());
     registerFallbackValue(const Duration(seconds: 1));
+    registerFallbackValue(FakeConfigManager());
   });
 
   setUp(() {
@@ -102,7 +104,7 @@ void main() {
     mockAdManagerService = MockAdManagerService();
     mockAccessManager = MockAccessManager();
     mockConnectivityService = MockConnectivityService();
-    mockUpdateServiceWrapper = MockUpdateServiceWrapper();
+    mockConfigGistService = MockConfigGistService();
 
     funnelProgressController = StreamController<String>.broadcast();
     vpnStatusController = StreamController<String>.broadcast();
@@ -138,7 +140,7 @@ void main() {
     when(() => mockConfigManager.isConnected).thenReturn(false);
     when(() => mockConfigManager.connectionStatus).thenReturn('Disconnected');
     when(() => mockConfigManager.isAutoSwitchEnabled).thenReturn(true);
-    when(() => mockConfigManager.fetchStartupConfigs()).thenAnswer((_) async => false);
+    when(() => mockConfigGistService.fetchAndApplyConfigs(any(), force: any(named: 'force'))).thenAnswer((_) async {});
 
     // Add Listener to ConfigManager (ChangeNotifier)
     when(() => mockConfigManager.addListener(any())).thenReturn(null);
@@ -146,8 +148,8 @@ void main() {
 
     // Connectivity & Update
     when(() => mockConnectivityService.hasInternet()).thenAnswer((_) async => true);
-    when(() => mockUpdateServiceWrapper.checkForUpdatesSilently(any())).thenAnswer((_) async {});
     when(() => mockAdManagerService.fetchLatestAds()).thenAnswer((_) async {});
+    when(() => mockFunnelService.startFunnel(retestDead: any(named: 'retestDead'))).thenAnswer((_) async {});
   });
 
   tearDown(() {
@@ -165,7 +167,7 @@ void main() {
         adManagerService: mockAdManagerService,
         accessManager: mockAccessManager,
         connectivityService: mockConnectivityService,
-        updateServiceWrapper: mockUpdateServiceWrapper,
+        configGistService: mockConfigGistService,
       ),
     );
   }
@@ -360,6 +362,48 @@ void main() {
 
        // Verify UI Update (Reactivity Check)
        expect(find.text('1h 0m remaining'), findsOneWidget);
+    });
+
+    testWidgets('Scenario: Ad Timeout handles failure gracefully', (tester) async {
+       // Setup: No Access
+       when(() => mockAccessManager.hasAccess).thenReturn(false);
+       when(() => mockAccessManager.remainingTime).thenReturn(Duration.zero);
+
+       // Setup: Ad Failure (Timeout/Closed)
+       // When showPreConnectionAd is called, return false
+       when(() => mockAdManagerService.showPreConnectionAd(any())).thenAnswer((_) async => false);
+
+       // Setup: Config
+       final config = VpnConfigWithMetrics(id: 'c1', rawConfig: 'v1', name: 'Server 1', addedDate: DateTime.now());
+       when(() => mockConfigManager.allConfigs).thenReturn([config]);
+       when(() => mockConfigManager.validatedConfigs).thenReturn([config]);
+       when(() => mockConfigManager.connectWithSmartFailover()).thenAnswer((_) async {});
+
+       await tester.pumpWidget(createWidget());
+       await tester.pumpAndSettle();
+
+       // Tap Connect
+       await tester.tap(find.text('CONNECT'));
+       await tester.pumpAndSettle();
+
+       // Verify Dialog appears
+       expect(find.byType(AdExplanationDialog), findsOneWidget);
+
+       // Tap "View Ad"
+       await tester.tap(find.text('View Ad'));
+       await tester.pumpAndSettle();
+
+       // Verify Ad Service called
+       verify(() => mockAdManagerService.showPreConnectionAd(any())).called(1);
+
+       // Verify "Claim Reward" dialog is NOT shown
+       expect(find.text('Claim Reward'), findsNothing);
+
+       // Verify AccessManager.addTime NEVER called
+       verifyNever(() => mockAccessManager.addTime(any()));
+
+       // Verify Error SnackBar
+       expect(find.text('Ad failed to load. Please try again.'), findsOneWidget);
     });
   });
 }

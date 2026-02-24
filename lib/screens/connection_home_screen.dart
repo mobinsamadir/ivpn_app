@@ -12,7 +12,7 @@ import '../services/access_manager.dart';
 import '../services/ad_manager_service.dart';
 import '../services/funnel_service.dart';
 import '../services/testers/ephemeral_tester.dart';
-import '../services/update_service_wrapper.dart';
+import '../services/config_gist_service.dart';
 import '../services/connectivity_service.dart';
 import '../widgets/ad_explanation_dialog.dart';
 import 'settings_screen.dart';
@@ -25,7 +25,7 @@ class ConnectionHomeScreen extends StatefulWidget {
   final AdManagerService? adManagerService;
   final AccessManager? accessManager;
   final ConnectivityService? connectivityService;
-  final UpdateServiceWrapper? updateServiceWrapper;
+  final ConfigGistService? configGistService;
 
   const ConnectionHomeScreen({
     super.key,
@@ -36,7 +36,7 @@ class ConnectionHomeScreen extends StatefulWidget {
     this.adManagerService,
     this.accessManager,
     this.connectivityService,
-    this.updateServiceWrapper,
+    this.configGistService,
   });
 
   @override
@@ -52,7 +52,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
   late final AdManagerService _adManagerService;
   late final AccessManager _accessManager;
   late final ConnectivityService _connectivityService;
-  late final UpdateServiceWrapper _updateServiceWrapper;
+  late final ConfigGistService _configGistService;
 
   // 2. State Variables
   bool _isInitialized = false;
@@ -91,7 +91,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     _adManagerService = widget.adManagerService ?? AdManagerService();
     _accessManager = widget.accessManager ?? AccessManager();
     _connectivityService = widget.connectivityService ?? ConnectivityService();
-    _updateServiceWrapper = widget.updateServiceWrapper ?? UpdateServiceWrapper();
+    _configGistService = widget.configGistService ?? ConfigGistService();
 
     // 1. Initialize Ad Service IMMEDIATELY
     _adManagerService.initialize();
@@ -146,8 +146,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
            // Trigger Updates & Ads with Delay
            Future.delayed(const Duration(seconds: 3), () {
              if (mounted) {
-               AdvancedLogger.info("[HomeScreen] Triggering Post-Connect Update & Ad Check...");
-               // _updateServiceWrapper.checkForUpdatesSilently(context); // Disabled per Architect Directive Phase 2
+               AdvancedLogger.info("[HomeScreen] Triggering Post-Connect Ad Check...");
                _adManagerService.fetchLatestAds();
              }
            });
@@ -269,18 +268,19 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
 
   // --- AD REWARD LOGIC ---
   Future<void> _showAdSequence() async {
-    final engage = await showDialog<bool>(
+    final adSuccess = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const AdExplanationDialog(),
+      builder: (context) => AdExplanationDialog(
+        onAdView: () async {
+          // This callback is executed when user clicks "View Ad"
+          return await _adManagerService.showPreConnectionAd(context);
+        },
+      ),
     );
 
-    if (engage == true) {
+    if (adSuccess == true) {
       if (!mounted) return;
-      final bool adSuccess = await _adManagerService.showPreConnectionAd(context);
-      if (!adSuccess) return;
-      if (!mounted) return;
-
       final claimed = await showDialog<bool>(
         context: context,
         barrierDismissible: false,
@@ -325,6 +325,16 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
           );
         }
       }
+    } else if (adSuccess == false) {
+      // Handle Ad Failure / Cancelled
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Ad failed to load. Please try again."),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
     }
   }
 
@@ -346,12 +356,14 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
        return;
     }
 
-    _configManager.fetchStartupConfigs().then((hasNewConfigs) {
-       if (hasNewConfigs && _autoTestOnStartup && !_configManager.isConnected && mounted) {
-           AdvancedLogger.info("[HomeScreen] Startup configs loaded. Triggering Auto-Test...");
-           _runFunnelTest();
-       }
-    });
+    // New Smart Fetch Logic
+    await _configGistService.fetchAndApplyConfigs(_configManager);
+
+    // Auto Test if configs exist
+    if (_configManager.allConfigs.isNotEmpty && _autoTestOnStartup && !_configManager.isConnected && mounted) {
+        AdvancedLogger.info("[HomeScreen] Triggering Auto-Test...");
+        _runFunnelTest();
+    }
   }
 
   Future<void> _runSmartAutoTest() async {
@@ -388,7 +400,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
         child: RefreshIndicator(
           backgroundColor: const Color(0xFF1A1A1A),
           color: Colors.blueAccent,
-          onRefresh: _refreshConfigsFromGitHub,
+          onRefresh: _refreshConfigsManual,
           child: CustomScrollView(
             slivers: [
               SliverToBoxAdapter(child: _buildAdBannerSection()),
@@ -476,6 +488,12 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
                         ),
                       ),
                       const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.refresh, color: Colors.greenAccent),
+                        onPressed: _refreshConfigsManual,
+                        tooltip: 'Force Refresh',
+                        splashRadius: 20,
+                      ),
                       IconButton(
                         icon: const Icon(Icons.speed, color: Colors.blueAccent),
                         onPressed: _runSmartAutoTest,
@@ -688,12 +706,12 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     }
   }
 
-  Future<void> _refreshConfigsFromGitHub() async {
+  Future<void> _refreshConfigsManual() async {
     if (!mounted) return;
-    _showToast('Refreshing configs from GitHub...');
+    _showToast('Refreshing configs...');
     try {
-      await _configManager.fetchStartupConfigs();
-      _showToast('Refresh check completed');
+      await _configGistService.fetchAndApplyConfigs(_configManager, force: true);
+      _showToast('Refresh completed');
     } catch (e) {
       _showToast('Failed to refresh configs: $e');
     }
