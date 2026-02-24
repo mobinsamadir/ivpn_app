@@ -22,7 +22,7 @@ class ConfigGistService {
     'https://gist.githubusercontent.com/mobinsamadir/687a7ef199d6eaf6d1912e36151a9327/raw/servers.txt',
   ];
 
-  Future<void> fetchAndApplyConfigs(ConfigManager manager, {bool force = false}) async {
+  Future<bool> fetchAndApplyConfigs(ConfigManager manager, {bool force = false}) async {
     final prefs = await SharedPreferences.getInstance();
     final lastFetchTs = prefs.getInt(_lastFetchKey) ?? 0;
     final lastFetch = DateTime.fromMillisecondsSinceEpoch(lastFetchTs);
@@ -31,7 +31,7 @@ class ConfigGistService {
     // Smart Logic: Fetch if FORCED OR (Empty List) OR (Time > 24h)
     if (!force && manager.allConfigs.isNotEmpty && now.difference(lastFetch) < _fetchInterval) {
        AdvancedLogger.info("[ConfigGistService] Skipping fetch. Last fetch: $lastFetch");
-       return;
+       return true; // Consider success as we have configs
     }
 
     AdvancedLogger.info("[ConfigGistService] Starting fetch (Force: $force)...");
@@ -43,22 +43,26 @@ class ConfigGistService {
         final content = await _robustFetch(url);
         if (content != null && content.isNotEmpty) {
            // Parse in background
-           final configs = await compute(parseConfigsInIsolate, content);
+           try {
+             final configs = await compute(parseConfigsInIsolate, content);
 
-           if (configs.isNotEmpty) {
-              // Sanitize
-              final cleaned = configs.map((c) {
-                 return c.replaceAll(RegExp(r'"spider_x":\s*("[^"]*"|[^,{}]+),?'), '');
-              }).toList();
+             if (configs.isNotEmpty) {
+                // Sanitize
+                final cleaned = configs.map((c) {
+                   return c.replaceAll(RegExp(r'"spider_x":\s*("[^"]*"|[^,{}]+),?'), '');
+                }).toList();
 
-              // Add to Manager
-              final added = await manager.addConfigs(cleaned, checkBlacklist: true);
-              if (added > 0) {
-                 AdvancedLogger.info("[ConfigGistService] Added $added configs from $url");
-                 success = true;
-                 // Save for fail-safe
-                 await prefs.setString(_backupConfigsKey, jsonEncode(cleaned));
-              }
+                // Add to Manager
+                final added = await manager.addConfigs(cleaned, checkBlacklist: true);
+                if (added > 0) {
+                   AdvancedLogger.info("[ConfigGistService] Added $added configs from $url");
+                   success = true;
+                   // Save for fail-safe
+                   await prefs.setString(_backupConfigsKey, jsonEncode(cleaned));
+                }
+             }
+           } catch (parseError) {
+             AdvancedLogger.error("APP_ERROR: Parsing failed: $parseError");
            }
         }
       } catch (e) {
@@ -69,6 +73,7 @@ class ConfigGistService {
     if (success) {
       await prefs.setInt(_lastFetchKey, now.millisecondsSinceEpoch);
       AdvancedLogger.info("[ConfigGistService] Fetch complete. Timestamp updated.");
+      return true;
     } else {
       AdvancedLogger.error("[ConfigGistService] All mirrors failed.");
 
@@ -83,11 +88,13 @@ class ConfigGistService {
                  AdvancedLogger.warn("⚠️ Network failure. Using last known good configuration.");
                  final added = await manager.addConfigs(backupConfigs, checkBlacklist: true);
                  AdvancedLogger.info("[ConfigGistService] Restored $added configs from backup.");
+                 return true; // Success via backup
              }
           } catch (e) {
-             AdvancedLogger.error("[ConfigGistService] Failed to load backup: $e");
+             AdvancedLogger.error("APP_ERROR: Failed to load backup: $e");
           }
       }
+      return false; // Total failure
     }
   }
 
@@ -109,7 +116,7 @@ class ConfigGistService {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
         },
-      ).timeout(const Duration(seconds: 30));
+      ).timeout(const Duration(seconds: 15)); // strict 15-second timeout
 
       if (response.statusCode != 200) return null;
 

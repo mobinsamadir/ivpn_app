@@ -358,7 +358,16 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
 
     // New Smart Fetch Logic
     try {
-      await _configGistService.fetchAndApplyConfigs(_configManager);
+      final success = await _configGistService.fetchAndApplyConfigs(_configManager);
+      if (!success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("⚠️ Server list could not be loaded. Please check your connection and tap Refresh."),
+            backgroundColor: Colors.orangeAccent,
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
     } catch (e) {
       AdvancedLogger.warn("[HomeScreen] Config fetch failed: $e");
     }
@@ -400,6 +409,34 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     return Scaffold(
       resizeToAvoidBottomInset: false,
       backgroundColor: const Color(0xFF121212),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF121212),
+        elevation: 0,
+        title: const Text(
+          'V2Ray',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.greenAccent),
+            onPressed: _refreshConfigsManual,
+            tooltip: 'Force Refresh',
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings, color: Colors.white),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              );
+            },
+          ),
+        ],
+      ),
       body: SafeArea(
         child: RefreshIndicator(
           backgroundColor: const Color(0xFF1A1A1A),
@@ -413,8 +450,6 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                   child: Column(
                     children: [
-                      const SizedBox(height: 8),
-                      _buildAppHeader(),
                       const SizedBox(height: 8),
                       _buildSubscriptionCard(),
                       const SizedBox(height: 16),
@@ -499,12 +534,6 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
                         ),
                       ),
                       const Spacer(),
-                      IconButton(
-                        icon: const Icon(Icons.refresh, color: Colors.greenAccent),
-                        onPressed: _refreshConfigsManual,
-                        tooltip: 'Force Refresh',
-                        splashRadius: 20,
-                      ),
                       IconButton(
                         icon: const Icon(Icons.speed, color: Colors.blueAccent),
                         onPressed: _runSmartAutoTest,
@@ -681,6 +710,19 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
       if (!access.hasAccess) return;
     }
 
+    // NEW CHECK
+    if (_configManager.selectedConfig == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("❌ Please select a server from the list first."),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      // Reset status to avoid stuck 'Connecting...'
+      _configManager.setConnected(false, status: 'Ready');
+      return;
+    }
+
     if (_configManager.allConfigs.isEmpty) {
       _showToast("No configurations available. Please refresh.");
       return;
@@ -763,30 +805,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     );
   }
 
-  Widget _buildAppHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        const Text(
-          'V2Ray',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        IconButton(
-          icon: const Icon(Icons.settings, color: Colors.white),
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SettingsScreen()),
-            );
-          },
-        )
-      ],
-    );
-  }
+  // _buildAppHeader Removed
 
   Widget _buildSubscriptionCard() {
     final access = _accessManager;
