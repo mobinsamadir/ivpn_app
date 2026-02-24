@@ -1,6 +1,6 @@
 name: ivpn_new
 description: iVPN Client - High Performance VPN
-version: 1.0.234+234 # یک شماره نسخه را بالا بردم تا تداخل ایجاد نشود
+version: 1.0.0+1771954304
 
 environment:
   sdk: ">=3.0.0 <4.0.0"

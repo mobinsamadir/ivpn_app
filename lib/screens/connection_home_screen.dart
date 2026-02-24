@@ -623,7 +623,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
                     if (_isFetching) {
                       return SliverList(
                         delegate: SliverChildBuilderDelegate(
-                          (context, index) => const ShimmerConfigCard(),
+                          (context, index) => const RepaintBoundary(child: ShimmerConfigCard()),
                           childCount: 6,
                         ),
                       );
