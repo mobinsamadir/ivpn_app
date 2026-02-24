@@ -405,5 +405,73 @@ void main() {
        // Verify Error SnackBar
        expect(find.text('Ad failed to load. Please try again.'), findsOneWidget);
     });
+
+    // --- NEW ITERATION 3 TESTS ---
+
+    testWidgets('Scenario: Gist Fetch Failure - Configs still displayed', (tester) async {
+       // Setup: ConfigGistService fails (does nothing or throws)
+       when(() => mockConfigGistService.fetchAndApplyConfigs(any(), force: any(named: 'force')))
+           .thenThrow(Exception('Network Error'));
+
+       // Setup: ConfigManager has cached configs
+       final config = VpnConfigWithMetrics(id: 'c1', rawConfig: 'v1', name: 'Cached Server', addedDate: DateTime.now());
+       when(() => mockConfigManager.allConfigs).thenReturn([config]);
+       when(() => mockConfigManager.validatedConfigs).thenReturn([config]);
+       when(() => mockConfigManager.favoriteConfigs).thenReturn([]);
+       when(() => mockConfigManager.selectedConfig).thenReturn(config);
+
+       await tester.pumpWidget(createWidget());
+       await tester.pumpAndSettle();
+
+       // Verify Config Card is displayed despite fetch error
+       expect(find.text('Cached Server'), findsOneWidget);
+    });
+
+    testWidgets('Scenario: Rapid Reconnect - Debounce/Toggle Logic', (tester) async {
+       // Setup: ConfigManager in Disconnected state
+       when(() => mockConfigManager.isConnected).thenReturn(false);
+       when(() => mockConfigManager.connectionStatus).thenReturn('Disconnected');
+
+       // Setup: Config
+       final config = VpnConfigWithMetrics(id: 'c1', rawConfig: 'v1', name: 'Server 1', addedDate: DateTime.now());
+       when(() => mockConfigManager.allConfigs).thenReturn([config]);
+       when(() => mockConfigManager.validatedConfigs).thenReturn([config]);
+       when(() => mockConfigManager.getBestConfig()).thenAnswer((_) async => config);
+
+       // Setup: connectWithSmartFailover mocks
+       when(() => mockConfigManager.setConnected(any(), status: any(named: 'status'))).thenReturn(null);
+       when(() => mockConfigManager.stopAllOperations()).thenAnswer((_) async {});
+
+       // We use a Completer to hang the connection process
+       final connectionCompleter = Completer<void>();
+       when(() => mockConfigManager.connectWithSmartFailover()).thenAnswer((_) => connectionCompleter.future);
+
+       await tester.pumpWidget(createWidget());
+       await tester.pumpAndSettle();
+
+       // 1. First Tap
+       await tester.tap(find.text('CONNECT'));
+       await tester.pump(); // Process tap
+
+       // Verify setConnected called with 'Connecting...'
+       verify(() => mockConfigManager.setConnected(false, status: 'Connecting...')).called(1);
+
+       // Simulate UI state update (mock the getter to reflect the change made by setConnected)
+       when(() => mockConfigManager.connectionStatus).thenReturn('Connecting...');
+
+       // Rebuild widget to pick up new mock state (since mock doesn't notify listeners)
+       await tester.pumpWidget(createWidget());
+       await tester.pump();
+
+       // 2. Second Tap (Rapidly)
+       await tester.tap(find.text('CONNECTING'));
+       await tester.pump();
+
+       // Verify stopAllOperations called
+       verify(() => mockConfigManager.stopAllOperations()).called(1);
+
+       // Verify connectWithSmartFailover NOT called a second time
+       verify(() => mockConfigManager.connectWithSmartFailover()).called(1);
+    });
   });
 }

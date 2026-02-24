@@ -357,7 +357,11 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     }
 
     // New Smart Fetch Logic
-    await _configGistService.fetchAndApplyConfigs(_configManager);
+    try {
+      await _configGistService.fetchAndApplyConfigs(_configManager);
+    } catch (e) {
+      AdvancedLogger.warn("[HomeScreen] Config fetch failed: $e");
+    }
 
     // Auto Test if configs exist
     if (_configManager.allConfigs.isNotEmpty && _autoTestOnStartup && !_configManager.isConnected && mounted) {
@@ -414,9 +418,16 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
                       const SizedBox(height: 8),
                       _buildSubscriptionCard(),
                       const SizedBox(height: 16),
-                      _buildConnectionStatus(),
-                      const SizedBox(height: 12),
-                      _buildConnectButton(),
+                      ListenableBuilder(
+                        listenable: _configManager,
+                        builder: (context, _) => Column(
+                          children: [
+                            _buildConnectionStatus(),
+                            const SizedBox(height: 12),
+                            _buildConnectButton(),
+                          ],
+                        ),
+                      ),
                       const SizedBox(height: 30),
                       _buildSelectedConfig(),
                       const SizedBox(height: 25),
