@@ -24,9 +24,16 @@ class AdvancedLogger {
   static Future<void> init({LogLevel minLevel = LogLevel.debug}) async {
     _minLevel = minLevel;
     try {
-      final directory = await getApplicationDocumentsDirectory();
-      final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-').split('.')[0];
-      _logFile = File(p.join(directory.path, 'vpn_log_$timestamp.jsonl'));
+      File logFile;
+      if (Platform.isWindows) {
+        final exePath = Platform.resolvedExecutable;
+        logFile = File(p.join(p.dirname(exePath), 'iVPN_debug_log.txt'));
+      } else {
+        final directory = await getApplicationDocumentsDirectory();
+        final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-').split('.')[0];
+        logFile = File(p.join(directory.path, 'vpn_log_$timestamp.jsonl'));
+      }
+      _logFile = logFile;
 
       // Write initial marker
       await _writeEntry({
@@ -103,6 +110,9 @@ class AdvancedLogger {
 
   /// Private logging method
   static void _log(LogLevel level, String message, {Map<String, dynamic>? metadata}) {
+    // Release Mode: Only allow critical errors
+    if (kReleaseMode && level != LogLevel.error) return;
+
     if (level.index < _minLevel.index) return;
 
     final entry = {

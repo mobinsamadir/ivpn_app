@@ -454,6 +454,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
           color: Colors.blueAccent,
           onRefresh: _refreshConfigsManual,
           child: CustomScrollView(
+            cacheExtent: 1000,
             slivers: [
               SliverToBoxAdapter(child: _buildAdBannerSection()),
               SliverToBoxAdapter(
@@ -809,7 +810,10 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
        // Short delay to allow native cleanup
        await Future.delayed(const Duration(milliseconds: 500));
     }
-    await _configManager.skipToNext(sourceList: _getCurrentList());
+    final success = await _configManager.skipToNext(sourceList: _getCurrentList());
+    if (!success) {
+       _showToast("No other valid servers available.");
+    }
   }
 
   List<VpnConfigWithMetrics> _getCurrentList() {

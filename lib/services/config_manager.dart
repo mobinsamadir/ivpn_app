@@ -439,9 +439,9 @@ class ConfigManager extends ChangeNotifier {
      return currentList[(currentIndex + 1) % currentList.length];
   }
 
-  Future<void> skipToNext({List<VpnConfigWithMetrics>? sourceList, bool performConnection = true}) async {
+  Future<bool> skipToNext({List<VpnConfigWithMetrics>? sourceList, bool performConnection = true}) async {
     final list = sourceList ?? (validatedConfigs.isNotEmpty ? validatedConfigs : allConfigs);
-    if (list.isEmpty) return;
+    if (list.isEmpty) return false;
 
     int currentIndex = -1;
     if (_selectedConfig != null) {
@@ -458,6 +458,7 @@ class ConfigManager extends ChangeNotifier {
       nextIndex = (nextIndex + 1) % list.length;
       final c = list[nextIndex];
       // Smart Skip: Ignore obviously dead configs (failed 3+ times, no ping)
+      // Also prevent wrapping to self if self is the only one (or all others dead)
       if (!c.isDead && (c.currentPing > 0 || c.funnelStage > 0)) {
         candidate = c;
         break;
@@ -465,20 +466,27 @@ class ConfigManager extends ChangeNotifier {
       attempts++;
     }
 
-    // Fallback: If no "good" candidate found, just take the immediate next one
+    // Fallback: If no "good" candidate found, we DO NOT blindly pick a dead one.
+    // Instead, we return false to let UI inform user.
     if (candidate == null) {
-       candidate = list[(currentIndex + 1) % list.length];
+       AdvancedLogger.warn("[ConfigManager] Smart Skip: No valid candidates found.");
+       return false;
     }
 
-    if (candidate.id != _selectedConfig?.id) {
-       AdvancedLogger.info("[ConfigManager] Skipping to: ${candidate.name}");
-       _selectedConfig = candidate;
-       _safeNotifyListeners();
-
-       if (performConnection) {
-          await connectWithSmartFailover();
-       }
+    // If candidate is same as current, it means only 1 valid config exists.
+    if (candidate.id == _selectedConfig?.id) {
+       AdvancedLogger.info("[ConfigManager] Smart Skip: Already on the only valid config.");
+       return false;
     }
+
+    AdvancedLogger.info("[ConfigManager] Skipping to: ${candidate.name}");
+    _selectedConfig = candidate;
+    _safeNotifyListeners();
+
+    if (performConnection) {
+       await connectWithSmartFailover();
+    }
+    return true;
   }
 
   // --- PERSISTENCE ---

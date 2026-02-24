@@ -25,8 +25,9 @@ class ConfigCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    return RepaintBoundary(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: const Color(0xFF1A1A1A),
         borderRadius: BorderRadius.circular(12),
@@ -296,7 +297,7 @@ class ConfigCard extends StatelessWidget {
           ),
         ),
       ),
-    );
+    ));
   }
 
   Widget _buildCountryFlag(String? countryCode) {
