@@ -22,12 +22,20 @@ jobs:
         python-version: '3.10'
 
     - name: Cache Xray
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: bin/
         key: ${{ runner.os }}-xray-${{ hashFiles('tester.py') }}
         restore-keys: |
           ${{ runner.os }}-xray-
+
+    - name: Cache Pip Dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-aiohttp
+        restore-keys: |
+          ${{ runner.os }}-pip-
 
     - name: Install Dependencies
       run: |

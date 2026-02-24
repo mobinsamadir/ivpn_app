@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html_parser;
@@ -12,6 +13,7 @@ class ConfigGistService {
   ConfigGistService._internal();
 
   static const String _lastFetchKey = 'last_config_fetch_timestamp';
+  static const String _backupConfigsKey = 'gist_backup_configs';
   static const Duration _fetchInterval = Duration(hours: 24);
 
   // Mirrors List (GitHub -> Gist -> MyFiles -> Drive API)
@@ -54,6 +56,8 @@ class ConfigGistService {
               if (added > 0) {
                  AdvancedLogger.info("[ConfigGistService] Added $added configs from $url");
                  success = true;
+                 // Save for fail-safe
+                 await prefs.setString(_backupConfigsKey, jsonEncode(cleaned));
               }
            }
         }
@@ -67,6 +71,23 @@ class ConfigGistService {
       AdvancedLogger.info("[ConfigGistService] Fetch complete. Timestamp updated.");
     } else {
       AdvancedLogger.error("[ConfigGistService] All mirrors failed.");
+
+      // Fail-safe
+      final backupJson = prefs.getString(_backupConfigsKey);
+      if (backupJson != null && backupJson.isNotEmpty) {
+          try {
+             final List<dynamic> rawList = jsonDecode(backupJson);
+             final List<String> backupConfigs = rawList.map((e) => e.toString()).toList();
+
+             if (backupConfigs.isNotEmpty) {
+                 AdvancedLogger.warn("⚠️ Network failure. Using last known good configuration.");
+                 final added = await manager.addConfigs(backupConfigs, checkBlacklist: true);
+                 AdvancedLogger.info("[ConfigGistService] Restored $added configs from backup.");
+             }
+          } catch (e) {
+             AdvancedLogger.error("[ConfigGistService] Failed to load backup: $e");
+          }
+      }
     }
   }
 
