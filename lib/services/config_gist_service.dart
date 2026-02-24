@@ -1,9 +1,13 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html_parser;
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../utils/advanced_logger.dart';
+import '../widgets/update_dialog.dart';
 import 'config_manager.dart';
 import 'config_parser.dart';
 
@@ -15,12 +19,51 @@ class ConfigGistService {
   static const String _lastFetchKey = 'last_config_fetch_timestamp';
   static const String _backupConfigsKey = 'gist_backup_configs';
   static const Duration _fetchInterval = Duration(hours: 24);
+  static const String _updateUrl = 'https://raw.githubusercontent.com/mobinsamadir/ivpn-servers/refs/heads/main/version.json';
 
   // Mirrors List (GitHub -> Gist -> MyFiles -> Drive API)
   static const List<String> _mirrors = [
     'https://raw.githubusercontent.com/mobinsamadir/ivpn-servers/refs/heads/main/servers.txt',
     'https://gist.githubusercontent.com/mobinsamadir/687a7ef199d6eaf6d1912e36151a9327/raw/servers.txt',
   ];
+
+  Future<void> checkForUpdates(BuildContext context) async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      final currentBuild = int.tryParse(info.buildNumber) ?? 0;
+
+      AdvancedLogger.info("[UpdateCheck] Checking for updates... Current Build: $currentBuild");
+
+      final response = await http.get(Uri.parse(_updateUrl)).timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final latestBuild = data['version_code'] as int;
+        final version = data['version_name'] as String;
+        final notes = data['release_notes'] as String? ?? 'Bug fixes and performance improvements.';
+        final downloadUrl = data['download_url'] as String;
+
+        AdvancedLogger.info("[UpdateCheck] Remote Build: $latestBuild");
+
+        if (latestBuild > currentBuild) {
+           if (context.mounted) {
+             showDialog(
+               context: context,
+               barrierDismissible: false,
+               builder: (ctx) => UpdateDialog(
+                 version: version,
+                 releaseNotes: notes,
+                 onUpdate: () {
+                    launchUrl(Uri.parse(downloadUrl), mode: LaunchMode.externalApplication);
+                 },
+               ),
+             );
+           }
+        }
+      }
+    } catch (e) {
+      AdvancedLogger.warn("[UpdateCheck] Failed: $e");
+    }
+  }
 
   Future<bool> fetchAndApplyConfigs(ConfigManager manager, {bool force = false}) async {
     final prefs = await SharedPreferences.getInstance();

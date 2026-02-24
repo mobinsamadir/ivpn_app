@@ -15,6 +15,7 @@ import '../services/testers/ephemeral_tester.dart';
 import '../services/config_gist_service.dart';
 import '../services/connectivity_service.dart';
 import '../widgets/ad_explanation_dialog.dart';
+import '../widgets/shimmer_config_card.dart';
 import 'settings_screen.dart';
 
 class ConnectionHomeScreen extends StatefulWidget {
@@ -57,6 +58,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
   // 2. State Variables
   bool _isInitialized = false;
   bool _autoTestOnStartup = true;
+  bool _isFetching = false;
   Timer? _timerUpdater;
   final Set<String> _activeTestIds = {};
 
@@ -340,11 +342,13 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
 
   Future<void> _initAppSequence() async {
     if (!mounted) return;
-    setState(() {});
+    setState(() { _isFetching = true; });
+
     final bool hasInternet = await _connectivityService.hasInternet();
 
     if (!hasInternet) {
        if (mounted) {
+         setState(() { _isFetching = false; });
          ScaffoldMessenger.of(context).showSnackBar(
            const SnackBar(
              content: Text("No Internet Connection. Testing Aborted."),
@@ -370,6 +374,13 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
       }
     } catch (e) {
       AdvancedLogger.warn("[HomeScreen] Config fetch failed: $e");
+    } finally {
+      if (mounted) setState(() { _isFetching = false; });
+    }
+
+    // Check for updates (Background)
+    if (mounted) {
+       _configGistService.checkForUpdates(context);
     }
 
     // Auto Test if configs exist
@@ -476,8 +487,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
                 child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16.0),
                   child: SizedBox(
-                    height: 250,
-                    child: UniversalAdWidget(slot: 'home_banner_bottom', height: 250),
+                    height: 60,
+                    child: UniversalAdWidget(slot: 'home_banner_bottom'),
                   ),
                 ),
               ),
@@ -772,11 +783,14 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
   Future<void> _refreshConfigsManual() async {
     if (!mounted) return;
     _showToast('Refreshing configs...');
+    setState(() { _isFetching = true; });
     try {
       await _configGistService.fetchAndApplyConfigs(_configManager, force: true);
       _showToast('Refresh completed');
     } catch (e) {
       _showToast('Failed to refresh configs: $e');
+    } finally {
+      if (mounted) setState(() { _isFetching = false; });
     }
   }
 
@@ -865,46 +879,73 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     final isConnected = _configManager.isConnected;
     final isConnecting = _configManager.connectionStatus.toLowerCase().contains('connecting');
 
-    return Center(
-      child: GestureDetector(
-        onTap: _handleConnection,
-        child: Container(
-          width: 180,
-          height: 180,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: isConnected
-                ? Colors.redAccent
-                : (isConnecting ? Colors.orange : Colors.green),
-            boxShadow: [
-              BoxShadow(
-                color: (isConnected ? Colors.red : Colors.green).withValues(alpha: 0.4),
-                blurRadius: 20,
-                spreadRadius: 5,
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        Center(
+          child: GestureDetector(
+            onTap: _handleConnection,
+            child: Container(
+              width: 180,
+              height: 180,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isConnected
+                    ? Colors.redAccent
+                    : (isConnecting ? Colors.orange : Colors.green),
+                boxShadow: [
+                  BoxShadow(
+                    color: (isConnected ? Colors.red : Colors.green).withValues(alpha: 0.4),
+                    blurRadius: 20,
+                    spreadRadius: 5,
+                  ),
+                ],
               ),
-            ],
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    isConnected ? Icons.power_settings_new : Icons.power_settings_new,
+                    size: 60,
+                    color: Colors.white,
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    isConnected ? 'DISCONNECT' : (isConnecting ? 'CONNECTING' : 'CONNECT'),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
+        ),
+
+        // Skip Button (Right Side)
+        Positioned(
+          right: 30,
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                isConnected ? Icons.power_settings_new : Icons.power_settings_new,
-                size: 60,
-                color: Colors.white,
-              ),
-              const SizedBox(height: 10),
-              Text(
-                isConnected ? 'DISCONNECT' : (isConnecting ? 'CONNECTING' : 'CONNECT'),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.blueAccent.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.skip_next_rounded, size: 32, color: Colors.blueAccent),
+                  onPressed: _skipServer,
+                  tooltip: 'Next Server',
                 ),
               ),
+              const SizedBox(height: 4),
+              const Text("Skip", style: TextStyle(color: Colors.grey, fontSize: 10)),
             ],
           ),
         ),
-      ),
+      ],
     );
   }
 

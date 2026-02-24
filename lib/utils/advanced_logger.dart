@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
@@ -10,8 +11,9 @@ enum LogLevel { debug, info, warn, error }
 class AdvancedLogger {
   static File? _logFile;
   static final List<String> _buffer = [];
-  static const int _bufferSize = 50; // Flush every 50 entries
+  static const int _bufferSize = 50; // Flush if buffer reaches 50
   static LogLevel _minLevel = LogLevel.debug;
+  static Timer? _flushTimer;
 
   // Memory buffering for in-app viewing
   static final List<String> _logHistory = [];
@@ -36,6 +38,10 @@ class AdvancedLogger {
           'version': Platform.operatingSystemVersion,
         }
       });
+
+      // Start periodic flush timer (5 seconds)
+      _flushTimer?.cancel();
+      _flushTimer = Timer.periodic(const Duration(seconds: 5), (_) => _flush());
 
       debugPrint('✅ AdvancedLogger initialized: ${_logFile!.path}');
     } catch (e) {
@@ -138,7 +144,7 @@ class AdvancedLogger {
     }
   }
 
-  /// Write entry to file
+  /// Write entry to file immediately (used for critical markers)
   static Future<void> _writeEntry(Map<String, dynamic> entry) async {
     if (_logFile == null) return;
     try {
@@ -151,20 +157,26 @@ class AdvancedLogger {
     }
   }
 
-  /// Flush buffer to file
+  /// Flush buffer to file safely
   static Future<void> _flush() async {
     if (_logFile == null || _buffer.isEmpty) return;
+
+    // Swap buffer to avoid race conditions during await
+    final List<String> bufferToWrite = List.from(_buffer);
+    _buffer.clear();
+
     try {
-      final content = '${_buffer.join('\n')}\n';
+      final content = '${bufferToWrite.join('\n')}\n';
       await _logFile!.writeAsString(content, mode: FileMode.append);
-      _buffer.clear();
     } catch (e) {
       debugPrint('Failed to flush log buffer: $e');
+      // If write fails, we lose these logs, but better than duplicating or memory leaks.
     }
   }
 
   /// Force flush (call before app exit)
   static Future<void> close() async {
+    _flushTimer?.cancel();
     await _flush();
     info('=== SESSION ENDED ===');
     await _flush(); // Flush the end marker too

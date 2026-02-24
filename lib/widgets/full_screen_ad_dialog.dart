@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../services/ad_manager_service.dart';
 import 'universal_ad_widget.dart';
 
 class FullScreenAdDialog extends StatefulWidget {
@@ -16,21 +15,13 @@ class FullScreenAdDialog extends StatefulWidget {
 }
 
 class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
-  int _timeLeft = 10;
+  int _timeLeft = 15; // Strict 15s countdown
   Timer? _timer;
+  bool _canClose = false;
 
   @override
   void initState() {
     super.initState();
-    _initializeTimer();
-  }
-
-  void _initializeTimer() {
-    final ad = AdManagerService().getAdUnit(widget.unitId);
-    // Enforce 10s minimum regardless of config, as per "The Wall" requirement
-    _timeLeft = (ad?.timerSeconds ?? 10);
-    if (_timeLeft < 10) _timeLeft = 10;
-
     _startTimer();
   }
 
@@ -45,8 +36,9 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
       } else {
         _timer?.cancel();
         if (mounted) {
-          // Failsafe: Auto-dismiss on timeout (Success)
-          Navigator.of(context).pop(true);
+          setState(() {
+            _canClose = true;
+          });
         }
       }
     });
@@ -60,13 +52,9 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
 
   @override
   Widget build(BuildContext context) {
-    // PopScope prevents Back Button to enforce "The Wall" until dismissed or closed
+    // PopScope prevents Back Button to enforce "The Wall" until dismissed
     return PopScope(
       canPop: false,
-      onPopInvokedWithResult: (didPop, result) {
-         if (didPop) return;
-         // Optionally block interaction or show toast
-      },
       child: Scaffold(
         backgroundColor: Colors.black, // Force solid background
         body: Stack(
@@ -86,23 +74,24 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
                           style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                         // Timer Badge
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.redAccent.withValues(alpha: 0.8),
-                            borderRadius: BorderRadius.circular(20),
+                        if (!_canClose)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.redAccent.withValues(alpha: 0.8),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.timer, color: Colors.white, size: 14),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '${_timeLeft}s',
+                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
                           ),
-                          child: Row(
-                            children: [
-                               const Icon(Icons.timer, color: Colors.white, size: 14),
-                               const SizedBox(width: 6),
-                               Text(
-                                '${_timeLeft}s',
-                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -118,8 +107,7 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
                     ),
                   ),
 
-                  // Footer "The Wall" Action Area
-                  // Modified: Now just shows status, no button needed as it auto-dismisses
+                  // Footer Status
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: const BoxDecoration(
@@ -130,22 +118,26 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          "Your premium connection is ready in ${_timeLeft}s...",
+                          _canClose
+                              ? "Thank you! You can now close this ad."
+                              : "Your premium connection is ready in ${_timeLeft}s...",
                           style: TextStyle(
-                            color: Colors.grey[400],
+                            color: _canClose ? Colors.greenAccent : Colors.grey[400],
                             fontSize: 14,
-                            fontWeight: FontWeight.w500
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                         const SizedBox(height: 20),
-                        // Visual Indicator that work is happening (or waiting)
-                        const SizedBox(
-                          width: double.infinity,
-                          height: 56,
-                          child: Center(
-                             child: CircularProgressIndicator(color: Colors.blueAccent),
+                        // Visual Indicator
+                        if (!_canClose)
+                          const SizedBox(
+                            width: double.infinity,
+                            height: 4,
+                            child: LinearProgressIndicator(
+                              backgroundColor: Colors.black,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.blueAccent),
+                            ),
                           ),
-                        ),
                       ],
                     ),
                   ),
@@ -153,30 +145,30 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
               ),
             ),
 
-            // Escapability Layer: Close Button
-            // Positioned relative to the safe area
-            Positioned(
-              top: 0,
-              right: 0,
-              child: SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Material(
-                    color: Colors.black54, // Semi-transparent for visibility over white ads
-                    shape: const CircleBorder(),
-                    clipBehavior: Clip.hardEdge,
-                    child: IconButton(
-                      icon: const Icon(Icons.close, color: Colors.white, size: 28),
-                      tooltip: 'Close Ad',
-                      onPressed: () {
-                        // User explicitly closed it -> No Reward (False)
-                        Navigator.of(context).pop(false);
-                      },
+            // Escapability Layer: Close Button (Only appears after timer)
+            if (_canClose)
+              Positioned(
+                top: 0,
+                right: 0,
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Material(
+                      color: Colors.black54,
+                      shape: const CircleBorder(),
+                      clipBehavior: Clip.hardEdge,
+                      child: IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                        tooltip: 'Close & Claim Reward',
+                        onPressed: () {
+                          // Success!
+                          Navigator.of(context).pop(true);
+                        },
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
           ],
         ),
       ),

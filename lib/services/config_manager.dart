@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:http/http.dart' as http;
@@ -236,7 +237,7 @@ class ConfigManager extends ChangeNotifier {
 
   Future<void> _onThrottleTick() async {
     await _updateLists(); // Async update via isolate
-    notifyListeners();
+    _safeNotifyListeners();
 
     _throttleTimer = null;
 
@@ -282,7 +283,7 @@ class ConfigManager extends ChangeNotifier {
          allConfigs.addAll(newConfigs);
          await _updateLists();
          await _saveAllConfigs();
-         notifyListeners();
+         _safeNotifyListeners();
          AdvancedLogger.info('[ConfigManager] Successfully added ${newConfigs.length} configs via Isolate.');
       }
 
@@ -438,6 +439,48 @@ class ConfigManager extends ChangeNotifier {
      return currentList[(currentIndex + 1) % currentList.length];
   }
 
+  Future<void> skipToNext({List<VpnConfigWithMetrics>? sourceList, bool performConnection = true}) async {
+    final list = sourceList ?? (validatedConfigs.isNotEmpty ? validatedConfigs : allConfigs);
+    if (list.isEmpty) return;
+
+    int currentIndex = -1;
+    if (_selectedConfig != null) {
+      currentIndex = list.indexWhere((c) => c.id == _selectedConfig!.id);
+    }
+
+    // Find next valid config
+    int attempts = 0;
+    int nextIndex = currentIndex;
+    VpnConfigWithMetrics? candidate;
+
+    // Loop to find next valid one
+    while (attempts < list.length) {
+      nextIndex = (nextIndex + 1) % list.length;
+      final c = list[nextIndex];
+      // Smart Skip: Ignore obviously dead configs (failed 3+ times, no ping)
+      if (!c.isDead && (c.currentPing > 0 || c.funnelStage > 0)) {
+        candidate = c;
+        break;
+      }
+      attempts++;
+    }
+
+    // Fallback: If no "good" candidate found, just take the immediate next one
+    if (candidate == null) {
+       candidate = list[(currentIndex + 1) % list.length];
+    }
+
+    if (candidate.id != _selectedConfig?.id) {
+       AdvancedLogger.info("[ConfigManager] Skipping to: ${candidate.name}");
+       _selectedConfig = candidate;
+       _safeNotifyListeners();
+
+       if (performConnection) {
+          await connectWithSmartFailover();
+       }
+    }
+  }
+
   // --- PERSISTENCE ---
   Future<void> _initDeviceId() async {
      final info = DeviceInfoPlugin();
@@ -491,6 +534,17 @@ class ConfigManager extends ChangeNotifier {
       favoriteConfigs = result['favorite']!;
     } catch (e) {
       AdvancedLogger.error("[ConfigManager] Sorting isolate failed: $e");
+    }
+  }
+
+  void _safeNotifyListeners() {
+    // Ensure UI updates are scheduled safely to prevent race conditions during build
+    if (SchedulerBinding.instance.schedulerPhase != SchedulerPhase.idle) {
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        notifyListeners();
+      });
+    } else {
+      notifyListeners();
     }
   }
 
