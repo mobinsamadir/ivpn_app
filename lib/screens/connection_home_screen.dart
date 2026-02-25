@@ -392,9 +392,14 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     }
 
     // Auto Test if configs exist
-    if (_configManager.allConfigs.isNotEmpty && _autoTestOnStartup && !_configManager.isConnected && mounted) {
-        AdvancedLogger.info("[HomeScreen] Triggering Auto-Test...");
+    // Smart Startup: Skip auto-test if we already have enough good configs
+    final bool haveEnoughValid = _configManager.validatedConfigs.length >= 5;
+
+    if (!haveEnoughValid && _configManager.allConfigs.isNotEmpty && _autoTestOnStartup && !_configManager.isConnected && mounted) {
+        AdvancedLogger.info("[HomeScreen] Triggering Auto-Test (Need valid configs)...");
         _runFunnelTest();
+    } else if (haveEnoughValid) {
+        AdvancedLogger.info("[HomeScreen] Smart Startup: Skipping Auto-Test (Have ${_configManager.validatedConfigs.length} valid configs).");
     }
   }
 

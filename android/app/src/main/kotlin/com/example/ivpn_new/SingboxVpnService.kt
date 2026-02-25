@@ -49,8 +49,30 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
         private val isTestRunning = AtomicBoolean(false)
         private val testMutex = Mutex()
 
+        private fun resolveConfigContent(input: String): String {
+            if (input.isBlank()) throw IllegalArgumentException("Config input is empty")
+
+            var content = input
+            // Check if it looks like a path (doesn't start with {)
+            if (!input.trim().startsWith("{")) {
+                 val file = File(input)
+                 if (file.exists() && file.isFile) {
+                     try {
+                         println("[Native] Reading config from file: $input")
+                         content = file.readText()
+                     } catch (e: Exception) {
+                         throw IllegalArgumentException("Failed to read config file: ${e.message}")
+                     }
+                 }
+            }
+
+            val logStart = if (content.length > 20) content.substring(0, 20) else content
+            println("[DEBUG-INTERNAL] Resolved JSON: $logStart...")
+            return content
+        }
+
         // --- NEW: Granular Control for Dart-driven Testing ---
-        suspend fun startTestProxy(configJson: String, tempDir: File): Int = withContext(Dispatchers.IO) {
+        suspend fun startTestProxy(rawInput: String, tempDir: File): Int = withContext(Dispatchers.IO) {
             if (isVpnRunning.get()) {
                 println("❌ [Native] Cannot start Test Proxy: VPN is running")
                 return@withContext -1
@@ -61,17 +83,8 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
                  return@withContext -2
             }
 
-            // Diagnostic Log
-            val start = if (configJson.length > 10) configJson.substring(0, 10) else configJson
-            println("[DEBUG-INTERNAL] Config start: $start")
-
-            if (!configJson.trim().startsWith("{")) {
-                 println("FATAL: INVALID CONFIG FORMAT DETECTED")
-                 isTestRunning.set(false)
-                 return@withContext -4
-            }
-
             try {
+                val configJson = resolveConfigContent(rawInput)
                 val json = JSONObject(configJson)
                 var socksPort = 0
 
@@ -142,11 +155,13 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
             }
         }
 
-        suspend fun measurePing(configJson: String, tempDir: File): Int = withContext(Dispatchers.IO) {
+        suspend fun measurePing(rawInput: String, tempDir: File): Int = withContext(Dispatchers.IO) {
             if (isVpnRunning.get()) return@withContext -1
             if (!isTestRunning.compareAndSet(false, true)) return@withContext -1
 
             try {
+                val configJson = resolveConfigContent(rawInput)
+
                 val socket = ServerSocket(0)
                 val socksPort = socket.localPort
                 socket.close()
@@ -216,7 +231,7 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
         return START_NOT_STICKY
     }
 
-    private fun startVpn(configJson: String) {
+    private fun startVpn(rawInput: String) {
         if (isVpnRunning.get()) return
 
         if (isTestRunning.get()) {
@@ -224,23 +239,14 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
              isTestRunning.set(false)
         }
 
-        // Diagnostic Log
-        val start = if (configJson.length > 10) configJson.substring(0, 10) else configJson
-        println("[DEBUG-INTERNAL] Config start: $start")
-
-        if (!configJson.trim().startsWith("{")) {
-             println("FATAL: INVALID CONFIG FORMAT DETECTED")
-             MainActivity.sendVpnStatus("ERROR: INVALID_FORMAT")
-             return
-        }
-
         isVpnRunning.set(true)
-
         createNotificationChannel()
         startForeground(VPN_NOTIFICATION_ID, createNotification())
 
         serviceScope.launch {
             try {
+                val configJson = resolveConfigContent(rawInput)
+
                 val builder = Builder()
                 builder.setSession("iVPN Connection")
                 builder.addAddress("172.19.0.1", 28)

@@ -6,6 +6,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:http/http.dart' as http;
+import 'package:connectivity_plus/connectivity_plus.dart'; // Event-Driven
 import 'package:collection/collection.dart';
 import 'package:crypto/crypto.dart'; // Import crypto for MD5
 import '../models/vpn_config_with_metrics.dart';
@@ -192,9 +193,20 @@ class ConfigManager extends ChangeNotifier {
     AdvancedLogger.info('[ConfigManager] Initializing...');
     await _initDeviceId();
     await _loadAutoSwitchSetting();
-    await _loadBlacklist(); // Load Blacklist
+    await _loadBlacklist();
     await _loadConfigs();
     await _updateLists();
+
+    // Event-Driven Network Listener
+    Connectivity().onConnectivityChanged.listen((_) async {
+       if (_isConnected) {
+          AdvancedLogger.info("[ConfigManager] Network state changed. Verifying connectivity...");
+          // Small delay to let network settle
+          await Future.delayed(const Duration(seconds: 2));
+          await measureActivePing();
+       }
+    });
+
     AdvancedLogger.info('[ConfigManager] Initialization complete. Loaded ${allConfigs.length} configs.');
   }
 
@@ -622,55 +634,61 @@ class ConfigManager extends ChangeNotifier {
   
   void stopSession() { _sessionTimer?.cancel(); }
 
-  // --- SMART MONITOR (HEARTBEAT) ---
-  void startSmartMonitor() {
-    _heartbeatTimer?.cancel();
-    if (!isAutoSwitchEnabled) return;
+  // --- EVENT-DRIVEN SMART MONITOR ---
+  Future<void> evaluateAutoSwitch(int currentPing) async {
+    if (!isAutoSwitchEnabled || !_isConnected) return;
 
-    AdvancedLogger.info('[ConfigManager] Starting Smart Monitor...');
-    int failureCount = 0;
+    // Thresholds: >400ms is panic, must be >150ms better to switch
+    const int panicThreshold = 400;
+    const int improvementThreshold = 150;
 
-    _heartbeatTimer = Timer.periodic(const Duration(seconds: 30), (timer) async {
-       if (!_isConnected) {
-         timer.cancel();
-         return;
-       }
+    bool needsSwitch = false;
 
-       final ping = await measureActivePing();
+    // 1. Check current status
+    if (currentPing == -1 || currentPing > panicThreshold) {
+       // 2. Check for better options
+       if (validatedConfigs.isNotEmpty) {
+          final best = validatedConfigs.first;
+          // Avoid switching to self
+          if (best.id == _selectedConfig?.id) return;
 
-       // Logic: Fail ONLY if ping is -1 (error/timeout). Do NOT fail on high ping alone.
-       if (ping == -1) {
-          failureCount++;
-          AdvancedLogger.warn('[Smart Monitor] Heartbeat failed. Count: $failureCount');
-
-          if (failureCount >= 10) {
-             AdvancedLogger.warn('[Smart Monitor] Threshold reached. Initiating Auto-Switch...');
-             failureCount = 0;
-             await _performAutoSwitch();
+          if (currentPing == -1 || (best.currentPing > 0 && (currentPing - best.currentPing) > improvementThreshold)) {
+             needsSwitch = true;
           }
-       } else {
-          failureCount = 0; // Reset on success
+       } else if (reserveList.isNotEmpty) {
+           needsSwitch = true;
        }
-    });
+    }
+
+    if (needsSwitch) {
+       AdvancedLogger.warn('[ConfigManager] Auto-Switch Triggered. Current Ping: $currentPing');
+       await _performAutoSwitch();
+    }
   }
 
-  void stopSmartMonitor() {
-    _heartbeatTimer?.cancel();
-    _heartbeatTimer = null;
-  }
+  // Legacy Polling Removed
+  void startSmartMonitor() {}
+  void stopSmartMonitor() {}
   
   Future<void> _performAutoSwitch() async {
-    // 1. Check Reserve List
+    VpnConfigWithMetrics? nextBest;
+
+    // Priority 1: Reserve List
     if (reserveList.isNotEmpty) {
-       final nextBest = reserveList.removeAt(0);
-       AdvancedLogger.info('[Smart Monitor] Switching to reserve config: ${nextBest.name}');
+       nextBest = reserveList.removeAt(0);
+    }
+    // Priority 2: Best Validated Config
+    else if (validatedConfigs.isNotEmpty) {
+       nextBest = validatedConfigs.firstWhereOrNull((c) => c.id != _selectedConfig?.id);
+    }
+
+    if (nextBest != null) {
+       AdvancedLogger.info('[Smart Monitor] Switching to config: ${nextBest.name}');
        _selectedConfig = nextBest;
        notifyListeners();
-
        onAutoSwitch?.call(nextBest);
     } else {
-       // 2. No reserves -> Trigger Funnel
-       AdvancedLogger.info('[Smart Monitor] Reserve list empty. Triggering Funnel...');
+       AdvancedLogger.info('[Smart Monitor] No better configs found. Triggering Funnel...');
        onTriggerFunnel?.call();
     }
   }
