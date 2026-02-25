@@ -37,10 +37,12 @@ class ConfigGistService {
       final response = await http.get(Uri.parse(_updateUrl)).timeout(const Duration(seconds: 10));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final latestBuild = data['version_code'] as int;
-        final version = data['version_name'] as String;
-        final notes = data['release_notes'] as String? ?? 'Bug fixes and performance improvements.';
-        final downloadUrl = data['download_url'] as String;
+        // Robust parsing to prevent ANY crash
+        final latestBuild = int.tryParse(data['version_code']?.toString() ?? '0') ?? 0;
+        final version = data['version']?.toString() ?? 'Unknown';
+        final notes = data['release_notes']?.toString() ?? 'Bug fixes and performance improvements.';
+        // FIX: Handle missing URL gracefully to prevent crash
+        final downloadUrl = data['url']?.toString() ?? '';
 
         AdvancedLogger.info("[UpdateCheck] Remote Build: $latestBuild");
 

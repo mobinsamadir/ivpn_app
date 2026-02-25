@@ -2,6 +2,7 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart'; // For kDebugMode
+import '../utils/advanced_logger.dart';
 import '../utils/file_logger.dart';
 import '../utils/base64_utils.dart';
 
@@ -34,6 +35,7 @@ class SingboxConfigGenerator {
       }
     } catch (e) {
       FileLogger.log("❌ ERROR: Protocol parsing failed: $e");
+      AdvancedLogger.warn("[PARSER-FAIL] Raw URL: $link");
       rethrow;
     }
   }
@@ -231,15 +233,16 @@ class SingboxConfigGenerator {
         final pbk = params['pbk'] ?? params['public_key'] ?? "";
         // VALIDATION: Prevent crash on invalid Reality configs
         if (pbk.trim().isEmpty) {
-           FileLogger.log('❌ [CONFIG-GEN] Invalid Reality Config: Missing public_key (pbk). RAW: $link');
-           throw Exception("Reality config missing public_key (pbk)");
+           // Fallback mechanism for missing PBK
+           AdvancedLogger.warn('[PARSER-WARNING] PBK missing, attempting standard VLESS for URL: $link');
+           // Do not add reality block, effectively falling back to standard TLS if configured
+        } else {
+           tls["reality"] = {
+             "enabled": true,
+             "public_key": pbk,
+             "short_id": params['sid'] ?? ""
+           };
         }
-
-        tls["reality"] = {
-          "enabled": true,
-          "public_key": pbk,
-          "short_id": params['sid'] ?? ""
-        };
       }
       tls["insecure"] = isTest;
       outbound["tls"] = tls;
@@ -411,7 +414,7 @@ class SingboxConfigGenerator {
     // 1. Base Structure (Common)
     final Map<String, dynamic> config = {
       "log": {
-        "level": "info",
+        "level": "trace",
         "output": isTest ? "stderr" : "box.log", // Explicit stderr for capture
         "timestamp": true
       },

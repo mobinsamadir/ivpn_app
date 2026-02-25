@@ -44,7 +44,7 @@ class NativeVpnService {
 
           // 1. Always log to Console/File (Requirement: Native Log Redirection)
           // CRITICAL: Use WARN to ensure it shows in Release mode per request
-          AdvancedLogger.warn("📡 [Native] $message");
+          AdvancedLogger.warn("[V2RAY_CORE] $message");
 
           // 2. Smart Filter: Only update UI for valid status changes to prevent UI jank
           // Known statuses: CONNECTED, CONNECTING, DISCONNECTED, RECONNECTING
@@ -128,10 +128,13 @@ class NativeVpnService {
         'listenPort': 10808, // Hardcoded for main VPN connection to avoid conflict with random test ports
       });
 
+      // CONFIG DUMP: Critical Diagnostic
+      AdvancedLogger.warn("[CORE-INPUT-JSON] $configJson");
+
       AdvancedLogger.info("🚀 [Native] Connecting with config length: ${configJson.length}...");
-      if (kDebugMode) {
-         AdvancedLogger.info("DEBUG_CONFIG: $configJson");
-      }
+      // if (kDebugMode) {
+      //    AdvancedLogger.info("DEBUG_CONFIG: $configJson");
+      // }
       await _methodChannel.invokeMethod('startVpn', {'config': configJson});
 
       // CRITICAL FIX: Removed fake "CONNECTED" state.
