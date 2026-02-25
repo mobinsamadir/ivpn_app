@@ -65,8 +65,8 @@ class EphemeralTester {
   // Limit Windows concurrent processes to 5 to prevent UI freeze
   static final Semaphore _windowsSemaphore = Semaphore(5);
 
-  // STRICTLY Serialize Android Libbox Calls (Concurrency = 1)
-  static final Semaphore _androidSemaphore = Semaphore(1);
+  // Android Concurrency = 3 (Safe for Modern Devices)
+  static final Semaphore _androidSemaphore = Semaphore(3);
 
   // Track active processes to kill on exit
   static final List<Process> _activeProcesses = [];

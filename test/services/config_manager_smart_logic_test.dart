@@ -52,5 +52,75 @@ void main() {
       expect(updated.isAlive, isFalse);
       expect(updated.lastFailedStage, "Invalid_Config");
     });
+
+    test('evaluateAutoSwitch triggers switch if current ping is bad (>400ms) and better candidate exists', () async {
+      // 1. Setup Configs
+      final badConfig = VpnConfigWithMetrics(
+        id: 'bad',
+        rawConfig: 'vless://bad',
+        name: 'Bad',
+        addedDate: DateTime.now(),
+      ).updateMetrics(deviceId: configManager.currentDeviceId, ping: 500);
+
+      final goodConfig = VpnConfigWithMetrics(
+        id: 'good',
+        rawConfig: 'vless://good',
+        name: 'Good',
+        addedDate: DateTime.now(),
+      ).updateMetrics(deviceId: configManager.currentDeviceId, ping: 100);
+
+      // 2. Inject into manager
+      configManager.allConfigs = [badConfig, goodConfig];
+      configManager.validatedConfigs = [goodConfig, badConfig]; // Sorted by score/ping
+      configManager.selectConfig(badConfig);
+      configManager.setConnected(true);
+      configManager.isAutoSwitchEnabled = true;
+
+      // Populate reserve list to ensure _performAutoSwitch picks 'good' immediately without funnel
+      configManager.reserveList = [goodConfig];
+
+      // 3. Spy on autoSwitch callback
+      bool switched = false;
+      configManager.onAutoSwitch = (config) {
+        switched = true;
+      };
+
+      // 4. Trigger evaluation
+      await configManager.evaluateAutoSwitch(500);
+
+      // 5. Verify
+      expect(switched, isTrue);
+      expect(configManager.selectedConfig?.id, 'good');
+    });
+
+    test('evaluateAutoSwitch does NOT switch if current ping is acceptable (<300ms)', () async {
+       final okayConfig = VpnConfigWithMetrics(
+        id: 'okay',
+        rawConfig: 'vless://okay',
+        name: 'Okay',
+        addedDate: DateTime.now(),
+      ).updateMetrics(deviceId: configManager.currentDeviceId, ping: 200);
+
+      final goodConfig = VpnConfigWithMetrics(
+        id: 'good',
+        rawConfig: 'vless://good',
+        name: 'Good',
+        addedDate: DateTime.now(),
+      ).updateMetrics(deviceId: configManager.currentDeviceId, ping: 100);
+
+      configManager.allConfigs = [okayConfig, goodConfig];
+      configManager.validatedConfigs = [goodConfig, okayConfig];
+      configManager.reserveList = [goodConfig];
+      configManager.selectConfig(okayConfig);
+      configManager.setConnected(true);
+      configManager.isAutoSwitchEnabled = true;
+
+      bool switched = false;
+      configManager.onAutoSwitch = (_) => switched = true;
+
+      await configManager.evaluateAutoSwitch(200);
+
+      expect(switched, isFalse);
+    });
   });
 }

@@ -47,6 +47,22 @@ List<VpnConfigWithMetrics> _buildQueueInIsolate(Map<String, dynamic> args) {
   return queue;
 }
 
+// Top-level function for batch processing in Isolate
+Map<String, Map<String, dynamic>> batchProcessConfigsInIsolate(List<VpnConfigWithMetrics> configs) {
+  final Map<String, Map<String, dynamic>> results = {};
+  for (final config in configs) {
+    try {
+      final details = SingboxConfigGenerator.extractServerDetails(config.rawConfig);
+      if (details != null && details['host'] != null) {
+        results[config.id] = details;
+      }
+    } catch (e) {
+      // Silently ignore malformed configs to prevent batch crash
+    }
+  }
+  return results;
+}
+
 class FunnelService {
   static final FunnelService _instance = FunnelService._internal();
   factory FunnelService() => _instance;
@@ -59,6 +75,9 @@ class FunnelService {
   final List<VpnConfigWithMetrics> _tcpQueue = [];
   final List<VpnConfigWithMetrics> _httpQueue = [];
   final List<VpnConfigWithMetrics> _speedQueue = [];
+
+  // Cache for pre-processed details
+  Map<String, Map<String, dynamic>> _cachedServerDetails = {};
 
   // Active Worker Counts
   int _activeTcpWorkers = 0;
@@ -131,6 +150,16 @@ class FunnelService {
     _totalConfigs = all.length;
     _tcpQueue.addAll(all);
 
+    // 1.5 Batch Pre-process Configs (Extract Host/Port in Isolate)
+    try {
+      AdvancedLogger.info("FunnelService: Pre-processing $_totalConfigs configs in Isolate...");
+      _cachedServerDetails = await compute(batchProcessConfigsInIsolate, all);
+      AdvancedLogger.info("FunnelService: Pre-processing complete. Cached ${_cachedServerDetails.length} valid details.");
+    } catch (e) {
+      AdvancedLogger.error("FunnelService: Batch processing failed: $e");
+      _cachedServerDetails = {};
+    }
+
     AdvancedLogger.info("FunnelService: Loaded $_totalConfigs configs into TCP Queue.");
 
     // 2. Start Worker Pools
@@ -195,8 +224,8 @@ class FunnelService {
         // STAGE 1: TCP Connect (Raw Dart Socket)
         bool passed = false;
 
-        // Extract host/port
-        final details = SingboxConfigGenerator.extractServerDetails(config.rawConfig);
+        // Use Cached Details to avoid Main Thread Parsing
+        final details = _cachedServerDetails[config.id];
 
         if (details != null && details['host'] != null) {
            final host = details['host'] as String;
