@@ -222,6 +222,7 @@ class EphemeralTester {
        try {
           // Allocate dynamic port
           listenPort = await PortAllocator().allocate();
+          AdvancedLogger.warn('[TESTER] Initializing on Port: $listenPort');
           onPort(listenPort); // Register for watchdog
 
           // Generate Test Config
@@ -233,10 +234,13 @@ class EphemeralTester {
 
           // Start Proxy
           proxyPort = await nativeService.startTestProxy(jsonConfig);
+          AdvancedLogger.warn('[TESTER] Native Process Spawned (via Service). Port: $proxyPort');
 
           if (proxyPort <= 0) {
              throw Exception("Failed to start Native Test Proxy (Code: $proxyPort)");
           }
+
+          AdvancedLogger.warn('[TESTER] Waiting for local socket to become ready...');
 
           // Setup HttpClient
           final client = HttpClient();
@@ -248,9 +252,12 @@ class EphemeralTester {
             // Test HTTP (Stage 2)
             final sw = Stopwatch()..start();
             try {
+              AdvancedLogger.warn('[TESTER] HTTP Probe started to http://127.0.0.1:$proxyPort');
               final req = await client.getUrl(Uri.parse('https://www.google.com/generate_204'));
               final resp = await req.close().timeout(const Duration(seconds: 5));
               sw.stop();
+
+              AdvancedLogger.warn('[TESTER] HTTP Response received: ${resp.statusCode}');
 
               if (resp.statusCode == 204) {
                   latency = sw.elapsedMilliseconds;
@@ -259,6 +266,7 @@ class EphemeralTester {
                   throw Exception("HTTP Status ${resp.statusCode}");
               }
             } catch (e) {
+              AdvancedLogger.warn('[TESTER] HTTP Response Error: $e');
               throw Exception("Stage 2 (HTTP) Failed: $e");
             }
 
@@ -350,6 +358,7 @@ class EphemeralTester {
 
         try {
             port = await PortAllocator().allocate();
+            AdvancedLogger.warn('[TESTER] Initializing on Port: $port');
             onPort(port); // Register for watchdog
 
             final testId = DateTime.now().millisecondsSinceEpoch;
@@ -390,9 +399,13 @@ class EphemeralTester {
               throw TimeoutException("Process spawn timed out");
             });
 
+            AdvancedLogger.warn('[TESTER] Native Process Spawned. PID: ${process!.pid}');
+
             onProcess(process); // Register for watchdog
             registerProcess(process!);
             await Future.delayed(const Duration(milliseconds: 500));
+
+            AdvancedLogger.warn('[TESTER] Waiting for local socket to become ready...');
 
             // Setup Client
             // FIX: SingboxConfigGenerator sets HTTP port to listenPort + 1
@@ -419,9 +432,12 @@ class EphemeralTester {
             // STAGE 2 (HTTP)
             final sw = Stopwatch()..start();
             try {
+                AdvancedLogger.warn('[TESTER] HTTP Probe started to http://127.0.0.1:${port+1}');
                 final req = await dartHttpClient.getUrl(Uri.parse('https://www.google.com/generate_204'));
                 final resp = await req.close().timeout(const Duration(seconds: 5));
                 sw.stop();
+
+                AdvancedLogger.warn('[TESTER] HTTP Response received: ${resp.statusCode}');
 
                 if (resp.statusCode == 204) {
                   latency = sw.elapsedMilliseconds;
@@ -430,6 +446,7 @@ class EphemeralTester {
                   throw Exception("Status ${resp.statusCode}");
                 }
             } catch (e) {
+                AdvancedLogger.warn('[TESTER] HTTP Response Error: $e');
                 throw Exception("Stage 2 Failed: $e");
             }
 

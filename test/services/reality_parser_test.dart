@@ -28,17 +28,23 @@ void main() {
       expect(config.contains('"short_id":"short"'), isTrue);
     });
 
-    test('Should throw error when pbk is completely missing', () {
+    test('Should fallback to standard VLESS when pbk is missing', () {
       // JSON missing pbk
       // {"add":"1.1.1.1","port":443,"id":"uuid","scy":"reality"}
       const base64Part = "eyJhZGQiOiIxLjEuMS4xIiwicG9ydCI6NDQzLCJpZCI6InV1aWQiLCJzY3kiOiJyZWFsaXR5In0=";
       const rawLink = "vless://$base64Part";
 
-      // Exception().toString() returns "Exception: message", so we check string matching
-      expect(
-        () => SingboxConfigGenerator.generateConfig(rawLink, listenPort: 10808, isTest: true),
-        throwsA(isA<Exception>().having((e) => e.toString(), 'message', contains('Reality config missing public_key')))
-      );
+      final config = SingboxConfigGenerator.generateConfig(rawLink, listenPort: 10808, isTest: true);
+
+      // Should contain server details
+      expect(config.contains('"server":"1.1.1.1"'), isTrue);
+
+      // Should NOT contain reality block (public_key)
+      expect(config.contains('"public_key"'), isFalse);
+
+      // Should contain tls enabled (since scy=reality implies tls fallback)
+      expect(config.contains('"tls":{'), isTrue);
+      expect(config.contains('"enabled":true'), isTrue);
     });
 
     test('Should handle VLESS URI with mixed casing and encoded characters', () {
