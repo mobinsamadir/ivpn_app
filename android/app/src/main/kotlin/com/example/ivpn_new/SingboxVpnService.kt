@@ -61,20 +61,47 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
                  return@withContext -2
             }
 
-            try {
-                val socket = ServerSocket(0)
-                val socksPort = socket.localPort
-                socket.close()
+            // Diagnostic Log
+            val start = if (configJson.length > 10) configJson.substring(0, 10) else configJson
+            println("[DEBUG-INTERNAL] Config start: $start")
 
+            if (!configJson.trim().startsWith("{")) {
+                 println("FATAL: INVALID CONFIG FORMAT DETECTED")
+                 isTestRunning.set(false)
+                 return@withContext -4
+            }
+
+            try {
                 val json = JSONObject(configJson)
-                val inbounds = JSONArray()
-                val socksInbound = JSONObject()
-                socksInbound.put("type", "socks")
-                socksInbound.put("tag", "socks-in")
-                socksInbound.put("listen", "127.0.0.1")
-                socksInbound.put("listen_port", socksPort)
-                inbounds.put(socksInbound)
-                json.put("inbounds", inbounds)
+                var socksPort = 0
+
+                // 1. Try to use Port from Dart (Priority)
+                if (json.has("inbounds")) {
+                     val existingInbounds = json.getJSONArray("inbounds")
+                     for (i in 0 until existingInbounds.length()) {
+                         val inbound = existingInbounds.getJSONObject(i)
+                         if (inbound.optString("type") == "socks" && inbound.has("listen_port")) {
+                             socksPort = inbound.getInt("listen_port")
+                             break
+                         }
+                     }
+                }
+
+                // 2. Fallback to Random Allocation
+                if (socksPort <= 0) {
+                    val socket = ServerSocket(0)
+                    socksPort = socket.localPort
+                    socket.close()
+
+                    val inbounds = JSONArray()
+                    val socksInbound = JSONObject()
+                    socksInbound.put("type", "socks")
+                    socksInbound.put("tag", "socks-in")
+                    socksInbound.put("listen", "127.0.0.1")
+                    socksInbound.put("listen_port", socksPort)
+                    inbounds.put(socksInbound)
+                    json.put("inbounds", inbounds)
+                }
 
                 if (!json.has("outbounds")) {
                     isTestRunning.set(false)
@@ -195,6 +222,16 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
         if (isTestRunning.get()) {
              try { Libbox.newService("", StubPlatformInterface()) } catch (_: Exception) {}
              isTestRunning.set(false)
+        }
+
+        // Diagnostic Log
+        val start = if (configJson.length > 10) configJson.substring(0, 10) else configJson
+        println("[DEBUG-INTERNAL] Config start: $start")
+
+        if (!configJson.trim().startsWith("{")) {
+             println("FATAL: INVALID CONFIG FORMAT DETECTED")
+             MainActivity.sendVpnStatus("ERROR: INVALID_FORMAT")
+             return
         }
 
         isVpnRunning.set(true)

@@ -222,6 +222,9 @@ class EphemeralTester {
        try {
           // Allocate dynamic port
           listenPort = await PortAllocator().allocate();
+          if (listenPort <= 0) {
+             throw Exception("Port Allocator returned invalid port: $listenPort");
+          }
           AdvancedLogger.warn('[TESTER] Initializing on Port: $listenPort');
           onPort(listenPort); // Register for watchdog
 
