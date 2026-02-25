@@ -346,6 +346,22 @@ class ConfigManager extends ChangeNotifier {
       }
   }
 
+  // --- NEW: Mark Invalid ---
+  Future<void> markInvalid(String id) async {
+      final index = allConfigs.indexWhere((c) => c.id == id);
+      if (index != -1) {
+         AdvancedLogger.warn("[ConfigManager] Marking config invalid (Parsing/Init Error): ${allConfigs[index].name}");
+         allConfigs[index] = allConfigs[index].copyWith(
+            failureCount: 99, // High penalty
+            isAlive: false,
+            lastFailedStage: "Invalid_Config"
+         );
+         await _updateLists();
+         await _saveAllConfigs();
+         notifyListeners();
+      }
+  }
+
   Future<bool> deleteConfig(String id) async {
      final configIndex = allConfigs.indexWhere((c) => c.id == id);
      if (configIndex != -1) {
@@ -706,9 +722,19 @@ class ConfigManager extends ChangeNotifier {
         final testResult = await tester.runTest(target, mode: TestMode.connectivity);
 
         if (testResult.funnelStage < 2 || testResult.currentPing == -1) {
-             // Mark failure and throw to trigger failover
+
+             // NEW: Check if failure was INIT/PARSING error
+             if (testResult.lastFailedStage != null &&
+                (testResult.lastFailedStage!.contains("Init") ||
+                 testResult.lastFailedStage!.contains("Stage1_ProxyInit"))) {
+
+                 await markInvalid(target.id);
+                 throw Exception("Pre-flight check failed (Invalid/Dead Config)");
+             }
+
+             // Mark regular failure and throw to trigger failover
              await markFailure(target.id);
-             throw Exception("Pre-flight check failed (Ghost/Dead)");
+             throw Exception("Pre-flight check failed (Connectivity)");
         }
 
         // Update metrics
@@ -732,7 +758,15 @@ class ConfigManager extends ChangeNotifier {
       } catch (e) {
         // 6. Handle Failure
         AdvancedLogger.warn('[ConfigManager] Connection failed to ${target.name}: $e');
-        await markFailure(target.id);
+        // If not already marked invalid (which happens in try block), ensure markFailure is called
+        // We can check if it is still alive to decide, but safe to call markFailure (it just increments)
+        // unless it was marked invalid (count 99).
+
+        // Only mark failure if it wasn't already killed
+        final current = getConfigById(target.id);
+        if (current != null && current.isAlive) {
+           await markFailure(target.id);
+        }
 
         if (_isGlobalStopRequested) {
           return;

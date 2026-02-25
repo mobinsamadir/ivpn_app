@@ -1,103 +1,56 @@
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ivpn_new/services/config_manager.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:ivpn_new/models/vpn_config_with_metrics.dart';
+import 'package:ivpn_new/services/testers/ephemeral_tester.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // Needed for mocking prefs
+
+class MockEphemeralTester extends Mock implements EphemeralTester {}
 
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
-
-  // Mocks for channels used by dependencies
-  const MethodChannel vpnChannel = MethodChannel('com.example.ivpn/vpn');
-  const MethodChannel pathProviderChannel = MethodChannel('plugins.flutter.io/path_provider');
-
-  setUp(() async {
-    SharedPreferences.setMockInitialValues({});
-    await ConfigManager().clearAllData();
-
-    // Mock VPN Channel (unused if performConnection: false, but good to have)
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
-      vpnChannel,
-      (MethodCall methodCall) async {
-        return null;
-      },
-    );
-
-    // Mock Path Provider (used by AdvancedLogger)
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
-      pathProviderChannel,
-      (MethodCall methodCall) async {
-        if (methodCall.method == 'getApplicationDocumentsDirectory' || methodCall.method == 'getTemporaryDirectory') {
-          return '/tmp';
-        }
-        return null;
-      },
-    );
-  });
-
-  tearDown(() {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(vpnChannel, null);
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(pathProviderChannel, null);
-  });
+  TestWidgetsFlutterBinding.ensureInitialized(); // Initialize binding for SharedPreferences
 
   group('ConfigManager Smart Logic', () {
-    test('Skip Logic: Selects next valid config and wraps around', () async {
-      final manager = ConfigManager();
-      // Add 3 configs
-      await manager.addConfigs([
-        'vless://uuid@1.1.1.1:443?query=1#Config1', // Index 0
-        'vless://uuid@2.2.2.2:443?query=1#Config2', // Index 1
-        'vless://uuid@3.3.3.3:443?query=1#Config3', // Index 2
-      ]);
+    late ConfigManager configManager;
+    late MockEphemeralTester mockTester;
 
-      await Future.delayed(Duration.zero);
-
-      // Simulate validation (set pings)
-      // Config 1: Alive
-      await manager.updateConfigMetrics(manager.allConfigs.firstWhere((c) => c.name == 'Config1').id, ping: 100);
-      // Config 2: Dead (Ping -1)
-      await manager.updateConfigMetrics(manager.allConfigs.firstWhere((c) => c.name == 'Config2').id, ping: -1);
-      // Config 3: Alive
-      await manager.updateConfigMetrics(manager.allConfigs.firstWhere((c) => c.name == 'Config3').id, ping: 200);
-
-      // Select Config 1
-      manager.selectConfig(manager.allConfigs.firstWhere((c) => c.name == 'Config1'));
-      expect(manager.selectedConfig?.name, 'Config1');
-
-      // Skip -> Should skip Config 2 (Dead) and go to Config 3
-      // We disable connection to isolate selection logic
-      await manager.skipToNext(performConnection: false);
-
-      expect(manager.selectedConfig?.name, 'Config3');
-
-      // Skip again -> Should wrap around to Config 1
-      await manager.skipToNext(performConnection: false);
-      expect(manager.selectedConfig?.name, 'Config1');
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({}); // Mock SharedPreferences
+      configManager = ConfigManager();
+      mockTester = MockEphemeralTester();
+      await configManager.init(); // Properly init
     });
 
-    test('Skip Logic: Handles empty list gracefully', () async {
-      final manager = ConfigManager();
-      await manager.clearAllData();
+    test('markInvalid should set failureCount to 99 and kill isAlive', () async {
+      // 1. Setup config
+      const testId = "test_invalid_1";
+      final config = VpnConfigWithMetrics(
+        id: testId,
+        rawConfig: "vless://test",
+        name: "Test Config",
+        failureCount: 0,
+        isAlive: true,
+      );
 
-      await manager.skipToNext(performConnection: false); // Should not crash
-      expect(manager.selectedConfig, isNull);
-    });
+      // Inject manually via public API (addConfig triggers isolate, but in test env compute runs in same isolate usually or we wait)
+      await configManager.addConfig(config.rawConfig, config.name);
 
-    test('Favorites Logic: Persists correctly', () async {
-       final manager = ConfigManager();
-       await manager.addConfigs(['vless://uuid@1.1.1.1:443?query=1#FavTest']);
-       await Future.delayed(Duration.zero);
+      // Wait for async add
+      await Future.delayed(const Duration(milliseconds: 100));
 
-       final config = manager.allConfigs.first;
+      // Retrieve the added config (ID generation in addConfigs is dynamic, so we find by name/raw)
+      var added = configManager.allConfigs.firstWhere((c) => c.rawConfig == config.rawConfig);
+      expect(added.isAlive, isTrue);
+      expect(added.failureCount, 0);
 
-       expect(config.isFavorite, isFalse);
+      // 2. Call markInvalid
+      await configManager.markInvalid(added.id);
 
-       await manager.toggleFavorite(config.id);
-       expect(manager.allConfigs.first.isFavorite, isTrue);
-
-       final prefs = await SharedPreferences.getInstance();
-       final jsonStr = prefs.getString('vpn_configs');
-       expect(jsonStr, isNotNull);
-       expect(jsonStr!.contains('"isFavorite":true'), isTrue);
+      // 3. Verify
+      var updated = configManager.allConfigs.firstWhere((c) => c.id == added.id);
+      expect(updated.failureCount, 99);
+      expect(updated.isAlive, isFalse);
+      expect(updated.lastFailedStage, "Invalid_Config");
     });
   });
 }

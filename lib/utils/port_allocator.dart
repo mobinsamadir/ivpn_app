@@ -12,6 +12,9 @@ class PortAllocator {
   static const int _maxPort = 65535;
   int _currentPort = _startPort;
 
+  // Use a simple Set to track active ports.
+  // Note: Dart is single-threaded (in the main isolate), so basic collection access is safe from race conditions within the same isolate.
+  // However, `await` points yield execution.
   final Set<int> _activePorts = {};
 
   Future<int> allocate() async {
@@ -24,14 +27,14 @@ class PortAllocator {
     while (attempts < 1000) {
       int port = 11000;
 
-      // Synchronize access
+      // Synchronize access logic
       if (_currentPort > _maxPort - 1) {
         _currentPort = _startPort;
       }
       port = _currentPort;
-      _currentPort += 2; // Reserve 2 ports
+      _currentPort += 2; // Reserve 2 ports for next call
 
-      // Check if either port is known to be active
+      // Check if either port is known to be active in OUR memory
       if (_activePorts.contains(port) || _activePorts.contains(port + 1)) {
         attempts++;
         continue;

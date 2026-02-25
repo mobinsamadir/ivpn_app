@@ -67,6 +67,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
   // CRITICAL FIX: Debounce Auto-Switch
   bool _isSwitching = false;
   String _lastNativeStatus = "DISCONNECTED";
+  bool _isAdmin = true;
 
   // Auto-switch Variables
   int _highPingCounter = 0;
@@ -166,6 +167,13 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
 
     // Start ping monitoring for auto-switch
     _startPingMonitoring();
+
+    // Check admin status for UI banner
+    if (Platform.isWindows) {
+      _nativeVpnService.isAdmin().then((val) {
+        if (mounted) setState(() => _isAdmin = val);
+      });
+    }
   }
 
   @override
@@ -456,6 +464,27 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
           child: CustomScrollView(
             cacheExtent: 1000,
             slivers: [
+              // 1. Banner for Admin Warning (Windows only)
+              if (Platform.isWindows && !_isAdmin)
+                SliverToBoxAdapter(
+                  child: Container(
+                    width: double.infinity,
+                    color: Colors.amberAccent.withOpacity(0.2),
+                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                    child: Row(
+                      children: const [
+                        Icon(Icons.warning_amber_rounded, color: Colors.amberAccent, size: 20),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            "For better connectivity, please run iVPN as Administrator.",
+                            style: TextStyle(color: Colors.amberAccent, fontSize: 13, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               SliverToBoxAdapter(child: _buildAdBannerSection()),
               SliverToBoxAdapter(
                 child: Padding(
@@ -660,27 +689,29 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
                         final config = configs[index];
-                        return ConfigCard(
-                          config: config,
-                          isSelected: _configManager.selectedConfig?.id == config.id,
-                          isTesting: _activeTestIds.contains(config.id),
-                          onTap: () {
-                            _configManager.selectConfig(config);
-                            setState(() {});
-                          },
-                          onTestLatency: () => _runSingleTest(config),
-                          onTestSpeed: () => _runSingleTest(config),
-                          onToggleFavorite: () async {
-                             await _configManager.toggleFavorite(config.id);
-                             setState(() {});
-                          },
-                          onDelete: () async {
-                            final confirm = await _showDeleteConfirmationDialog(config);
-                            if (confirm && mounted) {
-                              await _configManager.deleteConfig(config.id);
+                        return RepaintBoundary(
+                          child: ConfigCard(
+                            config: config,
+                            isSelected: _configManager.selectedConfig?.id == config.id,
+                            isTesting: _activeTestIds.contains(config.id),
+                            onTap: () {
+                              _configManager.selectConfig(config);
                               setState(() {});
-                            }
-                          },
+                            },
+                            onTestLatency: () => _runSingleTest(config),
+                            onTestSpeed: () => _runSingleTest(config),
+                            onToggleFavorite: () async {
+                               await _configManager.toggleFavorite(config.id);
+                               setState(() {});
+                            },
+                            onDelete: () async {
+                              final confirm = await _showDeleteConfirmationDialog(config);
+                              if (confirm && mounted) {
+                                await _configManager.deleteConfig(config.id);
+                                setState(() {});
+                              }
+                            },
+                          ),
                         );
                       },
                       childCount: configs.length,
@@ -716,11 +747,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
        return;
     }
 
-    // Admin Check
-    if (Platform.isWindows && !await _nativeVpnService.isAdmin()) {
-       _showToast("Administrator privileges required.");
-       return;
-    }
+    // Admin Check removed here as we now show a banner instead.
+    // If the user tries to connect without admin, it might fail (or work partially), but we don't block it.
 
     _configManager.setConnected(false, status: 'Connecting...');
 
