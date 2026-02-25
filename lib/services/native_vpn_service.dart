@@ -91,6 +91,16 @@ class NativeVpnService {
   Future<int> startTestProxy(String configJson) async {
     if (Platform.isWindows) return -1; // Handled by EphemeralTester directly on Windows
 
+    // 1. Diagnostic Log (First 10 chars)
+    final String start = configJson.length > 10 ? configJson.substring(0, 10) : configJson;
+    AdvancedLogger.warn("[DEBUG-INTERNAL] Config start: $start");
+
+    // 2. Validate Format
+    if (!configJson.trim().startsWith('{')) {
+       AdvancedLogger.error("FATAL: INVALID CONFIG FORMAT DETECTED. Expected JSON, got: $start...");
+       return -1;
+    }
+
     try {
        if (kDebugMode) {
           AdvancedLogger.info("DEBUG_CONFIG: $configJson");
@@ -130,6 +140,16 @@ class NativeVpnService {
 
       // CONFIG DUMP: Critical Diagnostic
       AdvancedLogger.warn("[CORE-INPUT-JSON] $configJson");
+
+      // 1. Diagnostic Log (First 10 chars)
+      final String start = configJson.length > 10 ? configJson.substring(0, 10) : configJson;
+      AdvancedLogger.warn("[DEBUG-INTERNAL] Config start: $start");
+
+      // 2. Validate Format
+      if (!configJson.trim().startsWith('{')) {
+         AdvancedLogger.error("FATAL: INVALID CONFIG FORMAT DETECTED. Expected JSON, got: $start...");
+         throw Exception("Invalid Config Format (Not JSON)");
+      }
 
       AdvancedLogger.info("🚀 [Native] Connecting with config length: ${configJson.length}...");
       // if (kDebugMode) {
