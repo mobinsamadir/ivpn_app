@@ -236,11 +236,17 @@ class EphemeralTester {
           });
 
           // Start Proxy
-          proxyPort = await nativeService.startTestProxy(jsonConfig);
+          try {
+            proxyPort = await nativeService.startTestProxy(jsonConfig);
+          } catch (e) {
+            proxyPort = -1;
+            AdvancedLogger.error("Native Start Exception: $e");
+          }
+
           AdvancedLogger.warn('[TESTER] Native Process Spawned (via Service). Port: $proxyPort');
 
           if (proxyPort <= 0) {
-             throw Exception("Failed to start Native Test Proxy (Code: $proxyPort)");
+             throw Exception("Early Exit: Native Proxy Failed (Code: $proxyPort)");
           }
 
           AdvancedLogger.warn('[TESTER] Waiting for local socket to become ready...');
