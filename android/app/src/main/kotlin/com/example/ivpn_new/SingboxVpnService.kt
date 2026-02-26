@@ -52,31 +52,27 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
         private val isTestRunning = AtomicBoolean(false)
         private val testMutex = Mutex()
 
-        private fun validateAndResolveConfig(input: String, result: MethodChannel.Result?): String? {
-             if (input.isBlank()) {
-                 result?.let { r -> Handler(Looper.getMainLooper()).post { r.error("EMPTY_INPUT", "Config input is blank", null) } }
-                 return null
-             }
+        private fun getValidJsonConfig(input: String): String {
+            val trimmed = input.trim()
+            if (trimmed.startsWith("{")) {
+                return trimmed // Already a valid JSON string
+            }
 
-             if (input.startsWith("/")) {
-                 val file = File(input)
-                 if (!file.exists()) {
-                     result?.let { r -> Handler(Looper.getMainLooper()).post { r.error("FILE_NOT_FOUND", "Config file not found at path: $input", null) } }
-                     return null
-                 }
-                 try {
-                     val content = file.readText()
-                     if (content.isBlank()) {
-                         result?.let { r -> Handler(Looper.getMainLooper()).post { r.error("EMPTY_CONFIG", "Config file is empty", null) } }
-                         return null
-                     }
-                     return content
-                 } catch (e: Exception) {
-                     result?.let { r -> Handler(Looper.getMainLooper()).post { r.error("FILE_READ_ERROR", "Failed to read file: ${e.message}", null) } }
-                     return null
-                 }
-             }
-             return input
+            // Otherwise, it must be a file path
+            val file = java.io.File(trimmed)
+            if (!file.exists()) {
+                throw IllegalArgumentException("File does not exist: $trimmed")
+            }
+
+            val content = file.readText().trim()
+            if (content.isEmpty()) {
+                throw IllegalArgumentException("File is empty: $trimmed")
+            }
+            if (!content.startsWith("{")) {
+                throw IllegalArgumentException("File content is not valid JSON")
+            }
+
+            return content
         }
 
         // --- NEW: Granular Control for Dart-driven Testing ---
@@ -95,11 +91,14 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
 
             try {
                 // STRICT VALIDATION
-                val configJson = validateAndResolveConfig(rawInput, result)
-                if (configJson == null) {
-                    // Error already sent via result
+                val configJson: String
+                try {
+                    configJson = getValidJsonConfig(rawInput)
+                } catch (e: Exception) {
+                    // Send error to Flutter immediately on the Main Thread
+                    result?.let { r -> Handler(Looper.getMainLooper()).post { r.error("CONFIG_ERROR", e.message, null) } }
                     isTestRunning.set(false)
-                    return@withContext
+                    return@withContext // EXIT the coroutine. DO NOT proceed to Libbox!
                 }
 
                 val json = JSONObject(configJson)
@@ -186,11 +185,14 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
 
             try {
                 // STRICT VALIDATION
-                val configJson = validateAndResolveConfig(rawInput, result)
-                if (configJson == null) {
-                     // Error already sent
-                     isTestRunning.set(false)
-                     return@withContext
+                val configJson: String
+                try {
+                    configJson = getValidJsonConfig(rawInput)
+                } catch (e: Exception) {
+                    // Send error to Flutter immediately on the Main Thread
+                    result?.let { r -> Handler(Looper.getMainLooper()).post { r.error("CONFIG_ERROR", e.message, null) } }
+                    isTestRunning.set(false)
+                    return@withContext // EXIT the coroutine. DO NOT proceed to Libbox!
                 }
 
                 val socket = ServerSocket(0)
@@ -282,11 +284,12 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
 
         serviceScope.launch {
             try {
-                // STRICT VALIDATION (No result object available)
-                val configJson = validateAndResolveConfig(rawInput, null)
-
-                if (configJson == null) {
-                    MainActivity.sendVpnStatus("ERROR: INVALID_CONFIG")
+                // STRICT VALIDATION
+                val configJson: String
+                try {
+                    configJson = getValidJsonConfig(rawInput)
+                } catch (e: Exception) {
+                    MainActivity.sendVpnStatus("ERROR: CONFIG_ERROR - ${e.message}")
                     stopVpn()
                     return@launch
                 }
