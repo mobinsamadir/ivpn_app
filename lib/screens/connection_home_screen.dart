@@ -16,6 +16,7 @@ import '../services/config_gist_service.dart';
 import '../services/connectivity_service.dart';
 import '../widgets/ad_explanation_dialog.dart';
 import '../widgets/shimmer_config_card.dart';
+import '../widgets/sliver_tab_bar_delegate.dart';
 import 'settings_screen.dart';
 
 class ConnectionHomeScreen extends StatefulWidget {
@@ -598,7 +599,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
               ),
               SliverPersistentHeader(
                 pinned: true,
-                delegate: _SliverTabBarDelegate(
+                delegate: SliverTabBarDelegate(
                   TabBar(
                     controller: _tabController,
                     indicator: BoxDecoration(
@@ -635,6 +636,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
                       ),
                     ],
                   ),
+                  backgroundColor: const Color(0xFF121212),
                 ),
               ),
               ListenableBuilder(
@@ -1104,30 +1106,5 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
         ],
       ),
     ) ?? false;
-  }
-}
-
-class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
-  final TabBar _tabBar;
-
-  _SliverTabBarDelegate(this._tabBar);
-
-  @override
-  double get minExtent => _tabBar.preferredSize.height;
-
-  @override
-  double get maxExtent => _tabBar.preferredSize.height;
-
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return Container(
-      color: const Color(0xFF121212), // Match Scaffold bg
-      child: _tabBar,
-    );
-  }
-
-  @override
-  bool shouldRebuild(_SliverTabBarDelegate oldDelegate) {
-    return false;
   }
 }
