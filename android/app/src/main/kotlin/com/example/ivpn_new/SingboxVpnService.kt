@@ -7,8 +7,11 @@ import android.app.PendingIntent
 import android.content.Intent
 import android.net.VpnService
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.ParcelFileDescriptor
 import androidx.core.app.NotificationCompat
+import io.flutter.plugin.common.MethodChannel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -49,42 +52,56 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
         private val isTestRunning = AtomicBoolean(false)
         private val testMutex = Mutex()
 
-        private fun resolveConfigContent(input: String): String {
-            if (input.isBlank()) throw IllegalArgumentException("Config input is empty")
+        private fun validateAndResolveConfig(input: String, result: MethodChannel.Result?): String? {
+             if (input.isBlank()) {
+                 result?.let { r -> Handler(Looper.getMainLooper()).post { r.error("EMPTY_INPUT", "Config input is blank", null) } }
+                 return null
+             }
 
-            var content = input
-            // Check if it looks like a path (doesn't start with {)
-            if (!input.trim().startsWith("{")) {
+             if (input.startsWith("/")) {
                  val file = File(input)
-                 if (file.exists() && file.isFile) {
-                     try {
-                         println("[Native] Reading config from file: $input")
-                         content = file.readText()
-                     } catch (e: Exception) {
-                         throw IllegalArgumentException("Failed to read config file: ${e.message}")
-                     }
+                 if (!file.exists()) {
+                     result?.let { r -> Handler(Looper.getMainLooper()).post { r.error("FILE_NOT_FOUND", "Config file not found at path: $input", null) } }
+                     return null
                  }
-            }
-
-            val logStart = if (content.length > 20) content.substring(0, 20) else content
-            println("[DEBUG-INTERNAL] Resolved JSON: $logStart...")
-            return content
+                 try {
+                     val content = file.readText()
+                     if (content.isBlank()) {
+                         result?.let { r -> Handler(Looper.getMainLooper()).post { r.error("EMPTY_CONFIG", "Config file is empty", null) } }
+                         return null
+                     }
+                     return content
+                 } catch (e: Exception) {
+                     result?.let { r -> Handler(Looper.getMainLooper()).post { r.error("FILE_READ_ERROR", "Failed to read file: ${e.message}", null) } }
+                     return null
+                 }
+             }
+             return input
         }
 
         // --- NEW: Granular Control for Dart-driven Testing ---
-        suspend fun startTestProxy(rawInput: String, tempDir: File): Int = withContext(Dispatchers.IO) {
+        suspend fun startTestProxy(rawInput: String, tempDir: File, result: MethodChannel.Result?) = withContext(Dispatchers.IO) {
             if (isVpnRunning.get()) {
                 println("❌ [Native] Cannot start Test Proxy: VPN is running")
-                return@withContext -1
+                result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
+                return@withContext
             }
 
             if (!isTestRunning.compareAndSet(false, true)) {
                  println("❌ [Native] Cannot start Test Proxy: Another test is already running")
-                 return@withContext -2
+                 result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-2) } }
+                 return@withContext
             }
 
             try {
-                val configJson = resolveConfigContent(rawInput)
+                // STRICT VALIDATION
+                val configJson = validateAndResolveConfig(rawInput, result)
+                if (configJson == null) {
+                    // Error already sent via result
+                    isTestRunning.set(false)
+                    return@withContext
+                }
+
                 val json = JSONObject(configJson)
                 var socksPort = 0
 
@@ -118,7 +135,8 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
 
                 if (!json.has("outbounds")) {
                     isTestRunning.set(false)
-                    return@withContext -3
+                    result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-3) } }
+                    return@withContext
                 }
 
                 if (json.has("log")) {
@@ -130,16 +148,17 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
                 val testConfigFile = File(tempDir, "test_proxy_${System.currentTimeMillis()}.json")
                 testConfigFile.writeText(testConfigStr)
 
-                Libbox.newService(testConfigFile.absolutePath, StubPlatformInterface())
+                // SAFE CALL to Libbox - pass JSON content string
+                Libbox.newService(testConfigStr, StubPlatformInterface())
                 delay(200)
 
-                return@withContext socksPort
+                result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(socksPort) } }
 
             } catch (e: Exception) {
                 e.printStackTrace()
                 isTestRunning.set(false)
                 try { Libbox.newService("", StubPlatformInterface()) } catch (_: Exception) {}
-                return@withContext -4
+                result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-4) } }
             }
         }
 
@@ -155,12 +174,24 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
             }
         }
 
-        suspend fun measurePing(rawInput: String, tempDir: File): Int = withContext(Dispatchers.IO) {
-            if (isVpnRunning.get()) return@withContext -1
-            if (!isTestRunning.compareAndSet(false, true)) return@withContext -1
+        suspend fun measurePing(rawInput: String, tempDir: File, result: MethodChannel.Result?) = withContext(Dispatchers.IO) {
+            if (isVpnRunning.get()) {
+                result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
+                return@withContext
+            }
+            if (!isTestRunning.compareAndSet(false, true)) {
+                result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
+                return@withContext
+            }
 
             try {
-                val configJson = resolveConfigContent(rawInput)
+                // STRICT VALIDATION
+                val configJson = validateAndResolveConfig(rawInput, result)
+                if (configJson == null) {
+                     // Error already sent
+                     isTestRunning.set(false)
+                     return@withContext
+                }
 
                 val socket = ServerSocket(0)
                 val socksPort = socket.localPort
@@ -175,12 +206,16 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
                 socksInbound.put("listen_port", socksPort)
                 inbounds.put(socksInbound)
                 json.put("inbounds", inbounds)
-                if (!json.has("outbounds")) return@withContext -1
+                if (!json.has("outbounds")) {
+                    result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
+                    return@withContext
+                }
 
                 val testConfigFile = File(tempDir, "test_${System.currentTimeMillis()}.json")
                 testConfigFile.writeText(json.toString())
 
-                Libbox.newService(testConfigFile.absolutePath, StubPlatformInterface())
+                // SAFE CALL - pass JSON content string
+                Libbox.newService(json.toString(), StubPlatformInterface())
                 delay(500)
 
                 val client = OkHttpClient.Builder()
@@ -201,12 +236,14 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
                 response.close()
 
                 if (response.isSuccessful || response.code == 204) {
-                    return@withContext (endTime - startTime).toInt()
+                    val ping = (endTime - startTime).toInt()
+                    result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(ping) } }
+                } else {
+                    result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
                 }
-                return@withContext -1
 
             } catch (e: Exception) {
-                return@withContext -1
+                result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
             } finally {
                 try { Libbox.newService("", StubPlatformInterface()) } catch (_: Exception) {}
                 isTestRunning.set(false)
@@ -245,7 +282,14 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
 
         serviceScope.launch {
             try {
-                val configJson = resolveConfigContent(rawInput)
+                // STRICT VALIDATION (No result object available)
+                val configJson = validateAndResolveConfig(rawInput, null)
+
+                if (configJson == null) {
+                    MainActivity.sendVpnStatus("ERROR: INVALID_CONFIG")
+                    stopVpn()
+                    return@launch
+                }
 
                 val builder = Builder()
                 builder.setSession("iVPN Connection")
@@ -279,7 +323,8 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
 
                 configFile.writeText(jsonObject.toString())
 
-                Libbox.newService(configFile.absolutePath, this@SingboxVpnService)
+                // SAFE CALL - pass JSON content string
+                Libbox.newService(jsonObject.toString(), this@SingboxVpnService)
 
                 // CRITICAL FIX: Broadcast "CONNECTED" State to Dart
                 MainActivity.sendVpnStatus("CONNECTED")

@@ -82,11 +82,8 @@ class MainActivity : FlutterActivity() {
                         // However, setMethodCallHandler runs on Main thread.
                         // We use the activity scope or create a quick one.
                         CoroutineScope(Dispatchers.IO).launch {
-                            val ping = SingboxVpnService.measurePing(config, cacheDir)
-                            // Post result back to Main thread
-                            Handler(Looper.getMainLooper()).post {
-                                result.success(ping)
-                            }
+                            // Pass result directly to SingboxVpnService which handles success/error on Main thread
+                            SingboxVpnService.measurePing(config, cacheDir, result)
                         }
                     } else {
                         result.error("INVALID_ARGUMENT", "Config is null", null)
@@ -96,10 +93,8 @@ class MainActivity : FlutterActivity() {
                     val config = call.argument<String>("config")
                     if (config != null) {
                          CoroutineScope(Dispatchers.IO).launch {
-                             val port = SingboxVpnService.startTestProxy(config, cacheDir)
-                             Handler(Looper.getMainLooper()).post {
-                                 result.success(port)
-                             }
+                             // Pass result directly to SingboxVpnService which handles success/error on Main thread
+                             SingboxVpnService.startTestProxy(config, cacheDir, result)
                          }
                     } else {
                         result.error("INVALID_ARGUMENT", "Config is null", null)
