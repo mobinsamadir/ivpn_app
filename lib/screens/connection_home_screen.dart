@@ -18,6 +18,7 @@ import '../widgets/ad_explanation_dialog.dart';
 import '../widgets/shimmer_config_card.dart';
 import '../widgets/sliver_tab_bar_delegate.dart';
 import 'settings_screen.dart';
+import 'log_viewer_screen.dart';
 
 class ConnectionHomeScreen extends StatefulWidget {
   final NativeVpnService? nativeVpnService;
@@ -45,7 +46,8 @@ class ConnectionHomeScreen extends StatefulWidget {
   State<ConnectionHomeScreen> createState() => _ConnectionHomeScreenState();
 }
 
-class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with WidgetsBindingObserver, SingleTickerProviderStateMixin {
+class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
+    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   // 1. Services
   late final NativeVpnService _nativeVpnService;
   late final FunnelService _funnelService;
@@ -72,7 +74,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
 
   // Auto-switch Variables
   int _highPingCounter = 0;
-  static const int _consecutiveHighPingCount = 2; // consecutive checks before switching
+  static const int _consecutiveHighPingCount =
+      2; // consecutive checks before switching
   Timer? _pingMonitorTimer;
 
   // Progress State
@@ -122,38 +125,51 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     // Auto-Switch Callback
     _configManager.onAutoSwitch = (config) {
       if (mounted) {
-         AdvancedLogger.info("[HomeScreen] Auto-Switch triggered to: ${config.name}");
-         _handleConnection();
+        AdvancedLogger.info(
+          "[HomeScreen] Auto-Switch triggered to: ${config.name}",
+        );
+        _handleConnection();
       }
     };
 
     // Listen to Funnel Progress
     _funnelSubscription = _funnelService.progressStream.listen((msg) {
-       if (mounted) setState(() => _testProgress = msg);
+      if (mounted) setState(() => _testProgress = msg);
     });
 
     // VPN Connection Status Listener
-    _vpnStatusSubscription = _nativeVpnService.connectionStatusStream.listen((status) {
-      AdvancedLogger.info('[ConnectionHomeScreen] Received VPN status update: $status');
+    _vpnStatusSubscription = _nativeVpnService.connectionStatusStream.listen((
+      status,
+    ) {
+      AdvancedLogger.info(
+        '[ConnectionHomeScreen] Received VPN status update: $status',
+      );
       if (mounted) {
         setState(() {
           _lastNativeStatus = status;
           // Update the connection status in ConfigManager to reflect the actual VPN status
-          _configManager.setConnected(status == 'CONNECTED', status: _getConnectionStatusMessage(status));
+          _configManager.setConnected(
+            status == 'CONNECTED',
+            status: _getConnectionStatusMessage(status),
+          );
         });
 
         // NEW: Post-Connect Logic (Anti-Censorship)
         if (status == 'CONNECTED') {
-           AdvancedLogger.info("[HomeScreen] VPN Connected. Retrying config fetch...");
-           // _configManager.fetchStartupConfigs(); // Disabled autonomous config fetch
+          AdvancedLogger.info(
+            "[HomeScreen] VPN Connected. Retrying config fetch...",
+          );
+          // _configManager.fetchStartupConfigs(); // Disabled autonomous config fetch
 
-           // Trigger Updates & Ads with Delay
-           Future.delayed(const Duration(seconds: 3), () {
-             if (mounted) {
-               AdvancedLogger.info("[HomeScreen] Triggering Post-Connect Ad Check...");
-               _adManagerService.fetchLatestAds();
-             }
-           });
+          // Trigger Updates & Ads with Delay
+          Future.delayed(const Duration(seconds: 3), () {
+            if (mounted) {
+              AdvancedLogger.info(
+                "[HomeScreen] Triggering Post-Connect Ad Check...",
+              );
+              _adManagerService.fetchLatestAds();
+            }
+          });
         }
       }
     });
@@ -217,9 +233,12 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
 
     // Check if current ping is high
     // Increased threshold to 3000ms to prevent loop
-    if (_configManager.selectedConfig != null && _configManager.selectedConfig!.currentPing > 3000) {
+    if (_configManager.selectedConfig != null &&
+        _configManager.selectedConfig!.currentPing > 3000) {
       _highPingCounter++;
-      AdvancedLogger.info('[ConnectionHomeScreen] High ping detected. Counter: $_highPingCounter');
+      AdvancedLogger.info(
+        '[ConnectionHomeScreen] High ping detected. Counter: $_highPingCounter',
+      );
 
       // If high ping has been detected for consecutive checks, initiate auto-switch
       if (_highPingCounter >= _consecutiveHighPingCount) {
@@ -241,7 +260,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     }
 
     _isSwitching = true;
-    AdvancedLogger.info('[ConnectionHomeScreen] Initiating auto-switch due to high ping');
+    AdvancedLogger.info(
+      '[ConnectionHomeScreen] Initiating auto-switch due to high ping',
+    );
     _showToast("High ping detected. Switching to best server...");
 
     try {
@@ -250,13 +271,18 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
 
       // Cool-down period to allow OS to release TUN interface
       AdvancedLogger.info('Waiting for port release...');
-      await Future.delayed(const Duration(seconds: 2)); // Increased delay for safety
+      await Future.delayed(
+        const Duration(seconds: 2),
+      ); // Increased delay for safety
 
       // Use Smart Failover
       await _configManager.connectWithSmartFailover();
-
     } catch (e, stackTrace) {
-      AdvancedLogger.error('[ConnectionHomeScreen] Auto-switch failed: $e', error: e, stackTrace: stackTrace);
+      AdvancedLogger.error(
+        '[ConnectionHomeScreen] Auto-switch failed: $e',
+        error: e,
+        stackTrace: stackTrace,
+      );
       _showToast("Auto-switch failed: $e");
     } finally {
       _isSwitching = false;
@@ -269,11 +295,16 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
 
   String _getConnectionStatusMessage(String status) {
     switch (status) {
-      case 'CONNECTED': return 'Connected';
-      case 'CONNECTING': return 'Connecting...';
-      case 'DISCONNECTED': return 'Disconnected';
-      case 'ERROR': return 'Connection Error';
-      default: return status;
+      case 'CONNECTED':
+        return 'Connected';
+      case 'CONNECTING':
+        return 'Connecting...';
+      case 'DISCONNECTED':
+        return 'Disconnected';
+      case 'ERROR':
+        return 'Connection Error';
+      default:
+        return status;
     }
   }
 
@@ -297,8 +328,13 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
         barrierDismissible: false,
         builder: (context) => AlertDialog(
           backgroundColor: const Color(0xFF1E1E1E),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('Claim Reward', style: TextStyle(color: Colors.white)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text(
+            'Claim Reward',
+            style: TextStyle(color: Colors.white),
+          ),
           content: const Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -319,7 +355,10 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
             ElevatedButton(
               onPressed: () => Navigator.pop(context, true),
               style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-              child: const Text('Claim +1 Hour', style: TextStyle(color: Colors.white)),
+              child: const Text(
+                'Claim +1 Hour',
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ],
         ),
@@ -351,31 +390,39 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
 
   Future<void> _initAppSequence() async {
     if (!mounted) return;
-    setState(() { _isFetching = true; });
+    setState(() {
+      _isFetching = true;
+    });
 
     final bool hasInternet = await _connectivityService.hasInternet();
 
     if (!hasInternet) {
-       if (mounted) {
-         setState(() { _isFetching = false; });
-         ScaffoldMessenger.of(context).showSnackBar(
-           const SnackBar(
-             content: Text("No Internet Connection. Testing Aborted."),
-             backgroundColor: Colors.redAccent,
-             duration: Duration(seconds: 4),
-           ),
-         );
-       }
-       return;
+      if (mounted) {
+        setState(() {
+          _isFetching = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("No Internet Connection. Testing Aborted."),
+            backgroundColor: Colors.redAccent,
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
+      return;
     }
 
     // New Smart Fetch Logic
     try {
-      final success = await _configGistService.fetchAndApplyConfigs(_configManager);
+      final success = await _configGistService.fetchAndApplyConfigs(
+        _configManager,
+      );
       if (!success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text("⚠️ Server list could not be loaded. Please check your connection and tap Refresh."),
+            content: Text(
+              "⚠️ Server list could not be loaded. Please check your connection and tap Refresh.",
+            ),
             backgroundColor: Colors.orangeAccent,
             duration: Duration(seconds: 4),
           ),
@@ -384,37 +431,46 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     } catch (e) {
       AdvancedLogger.warn("[HomeScreen] Config fetch failed: $e");
     } finally {
-      if (mounted) setState(() { _isFetching = false; });
+      if (mounted)
+        setState(() {
+          _isFetching = false;
+        });
     }
 
     // Check for updates (Background)
     if (mounted) {
-       _configGistService.checkForUpdates(context);
+      _configGistService.checkForUpdates(context);
     }
 
     // Auto Test if configs exist
     // Smart Startup: Skip auto-test if we already have enough good configs
     final bool haveEnoughValid = _configManager.validatedConfigs.length >= 5;
 
-    if (!haveEnoughValid && _configManager.allConfigs.isNotEmpty && _autoTestOnStartup && !_configManager.isConnected && mounted) {
-        AdvancedLogger.info("[HomeScreen] Triggering Auto-Test (Need valid configs)...");
-        _runFunnelTest();
+    if (!haveEnoughValid &&
+        _configManager.allConfigs.isNotEmpty &&
+        _autoTestOnStartup &&
+        !_configManager.isConnected &&
+        mounted) {
+      AdvancedLogger.info(
+        "[HomeScreen] Triggering Auto-Test (Need valid configs)...",
+      );
+      _runFunnelTest();
     } else if (haveEnoughValid) {
-        AdvancedLogger.info("[HomeScreen] Smart Startup: Skipping Auto-Test (Have ${_configManager.validatedConfigs.length} valid configs).");
+      AdvancedLogger.info(
+        "[HomeScreen] Smart Startup: Skipping Auto-Test (Have ${_configManager.validatedConfigs.length} valid configs).",
+      );
     }
   }
 
   Future<void> _runSmartAutoTest() async {
     if (!mounted) return;
     if (_configManager.allConfigs.isEmpty) {
-       _showToast("No configs available to test");
-       return;
+      _showToast("No configs available to test");
+      return;
     }
     AdvancedLogger.info("🚀 [Auto-Test] Running Smart Auto-Test (Funnel)...");
     await _runFunnelTest();
   }
-
-
 
   Future<void> _initialize() async {
     try {
@@ -433,9 +489,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      backgroundColor: const Color(0xFF121212),
+      backgroundColor: const Color(0xFF0A0A0A),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF121212),
+        backgroundColor: const Color(0xFF0A0A0A),
         elevation: 0,
         title: const Text(
           'V2Ray',
@@ -452,6 +508,16 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
             tooltip: 'Force Refresh',
           ),
           IconButton(
+            icon: const Icon(Icons.receipt_long, color: Colors.amber),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const LogViewerScreen()),
+              );
+            },
+            tooltip: 'View Logs',
+          ),
+          IconButton(
             icon: const Icon(Icons.settings, color: Colors.white),
             onPressed: () {
               Navigator.push(
@@ -462,9 +528,15 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showAddServerDialog,
+        backgroundColor: Colors.blueAccent,
+        child: const Icon(Icons.add, color: Colors.white),
+        tooltip: 'Add Manual Server',
+      ),
       body: SafeArea(
         child: RefreshIndicator(
-          backgroundColor: const Color(0xFF1A1A1A),
+          backgroundColor: const Color(0xFF141414),
           color: Colors.blueAccent,
           onRefresh: _refreshConfigsManual,
           child: CustomScrollView(
@@ -476,15 +548,26 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
                   child: Container(
                     width: double.infinity,
                     color: Colors.amberAccent.withOpacity(0.2),
-                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 8,
+                      horizontal: 16,
+                    ),
                     child: Row(
                       children: const [
-                        Icon(Icons.warning_amber_rounded, color: Colors.amberAccent, size: 20),
+                        Icon(
+                          Icons.warning_amber_rounded,
+                          color: Colors.amberAccent,
+                          size: 20,
+                        ),
                         SizedBox(width: 10),
                         Expanded(
                           child: Text(
                             "For better connectivity, please run iVPN as Administrator.",
-                            style: TextStyle(color: Colors.amberAccent, fontSize: 13, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              color: Colors.amberAccent,
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ],
@@ -534,43 +617,67 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
                   padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
                   child: Column(
                     children: [
-                       if (_testProgress.isNotEmpty && _testProgress != "Completed" && _testProgress != "Stopped")
-                          Container(
-                             padding: const EdgeInsets.all(12),
-                             decoration: BoxDecoration(
-                                color: const Color(0xFF1A1A1A),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.blueAccent.withValues(alpha: 0.3))
-                             ),
-                             child: Row(
-                                children: [
-                                   const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(strokeWidth: 2)
-                                   ),
-                                   const SizedBox(width: 12),
-                                   Expanded(child: Text(_testProgress, style: const TextStyle(color: Colors.white, fontSize: 13))),
-                                   IconButton(
-                                      icon: const Icon(Icons.stop, color: Colors.redAccent),
-                                      onPressed: () {
-                                         _funnelService.stop();
-                                         _showToast("Test Stopped");
-                                      },
-                                   )
-                                ],
-                             ),
+                      if (_testProgress.isNotEmpty &&
+                          _testProgress != "Completed" &&
+                          _testProgress != "Stopped")
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1A1A1A),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.blueAccent.withValues(alpha: 0.3),
+                            ),
                           ),
+                          child: Row(
+                            children: [
+                              const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  _testProgress,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.stop,
+                                  color: Colors.redAccent,
+                                ),
+                                onPressed: () {
+                                  _funnelService.stop();
+                                  _showToast("Test Stopped");
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
                     ],
                   ),
                 ),
               ),
               SliverToBoxAdapter(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 8,
+                  ),
                   child: Row(
                     children: [
-                      const Icon(Icons.list, color: Colors.blueAccent, size: 22),
+                      const Icon(
+                        Icons.list,
+                        color: Colors.blueAccent,
+                        size: 22,
+                      ),
                       const SizedBox(width: 12),
                       Text(
                         'Server Configuration',
@@ -588,7 +695,10 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
                         splashRadius: 20,
                       ),
                       IconButton(
-                        icon: const Icon(Icons.delete_sweep, color: Colors.redAccent),
+                        icon: const Icon(
+                          Icons.delete_sweep,
+                          color: Colors.redAccent,
+                        ),
                         onPressed: _showSmartCleanupDialog,
                         tooltip: 'Cleanup Configs',
                         splashRadius: 20,
@@ -628,7 +738,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
                       ),
                       Tab(
                         icon: const Icon(Icons.check_circle, size: 18),
-                        text: 'Valid (${_configManager.validatedConfigs.length})',
+                        text:
+                            'Valid (${_configManager.validatedConfigs.length})',
                       ),
                       Tab(
                         icon: const Icon(Icons.star, size: 18),
@@ -636,7 +747,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
                       ),
                     ],
                   ),
-                  backgroundColor: const Color(0xFF121212),
+                  backgroundColor: const Color(0xFF0A0A0A),
                 ),
               ),
               ListenableBuilder(
@@ -659,7 +770,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
                     if (_isFetching) {
                       return SliverList(
                         delegate: SliverChildBuilderDelegate(
-                          (context, index) => const RepaintBoundary(child: ShimmerConfigCard()),
+                          (context, index) =>
+                              const RepaintBoundary(child: ShimmerConfigCard()),
                           childCount: 6,
                         ),
                       );
@@ -693,36 +805,36 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
                   }
 
                   return SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final config = configs[index];
-                        return RepaintBoundary(
-                          child: ConfigCard(
-                            config: config,
-                            isSelected: _configManager.selectedConfig?.id == config.id,
-                            isTesting: _activeTestIds.contains(config.id),
-                            onTap: () {
-                              _configManager.selectConfig(config);
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      final config = configs[index];
+                      return RepaintBoundary(
+                        child: ConfigCard(
+                          config: config,
+                          isSelected:
+                              _configManager.selectedConfig?.id == config.id,
+                          isTesting: _activeTestIds.contains(config.id),
+                          onTap: () {
+                            _configManager.selectConfig(config);
+                            setState(() {});
+                          },
+                          onTestLatency: () => _runSingleTest(config),
+                          onTestSpeed: () => _runSingleTest(config),
+                          onToggleFavorite: () async {
+                            await _configManager.toggleFavorite(config.id);
+                            setState(() {});
+                          },
+                          onDelete: () async {
+                            final confirm = await _showDeleteConfirmationDialog(
+                              config,
+                            );
+                            if (confirm && mounted) {
+                              await _configManager.deleteConfig(config.id);
                               setState(() {});
-                            },
-                            onTestLatency: () => _runSingleTest(config),
-                            onTestSpeed: () => _runSingleTest(config),
-                            onToggleFavorite: () async {
-                               await _configManager.toggleFavorite(config.id);
-                               setState(() {});
-                            },
-                            onDelete: () async {
-                              final confirm = await _showDeleteConfirmationDialog(config);
-                              if (confirm && mounted) {
-                                await _configManager.deleteConfig(config.id);
-                                setState(() {});
-                              }
-                            },
-                          ),
-                        );
-                      },
-                      childCount: configs.length,
-                    ),
+                            }
+                          },
+                        ),
+                      );
+                    }, childCount: configs.length),
                   );
                 },
               ),
@@ -737,7 +849,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
   // --- LOGIC METHODS ---
 
   Future<void> _handleConnection() async {
-    if (_configManager.isConnected || _configManager.connectionStatus.toLowerCase().contains('connecting')) {
+    if (_configManager.isConnected ||
+        _configManager.connectionStatus.toLowerCase().contains('connecting')) {
       _isConnectionCancelled = true;
       await _configManager.stopAllOperations();
       return;
@@ -747,11 +860,14 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
 
     // Network Check
     if (!await _connectivityService.hasInternet()) {
-       if (!mounted) return;
-       ScaffoldMessenger.of(context).showSnackBar(
-         const SnackBar(content: Text('No internet connection'), backgroundColor: Colors.redAccent),
-       );
-       return;
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No internet connection'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
     }
 
     // Admin Check removed here as we now show a banner instead.
@@ -787,24 +903,28 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     // 1. SMART WAIT LOOP
     // If we have no valid configs yet, wait for the Funnel
     if (_configManager.validatedConfigs.isEmpty) {
-        setState(() => _configManager.setConnected(false, status: 'Testing servers...'));
+      setState(
+        () => _configManager.setConnected(false, status: 'Testing servers...'),
+      );
 
-        // Start Funnel if not running
-        _funnelService.startFunnel(retestDead: false); // Prioritize fresh ones
+      // Start Funnel if not running
+      _funnelService.startFunnel(retestDead: false); // Prioritize fresh ones
 
-        int waits = 0;
-        while (_configManager.validatedConfigs.isEmpty && waits < 15 && !_isConnectionCancelled) {
-             await Future.delayed(const Duration(seconds: 1));
-             waits++;
-        }
+      int waits = 0;
+      while (_configManager.validatedConfigs.isEmpty &&
+          waits < 15 &&
+          !_isConnectionCancelled) {
+        await Future.delayed(const Duration(seconds: 1));
+        waits++;
+      }
 
-        if (_isConnectionCancelled) return;
+      if (_isConnectionCancelled) return;
 
-        if (_configManager.validatedConfigs.isEmpty) {
-            _showToast("No accessible servers found. Please update list.");
-            _configManager.setConnected(false, status: 'Failed');
-            return;
-        }
+      if (_configManager.validatedConfigs.isEmpty) {
+        _showToast("No accessible servers found. Please update list.");
+        _configManager.setConnected(false, status: 'Failed');
+        return;
+      }
     }
 
     // 2. Delegate to Service (Smart Failover)
@@ -828,36 +948,49 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
   Future<void> _refreshConfigsManual() async {
     if (!mounted) return;
     _showToast('Refreshing configs...');
-    setState(() { _isFetching = true; });
+    setState(() {
+      _isFetching = true;
+    });
     try {
-      await _configGistService.fetchAndApplyConfigs(_configManager, force: true);
+      await _configGistService.fetchAndApplyConfigs(
+        _configManager,
+        force: true,
+      );
       _showToast('Refresh completed');
     } catch (e) {
       _showToast('Failed to refresh configs: $e');
     } finally {
-      if (mounted) setState(() { _isFetching = false; });
+      if (mounted)
+        setState(() {
+          _isFetching = false;
+        });
     }
   }
 
   Future<void> _skipServer() async {
     if (_configManager.isConnected) {
-       await _nativeVpnService.disconnect();
-       // Short delay to allow native cleanup
-       await Future.delayed(const Duration(milliseconds: 500));
+      await _nativeVpnService.disconnect();
+      // Short delay to allow native cleanup
+      await Future.delayed(const Duration(milliseconds: 500));
     }
-    final success = await _configManager.skipToNext(sourceList: _getCurrentList());
+    final success = await _configManager.skipToNext(
+      sourceList: _getCurrentList(),
+    );
     if (!success) {
-       _showToast("No other valid servers available.");
+      _showToast("No other valid servers available.");
     }
   }
 
   List<VpnConfigWithMetrics> _getCurrentList() {
-     switch (_tabController.index) {
-       case 1: return _configManager.validatedConfigs;
-       case 2: return _configManager.favoriteConfigs;
-       case 0:
-       default: return _configManager.allConfigs;
-     }
+    switch (_tabController.index) {
+      case 1:
+        return _configManager.validatedConfigs;
+      case 2:
+        return _configManager.favoriteConfigs;
+      case 0:
+      default:
+        return _configManager.allConfigs;
+    }
   }
 
   // --- RESTORED UI METHODS ---
@@ -896,8 +1029,15 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
         border: Border.all(color: Colors.white10),
       ),
       child: ListTile(
-        leading: const Icon(Icons.workspace_premium, color: Colors.amber, size: 32),
-        title: const Text('Free Plan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        leading: const Icon(
+          Icons.workspace_premium,
+          color: Colors.amber,
+          size: 32,
+        ),
+        title: const Text(
+          'Free Plan',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
         subtitle: Text(
           access.hasAccess
               ? '${access.remainingTime.inHours}h ${access.remainingTime.inMinutes % 60}m remaining'
@@ -923,7 +1063,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
     Color statusColor;
     if (_configManager.isConnected) {
       statusColor = Colors.greenAccent;
-    } else if (_configManager.connectionStatus == 'Failed' || _configManager.connectionStatus.contains('Error')) {
+    } else if (_configManager.connectionStatus == 'Failed' ||
+        _configManager.connectionStatus.contains('Error')) {
       statusColor = Colors.redAccent;
     } else {
       statusColor = Colors.grey;
@@ -943,7 +1084,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
 
   Widget _buildConnectButton() {
     final isConnected = _configManager.isConnected;
-    final isConnecting = _configManager.connectionStatus.toLowerCase().contains('connecting');
+    final isConnecting = _configManager.connectionStatus.toLowerCase().contains(
+          'connecting',
+        );
 
     return Stack(
       alignment: Alignment.center,
@@ -961,7 +1104,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
                     : (isConnecting ? Colors.orange : Colors.green),
                 boxShadow: [
                   BoxShadow(
-                    color: (isConnected ? Colors.red : Colors.green).withValues(alpha: 0.4),
+                    color: (isConnected ? Colors.red : Colors.green).withValues(
+                      alpha: 0.4,
+                    ),
                     blurRadius: 20,
                     spreadRadius: 5,
                   ),
@@ -971,13 +1116,17 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    isConnected ? Icons.power_settings_new : Icons.power_settings_new,
+                    isConnected
+                        ? Icons.power_settings_new
+                        : Icons.power_settings_new,
                     size: 60,
                     color: Colors.white,
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    isConnected ? 'DISCONNECT' : (isConnecting ? 'CONNECTING' : 'CONNECT'),
+                    isConnected
+                        ? 'DISCONNECT'
+                        : (isConnecting ? 'CONNECTING' : 'CONNECT'),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 18,
@@ -1001,17 +1150,92 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
                   shape: BoxShape.circle,
                 ),
                 child: IconButton(
-                  icon: const Icon(Icons.skip_next_rounded, size: 32, color: Colors.blueAccent),
+                  icon: const Icon(
+                    Icons.skip_next_rounded,
+                    size: 32,
+                    color: Colors.blueAccent,
+                  ),
                   onPressed: _skipServer,
                   tooltip: 'Next Server',
                 ),
               ),
               const SizedBox(height: 4),
-              const Text("Skip", style: TextStyle(color: Colors.grey, fontSize: 10)),
+              const Text(
+                "Skip",
+                style: TextStyle(color: Colors.grey, fontSize: 10),
+              ),
             ],
           ),
         ),
       ],
+    );
+  }
+
+  Future<void> _showAddServerDialog() async {
+    final TextEditingController _urlController = TextEditingController();
+
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1E1E1E),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text(
+            'Add Manual Server',
+            style: TextStyle(color: Colors.white),
+          ),
+          content: TextField(
+            controller: _urlController,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: 'vmess:// or vless:// ...',
+              hintStyle: const TextStyle(color: Colors.grey),
+              filled: true,
+              fillColor: const Color(0xFF2A2A2A),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
+            ),
+            maxLines: 3,
+            minLines: 1,
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blueAccent,
+              ),
+              child: const Text('Add', style: TextStyle(color: Colors.white)),
+              onPressed: () async {
+                final url = _urlController.text.trim();
+                if (url.isNotEmpty) {
+                  Navigator.of(context).pop();
+                  final added = await _configManager.addConfigs([url]);
+                  if (added > 0) {
+                    _showToast("Server added successfully!");
+                    setState(() {});
+                  } else {
+                    _showToast(
+                      "Failed to add server. Invalid format or already exists.",
+                    );
+                  }
+                } else {
+                  _showToast("Please enter a valid URL.");
+                }
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -1029,8 +1253,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
         onTestLatency: () => _runSingleTest(config),
         onTestSpeed: () => _runSingleTest(config),
         onToggleFavorite: () async {
-           await _configManager.toggleFavorite(config.id);
-           setState(() {});
+          await _configManager.toggleFavorite(config.id);
+          setState(() {});
         },
         onDelete: () async {
           final confirm = await _showDeleteConfirmationDialog(config);
@@ -1045,7 +1269,10 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
 
   Widget _buildAutoTestToggle() {
     return SwitchListTile(
-      title: const Text('Auto-Test on Startup', style: TextStyle(color: Colors.white)),
+      title: const Text(
+        'Auto-Test on Startup',
+        style: TextStyle(color: Colors.white),
+      ),
       value: _autoTestOnStartup,
       activeThumbColor: Colors.blueAccent,
       onChanged: (val) {
@@ -1061,7 +1288,10 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E1E1E),
-        title: const Text('Smart Cleanup', style: TextStyle(color: Colors.white)),
+        title: const Text(
+          'Smart Cleanup',
+          style: TextStyle(color: Colors.white),
+        ),
         content: const Text(
           'Remove failed and dead configs?',
           style: TextStyle(color: Colors.grey),
@@ -1074,37 +1304,55 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen> with Widget
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              final removed = await _configManager.removeConfigs(failedTcp: true, dead: true);
+              final removed = await _configManager.removeConfigs(
+                failedTcp: true,
+                dead: true,
+              );
               _showToast("Removed $removed configs");
             },
-            child: const Text('Cleanup', style: TextStyle(color: Colors.redAccent)),
+            child: const Text(
+              'Cleanup',
+              style: TextStyle(color: Colors.redAccent),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Future<bool> _showDeleteConfirmationDialog(VpnConfigWithMetrics config) async {
+  Future<bool> _showDeleteConfirmationDialog(
+    VpnConfigWithMetrics config,
+  ) async {
     return await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E1E),
-        title: const Text('Delete Config', style: TextStyle(color: Colors.white)),
-        content: Text(
-          'Delete ${config.name}?',
-          style: const TextStyle(color: Colors.grey),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          context: context,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: const Color(0xFF1E1E1E),
+            title: const Text(
+              'Delete Config',
+              style: TextStyle(color: Colors.white),
+            ),
+            content: Text(
+              'Delete ${config.name}?',
+              style: const TextStyle(color: Colors.grey),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text(
+                  'Delete',
+                  style: TextStyle(color: Colors.redAccent),
+                ),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
-          ),
-        ],
-      ),
-    ) ?? false;
+        ) ??
+        false;
   }
 }

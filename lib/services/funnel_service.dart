@@ -9,31 +9,33 @@ import '../utils/advanced_logger.dart';
 
 // Top-level function for priority queue building in isolate
 List<VpnConfigWithMetrics> _buildQueueInIsolate(Map<String, dynamic> args) {
-  final List<VpnConfigWithMetrics> allConfigs = args['configs'] as List<VpnConfigWithMetrics>;
+  final List<VpnConfigWithMetrics> allConfigs =
+      args['configs'] as List<VpnConfigWithMetrics>;
   final bool retestDead = args['retestDead'] as bool;
 
   // Categorize
   final tier1 = <VpnConfigWithMetrics>[]; // Retest (Known Good < 24h)
   final tier2 = <VpnConfigWithMetrics>[]; // Fresh / Untested
   final tier3 = <VpnConfigWithMetrics>[]; // Retry (Soft Fail)
-  final dead = <VpnConfigWithMetrics>[];  // Dead (Hard Fail)
+  final dead = <VpnConfigWithMetrics>[]; // Dead (Hard Fail)
 
   final now = DateTime.now();
 
   for (final c in allConfigs) {
-     if (c.funnelStage > 0) {
-        if (c.lastTestedAt != null && now.difference(c.lastTestedAt!).inHours < 24) {
-           tier1.add(c);
-        } else {
-           tier1.add(c); // Old good configs
-        }
-     } else if (c.funnelStage == 0 && c.failureCount == 0) {
-        tier2.add(c); // Fresh
-     } else if (c.failureCount < 3) {
-        tier3.add(c); // Retry
-     } else {
-        dead.add(c);
-     }
+    if (c.funnelStage > 0) {
+      if (c.lastTestedAt != null &&
+          now.difference(c.lastTestedAt!).inHours < 24) {
+        tier1.add(c);
+      } else {
+        tier1.add(c); // Old good configs
+      }
+    } else if (c.funnelStage == 0 && c.failureCount == 0) {
+      tier2.add(c); // Fresh
+    } else if (c.failureCount < 3) {
+      tier3.add(c); // Retry
+    } else {
+      dead.add(c);
+    }
   }
 
   // Sort Tier 1 by score (Best first)
@@ -41,18 +43,20 @@ List<VpnConfigWithMetrics> _buildQueueInIsolate(Map<String, dynamic> args) {
 
   final queue = [...tier1, ...tier2, ...tier3];
   if (retestDead) {
-     queue.addAll(dead);
+    queue.addAll(dead);
   }
 
   return queue;
 }
 
 // Top-level function for batch processing in Isolate
-Map<String, Map<String, dynamic>> batchProcessConfigsInIsolate(List<VpnConfigWithMetrics> configs) {
+Map<String, Map<String, dynamic>> batchProcessConfigsInIsolate(
+    List<VpnConfigWithMetrics> configs) {
   final Map<String, Map<String, dynamic>> results = {};
   for (final config in configs) {
     try {
-      final details = SingboxConfigGenerator.extractServerDetails(config.rawConfig);
+      final details =
+          SingboxConfigGenerator.extractServerDetails(config.rawConfig);
       if (details != null && details['host'] != null) {
         results[config.id] = details;
       }
@@ -114,7 +118,7 @@ class FunnelService {
 
     // Kill any zombie processes (Windows)
     if (!Platform.isAndroid) {
-       EphemeralTester.killAll();
+      EphemeralTester.killAll();
     }
 
     _progressController.add("Stopped");
@@ -133,7 +137,8 @@ class FunnelService {
     _httpPassed = 0;
     _speedFinished = 0;
 
-    AdvancedLogger.info("FunnelService: Starting Pipeline (RetestDead: $retestDead)");
+    AdvancedLogger.info(
+        "FunnelService: Starting Pipeline (RetestDead: $retestDead)");
 
     // Start UI Throttle Timer (500ms)
     _startUiThrottle();
@@ -143,8 +148,8 @@ class FunnelService {
     // 1. Populate TCP Queue (Initial Feed)
     // Offload to isolate
     final all = await compute(_buildQueueInIsolate, {
-       'configs': _configManager.allConfigs,
-       'retestDead': retestDead,
+      'configs': _configManager.allConfigs,
+      'retestDead': retestDead,
     });
 
     _totalConfigs = all.length;
@@ -152,15 +157,18 @@ class FunnelService {
 
     // 1.5 Batch Pre-process Configs (Extract Host/Port in Isolate)
     try {
-      AdvancedLogger.info("FunnelService: Pre-processing $_totalConfigs configs in Isolate...");
+      AdvancedLogger.info(
+          "FunnelService: Pre-processing $_totalConfigs configs in Isolate...");
       _cachedServerDetails = await compute(batchProcessConfigsInIsolate, all);
-      AdvancedLogger.info("FunnelService: Pre-processing complete. Cached ${_cachedServerDetails.length} valid details.");
+      AdvancedLogger.info(
+          "FunnelService: Pre-processing complete. Cached ${_cachedServerDetails.length} valid details.");
     } catch (e) {
       AdvancedLogger.error("FunnelService: Batch processing failed: $e");
       _cachedServerDetails = {};
     }
 
-    AdvancedLogger.info("FunnelService: Loaded $_totalConfigs configs into TCP Queue.");
+    AdvancedLogger.info(
+        "FunnelService: Loaded $_totalConfigs configs into TCP Queue.");
 
     // 2. Start Worker Pools
     // We spawn fixed number of loops that pull from queues
@@ -171,27 +179,32 @@ class FunnelService {
 
   void _startUiThrottle() {
     _uiThrottleTimer?.cancel();
-    _uiThrottleTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
-        if (!_isRunning) {
-           timer.cancel();
-           return;
-        }
+    _uiThrottleTimer =
+        Timer.periodic(const Duration(milliseconds: 500), (timer) {
+      if (!_isRunning) {
+        timer.cancel();
+        return;
+      }
 
-        final msg = "TCP: $_tcpPassed | HTTP: $_httpPassed | Speed: $_speedFinished | Queued: ${_tcpQueue.length + _httpQueue.length + _speedQueue.length}";
-        _progressController.add(msg);
+      final msg =
+          "TCP: $_tcpPassed | HTTP: $_httpPassed | Speed: $_speedFinished | Queued: ${_tcpQueue.length + _httpQueue.length + _speedQueue.length}";
+      _progressController.add(msg);
 
-        // Check completion
-        if (_tcpQueue.isEmpty && _httpQueue.isEmpty && _speedQueue.isEmpty &&
-            _activeTcpWorkers == 0 && _activeHttpWorkers == 0 && _activeSpeedWorkers == 0) {
-
-            // Debounce completion
-            Future.delayed(const Duration(seconds: 2), () {
-               if (_tcpQueue.isEmpty && _activeTcpWorkers == 0 && _isRunning) {
-                  stop();
-                  _progressController.add("Completed");
-               }
-            });
-        }
+      // Check completion
+      if (_tcpQueue.isEmpty &&
+          _httpQueue.isEmpty &&
+          _speedQueue.isEmpty &&
+          _activeTcpWorkers == 0 &&
+          _activeHttpWorkers == 0 &&
+          _activeSpeedWorkers == 0) {
+        // Debounce completion
+        Future.delayed(const Duration(seconds: 2), () {
+          if (_tcpQueue.isEmpty && _activeTcpWorkers == 0 && _isRunning) {
+            stop();
+            _progressController.add("Completed");
+          }
+        });
+      }
     });
   }
 
@@ -228,33 +241,33 @@ class FunnelService {
         final details = _cachedServerDetails[config.id];
 
         if (details != null && details['host'] != null) {
-           final host = details['host'] as String;
-           final port = details['port'] as int? ?? 443;
+          final host = details['host'] as String;
+          final port = details['port'] as int? ?? 443;
 
-           try {
-             // 2-second timeout for fast fail
-             final socket = await Socket.connect(host, port, timeout: const Duration(seconds: 2));
-             socket.destroy();
-             passed = true;
-           } catch (_) {
-             // Failed
-           }
+          try {
+            // 2-second timeout for fast fail
+            final socket = await Socket.connect(host, port,
+                timeout: const Duration(seconds: 2));
+            socket.destroy();
+            passed = true;
+          } catch (_) {
+            // Failed
+          }
         }
 
         if (passed) {
-           _tcpPassed++;
-           // Promote to HTTP Queue
-           _httpQueue.add(config);
+          _tcpPassed++;
+          // Promote to HTTP Queue
+          _httpQueue.add(config);
 
-           // Optimistic Update: Mark TCP passed in UI (optional, but good for feedback)
-           // We don't save to disk yet to avoid IO thrashing
+          // Optimistic Update: Mark TCP passed in UI (optional, but good for feedback)
+          // We don't save to disk yet to avoid IO thrashing
         } else {
-           // Failed TCP - Mark Dead
-           await _configManager.markFailure(config.id);
+          // Failed TCP - Mark Dead
+          await _configManager.markFailure(config.id);
         }
-
       } catch (e) {
-         AdvancedLogger.warn("TCP Worker Error: $e");
+        AdvancedLogger.warn("TCP Worker Error: $e");
       } finally {
         _activeTcpWorkers--;
       }
@@ -274,26 +287,27 @@ class FunnelService {
       }
 
       try {
-         // STAGE 2: HTTP Connectivity (Strict 204)
-         // This uses EphemeralTester which handles the Semaphore/Locking
-         final result = await _tester.runTest(config, mode: TestMode.connectivity);
+        // STAGE 2: HTTP Connectivity (Strict 204)
+        // This uses EphemeralTester which handles the Semaphore/Locking
+        final result =
+            await _tester.runTest(config, mode: TestMode.connectivity);
 
-         if (result.funnelStage >= 2) { // Success (2 or 3)
-             _httpPassed++;
+        if (result.funnelStage >= 2) {
+          // Success (2 or 3)
+          _httpPassed++;
 
-             // Update Manager (triggers Sort & UI update)
-             await _configManager.updateConfigDirectly(result);
+          // Update Manager (triggers Sort & UI update)
+          await _configManager.updateConfigDirectly(result);
 
-             // Promote to Speed Queue
-             _speedQueue.add(result);
-         } else {
-             await _configManager.markFailure(config.id);
-         }
-
+          // Promote to Speed Queue
+          _speedQueue.add(result);
+        } else {
+          await _configManager.markFailure(config.id);
+        }
       } catch (e) {
-         AdvancedLogger.warn("HTTP Worker Error: $e");
+        AdvancedLogger.warn("HTTP Worker Error: $e");
       } finally {
-         _activeHttpWorkers--;
+        _activeHttpWorkers--;
       }
     }
   }
@@ -303,30 +317,28 @@ class FunnelService {
       VpnConfigWithMetrics? config;
 
       if (_speedQueue.isNotEmpty) {
-         config = _speedQueue.removeAt(0);
-         _activeSpeedWorkers++;
+        config = _speedQueue.removeAt(0);
+        _activeSpeedWorkers++;
       } else {
-         await Future.delayed(const Duration(milliseconds: 200));
-         continue;
+        await Future.delayed(const Duration(milliseconds: 200));
+        continue;
       }
 
       try {
-         // STAGE 3: Speed Test
-         final result = await _tester.runTest(config, mode: TestMode.speed);
+        // STAGE 3: Speed Test
+        final result = await _tester.runTest(config, mode: TestMode.speed);
 
-         if (result.funnelStage == 3) {
-            _speedFinished++;
-            await _configManager.updateConfigDirectly(result);
-         }
-         // If speed test fails (but HTTP passed), we still keep it as Stage 2 valid
-         // EphemeralTester handles this (returns Stage 2 result if Stage 3 fails)
-
+        if (result.funnelStage == 3) {
+          _speedFinished++;
+          await _configManager.updateConfigDirectly(result);
+        }
+        // If speed test fails (but HTTP passed), we still keep it as Stage 2 valid
+        // EphemeralTester handles this (returns Stage 2 result if Stage 3 fails)
       } catch (e) {
-         AdvancedLogger.warn("Speed Worker Error: $e");
+        AdvancedLogger.warn("Speed Worker Error: $e");
       } finally {
-         _activeSpeedWorkers--;
+        _activeSpeedWorkers--;
       }
     }
   }
-
 }

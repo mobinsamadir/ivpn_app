@@ -41,17 +41,15 @@ class _SplashScreenState extends State<SplashScreen> {
 
       // 0. Request Notification Permission (Android 13+)
       await Permission.notification.request();
-      
+
       // 2. Initialize Config Logic
       setState(() => _statusMessage = 'Loading configs...');
       // Robust init with timeout to prevent hang
-      await configManager.init().timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          AdvancedLogger.error("ConfigManager.init timed out!");
-          // Don't throw, just proceed. Some configs might be missing but app won't hang.
-        }
-      );
+      await configManager.init().timeout(const Duration(seconds: 10),
+          onTimeout: () {
+        AdvancedLogger.error("ConfigManager.init timed out!");
+        // Don't throw, just proceed. Some configs might be missing but app won't hang.
+      });
 
       // NEW: Start Funnel immediately
       FunnelService().startFunnel();
@@ -93,10 +91,11 @@ class _SplashScreenState extends State<SplashScreen> {
               // Logo
               const Icon(Icons.vpn_lock, size: 80, color: Colors.white),
               const SizedBox(height: 24),
-              
+
               // Status or Error
               if (_hasError) ...[
-                const Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
+                const Icon(Icons.error_outline,
+                    size: 48, color: Colors.redAccent),
                 const SizedBox(height: 16),
                 Text(
                   _errorMessage ?? 'Unknown Error',

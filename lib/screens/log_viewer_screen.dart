@@ -44,7 +44,7 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
               curve: Curves.easeOut,
             );
           }
-          
+
           return Column(
             children: [
               Container(
@@ -52,7 +52,8 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
                 color: Colors.grey[900],
                 child: Row(
                   children: [
-                    const Icon(Icons.info_outline, color: Colors.amber, size: 16),
+                    const Icon(Icons.info_outline,
+                        color: Colors.amber, size: 16),
                     const SizedBox(width: 5),
                     Text(
                       'Showing last ${logs.length} log entries',
@@ -68,7 +69,7 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
                   itemBuilder: (context, index) {
                     final log = logs[index];
                     Color textColor = Colors.green; // Default green
-                    
+
                     // Color code based on log level
                     if (log.contains('[ERROR]')) {
                       textColor = Colors.red;
@@ -77,9 +78,10 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
                     } else if (log.contains('[DEBUG]')) {
                       textColor = Colors.cyan;
                     }
-                    
+
                     return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 2),
                       child: Text(
                         log,
                         style: TextStyle(
@@ -104,9 +106,9 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
   Future<void> _copyAllLogs() async {
     final logs = AdvancedLogger.logNotifier.value;
     final logText = logs.join('\n');
-    
+
     await Clipboard.setData(ClipboardData(text: logText));
-    
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -119,7 +121,7 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
 
   Future<void> _clearLogs() async {
     AdvancedLogger.logNotifier.value = [];
-    
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

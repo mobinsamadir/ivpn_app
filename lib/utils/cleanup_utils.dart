@@ -17,14 +17,15 @@ class CleanupUtils {
   static void registerResource(String jobId, Object resource) {
     if (_jobResources.containsKey(jobId)) {
       _jobResources[jobId]!.add(resource);
-      AdvancedLogger.debug('[Cleanup] Registered ${resource.runtimeType} to job $jobId');
+      AdvancedLogger.debug(
+          '[Cleanup] Registered ${resource.runtimeType} to job $jobId');
     }
   }
 
   /// Cleanup all resources associated with a specific job
   static Future<void> cleanupJobResources(String jobId) async {
     AdvancedLogger.info('[Cleanup] Starting cleanup for job: $jobId');
-    
+
     final resources = _jobResources.remove(jobId);
     final token = _activeTokens.remove(jobId);
 
@@ -63,7 +64,7 @@ class CleanupUtils {
   /// Global emergency cleanup for crashes or app exit
   static Future<void> emergencyCleanup() async {
     AdvancedLogger.error('[Cleanup] EMERGENCY CLEANUP TRIGGERED');
-    
+
     // Cleanup all known jobs
     final jobIds = _jobResources.keys.toList();
     for (final id in jobIds) {
@@ -77,7 +78,7 @@ class CleanupUtils {
         AdvancedLogger.info('[Cleanup] Flushed sing-box processes.');
       } catch (_) {}
     }
-    
+
     _jobResources.clear();
     _activeTokens.clear();
   }

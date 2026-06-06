@@ -44,26 +44,30 @@ class PortAllocator {
       if (await _isPortFree(port) && await _isPortFree(port + 1)) {
         _activePorts.add(port);
         // We track the base port. We assume port+1 is also effectively reserved/used by the same owner.
-        AdvancedLogger.info("PortAllocator: Allocated port block $port-${port+1}");
+        AdvancedLogger.info(
+            "PortAllocator: Allocated port block $port-${port + 1}");
         return port;
       }
 
       attempts++;
     }
 
-    throw Exception("PortAllocator: Failed to find a free port block after 1000 attempts");
+    throw Exception(
+        "PortAllocator: Failed to find a free port block after 1000 attempts");
   }
 
   void release(int port) {
     if (_activePorts.contains(port)) {
       _activePorts.remove(port);
-      AdvancedLogger.info("PortAllocator: Released port block $port-${port+1}");
+      AdvancedLogger.info(
+          "PortAllocator: Released port block $port-${port + 1}");
     }
   }
 
   Future<bool> _isPortFree(int port) async {
     try {
-      final socket = await ServerSocket.bind(InternetAddress.loopbackIPv4, port);
+      final socket =
+          await ServerSocket.bind(InternetAddress.loopbackIPv4, port);
       await socket.close();
       return true;
     } catch (e) {

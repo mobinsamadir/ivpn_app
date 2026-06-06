@@ -12,7 +12,8 @@ class SettingsScreen extends StatefulWidget {
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObserver {
+class _SettingsScreenState extends State<SettingsScreen>
+    with WidgetsBindingObserver {
   // متغیر برای کنترل وضعیت‌های جدید
   bool _killSwitchEnabled = false;
   bool _isBatteryOptimizationIgnored = false;
@@ -100,8 +101,11 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
           ),
           ListTile(
             leading: Icon(
-              _isBatteryOptimizationIgnored ? Icons.shield : Icons.battery_alert,
-              color: _isBatteryOptimizationIgnored ? Colors.green : Colors.orange,
+              _isBatteryOptimizationIgnored
+                  ? Icons.shield
+                  : Icons.battery_alert,
+              color:
+                  _isBatteryOptimizationIgnored ? Colors.green : Colors.orange,
             ),
             title: const Text('Keep VPN Alive'),
             subtitle: Text(
@@ -109,14 +113,18 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
                   ? 'Optimizations disabled (Stable)'
                   : 'Prevent background kills (Recommended)',
               style: TextStyle(
-                color: _isBatteryOptimizationIgnored ? Colors.green : Colors.orange,
+                color: _isBatteryOptimizationIgnored
+                    ? Colors.green
+                    : Colors.orange,
                 fontSize: 12,
               ),
             ),
             trailing: _isBatteryOptimizationIgnored
                 ? const Icon(Icons.check_circle, color: Colors.green)
                 : const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: _isBatteryOptimizationIgnored ? null : _requestBatteryOptimization,
+            onTap: _isBatteryOptimizationIgnored
+                ? null
+                : _requestBatteryOptimization,
           ),
           SwitchListTile(
             title: const Text('Kill Switch'),

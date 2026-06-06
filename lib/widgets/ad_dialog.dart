@@ -80,7 +80,10 @@ class _AdDialogState extends State<AdDialog> {
               children: [
                 const Text(
                   'Sponsored Content',
-                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold),
                 ),
                 if (_canClose)
                   IconButton(
@@ -90,7 +93,7 @@ class _AdDialogState extends State<AdDialog> {
               ],
             ),
             const SizedBox(height: 10),
-            
+
             // WebView Content (Using Reusable UniversalAdWidget)
             Expanded(
               child: ClipRRect(
@@ -101,7 +104,7 @@ class _AdDialogState extends State<AdDialog> {
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 16),
 
             // Footer Button
@@ -109,9 +112,8 @@ class _AdDialogState extends State<AdDialog> {
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: _canClose
-                    ? () => Navigator.of(context).pop(true)
-                    : null,
+                onPressed:
+                    _canClose ? () => Navigator.of(context).pop(true) : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _canClose ? Colors.green : Colors.grey[800],
                   disabledBackgroundColor: Colors.grey[800],
@@ -120,7 +122,9 @@ class _AdDialogState extends State<AdDialog> {
                   ),
                 ),
                 child: Text(
-                  _canClose ? 'Close & Connect' : 'Please wait (${_timeLeft}s)...',
+                  _canClose
+                      ? 'Close & Connect'
+                      : 'Please wait (${_timeLeft}s)...',
                   style: TextStyle(
                     color: _canClose ? Colors.white : Colors.white54,
                     fontSize: 16,

@@ -23,7 +23,7 @@ String _extractServerName(String raw) {
     if (uri.fragment.isNotEmpty) {
       return Uri.decodeComponent(uri.fragment);
     }
-  } catch(_) {}
+  } catch (_) {}
 
   // Fallback name
   final type = raw.split('://').first.toUpperCase();
@@ -32,10 +32,27 @@ String _extractServerName(String raw) {
 
 String? _extractCountryCode(String name) {
   final map = {
-    '🇺🇸': 'US', '🇩🇪': 'DE', '🇬🇧': 'GB', '🇫🇷': 'FR', '🇯🇵': 'JP',
-    '🇨🇦': 'CA', '🇦🇺': 'AU', '🇳🇱': 'NL', '🇸🇪': 'SE', '🇨🇭': 'CH',
-    '🇸🇬': 'SG', '🇭🇰': 'HK', '🇰🇷': 'KR', '🇮🇳': 'IN', '🇧🇷': 'BR',
-    '🇹🇷': 'TR', '🇮🇹': 'IT', '🇪🇸': 'ES', '🇵🇱': 'PL', '🇷🇺': 'RU', '🇮🇷': 'IR',
+    '🇺🇸': 'US',
+    '🇩🇪': 'DE',
+    '🇬🇧': 'GB',
+    '🇫🇷': 'FR',
+    '🇯🇵': 'JP',
+    '🇨🇦': 'CA',
+    '🇦🇺': 'AU',
+    '🇳🇱': 'NL',
+    '🇸🇪': 'SE',
+    '🇨🇭': 'CH',
+    '🇸🇬': 'SG',
+    '🇭🇰': 'HK',
+    '🇰🇷': 'KR',
+    '🇮🇳': 'IN',
+    '🇧🇷': 'BR',
+    '🇹🇷': 'TR',
+    '🇮🇹': 'IT',
+    '🇪🇸': 'ES',
+    '🇵🇱': 'PL',
+    '🇷🇺': 'RU',
+    '🇮🇷': 'IR',
   };
   for (final e in map.entries) {
     if (name.contains(e.key)) {
@@ -46,11 +63,15 @@ String? _extractCountryCode(String name) {
 }
 
 /// Isolate entry point for processing configs
-Future<Map<String, dynamic>> _processConfigsInIsolate(Map<String, dynamic> args) async {
+Future<Map<String, dynamic>> _processConfigsInIsolate(
+  Map<String, dynamic> args,
+) async {
   final List<String> configStrings = args['configStrings'] as List<String>;
-  final Set<String> blockedHashes = (args['blockedHashes'] as List).cast<String>().toSet();
+  final Set<String> blockedHashes =
+      (args['blockedHashes'] as List).cast<String>().toSet();
   final bool checkBlacklist = args['checkBlacklist'] as bool;
-  final Set<String> existingConfigs = (args['existingConfigs'] as List).cast<String>().toSet();
+  final Set<String> existingConfigs =
+      (args['existingConfigs'] as List).cast<String>().toSet();
   int addedCount = args['initialAddedCount'] as int;
 
   final List<VpnConfigWithMetrics> newConfigs = [];
@@ -67,13 +88,13 @@ Future<Map<String, dynamic>> _processConfigsInIsolate(Map<String, dynamic> args)
     final hash = md5.convert(utf8.encode(trimmedRaw)).toString();
 
     if (checkBlacklist && blockedHashes.contains(hash)) {
-       // Silently skip blacklisted config
-       continue;
+      // Silently skip blacklisted config
+      continue;
     }
 
     // Manual Overwrite: If adding with checkBlacklist=false, we mark hash for removal
     if (!checkBlacklist && blockedHashes.contains(hash)) {
-       hashesToRemoveFromBlacklist.add(hash);
+      hashesToRemoveFromBlacklist.add(hash);
     }
 
     if (existingConfigs.contains(trimmedRaw)) {
@@ -86,13 +107,15 @@ Future<Map<String, dynamic>> _processConfigsInIsolate(Map<String, dynamic> args)
     final name = _extractServerName(trimmedRaw);
     final id = 'config_${DateTime.now().millisecondsSinceEpoch}_$addedCount';
 
-    newConfigs.add(VpnConfigWithMetrics(
-      id: id,
-      rawConfig: trimmedRaw,
-      name: name,
-      countryCode: _extractCountryCode(name),
-      addedDate: DateTime.now(), // Ensure addedDate is set
-    ));
+    newConfigs.add(
+      VpnConfigWithMetrics(
+        id: id,
+        rawConfig: trimmedRaw,
+        name: name,
+        countryCode: _extractCountryCode(name),
+        addedDate: DateTime.now(), // Ensure addedDate is set
+      ),
+    );
 
     batchConfigs.add(trimmedRaw);
     addedCount++;
@@ -106,12 +129,14 @@ Future<Map<String, dynamic>> _processConfigsInIsolate(Map<String, dynamic> args)
 }
 
 /// Isolate entry point for sorting configs
-Map<String, List<VpnConfigWithMetrics>> _sortConfigsInIsolate(List<VpnConfigWithMetrics> configs) {
+Map<String, List<VpnConfigWithMetrics>> _sortConfigsInIsolate(
+  List<VpnConfigWithMetrics> configs,
+) {
   // Sort logic helper: Score Descending, then Date Descending
   int compareScore(VpnConfigWithMetrics a, VpnConfigWithMetrics b) {
-     final scoreCmp = b.score.compareTo(a.score);
-     if (scoreCmp != 0) return scoreCmp;
-     return b.addedDate.compareTo(a.addedDate);
+    final scoreCmp = b.score.compareTo(a.score);
+    if (scoreCmp != 0) return scoreCmp;
+    return b.addedDate.compareTo(a.addedDate);
   }
 
   // Create local copy to sort
@@ -154,7 +179,7 @@ class ConfigManager extends ChangeNotifier {
 
   bool _isConnected = false;
   bool get isConnected => _isConnected;
-  
+
   String _connectionStatus = 'Ready';
   String get connectionStatus => _connectionStatus;
 
@@ -199,15 +224,19 @@ class ConfigManager extends ChangeNotifier {
 
     // Event-Driven Network Listener
     Connectivity().onConnectivityChanged.listen((_) async {
-       if (_isConnected) {
-          AdvancedLogger.info("[ConfigManager] Network state changed. Verifying connectivity...");
-          // Small delay to let network settle
-          await Future.delayed(const Duration(seconds: 2));
-          await measureActivePing();
-       }
+      if (_isConnected) {
+        AdvancedLogger.info(
+          "[ConfigManager] Network state changed. Verifying connectivity...",
+        );
+        // Small delay to let network settle
+        await Future.delayed(const Duration(seconds: 2));
+        await measureActivePing();
+      }
     });
 
-    AdvancedLogger.info('[ConfigManager] Initialization complete. Loaded ${allConfigs.length} configs.');
+    AdvancedLogger.info(
+      '[ConfigManager] Initialization complete. Loaded ${allConfigs.length} configs.',
+    );
   }
 
   CancelToken getScanCancelToken() {
@@ -261,7 +290,10 @@ class ConfigManager extends ChangeNotifier {
   }
 
   // --- DATABASE OPERATIONS ---
-  Future<int> addConfigs(List<String> configStrings, {bool checkBlacklist = true}) async {
+  Future<int> addConfigs(
+    List<String> configStrings, {
+    bool checkBlacklist = true,
+  }) async {
     // Prepare data for Isolate
     // We pass list versions of Sets because Sets aren't always transferrable if they contain custom objects,
     // but Strings are fine. Just to be safe and consistent with typical isolate args.
@@ -270,129 +302,145 @@ class ConfigManager extends ChangeNotifier {
       'blockedHashes': _blockedConfigs.toList(),
       'checkBlacklist': checkBlacklist,
       'existingConfigs': allConfigs.map((c) => c.rawConfig.trim()).toList(),
-      'initialAddedCount': 0, // We can let the isolate handle local count, or pass a global counter if needed.
-                              // Current logic uses local addedCount in loop, let's stick to that but we risk ID collisions if we added multiple batches very fast.
-                              // Actually the ID uses DateTime.now() inside the loop. In isolate, DateTime.now() is fine.
+      'initialAddedCount':
+          0, // We can let the isolate handle local count, or pass a global counter if needed.
+      // Current logic uses local addedCount in loop, let's stick to that but we risk ID collisions if we added multiple batches very fast.
+      // Actually the ID uses DateTime.now() inside the loop. In isolate, DateTime.now() is fine.
     };
 
-    AdvancedLogger.info('[ConfigManager] Spawning isolate to process ${configStrings.length} configs...');
+    AdvancedLogger.info(
+      '[ConfigManager] Spawning isolate to process ${configStrings.length} configs...',
+    );
 
     try {
       final result = await compute(_processConfigsInIsolate, args);
 
       final newConfigs = result['newConfigs'] as List<VpnConfigWithMetrics>;
-      final hashesToRemove = result['hashesToRemoveFromBlacklist'] as List<String>;
+      final hashesToRemove =
+          result['hashesToRemoveFromBlacklist'] as List<String>;
 
       // Update Blacklist
       if (hashesToRemove.isNotEmpty) {
-         _blockedConfigs.removeAll(hashesToRemove);
-         await _saveBlacklist();
-         AdvancedLogger.info("[ConfigManager] Manual overwrite: Removed ${hashesToRemove.length} configs from blacklist.");
+        _blockedConfigs.removeAll(hashesToRemove);
+        await _saveBlacklist();
+        AdvancedLogger.info(
+          "[ConfigManager] Manual overwrite: Removed ${hashesToRemove.length} configs from blacklist.",
+        );
       }
 
       // Add New Configs
       if (newConfigs.isNotEmpty) {
-         allConfigs.addAll(newConfigs);
-         await _updateLists();
-         await _saveAllConfigs();
-         _safeNotifyListeners();
-         AdvancedLogger.info('[ConfigManager] Successfully added ${newConfigs.length} configs via Isolate.');
+        allConfigs.addAll(newConfigs);
+        await _updateLists();
+        await _saveAllConfigs();
+        _safeNotifyListeners();
+        AdvancedLogger.info(
+          '[ConfigManager] Successfully added ${newConfigs.length} configs via Isolate.',
+        );
       }
 
       return newConfigs.length;
-
     } catch (e) {
       AdvancedLogger.error('[ConfigManager] Error in addConfigs isolate: $e');
       return 0;
     }
   }
 
-  Future<void> updateConfigMetrics(String id, {int? ping, double? speed, bool? connectionSuccess}) async {
-     final index = allConfigs.indexWhere((c) => c.id == id);
-     if (index != -1) {
-        // Update in-place
-        allConfigs[index] = allConfigs[index].updateMetrics(
-           deviceId: _currentDeviceId,
-           ping: ping, 
-           speed: speed, 
-           connectionSuccess: connectionSuccess ?? false
-        );
-        // Don't sort immediately, use throttling
-        notifyListenersThrottled();
-     }
+  Future<void> updateConfigMetrics(
+    String id, {
+    int? ping,
+    double? speed,
+    bool? connectionSuccess,
+  }) async {
+    final index = allConfigs.indexWhere((c) => c.id == id);
+    if (index != -1) {
+      // Update in-place
+      allConfigs[index] = allConfigs[index].updateMetrics(
+        deviceId: _currentDeviceId,
+        ping: ping,
+        speed: speed,
+        connectionSuccess: connectionSuccess ?? false,
+      );
+      // Don't sort immediately, use throttling
+      notifyListenersThrottled();
+    }
   }
 
   Future<void> updateConfigDirectly(VpnConfigWithMetrics config) async {
-     final index = allConfigs.indexWhere((c) => c.id == config.id);
-     if (index != -1) {
-        allConfigs[index] = config;
-     }
-     // Don't sort immediately, use throttling
-     notifyListenersThrottled();
+    final index = allConfigs.indexWhere((c) => c.id == config.id);
+    if (index != -1) {
+      allConfigs[index] = config;
+    }
+    // Don't sort immediately, use throttling
+    notifyListenersThrottled();
   }
-  
+
   Future<void> markSuccess(String id) async {
-      final index = allConfigs.indexWhere((c) => c.id == id);
-      if (index != -1) {
-         allConfigs[index] = allConfigs[index].copyWith(
-            failureCount: 0,
-            lastSuccessfulConnectionTime: DateTime.now().millisecondsSinceEpoch,
-            isAlive: true
-         );
-         await _updateLists();
-         await _saveAllConfigs();
-         notifyListeners();
-      }
+    final index = allConfigs.indexWhere((c) => c.id == id);
+    if (index != -1) {
+      allConfigs[index] = allConfigs[index].copyWith(
+        failureCount: 0,
+        lastSuccessfulConnectionTime: DateTime.now().millisecondsSinceEpoch,
+        isAlive: true,
+      );
+      await _updateLists();
+      await _saveAllConfigs();
+      notifyListeners();
+    }
   }
-  
+
   Future<void> markFailure(String id) async {
-      final index = allConfigs.indexWhere((c) => c.id == id);
-      if (index != -1) {
-         allConfigs[index] = allConfigs[index].copyWith(
-            failureCount: allConfigs[index].failureCount + 1,
-            isAlive: false
-         );
-         await _updateLists();
-         await _saveAllConfigs();
-         notifyListeners();
-      }
+    final index = allConfigs.indexWhere((c) => c.id == id);
+    if (index != -1) {
+      allConfigs[index] = allConfigs[index].copyWith(
+        failureCount: allConfigs[index].failureCount + 1,
+        isAlive: false,
+      );
+      await _updateLists();
+      await _saveAllConfigs();
+      notifyListeners();
+    }
   }
 
   // --- NEW: Mark Invalid ---
   Future<void> markInvalid(String id) async {
-      final index = allConfigs.indexWhere((c) => c.id == id);
-      if (index != -1) {
-         AdvancedLogger.warn("[ConfigManager] Marking config invalid (Parsing/Init Error): ${allConfigs[index].name}");
-         allConfigs[index] = allConfigs[index].copyWith(
-            failureCount: 99, // High penalty
-            isAlive: false,
-            lastFailedStage: "Invalid_Config"
-         );
-         await _updateLists();
-         await _saveAllConfigs();
-         notifyListeners();
-      }
+    final index = allConfigs.indexWhere((c) => c.id == id);
+    if (index != -1) {
+      AdvancedLogger.warn(
+        "[ConfigManager] Marking config invalid (Parsing/Init Error): ${allConfigs[index].name}",
+      );
+      allConfigs[index] = allConfigs[index].copyWith(
+        failureCount: 99, // High penalty
+        isAlive: false,
+        lastFailedStage: "Invalid_Config",
+      );
+      await _updateLists();
+      await _saveAllConfigs();
+      notifyListeners();
+    }
   }
 
   Future<bool> deleteConfig(String id) async {
-     final configIndex = allConfigs.indexWhere((c) => c.id == id);
-     if (configIndex != -1) {
-        final config = allConfigs[configIndex];
+    final configIndex = allConfigs.indexWhere((c) => c.id == id);
+    if (configIndex != -1) {
+      final config = allConfigs[configIndex];
 
-        // BLACKLIST LOGIC: Add hash to persistent blacklist
-        final hash = md5.convert(utf8.encode(config.rawConfig.trim())).toString();
-        _blockedConfigs.add(hash);
-        await _saveBlacklist();
-        AdvancedLogger.info("[ConfigManager] Config deleted and blacklisted: ${config.name} ($hash)");
+      // BLACKLIST LOGIC: Add hash to persistent blacklist
+      final hash = md5.convert(utf8.encode(config.rawConfig.trim())).toString();
+      _blockedConfigs.add(hash);
+      await _saveBlacklist();
+      AdvancedLogger.info(
+        "[ConfigManager] Config deleted and blacklisted: ${config.name} ($hash)",
+      );
 
-        allConfigs.removeAt(configIndex);
-        if (_selectedConfig?.id == id) _selectedConfig = null;
-        await _updateLists();
-        await _saveAllConfigs();
-        notifyListeners();
-        return true;
-     }
-     return false;
+      allConfigs.removeAt(configIndex);
+      if (_selectedConfig?.id == id) _selectedConfig = null;
+      await _updateLists();
+      await _saveAllConfigs();
+      notifyListeners();
+      return true;
+    }
+    return false;
   }
 
   // --- CLEANUP METHODS ---
@@ -405,31 +453,31 @@ class ConfigManager extends ChangeNotifier {
     });
 
     if (allConfigs.length < initialCount) {
-        if (_selectedConfig != null && !allConfigs.contains(_selectedConfig)) {
-            _selectedConfig = null;
-        }
-        await _updateLists();
-        await _saveAllConfigs();
-        notifyListeners();
+      if (_selectedConfig != null && !allConfigs.contains(_selectedConfig)) {
+        _selectedConfig = null;
+      }
+      await _updateLists();
+      await _saveAllConfigs();
+      notifyListeners();
     }
     return initialCount - allConfigs.length;
   }
 
   Future<void> toggleFavorite(String id) async {
-      final index = allConfigs.indexWhere((c) => c.id == id);
-      if (index != -1) {
-         allConfigs[index] = allConfigs[index].copyWith(
-            isFavorite: !allConfigs[index].isFavorite
-         );
-         await _updateLists();
-         await _saveAllConfigs();
-         notifyListeners();
-      }
+    final index = allConfigs.indexWhere((c) => c.id == id);
+    if (index != -1) {
+      allConfigs[index] = allConfigs[index].copyWith(
+        isFavorite: !allConfigs[index].isFavorite,
+      );
+      await _updateLists();
+      await _saveAllConfigs();
+      notifyListeners();
+    }
   }
 
   void selectConfig(VpnConfigWithMetrics? c) {
-     _selectedConfig = c;
-     notifyListeners();
+    _selectedConfig = c;
+    notifyListeners();
   }
 
   // --- ACTIVE CONNECTION PING & NAVIGATION ---
@@ -439,17 +487,21 @@ class ConfigManager extends ChangeNotifier {
 
     final stopwatch = Stopwatch()..start();
     try {
-      final response = await http.head(
-        Uri.parse('https://www.google.com'),
-      ).timeout(const Duration(seconds: 5));
+      final response = await http
+          .head(Uri.parse('https://www.google.com'))
+          .timeout(const Duration(seconds: 5));
 
       stopwatch.stop();
       if (response.statusCode == 200) {
-         final ping = stopwatch.elapsedMilliseconds;
-         // Update metrics directly
-         await updateConfigMetrics(_selectedConfig!.id, ping: ping, connectionSuccess: true);
-         AdvancedLogger.info('[ConfigManager] Active ping success: ${ping}ms');
-         return ping;
+        final ping = stopwatch.elapsedMilliseconds;
+        // Update metrics directly
+        await updateConfigMetrics(
+          _selectedConfig!.id,
+          ping: ping,
+          connectionSuccess: true,
+        );
+        AdvancedLogger.info('[ConfigManager] Active ping success: ${ping}ms');
+        return ping;
       }
     } catch (e) {
       AdvancedLogger.warn('[ConfigManager] Active ping failed: $e');
@@ -458,17 +510,23 @@ class ConfigManager extends ChangeNotifier {
   }
 
   VpnConfigWithMetrics? getNextConfig(List<VpnConfigWithMetrics> currentList) {
-     if (currentList.isEmpty) return null;
-     if (_selectedConfig == null) return currentList.first;
+    if (currentList.isEmpty) return null;
+    if (_selectedConfig == null) return currentList.first;
 
-     final currentIndex = currentList.indexWhere((c) => c.id == _selectedConfig!.id);
-     if (currentIndex == -1) return currentList.first;
+    final currentIndex = currentList.indexWhere(
+      (c) => c.id == _selectedConfig!.id,
+    );
+    if (currentIndex == -1) return currentList.first;
 
-     return currentList[(currentIndex + 1) % currentList.length];
+    return currentList[(currentIndex + 1) % currentList.length];
   }
 
-  Future<bool> skipToNext({List<VpnConfigWithMetrics>? sourceList, bool performConnection = true}) async {
-    final list = sourceList ?? (validatedConfigs.isNotEmpty ? validatedConfigs : allConfigs);
+  Future<bool> skipToNext({
+    List<VpnConfigWithMetrics>? sourceList,
+    bool performConnection = true,
+  }) async {
+    final list = sourceList ??
+        (validatedConfigs.isNotEmpty ? validatedConfigs : allConfigs);
     if (list.isEmpty) return false;
 
     int currentIndex = -1;
@@ -497,14 +555,18 @@ class ConfigManager extends ChangeNotifier {
     // Fallback: If no "good" candidate found, we DO NOT blindly pick a dead one.
     // Instead, we return false to let UI inform user.
     if (candidate == null) {
-       AdvancedLogger.warn("[ConfigManager] Smart Skip: No valid candidates found.");
-       return false;
+      AdvancedLogger.warn(
+        "[ConfigManager] Smart Skip: No valid candidates found.",
+      );
+      return false;
     }
 
     // If candidate is same as current, it means only 1 valid config exists.
     if (candidate.id == _selectedConfig?.id) {
-       AdvancedLogger.info("[ConfigManager] Smart Skip: Already on the only valid config.");
-       return false;
+      AdvancedLogger.info(
+        "[ConfigManager] Smart Skip: Already on the only valid config.",
+      );
+      return false;
     }
 
     AdvancedLogger.info("[ConfigManager] Skipping to: ${candidate.name}");
@@ -512,20 +574,24 @@ class ConfigManager extends ChangeNotifier {
     _safeNotifyListeners();
 
     if (performConnection) {
-       await connectWithSmartFailover();
+      await connectWithSmartFailover();
     }
     return true;
   }
 
   // --- PERSISTENCE ---
   Future<void> _initDeviceId() async {
-     final info = DeviceInfoPlugin();
-     try {
-       if (Platform.isAndroid) {
-         _currentDeviceId = 'android_${(await info.androidInfo).id}';
-       } else if (Platform.isWindows) _currentDeviceId = 'windows_${(await info.windowsInfo).deviceId}';
-       else if (Platform.isIOS) _currentDeviceId = 'ios_${(await info.iosInfo).identifierForVendor}';
-     } catch(e) { _currentDeviceId = 'unknown'; }
+    final info = DeviceInfoPlugin();
+    try {
+      if (Platform.isAndroid) {
+        _currentDeviceId = 'android_${(await info.androidInfo).id}';
+      } else if (Platform.isWindows)
+        _currentDeviceId = 'windows_${(await info.windowsInfo).deviceId}';
+      else if (Platform.isIOS)
+        _currentDeviceId = 'ios_${(await info.iosInfo).identifierForVendor}';
+    } catch (e) {
+      _currentDeviceId = 'unknown';
+    }
   }
 
   Future<void> _loadConfigs() async {
@@ -540,25 +606,32 @@ class ConfigManager extends ChangeNotifier {
             // Defensively parse each config so one bad entry doesn't kill the whole list
             allConfigs.add(VpnConfigWithMetrics.fromJson(e));
           } catch (innerError) {
-            AdvancedLogger.warn('[ConfigManager] Skipped corrupted config during load: $innerError');
+            AdvancedLogger.warn(
+              '[ConfigManager] Skipped corrupted config during load: $innerError',
+            );
           }
         }
-        AdvancedLogger.info('[ConfigManager] Loaded ${allConfigs.length} from storage');
+        AdvancedLogger.info(
+          '[ConfigManager] Loaded ${allConfigs.length} from storage',
+        );
       }
-    } catch(e) {
-       AdvancedLogger.error('[ConfigManager] Load error: $e');
-       // If critical failure (e.g. JSON decode), fallback to empty list but keep app running
-       if (allConfigs.isEmpty) allConfigs = [];
+    } catch (e) {
+      AdvancedLogger.error('[ConfigManager] Load error: $e');
+      // If critical failure (e.g. JSON decode), fallback to empty list but keep app running
+      if (allConfigs.isEmpty) allConfigs = [];
     }
   }
 
   Future<void> _saveAllConfigs() async {
-     try {
-       final prefs = await SharedPreferences.getInstance();
-       await prefs.setString(_configsKey, jsonEncode(allConfigs.map((e)=>e.toJson()).toList()));
-     } catch(e) {
-       AdvancedLogger.error('[ConfigManager] Save error: $e');
-     }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        _configsKey,
+        jsonEncode(allConfigs.map((e) => e.toJson()).toList()),
+      );
+    } catch (e) {
+      AdvancedLogger.error('[ConfigManager] Save error: $e');
+    }
   }
 
   Future<void> _updateLists() async {
@@ -585,54 +658,58 @@ class ConfigManager extends ChangeNotifier {
   }
 
   Future<void> _loadBlacklist() async {
-     try {
-       final prefs = await SharedPreferences.getInstance();
-       final list = prefs.getStringList(_blacklistKey) ?? [];
-       _blockedConfigs = list.toSet();
-     } catch(e) {
-       AdvancedLogger.warn('[ConfigManager] Failed to load blacklist: $e');
-     }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final list = prefs.getStringList(_blacklistKey) ?? [];
+      _blockedConfigs = list.toSet();
+    } catch (e) {
+      AdvancedLogger.warn('[ConfigManager] Failed to load blacklist: $e');
+    }
   }
 
   Future<void> _saveBlacklist() async {
-     try {
-       final prefs = await SharedPreferences.getInstance();
-       await prefs.setStringList(_blacklistKey, _blockedConfigs.toList());
-     } catch(e) {
-       AdvancedLogger.warn('[ConfigManager] Failed to save blacklist: $e');
-     }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(_blacklistKey, _blockedConfigs.toList());
+    } catch (e) {
+      AdvancedLogger.warn('[ConfigManager] Failed to save blacklist: $e');
+    }
   }
 
   Future<void> _loadAutoSwitchSetting() async {
-     final p = await SharedPreferences.getInstance();
-     _isAutoSwitchEnabled = p.getBool(_autoSwitchKey) ?? true;
+    final p = await SharedPreferences.getInstance();
+    _isAutoSwitchEnabled = p.getBool(_autoSwitchKey) ?? true;
   }
+
   Future<void> _saveAutoSwitchSetting() async {
-     final p = await SharedPreferences.getInstance();
-     await p.setBool(_autoSwitchKey, _isAutoSwitchEnabled);
+    final p = await SharedPreferences.getInstance();
+    await p.setBool(_autoSwitchKey, _isAutoSwitchEnabled);
   }
 
   // --- UI & LEGACY COMPATIBILITY METHODS ---
   Future<VpnConfigWithMetrics?> getBestConfig() async {
-     if (_selectedConfig != null && _selectedConfig!.isValidated) return _selectedConfig;
-     if (favoriteConfigs.isNotEmpty) return favoriteConfigs.first;
-     if (validatedConfigs.isNotEmpty) return validatedConfigs.first;
-     if (allConfigs.isNotEmpty) return allConfigs.first;
-     return null;
+    if (_selectedConfig != null && _selectedConfig!.isValidated)
+      return _selectedConfig;
+    if (favoriteConfigs.isNotEmpty) return favoriteConfigs.first;
+    if (validatedConfigs.isNotEmpty) return validatedConfigs.first;
+    if (allConfigs.isNotEmpty) return allConfigs.first;
+    return null;
   }
 
   void setConnected(bool c, {String status = 'Connected'}) {
-     _isConnected = c;
-     _connectionStatus = status;
-     if (c) {
-       startSmartMonitor();
-     } else {
-       stopSmartMonitor();
-     }
-     notifyListeners();
+    _isConnected = c;
+    _connectionStatus = status;
+    if (c) {
+      startSmartMonitor();
+    } else {
+      stopSmartMonitor();
+    }
+    notifyListeners();
   }
-  
-  void stopSession() { _sessionTimer?.cancel(); }
+
+  void stopSession() {
+    _sessionTimer?.cancel();
+  }
 
   // --- EVENT-DRIVEN SMART MONITOR ---
   Future<void> evaluateAutoSwitch(int currentPing) async {
@@ -646,50 +723,60 @@ class ConfigManager extends ChangeNotifier {
 
     // 1. Check current status
     if (currentPing == -1 || currentPing > panicThreshold) {
-       // 2. Check for better options
-       if (validatedConfigs.isNotEmpty) {
-          final best = validatedConfigs.first;
-          // Avoid switching to self
-          if (best.id == _selectedConfig?.id) return;
+      // 2. Check for better options
+      if (validatedConfigs.isNotEmpty) {
+        final best = validatedConfigs.first;
+        // Avoid switching to self
+        if (best.id == _selectedConfig?.id) return;
 
-          if (currentPing == -1 || (best.currentPing > 0 && (currentPing - best.currentPing) > improvementThreshold)) {
-             needsSwitch = true;
-          }
-       } else if (reserveList.isNotEmpty) {
-           needsSwitch = true;
-       }
+        if (currentPing == -1 ||
+            (best.currentPing > 0 &&
+                (currentPing - best.currentPing) > improvementThreshold)) {
+          needsSwitch = true;
+        }
+      } else if (reserveList.isNotEmpty) {
+        needsSwitch = true;
+      }
     }
 
     if (needsSwitch) {
-       AdvancedLogger.warn('[ConfigManager] Auto-Switch Triggered. Current Ping: $currentPing');
-       await _performAutoSwitch();
+      AdvancedLogger.warn(
+        '[ConfigManager] Auto-Switch Triggered. Current Ping: $currentPing',
+      );
+      await _performAutoSwitch();
     }
   }
 
   // Legacy Polling Removed
   void startSmartMonitor() {}
   void stopSmartMonitor() {}
-  
+
   Future<void> _performAutoSwitch() async {
     VpnConfigWithMetrics? nextBest;
 
     // Priority 1: Reserve List
     if (reserveList.isNotEmpty) {
-       nextBest = reserveList.removeAt(0);
+      nextBest = reserveList.removeAt(0);
     }
     // Priority 2: Best Validated Config
     else if (validatedConfigs.isNotEmpty) {
-       nextBest = validatedConfigs.firstWhereOrNull((c) => c.id != _selectedConfig?.id);
+      nextBest = validatedConfigs.firstWhereOrNull(
+        (c) => c.id != _selectedConfig?.id,
+      );
     }
 
     if (nextBest != null) {
-       AdvancedLogger.info('[Smart Monitor] Switching to config: ${nextBest.name}');
-       _selectedConfig = nextBest;
-       notifyListeners();
-       onAutoSwitch?.call(nextBest);
+      AdvancedLogger.info(
+        '[Smart Monitor] Switching to config: ${nextBest.name}',
+      );
+      _selectedConfig = nextBest;
+      notifyListeners();
+      onAutoSwitch?.call(nextBest);
     } else {
-       AdvancedLogger.info('[Smart Monitor] No better configs found. Triggering Funnel...');
-       onTriggerFunnel?.call();
+      AdvancedLogger.info(
+        '[Smart Monitor] No better configs found. Triggering Funnel...',
+      );
+      onTriggerFunnel?.call();
     }
   }
 
@@ -700,17 +787,19 @@ class ConfigManager extends ChangeNotifier {
   }
 
   Future<void> clearAllData() async {
-     final p = await SharedPreferences.getInstance();
-     await p.remove(_configsKey);
-     _selectedConfig = null;
-     allConfigs.clear();
-     await _updateLists();
-     notifyListeners();
+    final p = await SharedPreferences.getInstance();
+    await p.remove(_configsKey);
+    _selectedConfig = null;
+    allConfigs.clear();
+    await _updateLists();
+    notifyListeners();
   }
 
   // --- SMART FAILOVER CONNECTION ---
   Future<void> connectWithSmartFailover() async {
-    AdvancedLogger.info('[ConfigManager] Starting Smart Failover Connection...');
+    AdvancedLogger.info(
+      '[ConfigManager] Starting Smart Failover Connection...',
+    );
     _isGlobalStopRequested = false;
 
     // 1. Notify UI
@@ -721,9 +810,11 @@ class ConfigManager extends ChangeNotifier {
     VpnConfigWithMetrics? target = await getBestConfig();
 
     if (target == null) {
-       AdvancedLogger.warn('[ConfigManager] No configs available for connection.');
-       setConnected(false, status: 'No servers available');
-       return;
+      AdvancedLogger.warn(
+        '[ConfigManager] No configs available for connection.',
+      );
+      setConnected(false, status: 'No servers available');
+      return;
     }
 
     int attempts = 0;
@@ -731,28 +822,30 @@ class ConfigManager extends ChangeNotifier {
     final NativeVpnService nativeService = NativeVpnService();
     final EphemeralTester tester = EphemeralTester();
 
-    while (attempts < maxAttempts && target != null && !_isGlobalStopRequested) {
+    while (
+        attempts < maxAttempts && target != null && !_isGlobalStopRequested) {
       try {
         selectConfig(target); // Update UI selection
 
         // 3. Pre-flight Check (Strict - Stage 2 Connectivity)
         setConnected(false, status: 'Verifying ${target.name}...');
-        final testResult = await tester.runTest(target, mode: TestMode.connectivity);
+        final testResult = await tester.runTest(
+          target,
+          mode: TestMode.connectivity,
+        );
 
         if (testResult.funnelStage < 2 || testResult.currentPing == -1) {
+          // NEW: Check if failure was INIT/PARSING error
+          if (testResult.lastFailedStage != null &&
+              (testResult.lastFailedStage!.contains("Init") ||
+                  testResult.lastFailedStage!.contains("Stage1_ProxyInit"))) {
+            await markInvalid(target.id);
+            throw Exception("Pre-flight check failed (Invalid/Dead Config)");
+          }
 
-             // NEW: Check if failure was INIT/PARSING error
-             if (testResult.lastFailedStage != null &&
-                (testResult.lastFailedStage!.contains("Init") ||
-                 testResult.lastFailedStage!.contains("Stage1_ProxyInit"))) {
-
-                 await markInvalid(target.id);
-                 throw Exception("Pre-flight check failed (Invalid/Dead Config)");
-             }
-
-             // Mark regular failure and throw to trigger failover
-             await markFailure(target.id);
-             throw Exception("Pre-flight check failed (Connectivity)");
+          // Mark regular failure and throw to trigger failover
+          await markFailure(target.id);
+          throw Exception("Pre-flight check failed (Connectivity)");
         }
 
         // Update metrics
@@ -764,18 +857,39 @@ class ConfigManager extends ChangeNotifier {
 
         // 4. Connect
         setConnected(false, status: 'Connecting to ${target.name}...');
-        await nativeService.connect(target.rawConfig);
+        try {
+          // Put a timeout strictly on the connection invocation process itself
+          await nativeService.connect(target.rawConfig).timeout(
+            const Duration(seconds: 15),
+            onTimeout: () {
+              throw TimeoutException(
+                "Connection to Native Service timed out",
+              );
+            },
+          );
 
-        // 5. Success
-        // Mark success is assumed if command doesn't throw. Real verification is via UI listener.
-        await updateConfigMetrics(target.id, connectionSuccess: true);
-        await markSuccess(target.id);
+          // 5. Success (optimistic native call success)
+          await updateConfigMetrics(target.id, connectionSuccess: true);
+          await markSuccess(target.id);
 
-        return;
+          // Safety fallback: if status stays 'Connecting' for too long, reset it
+          Future.delayed(const Duration(seconds: 20), () {
+            if (_connectionStatus.contains('Connecting')) {
+              setConnected(false, status: 'Connection Timeout');
+              nativeService.disconnect();
+            }
+          });
 
+          return;
+        } catch (e) {
+          AdvancedLogger.error("Failed to connect: $e");
+          rethrow;
+        }
       } catch (e) {
         // 6. Handle Failure
-        AdvancedLogger.warn('[ConfigManager] Connection failed to ${target.name}: $e');
+        AdvancedLogger.warn(
+          '[ConfigManager] Connection failed to ${target.name}: $e',
+        );
         // If not already marked invalid (which happens in try block), ensure markFailure is called
         // We can check if it is still alive to decide, but safe to call markFailure (it just increments)
         // unless it was marked invalid (count 99).
@@ -783,7 +897,7 @@ class ConfigManager extends ChangeNotifier {
         // Only mark failure if it wasn't already killed
         final current = getConfigById(target.id);
         if (current != null && current.isAlive) {
-           await markFailure(target.id);
+          await markFailure(target.id);
         }
 
         if (_isGlobalStopRequested) {
@@ -795,22 +909,23 @@ class ConfigManager extends ChangeNotifier {
         target = await getBestConfig(); // Get NEW best
 
         if (target != null && target.id != _selectedConfig?.id) {
-           setConnected(false, status: 'Switching to ${target.name}...');
-           // Brief delay to let UI show the status
-           await Future.delayed(const Duration(milliseconds: 500));
+          setConnected(false, status: 'Switching to ${target.name}...');
+          // Brief delay to let UI show the status
+          await Future.delayed(const Duration(milliseconds: 500));
         } else if (target == null) {
-           break;
+          break;
         }
       }
     }
 
     // 8. Final Failure State
     if (!_isGlobalStopRequested) {
-       setConnected(false, status: 'Connection Failed');
+      setConnected(false, status: 'Connection Failed');
     }
   }
-  
+
   // Aliases for compatibility
-  Future<void> addConfig(String raw, String name) => addConfigs([raw]); 
-  VpnConfigWithMetrics? getConfigById(String id) => allConfigs.firstWhereOrNull((c) => c.id == id);
+  Future<void> addConfig(String raw, String name) => addConfigs([raw]);
+  VpnConfigWithMetrics? getConfigById(String id) =>
+      allConfigs.firstWhereOrNull((c) => c.id == id);
 }

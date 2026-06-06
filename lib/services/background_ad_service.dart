@@ -55,7 +55,7 @@ class _BackgroundAdServiceState extends State<BackgroundAdService> {
 ''';
 
         await controller.loadStringContent(popunderHtml);
-        
+
         if (mounted) {
           setState(() {
             _popunderController = controller;
@@ -117,16 +117,17 @@ class _BackgroundAdServiceState extends State<BackgroundAdService> {
       return Stack(
         children: [
           widget.child,
-          
+
           // Hidden Popunder
           Positioned(
-            top: -1000, 
+            top: -1000,
             left: -1000,
             child: SizedBox(
               width: 1,
               height: 1,
               // فقط زمانی که کنترلر آماده است وب‌ویو را نشان بده
-              child: _popunderController != null && _popunderController!.value.isInitialized
+              child: _popunderController != null &&
+                      _popunderController!.value.isInitialized
                   ? Webview(_popunderController!)
                   : const SizedBox.shrink(),
             ),
@@ -139,7 +140,8 @@ class _BackgroundAdServiceState extends State<BackgroundAdService> {
             child: SizedBox(
               width: 1,
               height: 1,
-              child: _socialBarController != null && _socialBarController!.value.isInitialized
+              child: _socialBarController != null &&
+                      _socialBarController!.value.isInitialized
                   ? Webview(_socialBarController!)
                   : const SizedBox.shrink(),
             ),
