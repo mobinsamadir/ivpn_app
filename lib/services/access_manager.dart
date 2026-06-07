@@ -22,7 +22,7 @@ class AccessManager extends ChangeNotifier {
 
   // Getters
   DateTime? get expirationDate => _expirationDate;
-  
+
   bool get hasAccess {
     if (_expirationDate == null) return false;
     return _expirationDate!.isAfter(_clock());
@@ -40,10 +40,11 @@ class AccessManager extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       final expirationTs = prefs.getInt(_prefsKey);
-      
+
       if (expirationTs != null) {
         _expirationDate = DateTime.fromMillisecondsSinceEpoch(expirationTs);
-        AdvancedLogger.info("🕒 [AccessManager] Loaded expiration: $_expirationDate");
+        AdvancedLogger.info(
+            "🕒 [AccessManager] Loaded expiration: $_expirationDate");
       } else {
         AdvancedLogger.info("🕒 [AccessManager] No active plan found.");
       }
@@ -56,11 +57,12 @@ class AccessManager extends ChangeNotifier {
   // Add Time (Rewards)
   Future<void> addTime(Duration duration) async {
     final now = _clock();
-    
+
     // Double Reward Prevention
-    if (_lastRewardTime != null && now.difference(_lastRewardTime!) < const Duration(seconds: 5)) {
-       AdvancedLogger.warn("⚠️ [AccessManager] Double reward prevented.");
-       return;
+    if (_lastRewardTime != null &&
+        now.difference(_lastRewardTime!) < const Duration(seconds: 5)) {
+      AdvancedLogger.warn("⚠️ [AccessManager] Double reward prevented.");
+      return;
     }
 
     if (_expirationDate == null || _expirationDate!.isBefore(now)) {
@@ -68,11 +70,12 @@ class AccessManager extends ChangeNotifier {
     } else {
       _expirationDate = _expirationDate!.add(duration);
     }
-    
+
     _lastRewardTime = now;
     await _save();
     notifyListeners();
-    AdvancedLogger.info("🎁 [AccessManager] Time added! New expiry: $_expirationDate");
+    AdvancedLogger.info(
+        "🎁 [AccessManager] Time added! New expiry: $_expirationDate");
   }
 
   // Internal Save

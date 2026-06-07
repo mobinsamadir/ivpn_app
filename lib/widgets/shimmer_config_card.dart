@@ -7,7 +7,8 @@ class ShimmerConfigCard extends StatefulWidget {
   State<ShimmerConfigCard> createState() => _ShimmerConfigCardState();
 }
 
-class _ShimmerConfigCardState extends State<ShimmerConfigCard> with SingleTickerProviderStateMixin {
+class _ShimmerConfigCardState extends State<ShimmerConfigCard>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<Color?> _colorAnimation;
 
@@ -67,18 +68,28 @@ class _ShimmerConfigCardState extends State<ShimmerConfigCard> with SingleTicker
                       width: double.infinity,
                       height: 14,
                       decoration: BoxDecoration(
-                         color: color,
-                         borderRadius: BorderRadius.circular(4),
+                        color: color,
+                        borderRadius: BorderRadius.circular(4),
                       ),
                     ),
                     const SizedBox(height: 8),
                     // Metrics Row
                     Row(
-                       children: [
-                          Container(width: 60, height: 12, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(4))),
-                          const SizedBox(width: 8),
-                          Container(width: 40, height: 12, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(4))),
-                       ],
+                      children: [
+                        Container(
+                            width: 60,
+                            height: 12,
+                            decoration: BoxDecoration(
+                                color: color,
+                                borderRadius: BorderRadius.circular(4))),
+                        const SizedBox(width: 8),
+                        Container(
+                            width: 40,
+                            height: 12,
+                            decoration: BoxDecoration(
+                                color: color,
+                                borderRadius: BorderRadius.circular(4))),
+                      ],
                     )
                   ],
                 ),
@@ -86,11 +97,19 @@ class _ShimmerConfigCardState extends State<ShimmerConfigCard> with SingleTicker
               const SizedBox(width: 12),
               // Actions Placeholder
               Column(
-                 children: [
-                    Container(width: 20, height: 20, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-                    const SizedBox(height: 8),
-                    Container(width: 20, height: 20, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-                 ],
+                children: [
+                  Container(
+                      width: 20,
+                      height: 20,
+                      decoration:
+                          BoxDecoration(color: color, shape: BoxShape.circle)),
+                  const SizedBox(height: 8),
+                  Container(
+                      width: 20,
+                      height: 20,
+                      decoration:
+                          BoxDecoration(color: color, shape: BoxShape.circle)),
+                ],
               )
             ],
           ),

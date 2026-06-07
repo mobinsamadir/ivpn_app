@@ -30,7 +30,8 @@ class AdvancedLogger {
         logFile = File(p.join(p.dirname(exePath), 'iVPN_debug_log.txt'));
       } else {
         final directory = await getApplicationDocumentsDirectory();
-        final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-').split('.')[0];
+        final timestamp =
+            DateTime.now().toIso8601String().replaceAll(':', '-').split('.')[0];
         logFile = File(p.join(directory.path, 'vpn_log_$timestamp.jsonl'));
       }
       _logFile = logFile;
@@ -72,15 +73,18 @@ class AdvancedLogger {
   }
 
   /// Error level logging
-  static void error(String message, {dynamic error, StackTrace? stackTrace, Map<String, dynamic>? metadata}) {
+  static void error(String message,
+      {dynamic error, StackTrace? stackTrace, Map<String, dynamic>? metadata}) {
     final combinedMetadata = metadata ?? {};
     if (error != null) combinedMetadata['error'] = error.toString();
-    if (stackTrace != null) combinedMetadata['stackTrace'] = stackTrace.toString();
+    if (stackTrace != null)
+      combinedMetadata['stackTrace'] = stackTrace.toString();
     _log(LogLevel.error, message, metadata: combinedMetadata);
   }
 
   /// Network request logging
-  static void networkRequest(String method, String url, {Map<String, dynamic>? headers, dynamic body}) {
+  static void networkRequest(String method, String url,
+      {Map<String, dynamic>? headers, dynamic body}) {
     _log(LogLevel.info, 'HTTP $method $url', metadata: {
       'type': 'network_request',
       'method': method,
@@ -91,7 +95,8 @@ class AdvancedLogger {
   }
 
   /// Network response logging
-  static void networkResponse(String url, int statusCode, {dynamic body, Duration? duration}) {
+  static void networkResponse(String url, int statusCode,
+      {dynamic body, Duration? duration}) {
     _log(LogLevel.info, 'HTTP Response [$statusCode] $url', metadata: {
       'type': 'network_response',
       'url': url,
@@ -109,7 +114,8 @@ class AdvancedLogger {
   }
 
   /// Private logging method
-  static void _log(LogLevel level, String message, {Map<String, dynamic>? metadata}) {
+  static void _log(LogLevel level, String message,
+      {Map<String, dynamic>? metadata}) {
     // Release Mode: Only allow critical errors AND warnings (for native logs)
     if (kReleaseMode && level.index < LogLevel.warn.index) return;
 
@@ -132,7 +138,8 @@ class AdvancedLogger {
     }
 
     // Format log for in-app viewer: [TIME] [LEVEL] Message
-    final formattedLog = '[${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}:${DateTime.now().second.toString().padLeft(2, '0')}] [${level.toString().split('.').last}] $message';
+    final formattedLog =
+        '[${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}:${DateTime.now().second.toString().padLeft(2, '0')}] [${level.toString().split('.').last}] $message';
 
     // Add to memory buffer
     _logHistory.add(formattedLog);

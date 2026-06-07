@@ -71,7 +71,8 @@ class _UniversalAdWidgetState extends State<UniversalAdWidget> {
     double effectiveHeight = widget.height ?? 250.0;
 
     // Enforce strict 60dp for banner slots
-    if (widget.slot == 'home_banner_top' || widget.slot == 'home_banner_bottom') {
+    if (widget.slot == 'home_banner_top' ||
+        widget.slot == 'home_banner_bottom') {
       effectiveHeight = 60.0;
     }
 
@@ -126,7 +127,8 @@ class _ImageAd extends StatelessWidget {
       child: CachedNetworkImage(
         imageUrl: imageUrl,
         fit: BoxFit.contain,
-        placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
+        placeholder: (context, url) =>
+            const Center(child: CircularProgressIndicator()),
         errorWidget: (context, url, error) => const Icon(Icons.error),
       ),
     );
@@ -154,7 +156,8 @@ class _VideoAdState extends State<_VideoAd> {
   }
 
   Future<void> _initializePlayer() async {
-    _videoController = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl));
+    _videoController =
+        VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl));
     await _videoController.initialize();
 
     _chewieController = ChewieController(
@@ -184,7 +187,8 @@ class _VideoAdState extends State<_VideoAd> {
     return GestureDetector(
       onTap: () {
         if (widget.targetUrl.isNotEmpty) {
-           launchUrl(Uri.parse(widget.targetUrl), mode: LaunchMode.externalApplication);
+          launchUrl(Uri.parse(widget.targetUrl),
+              mode: LaunchMode.externalApplication);
         }
       },
       child: Chewie(controller: _chewieController!),
@@ -194,7 +198,8 @@ class _VideoAdState extends State<_VideoAd> {
 
 class _WebViewAd extends StatelessWidget {
   final String mediaSource;
-  final String targetUrl; // Not used for iframe usually, but maybe for overlay click
+  final String
+      targetUrl; // Not used for iframe usually, but maybe for overlay click
 
   const _WebViewAd({required this.mediaSource, required this.targetUrl});
 
@@ -269,9 +274,11 @@ class _WindowsWebViewState extends State<_WindowsWebView> {
       await _controller.loadStringContent(widget.htmlContent);
 
       _controller.url.listen((url) {
-        if (url != 'about:blank' && !url.contains('data:text/html') && !url.contains('acceptable.a-ads.com')) {
-             _launchUrl(url);
-             _controller.loadStringContent(widget.htmlContent);
+        if (url != 'about:blank' &&
+            !url.contains('data:text/html') &&
+            !url.contains('acceptable.a-ads.com')) {
+          _launchUrl(url);
+          _controller.loadStringContent(widget.htmlContent);
         }
       });
 
@@ -292,7 +299,7 @@ class _WindowsWebViewState extends State<_WindowsWebView> {
   void dispose() {
     try {
       if (_isInitialized) {
-         _controller.stop();
+        _controller.stop();
       }
       _controller.dispose();
     } catch (e) {
@@ -340,7 +347,8 @@ class _MobileWebViewState extends State<_MobileWebView> {
           },
           onNavigationRequest: (NavigationRequest request) {
             final url = request.url;
-            if (url.startsWith('data:') || url.contains('acceptable.a-ads.com')) {
+            if (url.startsWith('data:') ||
+                url.contains('acceptable.a-ads.com')) {
               return NavigationDecision.navigate;
             }
             launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
@@ -357,7 +365,8 @@ class _MobileWebViewState extends State<_MobileWebView> {
       children: [
         WebViewWidget(
           controller: _controller,
-          gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{}, // Prevent scroll hijacking
+          gestureRecognizers: <Factory<
+              OneSequenceGestureRecognizer>>{}, // Prevent scroll hijacking
         ),
         if (_isLoading)
           const Center(

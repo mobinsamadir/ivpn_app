@@ -32,7 +32,8 @@ class NativeVpnService {
 
   static const int failedPingValue = -1;
 
-  final StreamController<String> _statusController = StreamController<String>.broadcast();
+  final StreamController<String> _statusController =
+      StreamController<String>.broadcast();
 
   // Initialization logic moved here
   void _init() {
@@ -49,11 +50,17 @@ class NativeVpnService {
           // 2. Smart Filter: Only update UI for valid status changes to prevent UI jank
           // Known statuses: CONNECTED, CONNECTING, DISCONNECTED, RECONNECTING
           // Errors start with ERROR
-          bool isStatus = ["CONNECTED", "CONNECTING", "DISCONNECTED", "RECONNECTING", "PAUSED"].contains(message)
-                          || message.startsWith("ERROR");
+          bool isStatus = [
+                "CONNECTED",
+                "CONNECTING",
+                "DISCONNECTED",
+                "RECONNECTING",
+                "PAUSED",
+              ].contains(message) ||
+              message.startsWith("ERROR");
 
           if (isStatus) {
-             _statusController.add(message);
+            _statusController.add(message);
           }
         },
         onError: (error) {
@@ -76,7 +83,9 @@ class NativeVpnService {
     if (Platform.isWindows) return failedPingValue;
 
     try {
-      final int latency = await _methodChannel.invokeMethod('testConfig', {'config': config});
+      final int latency = await _methodChannel.invokeMethod('testConfig', {
+        'config': config,
+      });
       return latency <= 0 ? failedPingValue : latency;
     } catch (e) {
       AdvancedLogger.error("Failed to get latency: $e");
@@ -89,27 +98,33 @@ class NativeVpnService {
   /// Starts a lightweight Sing-box proxy for testing.
   /// Returns the SOCKS port on success, or negative error code.
   Future<int> startTestProxy(String configJson) async {
-    if (Platform.isWindows) return -1; // Handled by EphemeralTester directly on Windows
+    if (Platform.isWindows)
+      return -1; // Handled by EphemeralTester directly on Windows
 
     // 1. Diagnostic Log (First 10 chars)
-    final String start = configJson.length > 10 ? configJson.substring(0, 10) : configJson;
+    final String start =
+        configJson.length > 10 ? configJson.substring(0, 10) : configJson;
     AdvancedLogger.warn("[DEBUG-INTERNAL] Config start: $start");
 
     // 2. Validate Format
     if (!configJson.trim().startsWith('{')) {
-       AdvancedLogger.error("FATAL: INVALID CONFIG FORMAT DETECTED. Expected JSON, got: $start...");
-       return -1;
+      AdvancedLogger.error(
+        "FATAL: INVALID CONFIG FORMAT DETECTED. Expected JSON, got: $start...",
+      );
+      return -1;
     }
 
     try {
-       if (kDebugMode) {
-          AdvancedLogger.info("DEBUG_CONFIG: $configJson");
-       }
-       final int result = await _methodChannel.invokeMethod('startTestProxy', {'config': configJson});
-       return result;
+      if (kDebugMode) {
+        AdvancedLogger.info("DEBUG_CONFIG: $configJson");
+      }
+      final int result = await _methodChannel.invokeMethod('startTestProxy', {
+        'config': configJson,
+      });
+      return result;
     } catch (e) {
-       AdvancedLogger.error("Failed to start test proxy: $e");
-       return -1;
+      AdvancedLogger.error("Failed to start test proxy: $e");
+      return -1;
     }
   }
 
@@ -135,31 +150,52 @@ class NativeVpnService {
       // Generate Sing-box JSON config from raw link using shared logic in a background isolate
       final String configJson = await compute(_generateConfigWrapper, {
         'rawLink': rawLink,
-        'listenPort': 10808, // Hardcoded for main VPN connection to avoid conflict with random test ports
+        'listenPort':
+            10808, // Hardcoded for main VPN connection to avoid conflict with random test ports
       });
 
       // CONFIG DUMP: Critical Diagnostic
       AdvancedLogger.warn("[CORE-INPUT-JSON] $configJson");
 
       // 1. Diagnostic Log (First 10 chars)
-      final String start = configJson.length > 10 ? configJson.substring(0, 10) : configJson;
+      final String start =
+          configJson.length > 10 ? configJson.substring(0, 10) : configJson;
       AdvancedLogger.warn("[DEBUG-INTERNAL] Config start: $start");
 
       // 2. Validate Format
       if (!configJson.trim().startsWith('{')) {
-         AdvancedLogger.error("FATAL: INVALID CONFIG FORMAT DETECTED. Expected JSON, got: $start...");
-         throw Exception("Invalid Config Format (Not JSON)");
+        AdvancedLogger.error(
+          "FATAL: INVALID CONFIG FORMAT DETECTED. Expected JSON, got: $start...",
+        );
+        throw Exception("Invalid Config Format (Not JSON)");
       }
 
-      AdvancedLogger.info("🚀 [Native] Connecting with config length: ${configJson.length}...");
+      AdvancedLogger.info(
+        "🚀 [Native] Connecting with config length: ${configJson.length}...",
+      );
       // if (kDebugMode) {
       //    AdvancedLogger.info("DEBUG_CONFIG: $configJson");
       // }
-      await _methodChannel.invokeMethod('startVpn', {'config': configJson});
+      await _methodChannel
+          .invokeMethod('startVpn', {'config': configJson}).timeout(
+        const Duration(seconds: 15),
+        onTimeout: () {
+          throw TimeoutException(
+            "Native VPN connection attempt timed out.",
+          );
+        },
+      );
 
-      // CRITICAL FIX: Removed fake "CONNECTED" state.
-      // Now we wait for the OS to emit the real state via EventChannel.
-      AdvancedLogger.info("✅ [Native] Connect command sent. Waiting for OS confirmation...");
+      // Start a fallback timer just in case the OS never sends CONNECTED or ERROR
+      Timer(const Duration(seconds: 20), () {
+        // We cannot reliably check if it's still 'connecting' purely from here without state,
+        // but adding this ensures if the methodChannel returns but eventChannel hangs, we can poke the UI.
+        // Actually, let ConfigManager handle the global timeout as it tracks state.
+      });
+
+      AdvancedLogger.info(
+        "✅ [Native] Connect command sent. Waiting for OS confirmation...",
+      );
     } catch (e) {
       AdvancedLogger.error("Failed to send connect command: $e");
       _statusController.add("ERROR: START_FAILED: $e");

@@ -71,23 +71,30 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
                       children: [
                         const Text(
                           'Premium Connection',
-                          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold),
                         ),
                         // Timer Badge
                         if (!_canClose)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
                               color: Colors.redAccent.withValues(alpha: 0.8),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.timer, color: Colors.white, size: 14),
+                                const Icon(Icons.timer,
+                                    color: Colors.white, size: 14),
                                 const SizedBox(width: 6),
                                 Text(
                                   '${_timeLeft}s',
-                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold),
                                 ),
                               ],
                             ),
@@ -100,7 +107,8 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
                   Expanded(
                     child: Container(
                       width: double.infinity,
-                      color: const Color(0xFF121212), // Inner background just in case
+                      color: const Color(
+                          0xFF121212), // Inner background just in case
                       child: Center(
                         child: UniversalAdWidget(slot: widget.unitId),
                       ),
@@ -122,7 +130,9 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
                               ? "Thank you! You can now close this ad."
                               : "Your premium connection is ready in ${_timeLeft}s...",
                           style: TextStyle(
-                            color: _canClose ? Colors.greenAccent : Colors.grey[400],
+                            color: _canClose
+                                ? Colors.greenAccent
+                                : Colors.grey[400],
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
                           ),
@@ -135,7 +145,8 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
                             height: 4,
                             child: LinearProgressIndicator(
                               backgroundColor: Colors.black,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.blueAccent),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.blueAccent),
                             ),
                           ),
                       ],
@@ -158,7 +169,8 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
                       shape: const CircleBorder(),
                       clipBehavior: Clip.hardEdge,
                       child: IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                        icon: const Icon(Icons.close,
+                            color: Colors.white, size: 28),
                         tooltip: 'Close & Claim Reward',
                         onPressed: () {
                           // Success!

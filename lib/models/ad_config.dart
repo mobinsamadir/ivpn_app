@@ -2,15 +2,13 @@ class AdConfig {
   final String configVersion;
   final Map<String, AdUnit> ads;
 
-  AdConfig({
-    required this.configVersion,
-    required this.ads,
-  });
+  AdConfig({required this.configVersion, required this.ads});
 
   factory AdConfig.fromJson(Map<String, dynamic> json) {
     final adsJson = json['ads'] as Map<String, dynamic>? ?? {};
     final adsMap = adsJson.map(
-      (key, value) => MapEntry(key, AdUnit.fromJson(value as Map<String, dynamic>)),
+      (key, value) =>
+          MapEntry(key, AdUnit.fromJson(value as Map<String, dynamic>)),
     );
 
     return AdConfig(
@@ -44,14 +42,17 @@ class AdUnit {
 
   factory AdUnit.fromJson(Map<String, dynamic> json) {
     return AdUnit(
-      isEnabled: json['isEnabled'] as bool? ?? true,
+      isEnabled:
+          json['isEnabled'] as bool? ?? json['is_enabled'] as bool? ?? true,
       type: json['type'] as String? ?? 'webview',
       mediaSource: json['media_source'] as String? ??
           json['media_url'] as String? ??
           json['mediaSource'] as String? ??
           '',
-      targetUrl: json['targetUrl'] as String? ?? '',
-      timerSeconds: json['timerSeconds'] as int? ?? 0,
+      targetUrl:
+          json['targetUrl'] as String? ?? json['target_url'] as String? ?? '',
+      timerSeconds:
+          json['timerSeconds'] as int? ?? json['timer_seconds'] as int? ?? 0,
     );
   }
 
