@@ -148,7 +148,7 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
                 testConfigFile.writeText(testConfigStr)
 
                 // SAFE CALL to Libbox - pass JSON content string
-                Libbox.newService(testConfigStr, StubPlatformInterface())
+                Libbox.newBox(testConfigStr, StubPlatformInterface())
                 delay(200)
 
                 result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(socksPort) } }
@@ -156,7 +156,7 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
             } catch (e: Exception) {
                 e.printStackTrace()
                 isTestRunning.set(false)
-                try { Libbox.newService("", StubPlatformInterface()) } catch (_: Exception) {}
+                try { Libbox.newBox("", StubPlatformInterface()) } catch (_: Exception) {}
                 result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-4) } }
             }
         }
@@ -164,7 +164,7 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
         suspend fun stopTestProxy() = withContext(Dispatchers.IO) {
             if (isTestRunning.get()) {
                 try {
-                    Libbox.newService("", StubPlatformInterface())
+                    Libbox.newBox("", StubPlatformInterface())
                 } catch (e: Exception) {
                     e.printStackTrace()
                 } finally {
@@ -217,7 +217,7 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
                 testConfigFile.writeText(json.toString())
 
                 // SAFE CALL - pass JSON content string
-                Libbox.newService(json.toString(), StubPlatformInterface())
+                Libbox.newBox(json.toString(), StubPlatformInterface())
                 delay(500)
 
                 val client = OkHttpClient.Builder()
@@ -247,7 +247,7 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
             } catch (e: Exception) {
                 result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
             } finally {
-                try { Libbox.newService("", StubPlatformInterface()) } catch (_: Exception) {}
+                try { Libbox.newBox("", StubPlatformInterface()) } catch (_: Exception) {}
                 isTestRunning.set(false)
             }
         }
@@ -274,7 +274,7 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
         if (isVpnRunning.get()) return
 
         if (isTestRunning.get()) {
-             try { Libbox.newService("", StubPlatformInterface()) } catch (_: Exception) {}
+             try { Libbox.newBox("", StubPlatformInterface()) } catch (_: Exception) {}
              isTestRunning.set(false)
         }
 
@@ -327,7 +327,7 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
                 configFile.writeText(jsonObject.toString())
 
                 // SAFE CALL - pass JSON content string
-                Libbox.newService(jsonObject.toString(), this@SingboxVpnService)
+                Libbox.newBox(jsonObject.toString(), this@SingboxVpnService)
 
                 // CRITICAL FIX: Broadcast "CONNECTED" State to Dart
                 MainActivity.sendVpnStatus("CONNECTED")
@@ -346,7 +346,7 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
         isVpnRunning.set(false)
 
         try {
-            Libbox.newService("", this)
+            Libbox.newBox("", this)
             vpnInterface?.close()
             vpnInterface = null
             stopForeground(true)
@@ -415,16 +415,40 @@ class StubPlatformInterface : PlatformInterface {
         return WIFIState("wlan0", "00:00:00:00:00:00") 
     }
     override fun useProcFS(): Boolean = false
-    override fun writeLog(message: String?) { }
+    fun writeLog(message: String?) { }
     override fun closeDefaultInterfaceMonitor(listener: InterfaceUpdateListener?) { }
-    override fun findConnectionOwner(ipProtocol: Int, sourceAddress: String?, sourcePort: Int, destinationAddress: String?, destinationPort: Int): Int = 0
+    override fun findConnectionOwner(ipProtocol: Int, sourceAddress: String?, sourcePort: Int, destinationAddress: String?, destinationPort: Int): io.nekohasekai.libbox.ConnectionOwner? = null
     override fun getInterfaces(): NetworkInterfaceIterator { return StubNetworkInterfaceIterator() }
     override fun includeAllNetworks(): Boolean = false
     override fun localDNSTransport(): LocalDNSTransport? = null
-    override fun packageNameByUid(uid: Int): String = "unknown"
-    override fun uidByPackageName(packageName: String?): Int = 0
+    fun packageNameByUid(uid: Int): String = "unknown"
+    fun uidByPackageName(packageName: String?): Int = 0
     override fun sendNotification(notification: LibboxNotification?) { } 
     override fun startDefaultInterfaceMonitor(listener: InterfaceUpdateListener?) { }
     override fun systemCertificates(): StringIterator { return StubStringIterator() }
     override fun underNetworkExtension(): Boolean = false
+
+    // New libbox methods for main service
+    override fun checkPlatformShell() {}
+    override fun closeNeighborMonitor(listener: io.nekohasekai.libbox.NeighborUpdateListener?) {}
+    override fun lookupSFTPServer(): String? = null
+    override fun lookupUser(username: String?): io.nekohasekai.libbox.PlatformUser? = null
+    override fun openShellSession(user: io.nekohasekai.libbox.PlatformUser?, command: String?, environ: StringIterator?, term: String?, rows: Int, cols: Int): io.nekohasekai.libbox.ShellSession? = null
+    override fun readSystemSSHHostKey(): String? = null
+    override fun registerMyInterface(name: String?) {}
+    override fun startNeighborMonitor(listener: io.nekohasekai.libbox.NeighborUpdateListener?) {}
+    override fun tailscaleHostname(): String? = null
+    override fun usePlatformShell(): Boolean = false
+
+    // NEW METHODS ADDED TO LIBBOX
+    override fun checkPlatformShell() {}
+    override fun closeNeighborMonitor(listener: io.nekohasekai.libbox.NeighborUpdateListener?) {}
+    override fun lookupSFTPServer(): String? = null
+    override fun lookupUser(username: String?): io.nekohasekai.libbox.PlatformUser? = null
+    override fun openShellSession(user: io.nekohasekai.libbox.PlatformUser?, command: String?, environ: StringIterator?, term: String?, rows: Int, cols: Int): io.nekohasekai.libbox.ShellSession? = null
+    override fun readSystemSSHHostKey(): String? = null
+    override fun registerMyInterface(name: String?) {}
+    override fun startNeighborMonitor(listener: io.nekohasekai.libbox.NeighborUpdateListener?) {}
+    override fun tailscaleHostname(): String? = null
+    override fun usePlatformShell(): Boolean = false
 }

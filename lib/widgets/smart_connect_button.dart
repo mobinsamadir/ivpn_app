@@ -21,8 +21,28 @@ class SmartConnectButton extends StatefulWidget {
   State<SmartConnectButton> createState() => _SmartConnectButtonState();
 }
 
-class _SmartConnectButtonState extends State<SmartConnectButton> {
-  // Removed local state variables: _isConnecting, _isConnected, _connectionStatus
+class _SmartConnectButtonState extends State<SmartConnectButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    );
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,62 +52,82 @@ class _SmartConnectButtonState extends State<SmartConnectButton> {
         final configManager = ConfigManager();
         final isConnected = configManager.isConnected;
         final connectionStatus = configManager.connectionStatus;
-        // Determine isConnecting based on status text
         final isConnecting =
             connectionStatus.toLowerCase().contains('connecting') ||
                 connectionStatus.toLowerCase().contains('finding') ||
                 connectionStatus.toLowerCase().contains('preparing') ||
                 connectionStatus.toLowerCase().contains('testing');
 
+        if (isConnecting || isConnected) {
+          _pulseController.repeat(reverse: true);
+        } else {
+          _pulseController.stop();
+          _pulseController.value = 0.0;
+        }
+
         return Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Status indicator
             if (widget.showStatus)
               _buildStatusIndicator(isConnected, connectionStatus),
-
             const SizedBox(height: 20),
-
-            // Big connect button
             GestureDetector(
               onTap: widget.onPressed ?? () => _handleConnection(configManager),
-              child: Container(
-                width: widget.buttonSize,
-                height: widget.buttonSize,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: _getButtonColor(isConnected, isConnecting),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.2),
-                      blurRadius: 10,
-                      spreadRadius: 2,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      _getButtonIcon(isConnected, isConnecting),
-                      size: widget.buttonSize * 0.3,
-                      color: Colors.white,
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      _getButtonText(isConnected, isConnecting),
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: widget.buttonSize * 0.1,
-                        fontWeight: FontWeight.bold,
+              child: AnimatedBuilder(
+                animation: _pulseAnimation,
+                builder: (context, child) {
+                  return Transform.scale(
+                    scale: _pulseAnimation.value,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 400),
+                      curve: Curves.easeInOut,
+                      width: widget.buttonSize,
+                      height: widget.buttonSize,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: _getButtonGradient(isConnected, isConnecting),
+                        boxShadow: [
+                          BoxShadow(
+                            color:
+                                _getButtonGlowColor(isConnected, isConnecting),
+                            blurRadius: isConnecting || isConnected ? 25 : 15,
+                            spreadRadius: isConnecting || isConnected ? 8 : 2,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          isConnecting
+                              ? SizedBox(
+                                  width: widget.buttonSize * 0.3,
+                                  height: widget.buttonSize * 0.3,
+                                  child: const CircularProgressIndicator(
+                                      color: Colors.white, strokeWidth: 3),
+                                )
+                              : Icon(
+                                  _getButtonIcon(isConnected, isConnecting),
+                                  size: widget.buttonSize * 0.35,
+                                  color: Colors.white,
+                                ),
+                          const SizedBox(height: 12),
+                          Text(
+                            _getButtonText(isConnected, isConnecting),
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: widget.buttonSize * 0.1,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
+                  );
+                },
               ),
             ),
-
             const SizedBox(height: 20),
           ],
         );
@@ -96,26 +136,35 @@ class _SmartConnectButtonState extends State<SmartConnectButton> {
   }
 
   Widget _buildStatusIndicator(bool isConnected, String status) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.grey[900]?.withValues(alpha: 0.7),
+        color: isConnected
+            ? Colors.tealAccent.withValues(alpha: 0.1)
+            : Colors.grey[900]?.withValues(alpha: 0.7),
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isConnected
+              ? Colors.tealAccent.withValues(alpha: 0.3)
+              : Colors.transparent,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            isConnected ? Icons.wifi : Icons.wifi_off,
-            color: isConnected ? Colors.greenAccent : Colors.grey,
-            size: 16,
+            isConnected ? Icons.check_circle : Icons.wifi_off,
+            color: isConnected ? Colors.tealAccent : Colors.grey,
+            size: 18,
           ),
           const SizedBox(width: 8),
           Text(
             status,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: isConnected ? Colors.tealAccent : Colors.white,
               fontSize: 14,
+              fontWeight: isConnected ? FontWeight.bold : FontWeight.normal,
             ),
           ),
         ],
@@ -124,7 +173,6 @@ class _SmartConnectButtonState extends State<SmartConnectButton> {
   }
 
   Future<void> _handleConnection(ConfigManager configManager) async {
-    // If already connected, disconnect
     if (configManager.isConnected) {
       try {
         await NativeVpnService().disconnect();
@@ -140,10 +188,8 @@ class _SmartConnectButtonState extends State<SmartConnectButton> {
       return;
     }
 
-    // Check access before proceeding
     final accessManager = AccessManager();
     if (!accessManager.hasAccess) {
-      // In a real implementation, you might want to have a callback to the parent or show ad
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -153,12 +199,9 @@ class _SmartConnectButtonState extends State<SmartConnectButton> {
       return;
     }
 
-    // Connect Logic
-    // We update ConfigManager status to reflect what we are doing
     configManager.setConnected(false, status: 'Preparing connection...');
 
     try {
-      // Determine which config to use
       VpnConfigWithMetrics? configToUse;
 
       if (configManager.selectedConfig != null) {
@@ -166,7 +209,6 @@ class _SmartConnectButtonState extends State<SmartConnectButton> {
         AdvancedLogger.info(
             '[SmartConnect] Using selected config: ${configToUse!.name}');
       } else {
-        // If no server selected, run Fastest logic first, then connect
         configManager.setConnected(false, status: 'Finding fastest server...');
         configToUse = await configManager.getBestConfig();
 
@@ -185,14 +227,10 @@ class _SmartConnectButtonState extends State<SmartConnectButton> {
         return;
       }
 
-      // Update status to connecting
       configManager.setConnected(false,
           status: 'Connecting to ${configToUse.name}...');
 
-      // Connect using NativeVpnService
       await NativeVpnService().connect(configToUse.rawConfig);
-
-      // Removed optimistic success setting, relying on ConfigManager/NativeVpnService streams.
     } catch (e) {
       AdvancedLogger.error('[SmartConnect] Connection failed: $e');
       if (mounted) {
@@ -201,21 +239,45 @@ class _SmartConnectButtonState extends State<SmartConnectButton> {
     }
   }
 
-  Color _getButtonColor(bool isConnected, bool isConnecting) {
-    if (isConnecting) return Colors.orange;
-    if (isConnected) return Colors.redAccent;
-    return Colors.green;
+  Gradient _getButtonGradient(bool isConnected, bool isConnecting) {
+    if (isConnecting) {
+      return const LinearGradient(
+        colors: [Color(0xFFF2994A), Color(0xFFF2C94C)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      );
+    }
+    if (isConnected) {
+      // Changed from RED to TEAL/GREEN gradient
+      return const LinearGradient(
+        colors: [Color(0xFF11998E), Color(0xFF38EF7D)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      );
+    }
+    // Disconnected (Greyish blue)
+    return const LinearGradient(
+      colors: [Color(0xFF4A5568), Color(0xFF2D3748)],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    );
+  }
+
+  Color _getButtonGlowColor(bool isConnected, bool isConnecting) {
+    if (isConnecting) return const Color(0xFFF2994A).withValues(alpha: 0.5);
+    if (isConnected) return const Color(0xFF38EF7D).withValues(alpha: 0.5);
+    return Colors.black.withValues(alpha: 0.3);
   }
 
   IconData _getButtonIcon(bool isConnected, bool isConnecting) {
     if (isConnecting) return Icons.sync;
-    if (isConnected) return Icons.power_settings_new;
+    if (isConnected) return Icons.power_settings_new; // Connected icon
     return Icons.power_settings_new;
   }
 
   String _getButtonText(bool isConnected, bool isConnecting) {
-    if (isConnecting) return 'Connecting...';
-    if (isConnected) return 'Disconnect';
-    return 'Connect';
+    if (isConnecting) return 'CONNECTING';
+    if (isConnected) return 'CONNECTED';
+    return 'CONNECT';
   }
 }

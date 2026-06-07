@@ -1083,54 +1083,118 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   }
 
   Widget _buildConnectButton() {
-    final isConnected = _configManager.isConnected;
-    final isConnecting = _configManager.connectionStatus.toLowerCase().contains(
-          'connecting',
-        );
+    final configManager = ConfigManager();
+    final isConnected = configManager.isConnected;
+    final status = configManager.connectionStatus.toLowerCase();
+    final isConnecting = status.contains('connecting') ||
+        status.contains('finding') ||
+        status.contains('preparing') ||
+        status.contains('testing');
 
     return Stack(
       alignment: Alignment.center,
       children: [
+        // Refresh Button (Left Side)
+        Positioned(
+          left: 30,
+          child: Column(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.blueAccent.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.refresh_rounded,
+                    size: 32,
+                    color: Colors.blueAccent,
+                  ),
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Refreshing servers...')));
+                  },
+                  tooltip: 'Refresh Servers',
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                "Refresh",
+                style: TextStyle(color: Colors.grey, fontSize: 10),
+              ),
+            ],
+          ),
+        ),
+
+        // Main Connect Button
         Center(
           child: GestureDetector(
             onTap: _handleConnection,
-            child: Container(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 400),
+              curve: Curves.easeInOut,
               width: 180,
               height: 180,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isConnected
-                    ? Colors.redAccent
-                    : (isConnecting ? Colors.orange : Colors.green),
+                gradient: LinearGradient(
+                  colors: isConnected
+                      ? [
+                          const Color(0xFF11998E),
+                          const Color(0xFF38EF7D)
+                        ] // Green/Teal
+                      : (isConnecting
+                          ? [
+                              const Color(0xFFF2994A),
+                              const Color(0xFFF2C94C)
+                            ] // Orange/Yellow
+                          : [
+                              const Color(0xFF4A5568),
+                              const Color(0xFF2D3748)
+                            ]), // Dark Grey
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
                 boxShadow: [
                   BoxShadow(
-                    color: (isConnected ? Colors.red : Colors.green).withValues(
-                      alpha: 0.4,
-                    ),
-                    blurRadius: 20,
-                    spreadRadius: 5,
+                    color: (isConnected
+                            ? const Color(0xFF38EF7D)
+                            : (isConnecting
+                                ? const Color(0xFFF2994A)
+                                : Colors.black))
+                        .withValues(
+                            alpha: isConnected || isConnecting ? 0.5 : 0.3),
+                    blurRadius: isConnected || isConnecting ? 25 : 15,
+                    spreadRadius: isConnected || isConnecting ? 8 : 2,
+                    offset: const Offset(0, 8),
                   ),
                 ],
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    isConnected
-                        ? Icons.power_settings_new
-                        : Icons.power_settings_new,
-                    size: 60,
-                    color: Colors.white,
-                  ),
-                  const SizedBox(height: 10),
+                  isConnecting
+                      ? const SizedBox(
+                          width: 50,
+                          height: 50,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 3),
+                        )
+                      : Icon(
+                          Icons.power_settings_new,
+                          size: 60,
+                          color: Colors.white,
+                        ),
+                  const SizedBox(height: 12),
                   Text(
                     isConnected
-                        ? 'DISCONNECT'
+                        ? 'CONNECTED'
                         : (isConnecting ? 'CONNECTING' : 'CONNECT'),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
                     ),
                   ),
                 ],
@@ -1168,6 +1232,12 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
           ),
         ),
       ],
+    );
+  }
+
+  void _refreshServers() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Refreshing servers...')),
     );
   }
 

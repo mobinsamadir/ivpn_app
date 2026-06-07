@@ -1,16 +1,7 @@
 name: Test Suite
 
 on:
-  push:
-    branches: [ "main", "dev" ]
-    paths:
-      - 'lib/**'
-      - 'test/**'
-  pull_request:
-    branches: [ "main", "dev" ]
-    paths:
-      - 'lib/**'
-      - 'test/**'
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

@@ -50,9 +50,10 @@ class Semaphore {
 
   void release() {
     if (_waitQueue.isNotEmpty) {
-      _waitQueue.removeAt(0).complete();
+      final next = _waitQueue.removeAt(0);
+      if (!next.isCompleted) next.complete();
     } else {
-      _current--;
+      if (_current > 0) _current--;
     }
   }
 }
@@ -99,75 +100,63 @@ class EphemeralTester {
 
     // Variables for Watchdog Cleanup
     Process? processForCleanup;
-    int portForCleanup = 0;
     bool isCompleted = false;
 
     // Watchdog Timer
-    final timer = Timer(const Duration(seconds: 10), () {
+    final timer = Timer(const Duration(seconds: 15), () {
       if (!isCompleted) {
         isCompleted = true;
         AdvancedLogger.warn(
-            "[EphemeralTester] WATCHDOG TRIGGERED for ${config.name}. Killing resources...");
+            "[EphemeralTester] WATCHDOG TRIGGERED for ${config.name}. Force killing process...");
 
-        // Explicit Cleanup
         if (processForCleanup != null) {
           try {
-            processForCleanup!.kill(ProcessSignal.sigkill);
-            AdvancedLogger.info("Watchdog: Process killed.");
+            processForCleanup?.kill(ProcessSignal.sigkill);
           } catch (_) {}
           _activeProcesses.remove(processForCleanup);
+        } else if (Platform.isAndroid) {
+          try {
+            NativeVpnService().stopTestProxy();
+          } catch (_) {}
         }
 
-        if (portForCleanup > 0) {
-          PortAllocator().release(portForCleanup);
-          AdvancedLogger.info("Watchdog: Port released.");
+        if (!completer.isCompleted) {
+          completer.complete(config.copyWith(
+            funnelStage: 0,
+            failureReason: "Strict Watchdog Timeout",
+            lastFailedStage: "Watchdog_Timeout",
+            failureCount: config.failureCount + 1,
+            lastTestedAt: DateTime.now(),
+            ping: -1,
+          ));
         }
-
-        // Note: Semaphore release is tricky here if we are not inside the flow.
-        // Ideally _runTestInternal finally block should handle it.
-        // But if we complete here, the caller moves on.
-        // The _runTestInternal logic continues in background!
-        // We rely on process kill to stop _runTestInternal's execution flow (it will crash/exit).
-        // BUT the semaphore release is in finally block of _runTestInternal.
-        // If we kill process, `await process.exitCode` returns, and `finally` block runs!
-        // So Semaphore release SHOULD happen naturally after kill.
-
-        completer.complete(config.copyWith(
-          funnelStage: 0,
-          failureReason: "Strict Watchdog Timeout (10s)",
-          lastFailedStage: "Watchdog_Timeout",
-          failureCount: config.failureCount + 1,
-          lastTestedAt: DateTime.now(),
-          ping: -1,
-        ));
       }
     });
 
-    // Helper to capture resources
     void setProcess(Process? p) => processForCleanup = p;
-    void setPort(int p) => portForCleanup = p;
+    void setPort(
+        int p) {} // Not needed here anymore, runTestInternal handles port
 
-    // Run Logic
     _runTestInternal(config, mode, setProcess, setPort).then((result) {
       if (!isCompleted) {
         isCompleted = true;
         timer.cancel();
-        completer.complete(result);
+        if (!completer.isCompleted) completer.complete(result);
       }
     }).catchError((e) {
       if (!isCompleted) {
         isCompleted = true;
         timer.cancel();
-        // If error happens, _runTestInternal's finally block handles cleanup.
-        // We just report error.
-        completer.complete(config.copyWith(
-          funnelStage: 0,
-          failureReason: "Test Error: $e",
-          lastFailedStage: "Error",
-          failureCount: config.failureCount + 1,
-          lastTestedAt: DateTime.now(),
-          ping: -1,
-        ));
+        if (!completer.isCompleted) {
+          completer.complete(config.copyWith(
+            funnelStage: 0,
+            failureReason: "Test Error: $e",
+            lastFailedStage: "Error",
+            failureCount: config.failureCount + 1,
+            lastTestedAt: DateTime.now(),
+            ping: -1,
+          ));
+        }
       }
     });
 
@@ -553,7 +542,9 @@ class EphemeralTester {
         dartHttpClient.close();
         try {
           if (process != null) {
-            process.kill(ProcessSignal.sigkill);
+            try {
+              process.kill(ProcessSignal.sigkill);
+            } catch (_) {}
             _activeProcesses.remove(process);
           }
         } catch (e) {
