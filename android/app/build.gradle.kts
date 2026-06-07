@@ -21,7 +21,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.ivpn_new"
-        minSdk = 21
+        minSdk = flutter.minSdkVersion
         targetSdk = 34
         versionCode = flutter.versionCode
         versionName = flutter.versionName

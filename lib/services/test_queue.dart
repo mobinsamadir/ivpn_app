@@ -103,10 +103,14 @@ class TestQueue {
               item.type!, item.jobId, item.cancelToken);
         }
 
-        item.completer.completeError(
-          TimeoutException(
-              'Job "${item.name}" timed out after ${item.timeout}'),
-        );
+        try {
+          item.completer.completeError(
+            TimeoutException(
+                'Job "${item.name}" timed out after ${item.timeout}'),
+          );
+        } catch (e) {
+          // Ignore if already completed
+        }
       }
     });
 
@@ -118,15 +122,22 @@ class TestQueue {
       }
     } catch (e) {
       if (!item.completer.isCompleted) {
-        item.completer.completeError(e);
+        try {
+          item.completer.completeError(e);
+        } catch (_) {}
       }
       if (e is! OperationCancelledException || !item.cancelToken.wasTimeout) {
-        await CleanupUtils.cleanupJobResources(item.jobId);
+        try {
+          await CleanupUtils.cleanupJobResources(item.jobId);
+        } catch (_) {}
       }
     } finally {
       timer.cancel();
       _activeJob = null;
-      _processNext();
+      // Use microtask to prevent stack overflow from recursive calls
+      scheduleMicrotask(() {
+        _processNext();
+      });
     }
   }
 
