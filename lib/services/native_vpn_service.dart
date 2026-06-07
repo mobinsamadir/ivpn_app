@@ -32,6 +32,23 @@ class NativeVpnService {
 
   static const int failedPingValue = -1;
 
+
+  // Stats stream
+  static const _statsEventChannel = EventChannel('vpn_stats');
+
+  Stream<Map<String, int>> get statsStream {
+    if (!Platform.isAndroid) return const Stream.empty();
+    return _statsEventChannel.receiveBroadcastStream().map((event) {
+      if (event is Map) {
+        return {
+          'rx': (event['rx'] as num).toInt(),
+          'tx': (event['tx'] as num).toInt(),
+        };
+      }
+      return {'rx': 0, 'tx': 0};
+    });
+  }
+
   final StreamController<String> _statusController =
       StreamController<String>.broadcast();
 

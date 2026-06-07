@@ -69,6 +69,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   bool _isConnectionCancelled = false;
   // CRITICAL FIX: Debounce Auto-Switch
   bool _isSwitching = false;
+  bool _userInitiatedDisconnect = false;
   String _lastNativeStatus = "DISCONNECTED";
   bool _isAdmin = true;
 
@@ -84,6 +85,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   // Stream Subscriptions
   StreamSubscription? _funnelSubscription;
   StreamSubscription? _vpnStatusSubscription;
+  StreamSubscription? _statsSubscription;
+  int _rxBytes = 0;
+  int _txBytes = 0;
 
   late TabController _tabController;
 
@@ -154,6 +158,28 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
           );
         });
 
+        if (status == 'DISCONNECTED') {
+          setState(() {
+            _rxBytes = 0;
+            _txBytes = 0;
+          });
+          if (!_userInitiatedDisconnect) {
+            AdvancedLogger.warn("[HomeScreen] Unexpected disconnect. Attempting auto-switch...");
+            final validConfigs = _configManager.validatedConfigs;
+            if (validConfigs.isNotEmpty) {
+              if (_configManager.selectedConfig != null) {
+                _configManager.setConnected(false, status: 'Failed');
+              }
+              _skipServer();
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('هیچ کانفیگ معتبری یافت نشد')),
+              );
+            }
+          }
+          _userInitiatedDisconnect = false;
+        }
+
         // NEW: Post-Connect Logic (Anti-Censorship)
         if (status == 'CONNECTED') {
           AdvancedLogger.info(
@@ -193,10 +219,19 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     }
   }
 
+
+  String _formatBytes(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
+  }
+
   @override
   void dispose() {
     _funnelSubscription?.cancel();
     _vpnStatusSubscription?.cancel();
+    _statsSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _accessManager.removeListener(_onTimeChanged);
     _timerUpdater?.cancel();
@@ -851,6 +886,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   Future<void> _handleConnection() async {
     if (_configManager.isConnected ||
         _configManager.connectionStatus.toLowerCase().contains('connecting')) {
+      _userInitiatedDisconnect = true;
       _isConnectionCancelled = true;
       await _configManager.stopAllOperations();
       return;
@@ -1070,15 +1106,35 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
       statusColor = Colors.grey;
     }
 
-    return Center(
-      child: Text(
-        _configManager.connectionStatus,
-        style: TextStyle(
-          color: statusColor,
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
+    return Column(
+      children: [
+        Center(
+          child: Text(
+            _configManager.connectionStatus,
+            style: TextStyle(
+              color: statusColor,
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
         ),
-      ),
+        if (_configManager.isConnected)
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.arrow_downward, color: Colors.greenAccent, size: 16),
+                const SizedBox(width: 4),
+                Text(_formatBytes(_rxBytes), style: const TextStyle(color: Colors.white70)),
+                const SizedBox(width: 16),
+                const Icon(Icons.arrow_upward, color: Colors.blueAccent, size: 16),
+                const SizedBox(width: 4),
+                Text(_formatBytes(_txBytes), style: const TextStyle(color: Colors.white70)),
+              ],
+            ),
+          ),
+      ],
     );
   }
 

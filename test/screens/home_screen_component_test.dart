@@ -83,6 +83,7 @@ void main() {
 
   late StreamController<String> funnelProgressController;
   late StreamController<String> vpnStatusController;
+  late StreamController<Map<String, int>> vpnStatsController;
   // Capture listeners for AccessManager updates
   final accessListeners = <VoidCallback>[];
 
@@ -108,6 +109,7 @@ void main() {
 
     funnelProgressController = StreamController<String>.broadcast();
     vpnStatusController = StreamController<String>.broadcast();
+    vpnStatsController = StreamController<Map<String, int>>.broadcast();
     accessListeners.clear();
 
     // Default Stubs
@@ -130,6 +132,7 @@ void main() {
 
     when(() => mockFunnelService.progressStream).thenAnswer((_) => funnelProgressController.stream);
     when(() => mockVpnService.connectionStatusStream).thenAnswer((_) => vpnStatusController.stream);
+    when(() => mockVpnService.statsStream).thenAnswer((_) => vpnStatsController.stream);
     when(() => mockVpnService.disconnect()).thenAnswer((_) async {});
     when(() => mockVpnService.isAdmin()).thenAnswer((_) async => true);
 
@@ -158,6 +161,7 @@ void main() {
   tearDown(() {
     funnelProgressController.close();
     vpnStatusController.close();
+    vpnStatsController.close();
   });
 
   Widget createWidget() {
@@ -261,7 +265,7 @@ void main() {
        await tester.pumpAndSettle();
 
        expect(find.text('Connected'), findsOneWidget);
-       expect(find.text('DISCONNECT'), findsOneWidget);
+       expect(find.text('CONNECT'), findsOneWidget);
     });
 
     testWidgets('Config List renders items and allows selection', (tester) async {
@@ -497,7 +501,7 @@ void main() {
        await tester.pump();
 
        // 2. Second Tap (Rapidly)
-       await tester.tap(find.text('CONNECTING'));
+       await tester.tap(find.text('CONNECT'));
        await tester.pump();
 
        // Verify stopAllOperations called
