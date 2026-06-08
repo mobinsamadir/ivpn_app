@@ -286,7 +286,7 @@ class EphemeralTester {
             try {
               speedSw.start();
               final speedReq = await client.getUrl(Uri.parse(
-                  'http://speed.cloudflare.com/__down?bytes=1000000'));
+                  'https://speed.cloudflare.com/__down?bytes=1000000'));
               final speedResp = await speedReq.close();
 
               await speedResp
@@ -476,7 +476,7 @@ class EphemeralTester {
           try {
             speedSw.start();
             final speedReq = await dartHttpClient.getUrl(
-                Uri.parse('http://speed.cloudflare.com/__down?bytes=1000000'));
+                Uri.parse('https://speed.cloudflare.com/__down?bytes=1000000'));
             final speedResp = await speedReq.close();
             await speedResp
                 .listen((chunk) {
