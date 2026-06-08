@@ -444,11 +444,21 @@ class ConfigManager extends ChangeNotifier {
   }
 
   // --- CLEANUP METHODS ---
-  Future<int> removeConfigs({bool failedTcp = false, bool dead = false}) async {
+  Future<int> removeConfigs(
+      {bool failedTcp = false,
+      bool dead = false,
+      bool weak = false,
+      bool untestedSpeed = false}) async {
     final initialCount = allConfigs.length;
     allConfigs.removeWhere((c) {
       if (failedTcp && c.funnelStage == 0 && c.failureCount > 0) return true;
-      if (dead && c.currentPing == -1) return true;
+      if (dead &&
+          (c.currentPing == -1 ||
+              c.failureCount >= 3 ||
+              (!c.isAlive && c.funnelStage == 0))) return true;
+      if (weak && c.currentPing > 1500)
+        return true; // threshold for weak config
+      if (untestedSpeed && c.funnelStage < 3) return true;
       return false;
     });
 
@@ -529,43 +539,34 @@ class ConfigManager extends ChangeNotifier {
         (validatedConfigs.isNotEmpty ? validatedConfigs : allConfigs);
     if (list.isEmpty) return false;
 
-    int currentIndex = -1;
-    if (_selectedConfig != null) {
-      currentIndex = list.indexWhere((c) => c.id == _selectedConfig!.id);
-    }
+    // Filter out obviously dead configs
+    final validCandidates = list
+        .where((c) => !c.isDead && (c.currentPing > 0 || c.funnelStage > 0))
+        .toList();
 
-    // Find next valid config
-    int attempts = 0;
-    int nextIndex = currentIndex;
-    VpnConfigWithMetrics? candidate;
-
-    // Loop to find next valid one
-    while (attempts < list.length) {
-      nextIndex = (nextIndex + 1) % list.length;
-      final c = list[nextIndex];
-      // Smart Skip: Ignore obviously dead configs (failed 3+ times, no ping)
-      // Also prevent wrapping to self if self is the only one (or all others dead)
-      if (!c.isDead && (c.currentPing > 0 || c.funnelStage > 0)) {
-        candidate = c;
-        break;
-      }
-      attempts++;
-    }
-
-    // Fallback: If no "good" candidate found, we DO NOT blindly pick a dead one.
-    // Instead, we return false to let UI inform user.
-    if (candidate == null) {
+    if (validCandidates.isEmpty) {
       AdvancedLogger.warn(
-        "[ConfigManager] Smart Skip: No valid candidates found.",
-      );
+          "[ConfigManager] Smart Skip: No valid candidates found.");
       return false;
     }
 
-    // If candidate is same as current, it means only 1 valid config exists.
-    if (candidate.id == _selectedConfig?.id) {
+    // Sort by calculated score descending (best first)
+    validCandidates
+        .sort((a, b) => b.calculatedScore.compareTo(a.calculatedScore));
+
+    // Find best candidate that isn't the currently selected one
+    VpnConfigWithMetrics? candidate;
+    for (final c in validCandidates) {
+      if (c.id != _selectedConfig?.id) {
+        candidate = c;
+        break;
+      }
+    }
+
+    // If candidate is still null, it means the only valid candidate is the current one
+    if (candidate == null) {
       AdvancedLogger.info(
-        "[ConfigManager] Smart Skip: Already on the only valid config.",
-      );
+          "[ConfigManager] Smart Skip: Already on the only valid config.");
       return false;
     }
 
