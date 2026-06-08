@@ -164,7 +164,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
             _txBytes = 0;
           });
           if (!_userInitiatedDisconnect) {
-            AdvancedLogger.warn("[HomeScreen] Unexpected disconnect. Attempting auto-switch...");
+            AdvancedLogger.warn(
+                "[HomeScreen] Unexpected disconnect. Attempting auto-switch...");
             final validConfigs = _configManager.validatedConfigs;
             if (validConfigs.isNotEmpty) {
               if (_configManager.selectedConfig != null) {
@@ -219,11 +220,11 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     }
   }
 
-
   String _formatBytes(int bytes) {
     if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    if (bytes < 1024 * 1024 * 1024)
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
   }
 
@@ -1124,13 +1125,17 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.arrow_downward, color: Colors.greenAccent, size: 16),
+                const Icon(Icons.arrow_downward,
+                    color: Colors.greenAccent, size: 16),
                 const SizedBox(width: 4),
-                Text(_formatBytes(_rxBytes), style: const TextStyle(color: Colors.white70)),
+                Text(_formatBytes(_rxBytes),
+                    style: const TextStyle(color: Colors.white70)),
                 const SizedBox(width: 16),
-                const Icon(Icons.arrow_upward, color: Colors.blueAccent, size: 16),
+                const Icon(Icons.arrow_upward,
+                    color: Colors.blueAccent, size: 16),
                 const SizedBox(width: 4),
-                Text(_formatBytes(_txBytes), style: const TextStyle(color: Colors.white70)),
+                Text(_formatBytes(_txBytes),
+                    style: const TextStyle(color: Colors.white70)),
               ],
             ),
           ),
@@ -1410,38 +1415,79 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   }
 
   void _showSmartCleanupDialog() {
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E1E),
-        title: const Text(
-          'Smart Cleanup',
-          style: TextStyle(color: Colors.white),
-        ),
-        content: const Text(
-          'Remove failed and dead configs?',
-          style: TextStyle(color: Colors.grey),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+      backgroundColor: const Color(0xFF1E1E1E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading:
+                    const Icon(Icons.delete_forever, color: Colors.redAccent),
+                title: const Text('حذف همه کانفیگ‌ها',
+                    style: TextStyle(
+                        color: Colors.white, fontFamily: 'Vazirmatn')),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await _configManager.clearAllData();
+                  _showToast("همه کانفیگ‌ها حذف شدند");
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.wifi_off, color: Colors.orangeAccent),
+                title: const Text('حذف کانفیگ‌های غیرقابل دسترس',
+                    style: TextStyle(
+                        color: Colors.white, fontFamily: 'Vazirmatn')),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final removed =
+                      await _configManager.removeConfigs(dead: true);
+                  _showToast("$removed کانفیگ غیرقابل دسترس حذف شد");
+                },
+              ),
+              ListTile(
+                leading: const Icon(
+                    Icons.signal_cellular_connected_no_internet_4_bar,
+                    color: Colors.yellowAccent),
+                title: const Text('حذف کانفیگ‌های ضعیف',
+                    style: TextStyle(
+                        color: Colors.white, fontFamily: 'Vazirmatn')),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final removed =
+                      await _configManager.removeConfigs(weak: true);
+                  _showToast("$removed کانفیگ ضعیف حذف شد");
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.speed, color: Colors.blueAccent),
+                title: const Text('حذف کانفیگ‌های بدون تست سرعت',
+                    style: TextStyle(
+                        color: Colors.white, fontFamily: 'Vazirmatn')),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final removed =
+                      await _configManager.removeConfigs(untestedSpeed: true);
+                  _showToast("$removed کانفیگ بدون تست سرعت حذف شد");
+                },
+              ),
+              const Divider(color: Colors.white24),
+              ListTile(
+                leading: const Icon(Icons.close, color: Colors.grey),
+                title: const Text('لغو',
+                    style: TextStyle(
+                        color: Colors.white, fontFamily: 'Vazirmatn')),
+                onTap: () => Navigator.pop(ctx),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              final removed = await _configManager.removeConfigs(
-                failedTcp: true,
-                dead: true,
-              );
-              _showToast("Removed $removed configs");
-            },
-            child: const Text(
-              'Cleanup',
-              style: TextStyle(color: Colors.redAccent),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

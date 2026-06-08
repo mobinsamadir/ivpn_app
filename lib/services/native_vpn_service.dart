@@ -32,7 +32,6 @@ class NativeVpnService {
 
   static const int failedPingValue = -1;
 
-
   // Stats stream
   static const _statsEventChannel = EventChannel('vpn_stats');
 

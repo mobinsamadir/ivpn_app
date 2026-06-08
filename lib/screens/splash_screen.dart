@@ -15,53 +15,94 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
-  String _statusMessage = 'Initializing...';
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
+  String _statusMessage = 'در حال آماده‌سازی...';
   bool _hasError = false;
   String? _errorMessage;
+
+  late AnimationController _progressController;
+  Timer? _messageTimer;
+  int _messageIndex = 0;
+
+  final List<String> _loadingMessages = [
+    'در حال آماده‌سازی...',
+    'در حال بارگذاری کانفیگ‌ها...',
+    'در حال بررسی سرورها...',
+    'آماده‌سازی اتصال...',
+  ];
 
   @override
   void initState() {
     super.initState();
+
+    _progressController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 4), // Fallback visual duration
+    )..addListener(() {
+        setState(() {});
+      });
+
+    // Start progress animation
+    _progressController.forward();
+
+    // Cycle messages every 2 seconds
+    _messageTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
+      if (mounted) {
+        setState(() {
+          _messageIndex = (_messageIndex + 1) % _loadingMessages.length;
+          _statusMessage = _loadingMessages[_messageIndex];
+        });
+      }
+    });
+
     // Run after first frame render
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeApp();
     });
   }
 
+  @override
+  void dispose() {
+    _progressController.dispose();
+    _messageTimer?.cancel();
+    super.dispose();
+  }
+
   Future<void> _initializeApp() async {
     setState(() {
       _hasError = false;
-      _statusMessage = 'Initializing services...';
     });
 
     try {
-      // 1. Get Global Config Manager (Injected in main.dart)
       final configManager = context.read<ConfigManager>();
-
-      // 0. Request Notification Permission (Android 13+)
       await Permission.notification.request();
 
-      // 2. Initialize Config Logic
-      setState(() => _statusMessage = 'Loading configs...');
-      // Robust init with timeout to prevent hang
+      // Ensure minimum splash time of 2 seconds
+      final minSplashFuture = Future.delayed(const Duration(seconds: 2));
+
       await configManager.init().timeout(const Duration(seconds: 10),
           onTimeout: () {
         AdvancedLogger.error("ConfigManager.init timed out!");
-        // Don't throw, just proceed. Some configs might be missing but app won't hang.
       });
 
-      // NEW: Start Funnel immediately
       FunnelService().startFunnel();
-
-      // NEW: Initialize Ads
       AdManagerService().initialize();
 
-      // 3. Fetch Updates (Now handled by ConnectionHomeScreen logic or ConfigGistService)
-      // Removed direct call to fetchStartupConfigs as it was migrated.
+      // Wait until we have at least 1 valid config, OR the funnel finishes
+      int waitLoops = 0;
+      // We check for up to ~10 seconds
+      while (configManager.validatedConfigs.isEmpty && waitLoops < 10) {
+        await Future.delayed(const Duration(seconds: 1));
+        waitLoops++;
+        // If funnel finishes entirely, we can break early
+        // Currently we don't expose isRunning directly easily, but 10s wait is safe.
+      }
 
-      // 4. Navigate to Home
+      await minSplashFuture;
+
       if (mounted) {
+        _progressController.stop();
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const ConnectionHomeScreen()),
         );
@@ -71,7 +112,6 @@ class _SplashScreenState extends State<SplashScreen> {
       if (mounted) {
         setState(() {
           _hasError = true;
-          _statusMessage = '';
           _errorMessage = 'Initialization Failed:\n$e';
         });
       }
@@ -81,7 +121,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.blueGrey[900], // Dark theme background
+      backgroundColor: const Color(0xFF0A0A0A),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(32.0),
@@ -89,10 +129,40 @@ class _SplashScreenState extends State<SplashScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               // Logo
-              const Icon(Icons.vpn_lock, size: 80, color: Colors.white),
-              const SizedBox(height: 24),
+              AnimatedBuilder(
+                animation: _progressController,
+                builder: (context, child) {
+                  return Transform.scale(
+                    scale: 0.8 + (_progressController.value * 0.2),
+                    child: Opacity(
+                      opacity: 0.5 + (_progressController.value * 0.5),
+                      child: child,
+                    ),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF11998E), Color(0xFF38EF7D)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF38EF7D).withValues(alpha: 0.3),
+                        blurRadius: 30,
+                        spreadRadius: 5,
+                      )
+                    ],
+                  ),
+                  child:
+                      const Icon(Icons.vpn_lock, size: 80, color: Colors.white),
+                ),
+              ),
+              const SizedBox(height: 60),
 
-              // Status or Error
               if (_hasError) ...[
                 const Icon(Icons.error_outline,
                     size: 48, color: Colors.redAccent),
@@ -113,11 +183,37 @@ class _SplashScreenState extends State<SplashScreen> {
                   ),
                 )
               ] else ...[
-                const CircularProgressIndicator(color: Colors.white),
+                // Custom Progress Bar
+                Container(
+                  width: 200,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: Colors.white12,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: LinearProgressIndicator(
+                      value: _progressController.value,
+                      backgroundColor: Colors.transparent,
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                          Colors.greenAccent),
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 24),
-                Text(
-                  _statusMessage,
-                  style: const TextStyle(color: Colors.white70, fontSize: 16),
+                // Rotating Message
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 500),
+                  child: Text(
+                    _statusMessage,
+                    key: ValueKey<String>(_statusMessage),
+                    style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 16,
+                        fontFamily: 'Vazirmatn'),
+                    textDirection: TextDirection.rtl,
+                  ),
                 ),
               ],
             ],

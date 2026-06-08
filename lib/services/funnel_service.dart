@@ -13,35 +13,36 @@ List<VpnConfigWithMetrics> _buildQueueInIsolate(Map<String, dynamic> args) {
       args['configs'] as List<VpnConfigWithMetrics>;
   final bool retestDead = args['retestDead'] as bool;
 
-  // Categorize
-  final tier1 = <VpnConfigWithMetrics>[]; // Retest (Known Good < 24h)
-  final tier2 = <VpnConfigWithMetrics>[]; // Fresh / Untested
-  final tier3 = <VpnConfigWithMetrics>[]; // Retry (Soft Fail)
-  final dead = <VpnConfigWithMetrics>[]; // Dead (Hard Fail)
-
-  final now = DateTime.now();
+  // Priority order: Favorites > Validated (funnelStage > 0) > Fresh/Untested > Soft Fail > Dead
+  final favorites = <VpnConfigWithMetrics>[];
+  final validated = <VpnConfigWithMetrics>[];
+  final fresh = <VpnConfigWithMetrics>[];
+  final softFail = <VpnConfigWithMetrics>[];
+  final dead = <VpnConfigWithMetrics>[];
 
   for (final c in allConfigs) {
-    if (c.funnelStage > 0) {
-      if (c.lastTestedAt != null &&
-          now.difference(c.lastTestedAt!).inHours < 24) {
-        tier1.add(c);
-      } else {
-        tier1.add(c); // Old good configs
-      }
+    if (c.isFavorite) {
+      favorites.add(c);
+    } else if (c.isValidated || c.funnelStage > 0) {
+      validated.add(c);
     } else if (c.funnelStage == 0 && c.failureCount == 0) {
-      tier2.add(c); // Fresh
+      fresh.add(c);
     } else if (c.failureCount < 3) {
-      tier3.add(c); // Retry
+      softFail.add(c);
     } else {
       dead.add(c);
     }
   }
 
-  // Sort Tier 1 by score (Best first)
-  tier1.sort((a, b) => b.calculatedScore.compareTo(a.calculatedScore));
+  // Sort groups internally by score (best first)
+  int compareScore(VpnConfigWithMetrics a, VpnConfigWithMetrics b) {
+    return b.calculatedScore.compareTo(a.calculatedScore);
+  }
 
-  final queue = [...tier1, ...tier2, ...tier3];
+  favorites.sort(compareScore);
+  validated.sort(compareScore);
+
+  final queue = [...favorites, ...validated, ...fresh, ...softFail];
   if (retestDead) {
     queue.addAll(dead);
   }
