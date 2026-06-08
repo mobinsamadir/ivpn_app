@@ -149,8 +149,21 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
                 testConfigFile.writeText(testConfigStr)
 
                 // SAFE CALL to Libbox - pass JSON content string
-                val server = Libbox.newCommandServer(StubCommandServerHandler(), StubPlatformInterface())
-                server.startOrReloadService(testConfigStr, null)
+                val server = try {
+                    Libbox.newCommandServer(StubCommandServerHandler(), StubPlatformInterface())
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
+                    return@withContext
+                }
+
+                try {
+                    server.startOrReloadService(testConfigStr, null)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
+                    return@withContext
+                }
                 delay(200)
 
                 result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(socksPort) } }
@@ -219,8 +232,21 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
                 testConfigFile.writeText(json.toString())
 
                 // SAFE CALL - pass JSON content string
-                val testServer = Libbox.newCommandServer(StubCommandServerHandler(), StubPlatformInterface())
-                testServer.startOrReloadService(json.toString(), null)
+                val testServer = try {
+                    Libbox.newCommandServer(StubCommandServerHandler(), StubPlatformInterface())
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
+                    return@withContext
+                }
+
+                try {
+                    testServer.startOrReloadService(json.toString(), null)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
+                    return@withContext
+                }
                 delay(500)
 
                 val client = OkHttpClient.Builder()
@@ -313,7 +339,7 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
                 }
 
                 val fd = vpnInterface!!.fd
-                val configDir = getExternalFilesDir(null)!!
+                val configDir = getExternalFilesDir(null) ?: filesDir
                 val configFile = File(configDir, "config.json")
 
                 val jsonObject = JSONObject(configJson)
@@ -330,8 +356,15 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
                 configFile.writeText(jsonObject.toString())
 
                 // SAFE CALL - pass JSON content string
-                mainServer = Libbox.newCommandServer(StubCommandServerHandler(), this@SingboxVpnService)
-                mainServer?.startOrReloadService(jsonObject.toString(), null)
+                try {
+                    mainServer = Libbox.newCommandServer(StubCommandServerHandler(), this@SingboxVpnService)
+                    mainServer?.startOrReloadService(jsonObject.toString(), null)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    MainActivity.sendVpnStatus("ERROR: START_FAILED - ${e.message}")
+                    stopVpn()
+                    return@launch
+                }
 
                 // CRITICAL FIX: Broadcast "CONNECTED" State to Dart
                 MainActivity.sendVpnStatus("CONNECTED")
