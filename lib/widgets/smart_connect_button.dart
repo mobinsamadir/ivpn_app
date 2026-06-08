@@ -65,6 +65,9 @@ class _SmartConnectButtonState extends State<SmartConnectButton>
           _pulseController.value = 0.0;
         }
 
+        final bool hasConfigs = configManager.validatedConfigs.isNotEmpty || configManager.allConfigs.isNotEmpty;
+        final bool isButtonDisabled = !hasConfigs && !isConnecting && !isConnected;
+
         return Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -72,7 +75,7 @@ class _SmartConnectButtonState extends State<SmartConnectButton>
               _buildStatusIndicator(isConnected, connectionStatus),
             const SizedBox(height: 20),
             GestureDetector(
-              onTap: widget.onPressed ?? () => _handleConnection(configManager),
+              onTap: isButtonDisabled ? null : (widget.onPressed ?? () => _handleConnection(configManager)),
               child: AnimatedBuilder(
                 animation: _pulseAnimation,
                 builder: (context, child) {
@@ -85,11 +88,11 @@ class _SmartConnectButtonState extends State<SmartConnectButton>
                       height: widget.buttonSize,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        gradient: _getButtonGradient(isConnected, isConnecting),
+                        gradient: _getButtonGradient(isConnected, isConnecting, isButtonDisabled),
                         boxShadow: [
                           BoxShadow(
                             color:
-                                _getButtonGlowColor(isConnected, isConnecting),
+                                _getButtonGlowColor(isConnected, isConnecting, isButtonDisabled),
                             blurRadius: isConnecting || isConnected ? 25 : 15,
                             spreadRadius: isConnecting || isConnected ? 8 : 2,
                             offset: const Offset(0, 8),
@@ -107,15 +110,15 @@ class _SmartConnectButtonState extends State<SmartConnectButton>
                                       color: Colors.white, strokeWidth: 3),
                                 )
                               : Icon(
-                                  _getButtonIcon(isConnected, isConnecting),
+                                  _getButtonIcon(isConnected, isConnecting, isButtonDisabled),
                                   size: widget.buttonSize * 0.35,
-                                  color: Colors.white,
+                                  color: isButtonDisabled ? Colors.white54 : Colors.white,
                                 ),
                           const SizedBox(height: 12),
                           Text(
-                            _getButtonText(isConnected, isConnecting),
+                            _getButtonText(isConnected, isConnecting, isButtonDisabled),
                             style: TextStyle(
-                              color: Colors.white,
+                              color: isButtonDisabled ? Colors.white54 : Colors.white,
                               fontSize: widget.buttonSize * 0.1,
                               fontWeight: FontWeight.bold,
                               letterSpacing: 1.2,
@@ -239,7 +242,14 @@ class _SmartConnectButtonState extends State<SmartConnectButton>
     }
   }
 
-  Gradient _getButtonGradient(bool isConnected, bool isConnecting) {
+  Gradient _getButtonGradient(bool isConnected, bool isConnecting, bool isDisabled) {
+    if (isDisabled) {
+      return const LinearGradient(
+        colors: [Color(0xFF374151), Color(0xFF1F2937)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      );
+    }
     if (isConnecting) {
       return const LinearGradient(
         colors: [Color(0xFFF2994A), Color(0xFFF2C94C)],
@@ -263,19 +273,22 @@ class _SmartConnectButtonState extends State<SmartConnectButton>
     );
   }
 
-  Color _getButtonGlowColor(bool isConnected, bool isConnecting) {
+  Color _getButtonGlowColor(bool isConnected, bool isConnecting, bool isDisabled) {
+    if (isDisabled) return Colors.transparent;
     if (isConnecting) return const Color(0xFFF2994A).withValues(alpha: 0.5);
     if (isConnected) return const Color(0xFF38EF7D).withValues(alpha: 0.5);
     return Colors.black.withValues(alpha: 0.3);
   }
 
-  IconData _getButtonIcon(bool isConnected, bool isConnecting) {
+  IconData _getButtonIcon(bool isConnected, bool isConnecting, bool isDisabled) {
+    if (isDisabled) return Icons.hourglass_empty;
     if (isConnecting) return Icons.sync;
     if (isConnected) return Icons.power_settings_new; // Connected icon
     return Icons.power_settings_new;
   }
 
-  String _getButtonText(bool isConnected, bool isConnecting) {
+  String _getButtonText(bool isConnected, bool isConnecting, bool isDisabled) {
+    if (isDisabled) return 'WAITING';
     if (isConnecting) return 'CONNECTING';
     if (isConnected) return 'CONNECTED';
     return 'CONNECT';
