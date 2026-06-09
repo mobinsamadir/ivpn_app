@@ -34,7 +34,8 @@ class ConfigGistService {
       final currentBuild = int.tryParse(info.buildNumber) ?? 0;
 
       AdvancedLogger.info(
-          "[UpdateCheck] Checking for updates... Current Build: $currentBuild");
+        "[UpdateCheck] Checking for updates... Current Build: $currentBuild",
+      );
 
       final response = await http
           .get(Uri.parse(_updateUrl))
@@ -45,7 +46,8 @@ class ConfigGistService {
         final latestBuild =
             int.tryParse(data['version_code']?.toString() ?? '0') ?? 0;
         final version = data['version']?.toString() ?? 'Unknown';
-        final notes = data['release_notes']?.toString() ??
+        final notes =
+            data['release_notes']?.toString() ??
             'Bug fixes and performance improvements.';
         // FIX: Handle missing URL gracefully to prevent crash
         final downloadUrl = data['url']?.toString() ?? '';
@@ -61,8 +63,10 @@ class ConfigGistService {
                 version: version,
                 releaseNotes: notes,
                 onUpdate: () {
-                  launchUrl(Uri.parse(downloadUrl),
-                      mode: LaunchMode.externalApplication);
+                  launchUrl(
+                    Uri.parse(downloadUrl),
+                    mode: LaunchMode.externalApplication,
+                  );
                 },
               ),
             );
@@ -74,8 +78,10 @@ class ConfigGistService {
     }
   }
 
-  Future<bool> fetchAndApplyConfigs(ConfigManager manager,
-      {bool force = false}) async {
+  Future<bool> fetchAndApplyConfigs(
+    ConfigManager manager, {
+    bool force = false,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     final lastFetchTs = prefs.getInt(_lastFetchKey) ?? 0;
     final lastFetch = DateTime.fromMillisecondsSinceEpoch(lastFetchTs);
@@ -86,12 +92,14 @@ class ConfigGistService {
         manager.allConfigs.isNotEmpty &&
         now.difference(lastFetch) < _fetchInterval) {
       AdvancedLogger.info(
-          "[ConfigGistService] Skipping fetch. Last fetch: $lastFetch");
+        "[ConfigGistService] Skipping fetch. Last fetch: $lastFetch",
+      );
       return true; // Consider success as we have configs
     }
 
     AdvancedLogger.info(
-        "[ConfigGistService] Starting fetch (Force: $force)...");
+      "[ConfigGistService] Starting fetch (Force: $force)...",
+    );
 
     bool success = false;
     for (var url in _mirrors) {
@@ -107,15 +115,20 @@ class ConfigGistService {
               // Sanitize
               final cleaned = configs.map((c) {
                 return c.replaceAll(
-                    RegExp(r'"spider_x":\s*("[^"]*"|[^,{}]+),?'), '');
+                  RegExp(r'"spider_x":\s*("[^"]*"|[^,{}]+),?'),
+                  '',
+                );
               }).toList();
 
               // Add to Manager
-              final added =
-                  await manager.addConfigs(cleaned, checkBlacklist: true);
+              final added = await manager.addConfigs(
+                cleaned,
+                checkBlacklist: true,
+              );
               if (added > 0) {
                 AdvancedLogger.info(
-                    "[ConfigGistService] Added $added configs from $url");
+                  "[ConfigGistService] Added $added configs from $url",
+                );
                 success = true;
                 // Save for fail-safe
                 await prefs.setString(_backupConfigsKey, jsonEncode(cleaned));
@@ -133,7 +146,8 @@ class ConfigGistService {
     if (success) {
       await prefs.setInt(_lastFetchKey, now.millisecondsSinceEpoch);
       AdvancedLogger.info(
-          "[ConfigGistService] Fetch complete. Timestamp updated.");
+        "[ConfigGistService] Fetch complete. Timestamp updated.",
+      );
       return true;
     } else {
       AdvancedLogger.error("[ConfigGistService] All mirrors failed.");
@@ -143,16 +157,21 @@ class ConfigGistService {
       if (backupJson != null && backupJson.isNotEmpty) {
         try {
           final List<dynamic> rawList = jsonDecode(backupJson);
-          final List<String> backupConfigs =
-              rawList.map((e) => e.toString()).toList();
+          final List<String> backupConfigs = rawList
+              .map((e) => e.toString())
+              .toList();
 
           if (backupConfigs.isNotEmpty) {
             AdvancedLogger.warn(
-                "⚠️ Network failure. Using last known good configuration.");
-            final added =
-                await manager.addConfigs(backupConfigs, checkBlacklist: true);
+              "⚠️ Network failure. Using last known good configuration.",
+            );
+            final added = await manager.addConfigs(
+              backupConfigs,
+              checkBlacklist: true,
+            );
             AdvancedLogger.info(
-                "[ConfigGistService] Restored $added configs from backup.");
+              "[ConfigGistService] Restored $added configs from backup.",
+            );
             return true; // Success via backup
           }
         } catch (e) {
@@ -168,8 +187,9 @@ class ConfigGistService {
 
     // 1. Auto-convert Google Drive /view links
     if (targetUrl.contains('drive.google.com') && targetUrl.contains('/view')) {
-      final fileIdMatch =
-          RegExp(r'\/d\/([a-zA-Z0-9_-]+)').firstMatch(targetUrl);
+      final fileIdMatch = RegExp(
+        r'\/d\/([a-zA-Z0-9_-]+)',
+      ).firstMatch(targetUrl);
       if (fileIdMatch != null) {
         final fileId = fileIdMatch.group(1);
         targetUrl = 'https://drive.google.com/uc?export=download&id=$fileId';
@@ -177,13 +197,15 @@ class ConfigGistService {
     }
 
     try {
-      final response = await http.get(
-        Uri.parse(targetUrl),
-        headers: {
-          'User-Agent':
-              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-        },
-      ).timeout(const Duration(seconds: 15)); // strict 15-second timeout
+      final response = await http
+          .get(
+            Uri.parse(targetUrl),
+            headers: {
+              'User-Agent':
+                  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+            },
+          )
+          .timeout(const Duration(seconds: 15)); // strict 15-second timeout
 
       if (response.statusCode != 200) return null;
 
@@ -195,8 +217,9 @@ class ConfigGistService {
               content.contains('Virus scan warning'))) {
         final confirmToken = _extractDriveToken(content);
         if (confirmToken != null) {
-          final fileIdMatch =
-              RegExp(r'id=([a-zA-Z0-9_-]+)').firstMatch(targetUrl);
+          final fileIdMatch = RegExp(
+            r'id=([a-zA-Z0-9_-]+)',
+          ).firstMatch(targetUrl);
           final fileId = fileIdMatch?.group(1);
           if (fileId != null) {
             final confirmUrl =

@@ -126,7 +126,8 @@ class _BackgroundAdServiceState extends State<BackgroundAdService> {
               width: 1,
               height: 1,
               // فقط زمانی که کنترلر آماده است وب‌ویو را نشان بده
-              child: _popunderController != null &&
+              child:
+                  _popunderController != null &&
                       _popunderController!.value.isInitialized
                   ? Webview(_popunderController!)
                   : const SizedBox.shrink(),
@@ -140,7 +141,8 @@ class _BackgroundAdServiceState extends State<BackgroundAdService> {
             child: SizedBox(
               width: 1,
               height: 1,
-              child: _socialBarController != null &&
+              child:
+                  _socialBarController != null &&
                       _socialBarController!.value.isInitialized
                   ? Webview(_socialBarController!)
                   : const SizedBox.shrink(),

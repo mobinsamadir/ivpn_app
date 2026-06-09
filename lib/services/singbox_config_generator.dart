@@ -16,13 +16,16 @@ class SingboxConfigGenerator {
     'edge',
     'safari',
     '360',
-    'qq'
+    'qq',
   ];
   static final Random _rng = Random();
 
   // REMOVED default listenPort=10808 to force dynamic port usage
-  static String generateConfig(String rawLink,
-      {required int listenPort, bool isTest = false}) {
+  static String generateConfig(
+    String rawLink, {
+    required int listenPort,
+    bool isTest = false,
+  }) {
     final socksPort = listenPort;
     final httpPort = listenPort + 1;
     final link = rawLink.trim();
@@ -32,15 +35,27 @@ class SingboxConfigGenerator {
 
     try {
       if (link.toLowerCase().startsWith('vmess://')) {
-        return _parseVmess(link,
-            socksPort: socksPort, httpPort: httpPort, isTest: isTest);
+        return _parseVmess(
+          link,
+          socksPort: socksPort,
+          httpPort: httpPort,
+          isTest: isTest,
+        );
       } else if (link.toLowerCase().startsWith('vless://') ||
           link.toLowerCase().startsWith('trojan://')) {
-        return _parseUriStandard(link,
-            socksPort: socksPort, httpPort: httpPort, isTest: isTest);
+        return _parseUriStandard(
+          link,
+          socksPort: socksPort,
+          httpPort: httpPort,
+          isTest: isTest,
+        );
       } else if (link.toLowerCase().startsWith('ss://')) {
-        return _parseShadowsocks(link,
-            socksPort: socksPort, httpPort: httpPort, isTest: isTest);
+        return _parseShadowsocks(
+          link,
+          socksPort: socksPort,
+          httpPort: httpPort,
+          isTest: isTest,
+        );
       } else {
         throw Exception("Unsupported protocol: ${link.split('://').first}");
       }
@@ -52,13 +67,19 @@ class SingboxConfigGenerator {
   }
 
   /// Dedicated Ping Config - Minimal structure to avoid conflicts
-  static String generatePingConfig(
-      {required String rawLink, required int listenPort}) {
+  static String generatePingConfig({
+    required String rawLink,
+    required int listenPort,
+  }) {
     return generateConfig(rawLink, listenPort: listenPort, isTest: true);
   }
 
-  static String _parseVmess(String link,
-      {required int socksPort, required int httpPort, required bool isTest}) {
+  static String _parseVmess(
+    String link, {
+    required int socksPort,
+    required int httpPort,
+    required bool isTest,
+  }) {
     final String decoded = Base64Utils.safeDecode(link.substring(8));
     if (decoded.isEmpty) throw FormatException("Invalid VMess Base64");
 
@@ -78,7 +99,7 @@ class SingboxConfigGenerator {
         "padding": true,
         "protocol": "h2mux",
         "max_connections": 4,
-        "min_streams": 2
+        "min_streams": 2,
       },
     };
 
@@ -98,12 +119,20 @@ class SingboxConfigGenerator {
       };
     }
 
-    return _assembleFinalConfig(outbound,
-        socksPort: socksPort, httpPort: httpPort, isTest: isTest);
+    return _assembleFinalConfig(
+      outbound,
+      socksPort: socksPort,
+      httpPort: httpPort,
+      isTest: isTest,
+    );
   }
 
-  static String _parseUriStandard(String link,
-      {required int socksPort, required int httpPort, required bool isTest}) {
+  static String _parseUriStandard(
+    String link, {
+    required int socksPort,
+    required int httpPort,
+    required bool isTest,
+  }) {
     Uri? uri;
     try {
       uri = Uri.parse(link);
@@ -210,7 +239,7 @@ class SingboxConfigGenerator {
         "padding": true,
         "protocol": "h2mux",
         "max_connections": 4,
-        "min_streams": 2
+        "min_streams": 2,
       },
     };
 
@@ -230,8 +259,8 @@ class SingboxConfigGenerator {
           "enabled": true,
           "fingerprint": (params['fp'] != null && params['fp']!.isNotEmpty)
               ? params['fp']!
-              : fingerprints[_rng.nextInt(fingerprints.length)]
-        }
+              : fingerprints[_rng.nextInt(fingerprints.length)],
+        },
       };
 
       // Add ALPN if present (important for h2/h3)
@@ -258,13 +287,14 @@ class SingboxConfigGenerator {
         if (pbk.trim().isEmpty) {
           // Fallback mechanism for missing PBK
           AdvancedLogger.warn(
-              '[PARSER-WARNING] PBK missing, attempting standard VLESS for URL: $link');
+            '[PARSER-WARNING] PBK missing, attempting standard VLESS for URL: $link',
+          );
           // Do not add reality block, effectively falling back to standard TLS if configured
         } else {
           tls["reality"] = {
             "enabled": true,
             "public_key": pbk,
-            "short_id": params['sid'] ?? ""
+            "short_id": params['sid'] ?? "",
           };
         }
       }
@@ -281,12 +311,20 @@ class SingboxConfigGenerator {
     );
     if (transport != null) outbound["transport"] = transport;
 
-    return _assembleFinalConfig(outbound,
-        socksPort: socksPort, httpPort: httpPort, isTest: isTest);
+    return _assembleFinalConfig(
+      outbound,
+      socksPort: socksPort,
+      httpPort: httpPort,
+      isTest: isTest,
+    );
   }
 
-  static String _parseShadowsocks(String link,
-      {required int socksPort, required int httpPort, required bool isTest}) {
+  static String _parseShadowsocks(
+    String link, {
+    required int socksPort,
+    required int httpPort,
+    required bool isTest,
+  }) {
     String content = link.substring(5);
     String method, password, host;
     int port;
@@ -342,7 +380,7 @@ class SingboxConfigGenerator {
         outbound["transport"] = {
           "type": "ws",
           "path": pluginOpts['path'] ?? "/",
-          "headers": {"Host": pluginOpts['host'] ?? ""}
+          "headers": {"Host": pluginOpts['host'] ?? ""},
         };
       } else if (pluginName.contains('obfs-local') ||
           pluginOpts['obfs'] != null) {
@@ -350,8 +388,12 @@ class SingboxConfigGenerator {
       }
     }
 
-    return _assembleFinalConfig(outbound,
-        socksPort: socksPort, httpPort: httpPort, isTest: isTest);
+    return _assembleFinalConfig(
+      outbound,
+      socksPort: socksPort,
+      httpPort: httpPort,
+      isTest: isTest,
+    );
   }
 
   /// Extracts host and port for pre-flight TCP checks
@@ -368,7 +410,7 @@ class SingboxConfigGenerator {
           final Map<String, dynamic> data = jsonDecode(decoded);
           return {
             'host': data['add'],
-            'port': int.tryParse(data['port']?.toString() ?? '443') ?? 443
+            'port': int.tryParse(data['port']?.toString() ?? '443') ?? 443,
           };
         } catch (_) {
           // If JSON decode fails, maybe it's not JSON (legacy format not supported)
@@ -425,7 +467,7 @@ class SingboxConfigGenerator {
       return {
         "type": "ws",
         "path": path,
-        "headers": {"Host": host}
+        "headers": {"Host": host},
       };
     } else if (network == "grpc") {
       return {"type": "grpc", "service_name": serviceName ?? path ?? "grpc"};
@@ -433,19 +475,23 @@ class SingboxConfigGenerator {
     return null;
   }
 
-  static String _assembleFinalConfig(Map<String, dynamic> proxyOutbound,
-      {required int socksPort, required int httpPort, bool isTest = false}) {
+  static String _assembleFinalConfig(
+    Map<String, dynamic> proxyOutbound, {
+    required int socksPort,
+    required int httpPort,
+    bool isTest = false,
+  }) {
     // 1. Base Structure (Common)
     final Map<String, dynamic> config = {
       "log": {
         "level": "trace",
         "output": isTest ? "stderr" : "box.log", // Explicit stderr for capture
-        "timestamp": true
+        "timestamp": true,
       },
       "outbounds": [
         proxyOutbound,
         {"type": "direct", "tag": "direct"},
-        {"type": "dns", "tag": "dns-out"}
+        {"type": "dns", "tag": "dns-out"},
       ],
     };
 
@@ -457,14 +503,14 @@ class SingboxConfigGenerator {
           "type": "socks",
           "tag": "socks-test",
           "listen": "127.0.0.1",
-          "listen_port": socksPort
+          "listen_port": socksPort,
         },
         {
           "type": "http",
           "tag": "http-test",
           "listen": "127.0.0.1",
-          "listen_port": httpPort
-        }
+          "listen_port": httpPort,
+        },
       ];
 
       // Lightweight Routing for Tests
@@ -472,20 +518,20 @@ class SingboxConfigGenerator {
         "rules": [
           {
             "outbound": "proxy",
-            "network": ["tcp", "udp"]
-          }
+            "network": ["tcp", "udp"],
+          },
         ],
         "auto_detect_interface": true,
-        "final": "proxy"
+        "final": "proxy",
       };
 
       // Simple DNS for Tests
       config["dns"] = {
         "servers": [
-          {"tag": "remote", "address": "8.8.8.8", "detour": "proxy"}
+          {"tag": "remote", "address": "8.8.8.8", "detour": "proxy"},
         ],
         "rules": [],
-        "final": "remote"
+        "final": "remote",
       };
     } else {
       // PRODUCTION MODE: TUN Inbound (Full VPN)
@@ -497,24 +543,24 @@ class SingboxConfigGenerator {
           "auto_route": true,
           "strict_route": true,
           "stack": "system", // Optimized for Windows
-          "sniff": true
-        }
+          "sniff": true,
+        },
       ];
 
       // Robust DNS (Encrypted Remote, Direct Local)
       config["dns"] = {
         "servers": [
           {"tag": "google", "address": "8.8.8.8", "detour": "proxy"},
-          {"tag": "local", "address": "local", "detour": "direct"}
+          {"tag": "local", "address": "local", "detour": "direct"},
         ],
         "rules": [
           {
-            "outbound": "any",
-            "server": "local"
-          } // Fallback to local if needed, though 'final' handles main
+            "outbound": ["any"],
+            "server": "local",
+          },
         ],
         "final": "google",
-        "strategy": "ipv4_only"
+        "strategy": "ipv4_only",
       };
 
       // Smart Routing Rules
@@ -522,6 +568,8 @@ class SingboxConfigGenerator {
         "auto_detect_interface": true,
         "rules": [
           {"protocol": "dns", "outbound": "dns-out"},
+          // Critical Windows fix: Bypass TUN for local traffic to avoid infinite routing loops
+          {"ip_is_private": true, "outbound": "direct"},
           // Route ad domains through proxy to bypass censorship in restricted regions
           {
             "domain_suffix": [
@@ -641,9 +689,9 @@ class SingboxConfigGenerator {
               "blogspot.td",
               "blogspot.tw",
               "blogspot.ug",
-              "blogspot.vn"
+              "blogspot.vn",
             ],
-            "outbound": "proxy"
+            "outbound": "proxy",
           },
           // Use IP ranges instead of geoip for Iran and private networks to avoid DB issues
           {
@@ -651,12 +699,12 @@ class SingboxConfigGenerator {
               "10.0.0.0/8",
               "172.16.0.0/12",
               "192.168.0.0/16",
-              "127.0.0.0/8"
+              "127.0.0.0/8",
             ],
-            "outbound": "direct"
+            "outbound": "direct",
           },
         ],
-        "final": "proxy"
+        "final": "proxy",
       };
     }
 

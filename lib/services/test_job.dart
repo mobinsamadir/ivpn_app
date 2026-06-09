@@ -6,11 +6,7 @@ class TestJob {
   final String name;
   final DateTime createdAt = DateTime.now();
 
-  TestJob({
-    required this.type,
-    required this.task,
-    this.name = 'Unnamed Job',
-  });
+  TestJob({required this.type, required this.task, this.name = 'Unnamed Job'});
 
   @override
   String toString() => 'TestJob($name, $type, ${createdAt.toIso8601String()})';

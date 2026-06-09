@@ -36,12 +36,13 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
 
-    _progressController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 4), // Fallback visual duration
-    )..addListener(() {
-        setState(() {});
-      });
+    _progressController =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(seconds: 4), // Fallback visual duration
+        )..addListener(() {
+          setState(() {});
+        });
 
     // Start progress animation
     _progressController.forward();
@@ -81,10 +82,12 @@ class _SplashScreenState extends State<SplashScreen>
       // Ensure minimum splash time of 2 seconds
       final minSplashFuture = Future.delayed(const Duration(seconds: 2));
 
-      await configManager.init().timeout(const Duration(seconds: 10),
-          onTimeout: () {
-        AdvancedLogger.error("ConfigManager.init timed out!");
-      });
+      await configManager.init().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          AdvancedLogger.error("ConfigManager.init timed out!");
+        },
+      );
 
       FunnelService().startFunnel();
       AdManagerService().initialize();
@@ -154,18 +157,24 @@ class _SplashScreenState extends State<SplashScreen>
                         color: const Color(0xFF38EF7D).withValues(alpha: 0.3),
                         blurRadius: 30,
                         spreadRadius: 5,
-                      )
+                      ),
                     ],
                   ),
-                  child:
-                      const Icon(Icons.vpn_lock, size: 80, color: Colors.white),
+                  child: const Icon(
+                    Icons.vpn_lock,
+                    size: 80,
+                    color: Colors.white,
+                  ),
                 ),
               ),
               const SizedBox(height: 60),
 
               if (_hasError) ...[
-                const Icon(Icons.error_outline,
-                    size: 48, color: Colors.redAccent),
+                const Icon(
+                  Icons.error_outline,
+                  size: 48,
+                  color: Colors.redAccent,
+                ),
                 const SizedBox(height: 16),
                 Text(
                   _errorMessage ?? 'Unknown Error',
@@ -181,7 +190,7 @@ class _SplashScreenState extends State<SplashScreen>
                     backgroundColor: Colors.white,
                     foregroundColor: Colors.black,
                   ),
-                )
+                ),
               ] else ...[
                 // Custom Progress Bar
                 Container(
@@ -197,7 +206,8 @@ class _SplashScreenState extends State<SplashScreen>
                       value: _progressController.value,
                       backgroundColor: Colors.transparent,
                       valueColor: const AlwaysStoppedAnimation<Color>(
-                          Colors.greenAccent),
+                        Colors.greenAccent,
+                      ),
                     ),
                   ),
                 ),
@@ -209,9 +219,10 @@ class _SplashScreenState extends State<SplashScreen>
                     _statusMessage,
                     key: ValueKey<String>(_statusMessage),
                     style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 16,
-                        fontFamily: 'Vazirmatn'),
+                      color: Colors.white70,
+                      fontSize: 16,
+                      fontFamily: 'Vazirmatn',
+                    ),
                     textDirection: TextDirection.rtl,
                   ),
                 ),

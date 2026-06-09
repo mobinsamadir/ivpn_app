@@ -77,20 +77,24 @@ class _ShimmerConfigCardState extends State<ShimmerConfigCard>
                     Row(
                       children: [
                         Container(
-                            width: 60,
-                            height: 12,
-                            decoration: BoxDecoration(
-                                color: color,
-                                borderRadius: BorderRadius.circular(4))),
+                          width: 60,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: color,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
                         const SizedBox(width: 8),
                         Container(
-                            width: 40,
-                            height: 12,
-                            decoration: BoxDecoration(
-                                color: color,
-                                borderRadius: BorderRadius.circular(4))),
+                          width: 40,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: color,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
                       ],
-                    )
+                    ),
                   ],
                 ),
               ),
@@ -99,18 +103,24 @@ class _ShimmerConfigCardState extends State<ShimmerConfigCard>
               Column(
                 children: [
                   Container(
-                      width: 20,
-                      height: 20,
-                      decoration:
-                          BoxDecoration(color: color, shape: BoxShape.circle)),
+                    width: 20,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   Container(
-                      width: 20,
-                      height: 20,
-                      decoration:
-                          BoxDecoration(color: color, shape: BoxShape.circle)),
+                    width: 20,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
                 ],
-              )
+              ),
             ],
           ),
         );

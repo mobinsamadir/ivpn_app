@@ -3,10 +3,7 @@ import 'package:flutter/material.dart';
 class AdExplanationDialog extends StatefulWidget {
   final Future<bool> Function() onAdView;
 
-  const AdExplanationDialog({
-    super.key,
-    required this.onAdView,
-  });
+  const AdExplanationDialog({super.key, required this.onAdView});
 
   @override
   State<AdExplanationDialog> createState() => _AdExplanationDialogState();
@@ -33,8 +30,10 @@ class _AdExplanationDialogState extends State<AdExplanationDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       backgroundColor: const Color(0xFF1E1E1E),
-      title:
-          const Text('Add 1 Hour Time', style: TextStyle(color: Colors.white)),
+      title: const Text(
+        'Add 1 Hour Time',
+        style: TextStyle(color: Colors.white),
+      ),
       content: const Text(
         'To keep the service free, please engage with our sponsor.\n\n'
         '1. Click "View Ad"\n'
@@ -56,9 +55,12 @@ class _AdExplanationDialogState extends State<AdExplanationDialog> {
             : ElevatedButton(
                 onPressed: _handleViewAd,
                 style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blueAccent),
-                child: const Text('View Ad',
-                    style: TextStyle(color: Colors.white)),
+                  backgroundColor: Colors.blueAccent,
+                ),
+                child: const Text(
+                  'View Ad',
+                  style: TextStyle(color: Colors.white),
+                ),
               ),
       ],
     );

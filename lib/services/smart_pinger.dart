@@ -48,18 +48,21 @@ class SmartPinger {
     final List<Future<PingResult>> futures = [];
 
     AdvancedLogger.info(
-        '[SmartPing] Starting multi-endpoint ping test (Endpoints: ${endpoints.length})');
+      '[SmartPing] Starting multi-endpoint ping test (Endpoints: ${endpoints.length})',
+    );
 
     final effectiveTimeout = timeoutPerPing ?? TestTimeouts.pingCheck;
 
     // Create independent futures for each endpoint
     for (final endpoint in endpoints) {
-      futures.add(_pingWithRetry(
-        endpoint,
-        cancelToken,
-        maxRetries: 2,
-        timeout: effectiveTimeout,
-      ));
+      futures.add(
+        _pingWithRetry(
+          endpoint,
+          cancelToken,
+          maxRetries: 2,
+          timeout: effectiveTimeout,
+        ),
+      );
     }
 
     // Run concurrently and collect results
@@ -91,7 +94,7 @@ class SmartPinger {
 
     final avg = successful.isNotEmpty
         ? successful.map((r) => r.latency).reduce((a, b) => a + b) /
-            successful.length
+              successful.length
         : -1.0;
 
     return SmartPingResult(
@@ -106,8 +109,11 @@ class SmartPinger {
 
   /// Ping with retry capability
   static Future<PingResult> _pingWithRetry(
-      String endpoint, CancelToken? cancelToken,
-      {int maxRetries = 2, required Duration timeout}) async {
+    String endpoint,
+    CancelToken? cancelToken, {
+    int maxRetries = 2,
+    required Duration timeout,
+  }) async {
     for (int attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         final pingResult = await _pingSingle(
@@ -146,8 +152,10 @@ class SmartPinger {
 
   /// Single endpoint ping using TCP connection
   static Future<PingResult> _pingSingle(
-      String endpoint, CancelToken? cancelToken,
-      {required Duration timeout}) async {
+    String endpoint,
+    CancelToken? cancelToken, {
+    required Duration timeout,
+  }) async {
     final stopwatch = Stopwatch()..start();
 
     try {
@@ -155,15 +163,12 @@ class SmartPinger {
 
       final uri = Uri.parse(endpoint);
       final host = uri.host;
-      final port =
-          uri.port == 0 ? (uri.scheme == 'https' ? 443 : 80) : uri.port;
+      final port = uri.port == 0
+          ? (uri.scheme == 'https' ? 443 : 80)
+          : uri.port;
 
       // TCP connection test
-      final socket = await Socket.connect(
-        host,
-        port,
-        timeout: timeout,
-      );
+      final socket = await Socket.connect(host, port, timeout: timeout);
 
       socket.destroy();
       stopwatch.stop();

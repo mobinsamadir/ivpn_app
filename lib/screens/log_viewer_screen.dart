@@ -52,8 +52,11 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
                 color: Colors.grey[900],
                 child: Row(
                   children: [
-                    const Icon(Icons.info_outline,
-                        color: Colors.amber, size: 16),
+                    const Icon(
+                      Icons.info_outline,
+                      color: Colors.amber,
+                      size: 16,
+                    ),
                     const SizedBox(width: 5),
                     Text(
                       'Showing last ${logs.length} log entries',
@@ -81,7 +84,9 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
 
                     return Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 2),
+                        horizontal: 10,
+                        vertical: 2,
+                      ),
                       child: Text(
                         log,
                         style: TextStyle(

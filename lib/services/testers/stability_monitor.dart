@@ -23,11 +23,12 @@ class StabilityMonitor {
     final List<int> samples = [];
     int failureCount = 0;
     final startTime = DateTime.now();
-    final totalSamples =
-        (duration.inMilliseconds / interval.inMilliseconds).round();
+    final totalSamples = (duration.inMilliseconds / interval.inMilliseconds)
+        .round();
 
     onLog?.call(
-        "📈 [STABILITY] Starting Stability Monitor (${duration.inSeconds}s, $totalSamples samples)...");
+      "📈 [STABILITY] Starting Stability Monitor (${duration.inSeconds}s, $totalSamples samples)...",
+    );
 
     for (int i = 0; i < totalSamples; i++) {
       if (cancelToken?.isCancelled == true) {
@@ -67,10 +68,12 @@ class StabilityMonitor {
         ? 0.0
         : validSamples.reduce((a, b) => a + b) / validSamples.length;
 
-    final maxLatency =
-        validSamples.isEmpty ? 0 : validSamples.reduce((a, b) => a > b ? a : b);
-    final minLatency =
-        validSamples.isEmpty ? 0 : validSamples.reduce((a, b) => a < b ? a : b);
+    final maxLatency = validSamples.isEmpty
+        ? 0
+        : validSamples.reduce((a, b) => a > b ? a : b);
+    final minLatency = validSamples.isEmpty
+        ? 0
+        : validSamples.reduce((a, b) => a < b ? a : b);
 
     final metrics = StabilityMetrics(
       samples: samples,
@@ -86,7 +89,8 @@ class StabilityMonitor {
     );
 
     onLog?.call(
-        "📊 [STABILITY] Done. Jitter: ${metrics.jitter.toStringAsFixed(2)}ms, Loss: ${metrics.packetLoss.toStringAsFixed(1)}%");
+      "📊 [STABILITY] Done. Jitter: ${metrics.jitter.toStringAsFixed(2)}ms, Loss: ${metrics.packetLoss.toStringAsFixed(1)}%",
+    );
 
     return metrics;
   }
@@ -110,8 +114,9 @@ class StabilityMonitor {
 
     try {
       stopwatch.start();
-      final request =
-          await client.getUrl(Uri.parse("http://cp.cloudflare.com"));
+      final request = await client.getUrl(
+        Uri.parse("http://cp.cloudflare.com"),
+      );
 
       cancelToken?.addOnCancel(() {
         client.close(force: true);

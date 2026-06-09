@@ -21,7 +21,8 @@ class TestManager {
     // If there's an existing test, cancel it first
     if (_activeTests.containsKey(index)) {
       AdvancedLogger.debug(
-          "TestManager: Cancelling existing test for #$index before restart");
+        "TestManager: Cancelling existing test for #$index before restart",
+      );
       _activeTests[index]?.cancel();
     }
 
@@ -32,7 +33,8 @@ class TestManager {
 
   static void stopTest(int index) {
     AdvancedLogger.debug(
-        "TestManager: Manual stop requested for server #$index");
+      "TestManager: Manual stop requested for server #$index",
+    );
     _activeTests[index]?.cancel();
     _activeTests.remove(index);
   }
@@ -44,7 +46,8 @@ class TestManager {
 
   static void resetAll() {
     AdvancedLogger.debug(
-        "TestManager: RESET ALL called. Clearing all active tests.");
+      "TestManager: RESET ALL called. Clearing all active tests.",
+    );
     for (var token in _activeTests.values) {
       token.cancel();
     }
