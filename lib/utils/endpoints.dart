@@ -3,7 +3,6 @@ final List<String> adaptiveSpeedTestEndpoints = [
   'https://httpbin.org/bytes/100000', // 100KB
   'https://httpbin.org/bytes/500000', // 500KB
   'https://httpbin.org/bytes/1000000', // 1MB
-
   // Backup: Public speed test endpoints
   'https://speedtest.tele2.net/1MB.zip',
   'https://ipv4.download.thinkbroadband.com/5MB.zip',

@@ -30,8 +30,10 @@ class AdvancedLogger {
         logFile = File(p.join(p.dirname(exePath), 'iVPN_debug_log.txt'));
       } else {
         final directory = await getApplicationDocumentsDirectory();
-        final timestamp =
-            DateTime.now().toIso8601String().replaceAll(':', '-').split('.')[0];
+        final timestamp = DateTime.now()
+            .toIso8601String()
+            .replaceAll(':', '-')
+            .split('.')[0];
         logFile = File(p.join(directory.path, 'vpn_log_$timestamp.jsonl'));
       }
       _logFile = logFile;
@@ -44,7 +46,7 @@ class AdvancedLogger {
         'metadata': {
           'platform': Platform.operatingSystem,
           'version': Platform.operatingSystemVersion,
-        }
+        },
       });
 
       // Start periodic flush timer (5 seconds)
@@ -73,8 +75,12 @@ class AdvancedLogger {
   }
 
   /// Error level logging
-  static void error(String message,
-      {dynamic error, StackTrace? stackTrace, Map<String, dynamic>? metadata}) {
+  static void error(
+    String message, {
+    dynamic error,
+    StackTrace? stackTrace,
+    Map<String, dynamic>? metadata,
+  }) {
     final combinedMetadata = metadata ?? {};
     if (error != null) combinedMetadata['error'] = error.toString();
     if (stackTrace != null)
@@ -83,27 +89,43 @@ class AdvancedLogger {
   }
 
   /// Network request logging
-  static void networkRequest(String method, String url,
-      {Map<String, dynamic>? headers, dynamic body}) {
-    _log(LogLevel.info, 'HTTP $method $url', metadata: {
-      'type': 'network_request',
-      'method': method,
-      'url': url,
-      'headers': headers,
-      'body': body,
-    });
+  static void networkRequest(
+    String method,
+    String url, {
+    Map<String, dynamic>? headers,
+    dynamic body,
+  }) {
+    _log(
+      LogLevel.info,
+      'HTTP $method $url',
+      metadata: {
+        'type': 'network_request',
+        'method': method,
+        'url': url,
+        'headers': headers,
+        'body': body,
+      },
+    );
   }
 
   /// Network response logging
-  static void networkResponse(String url, int statusCode,
-      {dynamic body, Duration? duration}) {
-    _log(LogLevel.info, 'HTTP Response [$statusCode] $url', metadata: {
-      'type': 'network_response',
-      'url': url,
-      'statusCode': statusCode,
-      'body': body,
-      'durationMs': duration?.inMilliseconds,
-    });
+  static void networkResponse(
+    String url,
+    int statusCode, {
+    dynamic body,
+    Duration? duration,
+  }) {
+    _log(
+      LogLevel.info,
+      'HTTP Response [$statusCode] $url',
+      metadata: {
+        'type': 'network_response',
+        'url': url,
+        'statusCode': statusCode,
+        'body': body,
+        'durationMs': duration?.inMilliseconds,
+      },
+    );
   }
 
   /// Get the current log file path
@@ -114,8 +136,11 @@ class AdvancedLogger {
   }
 
   /// Private logging method
-  static void _log(LogLevel level, String message,
-      {Map<String, dynamic>? metadata}) {
+  static void _log(
+    LogLevel level,
+    String message, {
+    Map<String, dynamic>? metadata,
+  }) {
     // Release Mode: Only allow critical errors AND warnings (for native logs)
     if (kReleaseMode && level.index < LogLevel.warn.index) return;
 

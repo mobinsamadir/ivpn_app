@@ -5,10 +5,7 @@ import 'universal_ad_widget.dart';
 class FullScreenAdDialog extends StatefulWidget {
   final String unitId;
 
-  const FullScreenAdDialog({
-    super.key,
-    this.unitId = 'reward_ad',
-  });
+  const FullScreenAdDialog({super.key, this.unitId = 'reward_ad'});
 
   @override
   State<FullScreenAdDialog> createState() => _FullScreenAdDialogState();
@@ -72,29 +69,36 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
                         const Text(
                           'Premium Connection',
                           style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold),
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         // Timer Badge
                         if (!_canClose)
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 6),
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.redAccent.withValues(alpha: 0.8),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.timer,
-                                    color: Colors.white, size: 14),
+                                const Icon(
+                                  Icons.timer,
+                                  color: Colors.white,
+                                  size: 14,
+                                ),
                                 const SizedBox(width: 6),
                                 Text(
                                   '${_timeLeft}s',
                                   style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold),
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ],
                             ),
@@ -108,7 +112,8 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
                     child: Container(
                       width: double.infinity,
                       color: const Color(
-                          0xFF121212), // Inner background just in case
+                        0xFF121212,
+                      ), // Inner background just in case
                       child: Center(
                         child: UniversalAdWidget(slot: widget.unitId),
                       ),
@@ -146,7 +151,8 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
                             child: LinearProgressIndicator(
                               backgroundColor: Colors.black,
                               valueColor: AlwaysStoppedAnimation<Color>(
-                                  Colors.blueAccent),
+                                Colors.blueAccent,
+                              ),
                             ),
                           ),
                       ],
@@ -169,8 +175,11 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
                       shape: const CircleBorder(),
                       clipBehavior: Clip.hardEdge,
                       child: IconButton(
-                        icon: const Icon(Icons.close,
-                            color: Colors.white, size: 28),
+                        icon: const Icon(
+                          Icons.close,
+                          color: Colors.white,
+                          size: 28,
+                        ),
                         tooltip: 'Close & Claim Reward',
                         onPressed: () {
                           // Success!

@@ -80,28 +80,20 @@ class _UniversalAdWidgetState extends State<UniversalAdWidget> {
       width: widget.width ?? double.infinity,
       height: effectiveHeight,
       child: ConstrainedBox(
-          constraints: BoxConstraints.tightFor(height: effectiveHeight),
-          child: _buildContent(ad)),
+        constraints: BoxConstraints.tightFor(height: effectiveHeight),
+        child: _buildContent(ad),
+      ),
     );
   }
 
   Widget _buildContent(AdUnit ad) {
     switch (ad.type) {
       case 'webview':
-        return _WebViewAd(
-          mediaSource: ad.mediaSource,
-          targetUrl: ad.targetUrl,
-        );
+        return _WebViewAd(mediaSource: ad.mediaSource, targetUrl: ad.targetUrl);
       case 'image':
-        return _ImageAd(
-          imageUrl: ad.mediaSource,
-          targetUrl: ad.targetUrl,
-        );
+        return _ImageAd(imageUrl: ad.mediaSource, targetUrl: ad.targetUrl);
       case 'video':
-        return _VideoAd(
-          videoUrl: ad.mediaSource,
-          targetUrl: ad.targetUrl,
-        );
+        return _VideoAd(videoUrl: ad.mediaSource, targetUrl: ad.targetUrl);
       default:
         return const SizedBox.shrink();
     }
@@ -156,8 +148,9 @@ class _VideoAdState extends State<_VideoAd> {
   }
 
   Future<void> _initializePlayer() async {
-    _videoController =
-        VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl));
+    _videoController = VideoPlayerController.networkUrl(
+      Uri.parse(widget.videoUrl),
+    );
     await _videoController.initialize();
 
     _chewieController = ChewieController(
@@ -187,8 +180,10 @@ class _VideoAdState extends State<_VideoAd> {
     return GestureDetector(
       onTap: () {
         if (widget.targetUrl.isNotEmpty) {
-          launchUrl(Uri.parse(widget.targetUrl),
-              mode: LaunchMode.externalApplication);
+          launchUrl(
+            Uri.parse(widget.targetUrl),
+            mode: LaunchMode.externalApplication,
+          );
         }
       },
       child: Chewie(controller: _chewieController!),
@@ -199,7 +194,7 @@ class _VideoAdState extends State<_VideoAd> {
 class _WebViewAd extends StatelessWidget {
   final String mediaSource;
   final String
-      targetUrl; // Not used for iframe usually, but maybe for overlay click
+  targetUrl; // Not used for iframe usually, but maybe for overlay click
 
   const _WebViewAd({required this.mediaSource, required this.targetUrl});
 
@@ -221,7 +216,8 @@ class _WebViewAd extends StatelessWidget {
 
     // Step 3: Wrap in Full HTML Template (For Transparency & Centering)
     if (!content.contains("<html")) {
-      content = """
+      content =
+          """
       <!DOCTYPE html>
       <html>
       <head>
@@ -313,10 +309,7 @@ class _WindowsWebViewState extends State<_WindowsWebView> {
     if (!_isInitialized) {
       return const Center(child: CircularProgressIndicator());
     }
-    return Container(
-      color: Colors.transparent,
-      child: Webview(_controller),
-    );
+    return Container(color: Colors.transparent, child: Webview(_controller));
   }
 }
 
@@ -365,8 +358,10 @@ class _MobileWebViewState extends State<_MobileWebView> {
       children: [
         WebViewWidget(
           controller: _controller,
-          gestureRecognizers: <Factory<
-              OneSequenceGestureRecognizer>>{}, // Prevent scroll hijacking
+          gestureRecognizers:
+              <
+                Factory<OneSequenceGestureRecognizer>
+              >{}, // Prevent scroll hijacking
         ),
         if (_isLoading)
           const Center(

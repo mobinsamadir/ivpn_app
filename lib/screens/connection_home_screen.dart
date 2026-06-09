@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 // Explicit import for compute
 import 'dart:async';
 import 'dart:io';
@@ -61,15 +63,14 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   // 2. State Variables
   bool _isInitialized = false;
   bool _autoTestOnStartup = true;
+  bool _autoRefreshOnStartup = false;
   bool _isFetching = false;
   Timer? _timerUpdater;
   final Set<String> _activeTestIds = {};
 
   // Connection Control
-  bool _isConnectionCancelled = false;
   // CRITICAL FIX: Debounce Auto-Switch
   bool _isSwitching = false;
-  bool _userInitiatedDisconnect = false;
   String _lastNativeStatus = "DISCONNECTED";
   bool _isAdmin = true;
 
@@ -163,9 +164,11 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
             _rxBytes = 0;
             _txBytes = 0;
           });
-          if (!_userInitiatedDisconnect) {
+          if (!_configManager.userInitiatedDisconnect &&
+              !_configManager.isConnectionCancelled) {
             AdvancedLogger.warn(
-                "[HomeScreen] Unexpected disconnect. Attempting auto-switch...");
+              "[HomeScreen] Unexpected disconnect. Attempting auto-switch...",
+            );
             final validConfigs = _configManager.validatedConfigs;
             if (validConfigs.isNotEmpty) {
               if (_configManager.selectedConfig != null) {
@@ -178,7 +181,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
               );
             }
           }
-          _userInitiatedDisconnect = false;
+          _configManager.userInitiatedDisconnect = false;
+          _configManager.isConnectionCancelled = false;
         }
 
         // NEW: Post-Connect Logic (Anti-Censorship)
@@ -476,6 +480,12 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     // Check for updates (Background)
     if (mounted) {
       _configGistService.checkForUpdates(context);
+    }
+
+    // Auto Refresh on startup if enabled
+    if (_autoRefreshOnStartup) {
+      AdvancedLogger.info("[HomeScreen] Triggering Auto-Refresh on startup...");
+      await _refreshConfigsManual();
     }
 
     // Auto Test if configs exist
@@ -849,9 +859,14 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                           isSelected:
                               _configManager.selectedConfig?.id == config.id,
                           isTesting: _activeTestIds.contains(config.id),
-                          onTap: () {
+                          onTap: () async {
+                            final wasConnected = _configManager.isConnected;
                             _configManager.selectConfig(config);
                             setState(() {});
+                            if (wasConnected) {
+                              // Start the switch process properly within ConfigManager to avoid race conditions
+                              await _configManager.switchConfig(config);
+                            }
                           },
                           onTestLatency: () => _runSingleTest(config),
                           onTestSpeed: () => _runSingleTest(config),
@@ -887,13 +902,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   Future<void> _handleConnection() async {
     if (_configManager.isConnected ||
         _configManager.connectionStatus.toLowerCase().contains('connecting')) {
-      _userInitiatedDisconnect = true;
-      _isConnectionCancelled = true;
       await _configManager.stopAllOperations();
       return;
     }
-
-    _isConnectionCancelled = false;
 
     // Network Check
     if (!await _connectivityService.hasInternet()) {
@@ -919,19 +930,6 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
       if (!access.hasAccess) return;
     }
 
-    // NEW CHECK
-    if (_configManager.selectedConfig == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("❌ Please select a server from the list first."),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
-      // Reset status to avoid stuck 'Connecting...'
-      _configManager.setConnected(false, status: 'Ready');
-      return;
-    }
-
     if (_configManager.allConfigs.isEmpty) {
       _showToast("No configurations available. Please refresh.");
       return;
@@ -950,12 +948,12 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
       int waits = 0;
       while (_configManager.validatedConfigs.isEmpty &&
           waits < 15 &&
-          !_isConnectionCancelled) {
+          !_configManager.isConnectionCancelled) {
         await Future.delayed(const Duration(seconds: 1));
         waits++;
       }
 
-      if (_isConnectionCancelled) return;
+      if (_configManager.isConnectionCancelled) return;
 
       if (_configManager.validatedConfigs.isEmpty) {
         _showToast("No accessible servers found. Please update list.");
@@ -1125,17 +1123,27 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.arrow_downward,
-                    color: Colors.greenAccent, size: 16),
+                const Icon(
+                  Icons.arrow_downward,
+                  color: Colors.greenAccent,
+                  size: 16,
+                ),
                 const SizedBox(width: 4),
-                Text(_formatBytes(_rxBytes),
-                    style: const TextStyle(color: Colors.white70)),
+                Text(
+                  _formatBytes(_rxBytes),
+                  style: const TextStyle(color: Colors.white70),
+                ),
                 const SizedBox(width: 16),
-                const Icon(Icons.arrow_upward,
-                    color: Colors.blueAccent, size: 16),
+                const Icon(
+                  Icons.arrow_upward,
+                  color: Colors.blueAccent,
+                  size: 16,
+                ),
                 const SizedBox(width: 4),
-                Text(_formatBytes(_txBytes),
-                    style: const TextStyle(color: Colors.white70)),
+                Text(
+                  _formatBytes(_txBytes),
+                  style: const TextStyle(color: Colors.white70),
+                ),
               ],
             ),
           ),
@@ -1147,7 +1155,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     final configManager = ConfigManager();
     final isConnected = configManager.isConnected;
     final status = configManager.connectionStatus.toLowerCase();
-    final isConnecting = status.contains('connecting') ||
+    final isConnecting =
+        status.contains('connecting') ||
         status.contains('finding') ||
         status.contains('preparing') ||
         status.contains('testing');
@@ -1173,7 +1182,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                   ),
                   onPressed: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Refreshing servers...')));
+                      const SnackBar(content: Text('Refreshing servers...')),
+                    );
                   },
                   tooltip: 'Refresh Servers',
                 ),
@@ -1202,29 +1212,31 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                   colors: isConnected
                       ? [
                           const Color(0xFF11998E),
-                          const Color(0xFF38EF7D)
+                          const Color(0xFF38EF7D),
                         ] // Green/Teal
                       : (isConnecting
-                          ? [
-                              const Color(0xFFF2994A),
-                              const Color(0xFFF2C94C)
-                            ] // Orange/Yellow
-                          : [
-                              const Color(0xFF4A5568),
-                              const Color(0xFF2D3748)
-                            ]), // Dark Grey
+                            ? [
+                                const Color(0xFFF2994A),
+                                const Color(0xFFF2C94C),
+                              ] // Orange/Yellow
+                            : [
+                                const Color(0xFF4A5568),
+                                const Color(0xFF2D3748),
+                              ]), // Dark Grey
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: (isConnected
-                            ? const Color(0xFF38EF7D)
-                            : (isConnecting
-                                ? const Color(0xFFF2994A)
-                                : Colors.black))
-                        .withValues(
-                            alpha: isConnected || isConnecting ? 0.5 : 0.3),
+                    color:
+                        (isConnected
+                                ? const Color(0xFF38EF7D)
+                                : (isConnecting
+                                      ? const Color(0xFFF2994A)
+                                      : Colors.black))
+                            .withValues(
+                              alpha: isConnected || isConnecting ? 0.5 : 0.3,
+                            ),
                     blurRadius: isConnected || isConnecting ? 25 : 15,
                     spreadRadius: isConnected || isConnecting ? 8 : 2,
                     offset: const Offset(0, 8),
@@ -1239,7 +1251,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                           width: 50,
                           height: 50,
                           child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 3),
+                            color: Colors.white,
+                            strokeWidth: 3,
+                          ),
                         )
                       : Icon(
                           Icons.power_settings_new,
@@ -1297,9 +1311,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   }
 
   void _refreshServers() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Refreshing servers...')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Refreshing servers...')));
   }
 
   Future<void> _showAddServerDialog() async {
@@ -1398,19 +1412,44 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     );
   }
 
+  Future<void> _savePreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('autoTestOnStartup', _autoTestOnStartup);
+    await prefs.setBool('autoRefreshOnStartup', _autoRefreshOnStartup);
+  }
+
   Widget _buildAutoTestToggle() {
-    return SwitchListTile(
-      title: const Text(
-        'Auto-Test on Startup',
-        style: TextStyle(color: Colors.white),
-      ),
-      value: _autoTestOnStartup,
-      activeThumbColor: Colors.blueAccent,
-      onChanged: (val) {
-        setState(() {
-          _autoTestOnStartup = val;
-        });
-      },
+    return Column(
+      children: [
+        SwitchListTile(
+          title: const Text(
+            'Auto-Test on Startup',
+            style: TextStyle(color: Colors.white),
+          ),
+          value: _autoTestOnStartup,
+          activeThumbColor: Colors.blueAccent,
+          onChanged: (val) {
+            setState(() {
+              _autoTestOnStartup = val;
+            });
+            _savePreferences();
+          },
+        ),
+        SwitchListTile(
+          title: const Text(
+            'Auto-Refresh on Startup',
+            style: TextStyle(color: Colors.white),
+          ),
+          value: _autoRefreshOnStartup,
+          activeThumbColor: Colors.blueAccent,
+          onChanged: (val) {
+            setState(() {
+              _autoRefreshOnStartup = val;
+            });
+            _savePreferences();
+          },
+        ),
+      ],
     );
   }
 
@@ -1428,11 +1467,17 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading:
-                    const Icon(Icons.delete_forever, color: Colors.redAccent),
-                title: const Text('حذف همه کانفیگ‌ها',
-                    style: TextStyle(
-                        color: Colors.white, fontFamily: 'Vazirmatn')),
+                leading: const Icon(
+                  Icons.delete_forever,
+                  color: Colors.redAccent,
+                ),
+                title: const Text(
+                  'حذف همه کانفیگ‌ها',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontFamily: 'Vazirmatn',
+                  ),
+                ),
                 onTap: () async {
                   Navigator.pop(ctx);
                   await _configManager.clearAllData();
@@ -1441,48 +1486,68 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
               ),
               ListTile(
                 leading: const Icon(Icons.wifi_off, color: Colors.orangeAccent),
-                title: const Text('حذف کانفیگ‌های غیرقابل دسترس',
-                    style: TextStyle(
-                        color: Colors.white, fontFamily: 'Vazirmatn')),
+                title: const Text(
+                  'حذف کانفیگ‌های غیرقابل دسترس',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontFamily: 'Vazirmatn',
+                  ),
+                ),
                 onTap: () async {
                   Navigator.pop(ctx);
-                  final removed =
-                      await _configManager.removeConfigs(dead: true);
+                  final removed = await _configManager.removeConfigs(
+                    dead: true,
+                  );
                   _showToast("$removed کانفیگ غیرقابل دسترس حذف شد");
                 },
               ),
               ListTile(
                 leading: const Icon(
-                    Icons.signal_cellular_connected_no_internet_4_bar,
-                    color: Colors.yellowAccent),
-                title: const Text('حذف کانفیگ‌های ضعیف',
-                    style: TextStyle(
-                        color: Colors.white, fontFamily: 'Vazirmatn')),
+                  Icons.signal_cellular_connected_no_internet_4_bar,
+                  color: Colors.yellowAccent,
+                ),
+                title: const Text(
+                  'حذف کانفیگ‌های ضعیف',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontFamily: 'Vazirmatn',
+                  ),
+                ),
                 onTap: () async {
                   Navigator.pop(ctx);
-                  final removed =
-                      await _configManager.removeConfigs(weak: true);
+                  final removed = await _configManager.removeConfigs(
+                    weak: true,
+                  );
                   _showToast("$removed کانفیگ ضعیف حذف شد");
                 },
               ),
               ListTile(
                 leading: const Icon(Icons.speed, color: Colors.blueAccent),
-                title: const Text('حذف کانفیگ‌های بدون تست سرعت',
-                    style: TextStyle(
-                        color: Colors.white, fontFamily: 'Vazirmatn')),
+                title: const Text(
+                  'حذف کانفیگ‌های بدون تست سرعت',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontFamily: 'Vazirmatn',
+                  ),
+                ),
                 onTap: () async {
                   Navigator.pop(ctx);
-                  final removed =
-                      await _configManager.removeConfigs(untestedSpeed: true);
+                  final removed = await _configManager.removeConfigs(
+                    untestedSpeed: true,
+                  );
                   _showToast("$removed کانفیگ بدون تست سرعت حذف شد");
                 },
               ),
               const Divider(color: Colors.white24),
               ListTile(
                 leading: const Icon(Icons.close, color: Colors.grey),
-                title: const Text('لغو',
-                    style: TextStyle(
-                        color: Colors.white, fontFamily: 'Vazirmatn')),
+                title: const Text(
+                  'لغو',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontFamily: 'Vazirmatn',
+                  ),
+                ),
                 onTap: () => Navigator.pop(ctx),
               ),
             ],

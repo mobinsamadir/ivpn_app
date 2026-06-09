@@ -44,7 +44,8 @@ class AccessManager extends ChangeNotifier {
       if (expirationTs != null) {
         _expirationDate = DateTime.fromMillisecondsSinceEpoch(expirationTs);
         AdvancedLogger.info(
-            "🕒 [AccessManager] Loaded expiration: $_expirationDate");
+          "🕒 [AccessManager] Loaded expiration: $_expirationDate",
+        );
       } else {
         AdvancedLogger.info("🕒 [AccessManager] No active plan found.");
       }
@@ -75,7 +76,8 @@ class AccessManager extends ChangeNotifier {
     await _save();
     notifyListeners();
     AdvancedLogger.info(
-        "🎁 [AccessManager] Time added! New expiry: $_expirationDate");
+      "🎁 [AccessManager] Time added! New expiry: $_expirationDate",
+    );
   }
 
   // Internal Save

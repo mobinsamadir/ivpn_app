@@ -52,12 +52,14 @@ List<VpnConfigWithMetrics> _buildQueueInIsolate(Map<String, dynamic> args) {
 
 // Top-level function for batch processing in Isolate
 Map<String, Map<String, dynamic>> batchProcessConfigsInIsolate(
-    List<VpnConfigWithMetrics> configs) {
+  List<VpnConfigWithMetrics> configs,
+) {
   final Map<String, Map<String, dynamic>> results = {};
   for (final config in configs) {
     try {
-      final details =
-          SingboxConfigGenerator.extractServerDetails(config.rawConfig);
+      final details = SingboxConfigGenerator.extractServerDetails(
+        config.rawConfig,
+      );
       if (details != null && details['host'] != null) {
         results[config.id] = details;
       }
@@ -139,7 +141,8 @@ class FunnelService {
     _speedFinished = 0;
 
     AdvancedLogger.info(
-        "FunnelService: Starting Pipeline (RetestDead: $retestDead)");
+      "FunnelService: Starting Pipeline (RetestDead: $retestDead)",
+    );
 
     // Start UI Throttle Timer (500ms)
     _startUiThrottle();
@@ -159,17 +162,20 @@ class FunnelService {
     // 1.5 Batch Pre-process Configs (Extract Host/Port in Isolate)
     try {
       AdvancedLogger.info(
-          "FunnelService: Pre-processing $_totalConfigs configs in Isolate...");
+        "FunnelService: Pre-processing $_totalConfigs configs in Isolate...",
+      );
       _cachedServerDetails = await compute(batchProcessConfigsInIsolate, all);
       AdvancedLogger.info(
-          "FunnelService: Pre-processing complete. Cached ${_cachedServerDetails.length} valid details.");
+        "FunnelService: Pre-processing complete. Cached ${_cachedServerDetails.length} valid details.",
+      );
     } catch (e) {
       AdvancedLogger.error("FunnelService: Batch processing failed: $e");
       _cachedServerDetails = {};
     }
 
     AdvancedLogger.info(
-        "FunnelService: Loaded $_totalConfigs configs into TCP Queue.");
+      "FunnelService: Loaded $_totalConfigs configs into TCP Queue.",
+    );
 
     // 2. Start Worker Pools
     // We spawn fixed number of loops that pull from queues
@@ -180,8 +186,9 @@ class FunnelService {
 
   void _startUiThrottle() {
     _uiThrottleTimer?.cancel();
-    _uiThrottleTimer =
-        Timer.periodic(const Duration(milliseconds: 500), (timer) {
+    _uiThrottleTimer = Timer.periodic(const Duration(milliseconds: 500), (
+      timer,
+    ) {
       if (!_isRunning) {
         timer.cancel();
         return;
@@ -247,8 +254,11 @@ class FunnelService {
 
           try {
             // 2-second timeout for fast fail
-            final socket = await Socket.connect(host, port,
-                timeout: const Duration(seconds: 2));
+            final socket = await Socket.connect(
+              host,
+              port,
+              timeout: const Duration(seconds: 2),
+            );
             socket.destroy();
             passed = true;
           } catch (_) {
@@ -290,8 +300,10 @@ class FunnelService {
       try {
         // STAGE 2: HTTP Connectivity (Strict 204)
         // This uses EphemeralTester which handles the Semaphore/Locking
-        final result =
-            await _tester.runTest(config, mode: TestMode.connectivity);
+        final result = await _tester.runTest(
+          config,
+          mode: TestMode.connectivity,
+        );
 
         if (result.funnelStage >= 2) {
           // Success (2 or 3)

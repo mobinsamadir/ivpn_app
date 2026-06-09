@@ -12,12 +12,16 @@ class AdManagerService {
   factory AdManagerService() => _instance;
   AdManagerService._internal();
 
-  final ValueNotifier<AdConfig?> configNotifier =
-      ValueNotifier<AdConfig?>(null);
+  final ValueNotifier<AdConfig?> configNotifier = ValueNotifier<AdConfig?>(
+    null,
+  );
 
   // Base64 Encoded Ad Config URL
-  static final String _adUrl = utf8.decode(base64.decode(
-      'aHR0cHM6Ly9naXN0LmdpdGh1YnVzZXJjb250ZW50LmNvbS9tb2JpbnNhbWFkaXIvMDM3Y2RhYjhiODcxM2UxYzVhNTJkODE1NTM5ZjU2MzgvcmF3LzA4NjgzM2E5N2QyMzZkOWNmNTdkNDI3YzQ2YzIyNjg5MDQyNDRhN2UvYWRfY29uZmlnLmpzb24='));
+  static final String _adUrl = utf8.decode(
+    base64.decode(
+      'aHR0cHM6Ly9naXN0LmdpdGh1YnVzZXJjb250ZW50LmNvbS9tb2JpbnNhbWFkaXIvMDM3Y2RhYjhiODcxM2UxYzVhNTJkODE1NTM5ZjU2MzgvcmF3LzA4NjgzM2E5N2QyMzZkOWNmNTdkNDI3YzQ2YzIyNjg5MDQyNDRhN2UvYWRfY29uZmlnLmpzb24=',
+    ),
+  );
 
   static const String _storageKey = "ad_config_cache";
 
@@ -48,33 +52,35 @@ class AdManagerService {
         "type": "webview",
         "mediaSource": _defaultAdHtml,
         "targetUrl": "",
-        "timerSeconds": 0
+        "timerSeconds": 0,
       },
       "home_banner_bottom": {
         "isEnabled": true,
         "type": "webview",
         "mediaSource": _defaultAdHtml,
         "targetUrl": "",
-        "timerSeconds": 0
+        "timerSeconds": 0,
       },
       "reward_ad": {
         "isEnabled": true,
         "type": "webview",
         "mediaSource": _defaultAdHtml,
         "targetUrl": "",
-        "timerSeconds": 10 // Timer for reward ad
-      }
-    }
+        "timerSeconds": 10, // Timer for reward ad
+      },
+    },
   };
 
   bool _initialized = false;
 
   // CRITICAL FIX: Add Timeouts to prevent hanging if GitHub/Gist is blocked
-  final Dio _dio = Dio(BaseOptions(
-    connectTimeout: const Duration(seconds: 5),
-    receiveTimeout: const Duration(seconds: 5),
-    sendTimeout: const Duration(seconds: 5),
-  ));
+  final Dio _dio = Dio(
+    BaseOptions(
+      connectTimeout: const Duration(seconds: 5),
+      receiveTimeout: const Duration(seconds: 5),
+      sendTimeout: const Duration(seconds: 5),
+    ),
+  );
 
   Future<void> initialize() async {
     if (_initialized) return;
@@ -110,7 +116,8 @@ class AdManagerService {
         final cachedConfig = AdConfig.fromJson(jsonMap);
         configNotifier.value = cachedConfig;
         AdvancedLogger.info(
-            "[AdManager] Loaded cached config: ${cachedConfig.configVersion}");
+          "[AdManager] Loaded cached config: ${cachedConfig.configVersion}",
+        );
       }
     } catch (e) {
       AdvancedLogger.warn("[AdManager] Cache load failed: $e");
@@ -126,7 +133,8 @@ class AdManagerService {
       if (response.data != null) {
         final raw = response.data.toString();
         AdvancedLogger.info(
-            "[AdManager] Raw Response: ${raw.length > 200 ? raw.substring(0, 200) : raw}");
+          "[AdManager] Raw Response: ${raw.length > 200 ? raw.substring(0, 200) : raw}",
+        );
       }
 
       if (response.statusCode == 200 && response.data != null) {
@@ -138,7 +146,8 @@ class AdManagerService {
         final remoteConfig = AdConfig.fromJson(data);
         configNotifier.value = remoteConfig;
         AdvancedLogger.info(
-            "[AdManager] Success! Updating cache and UI. Version: ${remoteConfig.configVersion}");
+          "[AdManager] Success! Updating cache and UI. Version: ${remoteConfig.configVersion}",
+        );
 
         // Cache it
         final prefs = await SharedPreferences.getInstance();
@@ -163,17 +172,20 @@ class AdManagerService {
 
     if (configNotifier.value == null) {
       AdvancedLogger.info(
-          "[AdManager] Fallback Triggered! Using hardcoded HTML.");
+        "[AdManager] Fallback Triggered! Using hardcoded HTML.",
+      );
       try {
         final defaultConfig = AdConfig.fromJson(_defaultFallbackMap);
         configNotifier.value = defaultConfig;
       } catch (e) {
         AdvancedLogger.error(
-            "[AdManager] Critical: Failed to apply fallback: $e");
+          "[AdManager] Critical: Failed to apply fallback: $e",
+        );
       }
     } else {
       AdvancedLogger.info(
-          "[AdManager] Network failed, but keeping existing config (Cache/Default).");
+        "[AdManager] Network failed, but keeping existing config (Cache/Default).",
+      );
     }
   }
 
@@ -185,7 +197,8 @@ class AdManagerService {
     if (!context.mounted) return false;
 
     AdvancedLogger.info(
-        "[AdManager] Requesting Pre-Connection Ad (Full Screen Wall)...");
+      "[AdManager] Requesting Pre-Connection Ad (Full Screen Wall)...",
+    );
     try {
       // Using Navigator.push with FullScreenAdDialog for "The Wall" experience
       final result = await Navigator.of(context).push<bool>(

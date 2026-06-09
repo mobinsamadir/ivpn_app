@@ -81,7 +81,8 @@ class EphemeralTester {
   static void killAll() {
     if (!Platform.isWindows) return; // Safety check
     AdvancedLogger.info(
-        "EphemeralTester: Killing all ${_activeProcesses.length} active processes...");
+      "EphemeralTester: Killing all ${_activeProcesses.length} active processes...",
+    );
     for (var p in _activeProcesses) {
       try {
         p.kill(ProcessSignal.sigkill);
@@ -94,8 +95,10 @@ class EphemeralTester {
 
   /// Runs the Funnel Test on a specific config based on the mode.
   /// Returns a VpnConfigWithMetrics object with updated stageResults and scores.
-  Future<VpnConfigWithMetrics> runTest(VpnConfigWithMetrics config,
-      {TestMode mode = TestMode.speed}) async {
+  Future<VpnConfigWithMetrics> runTest(
+    VpnConfigWithMetrics config, {
+    TestMode mode = TestMode.speed,
+  }) async {
     final completer = Completer<VpnConfigWithMetrics>();
 
     // Variables for Watchdog Cleanup
@@ -107,7 +110,8 @@ class EphemeralTester {
       if (!isCompleted) {
         isCompleted = true;
         AdvancedLogger.warn(
-            "[EphemeralTester] WATCHDOG TRIGGERED for ${config.name}. Force killing process...");
+          "[EphemeralTester] WATCHDOG TRIGGERED for ${config.name}. Force killing process...",
+        );
 
         if (processForCleanup != null) {
           try {
@@ -121,44 +125,51 @@ class EphemeralTester {
         }
 
         if (!completer.isCompleted) {
-          completer.complete(config.copyWith(
-            funnelStage: 0,
-            failureReason: "Strict Watchdog Timeout",
-            lastFailedStage: "Watchdog_Timeout",
-            failureCount: config.failureCount + 1,
-            lastTestedAt: DateTime.now(),
-            ping: -1,
-          ));
+          completer.complete(
+            config.copyWith(
+              funnelStage: 0,
+              failureReason: "Strict Watchdog Timeout",
+              lastFailedStage: "Watchdog_Timeout",
+              failureCount: config.failureCount + 1,
+              lastTestedAt: DateTime.now(),
+              ping: -1,
+            ),
+          );
         }
       }
     });
 
     void setProcess(Process? p) => processForCleanup = p;
     void setPort(
-        int p) {} // Not needed here anymore, runTestInternal handles port
+      int p,
+    ) {} // Not needed here anymore, runTestInternal handles port
 
-    _runTestInternal(config, mode, setProcess, setPort).then((result) {
-      if (!isCompleted) {
-        isCompleted = true;
-        timer.cancel();
-        if (!completer.isCompleted) completer.complete(result);
-      }
-    }).catchError((e) {
-      if (!isCompleted) {
-        isCompleted = true;
-        timer.cancel();
-        if (!completer.isCompleted) {
-          completer.complete(config.copyWith(
-            funnelStage: 0,
-            failureReason: "Test Error: $e",
-            lastFailedStage: "Error",
-            failureCount: config.failureCount + 1,
-            lastTestedAt: DateTime.now(),
-            ping: -1,
-          ));
-        }
-      }
-    });
+    _runTestInternal(config, mode, setProcess, setPort)
+        .then((result) {
+          if (!isCompleted) {
+            isCompleted = true;
+            timer.cancel();
+            if (!completer.isCompleted) completer.complete(result);
+          }
+        })
+        .catchError((e) {
+          if (!isCompleted) {
+            isCompleted = true;
+            timer.cancel();
+            if (!completer.isCompleted) {
+              completer.complete(
+                config.copyWith(
+                  funnelStage: 0,
+                  failureReason: "Test Error: $e",
+                  lastFailedStage: "Error",
+                  failureCount: config.failureCount + 1,
+                  lastTestedAt: DateTime.now(),
+                  ping: -1,
+                ),
+              );
+            }
+          }
+        });
 
     return completer.future;
   }
@@ -174,8 +185,10 @@ class EphemeralTester {
       // STAGE 1: TCP Check (Concurrent - No Semaphore)
       try {
         // Offload parsing to Isolate
-        final details =
-            await compute(_extractHostPortWrapper, config.rawConfig);
+        final details = await compute(
+          _extractHostPortWrapper,
+          config.rawConfig,
+        );
         if (details == null)
           throw Exception("Could not extract server details");
 
@@ -184,8 +197,11 @@ class EphemeralTester {
 
         Socket? socket;
         try {
-          socket = await Socket.connect(host, port,
-              timeout: const Duration(seconds: 3));
+          socket = await Socket.connect(
+            host,
+            port,
+            timeout: const Duration(seconds: 3),
+          );
           socket.destroy();
         } catch (e) {
           throw Exception("Stage 1 (TCP) Failed: $e");
@@ -239,14 +255,16 @@ class EphemeralTester {
         }
 
         AdvancedLogger.warn(
-            '[TESTER] Native Process Spawned (via Service). Port: $proxyPort');
+          '[TESTER] Native Process Spawned (via Service). Port: $proxyPort',
+        );
 
         if (proxyPort <= 0) {
           throw Exception("Early Exit: Native Proxy Failed (Code: $proxyPort)");
         }
 
         AdvancedLogger.warn(
-            '[TESTER] Waiting for local socket to become ready...');
+          '[TESTER] Waiting for local socket to become ready...',
+        );
 
         // Setup HttpClient
         final client = HttpClient();
@@ -259,14 +277,17 @@ class EphemeralTester {
           final sw = Stopwatch()..start();
           try {
             AdvancedLogger.warn(
-                '[TESTER] HTTP Probe started to http://127.0.0.1:$proxyPort');
-            final req = await client
-                .getUrl(Uri.parse('https://www.google.com/generate_204'));
+              '[TESTER] HTTP Probe started to http://127.0.0.1:$proxyPort',
+            );
+            final req = await client.getUrl(
+              Uri.parse('https://www.google.com/generate_204'),
+            );
             final resp = await req.close().timeout(const Duration(seconds: 5));
             sw.stop();
 
             AdvancedLogger.warn(
-                '[TESTER] HTTP Response received: ${resp.statusCode}');
+              '[TESTER] HTTP Response received: ${resp.statusCode}',
+            );
 
             if (resp.statusCode == 204) {
               latency = sw.elapsedMilliseconds;
@@ -285,8 +306,9 @@ class EphemeralTester {
             final speedSw = Stopwatch();
             try {
               speedSw.start();
-              final speedReq = await client.getUrl(Uri.parse(
-                  'https://speed.cloudflare.com/__down?bytes=1000000'));
+              final speedReq = await client.getUrl(
+                Uri.parse('https://speed.cloudflare.com/__down?bytes=1000000'),
+              );
               final speedResp = await speedReq.close();
 
               await speedResp
@@ -341,17 +363,21 @@ class EphemeralTester {
       }
 
       return config.copyWith(
-          funnelStage: stage3Success ? 3 : 2,
-          speedScore: score,
-          stageResults: newStageResults,
-          failureCount: 0,
-          isAlive: true,
-          lastTestedAt: DateTime.now(),
-          lastSuccessfulConnectionTime: DateTime.now().millisecondsSinceEpoch,
-          deviceMetrics: config
-              .updateMetrics(
-                  deviceId: "android_verified", ping: latency, speed: speedMbps)
-              .deviceMetrics);
+        funnelStage: stage3Success ? 3 : 2,
+        speedScore: score,
+        stageResults: newStageResults,
+        failureCount: 0,
+        isAlive: true,
+        lastTestedAt: DateTime.now(),
+        lastSuccessfulConnectionTime: DateTime.now().millisecondsSinceEpoch,
+        deviceMetrics: config
+            .updateMetrics(
+              deviceId: "android_verified",
+              ping: latency,
+              speed: speedMbps,
+            )
+            .deviceMetrics,
+      );
     } else {
       // --- WINDOWS / DESKTOP PATH ---
       await _windowsSemaphore.acquire();
@@ -375,8 +401,9 @@ class EphemeralTester {
 
         final binPath = await BinaryManager.ensureBinary();
         final tempDir = await getTemporaryDirectory();
-        tempConfigFile =
-            File(p.join(tempDir.path, 'test_${config.id}_$testId.json'));
+        tempConfigFile = File(
+          p.join(tempDir.path, 'test_${config.id}_$testId.json'),
+        );
 
         final jsonConfig = await compute(_generateConfigWrapper, {
           'rawConfig': config.rawConfig,
@@ -388,7 +415,7 @@ class EphemeralTester {
         parsedJson['log'] = {
           "level": "fatal",
           "output": "stderr",
-          "timestamp": true
+          "timestamp": true,
         };
         if (parsedJson['inbounds'] is List) {
           for (var inbound in parsedJson['inbounds']) {
@@ -406,20 +433,24 @@ class EphemeralTester {
           environment: {'ENABLE_DEPRECATED_SPECIAL_OUTBOUNDS': 'true'},
         );
 
-        process = await processFuture.timeout(const Duration(seconds: 5),
-            onTimeout: () {
-          throw TimeoutException("Process spawn timed out");
-        });
+        process = await processFuture.timeout(
+          const Duration(seconds: 5),
+          onTimeout: () {
+            throw TimeoutException("Process spawn timed out");
+          },
+        );
 
         AdvancedLogger.warn(
-            '[TESTER] Native Process Spawned. PID: ${process!.pid}');
+          '[TESTER] Native Process Spawned. PID: ${process!.pid}',
+        );
 
         onProcess(process); // Register for watchdog
         registerProcess(process!);
         await Future.delayed(const Duration(milliseconds: 500));
 
         AdvancedLogger.warn(
-            '[TESTER] Waiting for local socket to become ready...');
+          '[TESTER] Waiting for local socket to become ready...',
+        );
 
         // Setup Client
         // FIX: SingboxConfigGenerator sets HTTP port to listenPort + 1
@@ -432,8 +463,11 @@ class EphemeralTester {
         int attempts = 0;
         while (attempts < 3) {
           try {
-            final socket = await Socket.connect('127.0.0.1', port,
-                timeout: const Duration(milliseconds: 1500));
+            final socket = await Socket.connect(
+              '127.0.0.1',
+              port,
+              timeout: const Duration(milliseconds: 1500),
+            );
             socket.destroy();
             stage1Success = true;
             break;
@@ -449,14 +483,17 @@ class EphemeralTester {
         final sw = Stopwatch()..start();
         try {
           AdvancedLogger.warn(
-              '[TESTER] HTTP Probe started to http://127.0.0.1:${port + 1}');
-          final req = await dartHttpClient
-              .getUrl(Uri.parse('https://www.google.com/generate_204'));
+            '[TESTER] HTTP Probe started to http://127.0.0.1:${port + 1}',
+          );
+          final req = await dartHttpClient.getUrl(
+            Uri.parse('https://www.google.com/generate_204'),
+          );
           final resp = await req.close().timeout(const Duration(seconds: 5));
           sw.stop();
 
           AdvancedLogger.warn(
-              '[TESTER] HTTP Response received: ${resp.statusCode}');
+            '[TESTER] HTTP Response received: ${resp.statusCode}',
+          );
 
           if (resp.statusCode == 204) {
             latency = sw.elapsedMilliseconds;
@@ -476,7 +513,8 @@ class EphemeralTester {
           try {
             speedSw.start();
             final speedReq = await dartHttpClient.getUrl(
-                Uri.parse('https://speed.cloudflare.com/__down?bytes=1000000'));
+              Uri.parse('https://speed.cloudflare.com/__down?bytes=1000000'),
+            );
             final speedResp = await speedReq.close();
             await speedResp
                 .listen((chunk) {
@@ -499,27 +537,30 @@ class EphemeralTester {
         if (latency > 0) score += (1000 ~/ latency).clamp(0, 50).toInt();
 
         final finalStage = (speedMbps > 0) ? 3 : 2;
-        final newStageResults =
-            Map<String, TestResult>.from(config.stageResults);
+        final newStageResults = Map<String, TestResult>.from(
+          config.stageResults,
+        );
         newStageResults['TCP'] = TestResult(success: true);
         newStageResults['HTTP'] = TestResult(success: true, latency: latency);
         if (speedMbps > 0)
           newStageResults['Speed'] = TestResult(success: true, latency: 0);
 
         return config.copyWith(
-            funnelStage: finalStage,
-            speedScore: score,
-            stageResults: newStageResults,
-            failureCount: 0,
-            isAlive: true,
-            lastTestedAt: DateTime.now(),
-            lastSuccessfulConnectionTime: DateTime.now().millisecondsSinceEpoch,
-            deviceMetrics: config
-                .updateMetrics(
-                    deviceId: "windows_ephemeral",
-                    ping: latency,
-                    speed: speedMbps)
-                .deviceMetrics);
+          funnelStage: finalStage,
+          speedScore: score,
+          stageResults: newStageResults,
+          failureCount: 0,
+          isAlive: true,
+          lastTestedAt: DateTime.now(),
+          lastSuccessfulConnectionTime: DateTime.now().millisecondsSinceEpoch,
+          deviceMetrics: config
+              .updateMetrics(
+                deviceId: "windows_ephemeral",
+                ping: latency,
+                speed: speedMbps,
+              )
+              .deviceMetrics,
+        );
       } catch (e) {
         AdvancedLogger.warn("EphemeralTester Error (${config.name}): $e");
         String failedStage = "Init";
@@ -542,6 +583,9 @@ class EphemeralTester {
         dartHttpClient.close();
         try {
           if (process != null) {
+            AdvancedLogger.info(
+              "[EphemeralTester] Hard killing native process PID: ${process.pid} in finally block",
+            );
             try {
               process.kill(ProcessSignal.sigkill);
             } catch (_) {}

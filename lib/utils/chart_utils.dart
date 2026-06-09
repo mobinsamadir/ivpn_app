@@ -24,14 +24,16 @@ class ChartUtils {
     double mean = validSamples.reduce((a, b) => a + b) / validSamples.length;
     double variance =
         validSamples.map((x) => pow(x - mean, 2)).reduce((a, b) => a + b) /
-            validSamples.length;
+        validSamples.length;
 
     return sqrt(variance);
   }
 
   /// Calculates Moving Average for UI smoothing
   static List<double> calculateMovingAverage(
-      List<int> samples, int windowSize) {
+    List<int> samples,
+    int windowSize,
+  ) {
     if (samples.isEmpty) return [];
 
     List<double> result = [];

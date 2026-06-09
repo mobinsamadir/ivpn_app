@@ -43,88 +43,101 @@ void main() {
     );
   };
 
-  runZonedGuarded(() async {
-    // 3. Robust Initialization with Timeouts & Try-Catch
-    // WindowManager (Desktop)
-    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-      try {
-        await windowManager
-            .ensureInitialized()
-            .timeout(const Duration(seconds: 2));
-      } catch (e) {
-        debugPrint("WindowManager init failed or timed out: $e");
+  runZonedGuarded(
+    () async {
+      // 3. Robust Initialization with Timeouts & Try-Catch
+      // WindowManager (Desktop)
+      if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+        try {
+          await windowManager.ensureInitialized().timeout(
+            const Duration(seconds: 2),
+          );
+        } catch (e) {
+          debugPrint("WindowManager init failed or timed out: $e");
+        }
       }
-    }
 
-    // Initialize Loggers (Non-critical: Don't block app start)
-    try {
-      await AdvancedLogger.init().timeout(const Duration(seconds: 2));
-      AdvancedLogger.info('🚀 IVPN App Initialized', metadata: {
-        'platform': Platform.operatingSystem,
-        'version': Platform.operatingSystemVersion,
-      });
+      // Initialize Loggers (Non-critical: Don't block app start)
+      try {
+        await AdvancedLogger.init().timeout(const Duration(seconds: 2));
+        AdvancedLogger.info(
+          '🚀 IVPN App Initialized',
+          metadata: {
+            'platform': Platform.operatingSystem,
+            'version': Platform.operatingSystemVersion,
+          },
+        );
 
-      await FileLogger.init().timeout(const Duration(seconds: 2));
-      FileLogger.log("Application starting...");
-    } catch (e) {
-      debugPrint("Logger initialization warning: $e");
-    }
+        await FileLogger.init().timeout(const Duration(seconds: 2));
+        FileLogger.log("Application starting...");
+      } catch (e) {
+        debugPrint("Logger initialization warning: $e");
+      }
 
-    // Setup Global Crash Recovery
-    // FlutterError.onError = (details) {
-    //   FlutterError.presentError(details);
-    //   try {
-    //     AdvancedLogger.error("GLOBAL FLUTTER ERROR", error: details.exception, stackTrace: details.stack);
-    //     CleanupUtils.emergencyCleanup();
-    //   } catch (_) {}
-    // };
+      // Setup Global Crash Recovery
+      // FlutterError.onError = (details) {
+      //   FlutterError.presentError(details);
+      //   try {
+      //     AdvancedLogger.error("GLOBAL FLUTTER ERROR", error: details.exception, stackTrace: details.stack);
+      //     CleanupUtils.emergencyCleanup();
+      //   } catch (_) {}
+      // };
 
-    // Initialize Core Services Globally
-    try {
-      // Critical: SharedPreferences with Timeout
-      await SharedPreferences.getInstance().timeout(const Duration(seconds: 5));
-    } catch (e) {
-      debugPrint("CRITICAL: SharedPreferences failed to load: $e");
-      // Fallback: If SharedPreferences fails, show Fatal Error Screen via runApp
-      runApp(MaterialApp(
-        home: Scaffold(
-          backgroundColor: Colors.black,
-          body: Center(
-            child: Text(
-              "Fatal Error: Storage Initialization Failed.\n$e",
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.red),
+      // Initialize Core Services Globally
+      try {
+        // Critical: SharedPreferences with Timeout
+        await SharedPreferences.getInstance().timeout(
+          const Duration(seconds: 5),
+        );
+      } catch (e) {
+        debugPrint("CRITICAL: SharedPreferences failed to load: $e");
+        // Fallback: If SharedPreferences fails, show Fatal Error Screen via runApp
+        runApp(
+          MaterialApp(
+            home: Scaffold(
+              backgroundColor: Colors.black,
+              body: Center(
+                child: Text(
+                  "Fatal Error: Storage Initialization Failed.\n$e",
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.red),
+                ),
+              ),
             ),
           ),
+        );
+        return; // Stop execution
+      }
+
+      final configManager = ConfigManager(); // Create Global Instance Here
+
+      runApp(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider(create: (context) => ThemeProvider()),
+            // Inject Global ConfigManager (Critical Fix)
+            ChangeNotifierProvider.value(value: configManager),
+          ],
+          child: const GlobalWindowListener(child: MyApp()),
         ),
-      ));
-      return; // Stop execution
-    }
-
-    final configManager = ConfigManager(); // Create Global Instance Here
-
-    runApp(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider(create: (context) => ThemeProvider()),
-          // Inject Global ConfigManager (Critical Fix)
-          ChangeNotifierProvider.value(value: configManager),
-        ],
-        child: const GlobalWindowListener(child: MyApp()),
-      ),
-    );
-  }, (error, stack) {
-    // Catch-all for async errors
-    if (kDebugMode) {
-      debugPrint('CRITICAL STARTUP ERROR: $error');
-    }
-    // Simple error logging to prevent total crash
-    try {
-      AdvancedLogger.error("UNCAUGHT ASYNC ERROR",
-          error: error, stackTrace: stack);
-      CleanupUtils.emergencyCleanup();
-    } catch (_) {}
-  });
+      );
+    },
+    (error, stack) {
+      // Catch-all for async errors
+      if (kDebugMode) {
+        debugPrint('CRITICAL STARTUP ERROR: $error');
+      }
+      // Simple error logging to prevent total crash
+      try {
+        AdvancedLogger.error(
+          "UNCAUGHT ASYNC ERROR",
+          error: error,
+          stackTrace: stack,
+        );
+        CleanupUtils.emergencyCleanup();
+      } catch (_) {}
+    },
+  );
 }
 
 class MyApp extends StatelessWidget {

@@ -16,7 +16,8 @@ class FFILoader {
       // If we had a sing-box.dll:
       // _lib = DynamicLibrary.open("sing-box.dll");
       throw UnsupportedError(
-          "FFI not implemented for Windows yet. Use Process-based service.");
+        "FFI not implemented for Windows yet. Use Process-based service.",
+      );
     } else {
       _lib = DynamicLibrary.process();
     }

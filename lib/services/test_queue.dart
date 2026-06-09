@@ -74,8 +74,9 @@ class TestQueue {
     for (final item in _queue) {
       CleanupUtils.cleanupJobResources(item.jobId);
       if (!item.completer.isCompleted) {
-        item.completer
-            .completeError(OperationCancelledException('Queue cancelled'));
+        item.completer.completeError(
+          OperationCancelledException('Queue cancelled'),
+        );
       }
     }
     _queue.clear();
@@ -100,13 +101,17 @@ class TestQueue {
 
         if (item.type != null) {
           TestFallbackStrategy.triggerFallback(
-              item.type!, item.jobId, item.cancelToken);
+            item.type!,
+            item.jobId,
+            item.cancelToken,
+          );
         }
 
         try {
           item.completer.completeError(
             TimeoutException(
-                'Job "${item.name}" timed out after ${item.timeout}'),
+              'Job "${item.name}" timed out after ${item.timeout}',
+            ),
           );
         } catch (e) {
           // Ignore if already completed

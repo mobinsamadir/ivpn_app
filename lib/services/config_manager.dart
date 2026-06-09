@@ -67,11 +67,13 @@ Future<Map<String, dynamic>> _processConfigsInIsolate(
   Map<String, dynamic> args,
 ) async {
   final List<String> configStrings = args['configStrings'] as List<String>;
-  final Set<String> blockedHashes =
-      (args['blockedHashes'] as List).cast<String>().toSet();
+  final Set<String> blockedHashes = (args['blockedHashes'] as List)
+      .cast<String>()
+      .toSet();
   final bool checkBlacklist = args['checkBlacklist'] as bool;
-  final Set<String> existingConfigs =
-      (args['existingConfigs'] as List).cast<String>().toSet();
+  final Set<String> existingConfigs = (args['existingConfigs'] as List)
+      .cast<String>()
+      .toSet();
   int addedCount = args['initialAddedCount'] as int;
 
   final List<VpnConfigWithMetrics> newConfigs = [];
@@ -158,6 +160,9 @@ Map<String, List<VpnConfigWithMetrics>> _sortConfigsInIsolate(
 }
 
 class ConfigManager extends ChangeNotifier {
+  // Connection state flags
+  bool userInitiatedDisconnect = false;
+  bool isConnectionCancelled = false;
   static final ConfigManager _instance = ConfigManager._internal();
   factory ConfigManager() => _instance;
   ConfigManager._internal();
@@ -254,12 +259,15 @@ class ConfigManager extends ChangeNotifier {
 
   Future<void> stopAllOperations() async {
     AdvancedLogger.info('[ConfigManager] 🛑 STOP ALL OPERATIONS REQUESTED');
+    userInitiatedDisconnect = true;
+    isConnectionCancelled = true;
     _isGlobalStopRequested = true;
     cancelScan();
     stopSmartMonitor();
     if (stopVpnCallback != null) {
       await stopVpnCallback!();
     }
+    setConnected(false, status: 'Disconnected');
     notifyListeners();
   }
 
@@ -444,18 +452,20 @@ class ConfigManager extends ChangeNotifier {
   }
 
   // --- CLEANUP METHODS ---
-  Future<int> removeConfigs(
-      {bool failedTcp = false,
-      bool dead = false,
-      bool weak = false,
-      bool untestedSpeed = false}) async {
+  Future<int> removeConfigs({
+    bool failedTcp = false,
+    bool dead = false,
+    bool weak = false,
+    bool untestedSpeed = false,
+  }) async {
     final initialCount = allConfigs.length;
     allConfigs.removeWhere((c) {
       if (failedTcp && c.funnelStage == 0 && c.failureCount > 0) return true;
       if (dead &&
           (c.currentPing == -1 ||
               c.failureCount >= 3 ||
-              (!c.isAlive && c.funnelStage == 0))) return true;
+              (!c.isAlive && c.funnelStage == 0)))
+        return true;
       if (weak && c.currentPing > 1500)
         return true; // threshold for weak config
       if (untestedSpeed && c.funnelStage < 3) return true;
@@ -535,7 +545,8 @@ class ConfigManager extends ChangeNotifier {
     List<VpnConfigWithMetrics>? sourceList,
     bool performConnection = true,
   }) async {
-    final list = sourceList ??
+    final list =
+        sourceList ??
         (validatedConfigs.isNotEmpty ? validatedConfigs : allConfigs);
     if (list.isEmpty) return false;
 
@@ -546,13 +557,15 @@ class ConfigManager extends ChangeNotifier {
 
     if (validCandidates.isEmpty) {
       AdvancedLogger.warn(
-          "[ConfigManager] Smart Skip: No valid candidates found.");
+        "[ConfigManager] Smart Skip: No valid candidates found.",
+      );
       return false;
     }
 
     // Sort by calculated score descending (best first)
-    validCandidates
-        .sort((a, b) => b.calculatedScore.compareTo(a.calculatedScore));
+    validCandidates.sort(
+      (a, b) => b.calculatedScore.compareTo(a.calculatedScore),
+    );
 
     // Find best candidate that isn't the currently selected one
     VpnConfigWithMetrics? candidate;
@@ -566,7 +579,8 @@ class ConfigManager extends ChangeNotifier {
     // If candidate is still null, it means the only valid candidate is the current one
     if (candidate == null) {
       AdvancedLogger.info(
-          "[ConfigManager] Smart Skip: Already on the only valid config.");
+        "[ConfigManager] Smart Skip: Already on the only valid config.",
+      );
       return false;
     }
 
@@ -687,6 +701,30 @@ class ConfigManager extends ChangeNotifier {
     await p.setBool(_autoSwitchKey, _isAutoSwitchEnabled);
   }
 
+  Future<void> switchConfig(VpnConfigWithMetrics newConfig) async {
+    AdvancedLogger.info('[ConfigManager] Switching configuration safely...');
+    userInitiatedDisconnect = true;
+    isConnectionCancelled = true;
+
+    // 1. Issue the disconnect
+    final NativeVpnService nativeService = NativeVpnService();
+    await nativeService.disconnect();
+
+    // 2. Wait securely until the status is actually DISCONNECTED
+    try {
+      await nativeService.connectionStatusStream
+          .firstWhere((status) => status == 'DISCONNECTED')
+          .timeout(const Duration(seconds: 10));
+    } catch (e) {
+      AdvancedLogger.warn(
+        '[ConfigManager] Timeout waiting for DISCONNECTED state during switch. Proceeding anyway...',
+      );
+    }
+
+    // 3. Initiate new connection
+    await connectWithSmartFailover();
+  }
+
   // --- UI & LEGACY COMPATIBILITY METHODS ---
   Future<VpnConfigWithMetrics?> getBestConfig() async {
     if (_selectedConfig != null && _selectedConfig!.isValidated)
@@ -782,8 +820,13 @@ class ConfigManager extends ChangeNotifier {
   }
 
   Future<void> disconnectVpn() async {
+    userInitiatedDisconnect = true;
+    isConnectionCancelled = true;
     cancelScan();
     stopSmartMonitor();
+    if (stopVpnCallback != null) {
+      await stopVpnCallback!();
+    }
     setConnected(false, status: 'Disconnected');
   }
 
@@ -798,6 +841,8 @@ class ConfigManager extends ChangeNotifier {
 
   // --- SMART FAILOVER CONNECTION ---
   Future<void> connectWithSmartFailover() async {
+    userInitiatedDisconnect = false;
+    isConnectionCancelled = false;
     AdvancedLogger.info(
       '[ConfigManager] Starting Smart Failover Connection...',
     );
@@ -823,8 +868,9 @@ class ConfigManager extends ChangeNotifier {
     final NativeVpnService nativeService = NativeVpnService();
     final EphemeralTester tester = EphemeralTester();
 
-    while (
-        attempts < maxAttempts && target != null && !_isGlobalStopRequested) {
+    while (attempts < maxAttempts &&
+        target != null &&
+        !_isGlobalStopRequested) {
       try {
         selectConfig(target); // Update UI selection
 
@@ -860,14 +906,16 @@ class ConfigManager extends ChangeNotifier {
         setConnected(false, status: 'Connecting to ${target.name}...');
         try {
           // Put a timeout strictly on the connection invocation process itself
-          await nativeService.connect(target.rawConfig).timeout(
-            const Duration(seconds: 15),
-            onTimeout: () {
-              throw TimeoutException(
-                "Connection to Native Service timed out",
+          await nativeService
+              .connect(target.rawConfig)
+              .timeout(
+                const Duration(seconds: 15),
+                onTimeout: () {
+                  throw TimeoutException(
+                    "Connection to Native Service timed out",
+                  );
+                },
               );
-            },
-          );
 
           // 5. Success (optimistic native call success)
           await updateConfigMetrics(target.id, connectionSuccess: true);

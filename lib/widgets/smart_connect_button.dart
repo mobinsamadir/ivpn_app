@@ -54,9 +54,9 @@ class _SmartConnectButtonState extends State<SmartConnectButton>
         final connectionStatus = configManager.connectionStatus;
         final isConnecting =
             connectionStatus.toLowerCase().contains('connecting') ||
-                connectionStatus.toLowerCase().contains('finding') ||
-                connectionStatus.toLowerCase().contains('preparing') ||
-                connectionStatus.toLowerCase().contains('testing');
+            connectionStatus.toLowerCase().contains('finding') ||
+            connectionStatus.toLowerCase().contains('preparing') ||
+            connectionStatus.toLowerCase().contains('testing');
 
         if (isConnecting || isConnected) {
           _pulseController.repeat(reverse: true);
@@ -65,8 +65,11 @@ class _SmartConnectButtonState extends State<SmartConnectButton>
           _pulseController.value = 0.0;
         }
 
-        final bool hasConfigs = configManager.validatedConfigs.isNotEmpty || configManager.allConfigs.isNotEmpty;
-        final bool isButtonDisabled = !hasConfigs && !isConnecting && !isConnected;
+        final bool hasConfigs =
+            configManager.validatedConfigs.isNotEmpty ||
+            configManager.allConfigs.isNotEmpty;
+        final bool isButtonDisabled =
+            !hasConfigs && !isConnecting && !isConnected;
 
         return Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -75,7 +78,10 @@ class _SmartConnectButtonState extends State<SmartConnectButton>
               _buildStatusIndicator(isConnected, connectionStatus),
             const SizedBox(height: 20),
             GestureDetector(
-              onTap: isButtonDisabled ? null : (widget.onPressed ?? () => _handleConnection(configManager)),
+              onTap: isButtonDisabled
+                  ? null
+                  : (widget.onPressed ??
+                        () => _handleConnection(configManager)),
               child: AnimatedBuilder(
                 animation: _pulseAnimation,
                 builder: (context, child) {
@@ -88,11 +94,18 @@ class _SmartConnectButtonState extends State<SmartConnectButton>
                       height: widget.buttonSize,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        gradient: _getButtonGradient(isConnected, isConnecting, isButtonDisabled),
+                        gradient: _getButtonGradient(
+                          isConnected,
+                          isConnecting,
+                          isButtonDisabled,
+                        ),
                         boxShadow: [
                           BoxShadow(
-                            color:
-                                _getButtonGlowColor(isConnected, isConnecting, isButtonDisabled),
+                            color: _getButtonGlowColor(
+                              isConnected,
+                              isConnecting,
+                              isButtonDisabled,
+                            ),
                             blurRadius: isConnecting || isConnected ? 25 : 15,
                             spreadRadius: isConnecting || isConnected ? 8 : 2,
                             offset: const Offset(0, 8),
@@ -107,18 +120,32 @@ class _SmartConnectButtonState extends State<SmartConnectButton>
                                   width: widget.buttonSize * 0.3,
                                   height: widget.buttonSize * 0.3,
                                   child: const CircularProgressIndicator(
-                                      color: Colors.white, strokeWidth: 3),
+                                    color: Colors.white,
+                                    strokeWidth: 3,
+                                  ),
                                 )
                               : Icon(
-                                  _getButtonIcon(isConnected, isConnecting, isButtonDisabled),
+                                  _getButtonIcon(
+                                    isConnected,
+                                    isConnecting,
+                                    isButtonDisabled,
+                                  ),
                                   size: widget.buttonSize * 0.35,
-                                  color: isButtonDisabled ? Colors.white54 : Colors.white,
+                                  color: isButtonDisabled
+                                      ? Colors.white54
+                                      : Colors.white,
                                 ),
                           const SizedBox(height: 12),
                           Text(
-                            _getButtonText(isConnected, isConnecting, isButtonDisabled),
+                            _getButtonText(
+                              isConnected,
+                              isConnecting,
+                              isButtonDisabled,
+                            ),
                             style: TextStyle(
-                              color: isButtonDisabled ? Colors.white54 : Colors.white,
+                              color: isButtonDisabled
+                                  ? Colors.white54
+                                  : Colors.white,
                               fontSize: widget.buttonSize * 0.1,
                               fontWeight: FontWeight.bold,
                               letterSpacing: 1.2,
@@ -183,9 +210,9 @@ class _SmartConnectButtonState extends State<SmartConnectButton>
       } catch (e) {
         AdvancedLogger.error('[SmartConnect] Failed to disconnect: $e');
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to disconnect: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Failed to disconnect: $e')));
         }
       }
       return;
@@ -196,7 +223,8 @@ class _SmartConnectButtonState extends State<SmartConnectButton>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('Access required. Please use main screen.')),
+            content: Text('Access required. Please use main screen.'),
+          ),
         );
       }
       return;
@@ -210,7 +238,8 @@ class _SmartConnectButtonState extends State<SmartConnectButton>
       if (configManager.selectedConfig != null) {
         configToUse = configManager.selectedConfig;
         AdvancedLogger.info(
-            '[SmartConnect] Using selected config: ${configToUse!.name}');
+          '[SmartConnect] Using selected config: ${configToUse!.name}',
+        );
       } else {
         configManager.setConnected(false, status: 'Finding fastest server...');
         configToUse = await configManager.getBestConfig();
@@ -218,10 +247,12 @@ class _SmartConnectButtonState extends State<SmartConnectButton>
         if (configToUse != null) {
           configManager.selectConfig(configToUse);
           AdvancedLogger.info(
-              '[SmartConnect] Auto-selected best server: ${configToUse.name} (${configToUse.currentPing}ms)');
+            '[SmartConnect] Auto-selected best server: ${configToUse.name} (${configToUse.currentPing}ms)',
+          );
         } else {
           AdvancedLogger.info(
-              '[SmartConnect] No valid config found after testing');
+            '[SmartConnect] No valid config found after testing',
+          );
         }
       }
 
@@ -230,8 +261,10 @@ class _SmartConnectButtonState extends State<SmartConnectButton>
         return;
       }
 
-      configManager.setConnected(false,
-          status: 'Connecting to ${configToUse.name}...');
+      configManager.setConnected(
+        false,
+        status: 'Connecting to ${configToUse.name}...',
+      );
 
       await NativeVpnService().connect(configToUse.rawConfig);
     } catch (e) {
@@ -242,7 +275,11 @@ class _SmartConnectButtonState extends State<SmartConnectButton>
     }
   }
 
-  Gradient _getButtonGradient(bool isConnected, bool isConnecting, bool isDisabled) {
+  Gradient _getButtonGradient(
+    bool isConnected,
+    bool isConnecting,
+    bool isDisabled,
+  ) {
     if (isDisabled) {
       return const LinearGradient(
         colors: [Color(0xFF374151), Color(0xFF1F2937)],
@@ -273,14 +310,22 @@ class _SmartConnectButtonState extends State<SmartConnectButton>
     );
   }
 
-  Color _getButtonGlowColor(bool isConnected, bool isConnecting, bool isDisabled) {
+  Color _getButtonGlowColor(
+    bool isConnected,
+    bool isConnecting,
+    bool isDisabled,
+  ) {
     if (isDisabled) return Colors.transparent;
     if (isConnecting) return const Color(0xFFF2994A).withValues(alpha: 0.5);
     if (isConnected) return const Color(0xFF38EF7D).withValues(alpha: 0.5);
     return Colors.black.withValues(alpha: 0.3);
   }
 
-  IconData _getButtonIcon(bool isConnected, bool isConnecting, bool isDisabled) {
+  IconData _getButtonIcon(
+    bool isConnected,
+    bool isConnecting,
+    bool isDisabled,
+  ) {
     if (isDisabled) return Icons.hourglass_empty;
     if (isConnecting) return Icons.sync;
     if (isConnected) return Icons.power_settings_new; // Connected icon

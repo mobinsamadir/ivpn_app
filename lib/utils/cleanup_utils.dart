@@ -18,7 +18,8 @@ class CleanupUtils {
     if (_jobResources.containsKey(jobId)) {
       _jobResources[jobId]!.add(resource);
       AdvancedLogger.debug(
-          '[Cleanup] Registered ${resource.runtimeType} to job $jobId');
+        '[Cleanup] Registered ${resource.runtimeType} to job $jobId',
+      );
     }
   }
 

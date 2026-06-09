@@ -65,9 +65,7 @@ class _AdDialogState extends State<AdDialog> {
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: const Color(0xFF1E1E1E),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
         width: MediaQuery.of(context).size.width * 0.9,
         height: MediaQuery.of(context).size.height * 0.8,
@@ -81,9 +79,10 @@ class _AdDialogState extends State<AdDialog> {
                 const Text(
                   'Sponsored Content',
                   style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold),
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 if (_canClose)
                   IconButton(
@@ -112,8 +111,9 @@ class _AdDialogState extends State<AdDialog> {
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed:
-                    _canClose ? () => Navigator.of(context).pop(true) : null,
+                onPressed: _canClose
+                    ? () => Navigator.of(context).pop(true)
+                    : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _canClose ? Colors.green : Colors.grey[800],
                   disabledBackgroundColor: Colors.grey[800],
