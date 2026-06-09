@@ -924,7 +924,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     _configManager.setConnected(false, status: 'Connecting...');
 
     // Access Check
-    final access = _accessManager;
+    final access = context.read<TimeWalletService>();
     if (!access.hasAccess) {
       await _showAdSequence();
       if (!access.hasAccess) return;
@@ -1056,7 +1056,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   // _buildAppHeader Removed
 
   Widget _buildSubscriptionCard() {
-    final access = _accessManager;
+    final access = context.read<TimeWalletService>();
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF1E1E1E),
