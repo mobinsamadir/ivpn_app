@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/config_manager.dart';
 import '../models/vpn_config_with_metrics.dart';
 import '../utils/advanced_logger.dart';
-import '../services/access_manager.dart';
+import '../services/time_wallet_service.dart';
 import '../services/native_vpn_service.dart';
 
 class SmartConnectButton extends StatefulWidget {
@@ -218,8 +218,8 @@ class _SmartConnectButtonState extends State<SmartConnectButton>
       return;
     }
 
-    final accessManager = AccessManager();
-    if (!accessManager.hasAccess) {
+    final accessManager = TimeWalletService();
+    if (!accessManager.hasTime) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

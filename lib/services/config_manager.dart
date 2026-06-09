@@ -273,11 +273,9 @@ class ConfigManager extends ChangeNotifier {
           _consecutiveFailoverCount++;
           AdvancedLogger.info("[Auto-Heal] Attempt $_consecutiveFailoverCount: Triggering silent failover...");
 
-          // Trigger failover silently
           connectWithSmartFailover();
         }
       } else {
-        // Just update status for CONNECTING, RECONNECTING, etc
         setConnected(_isConnected, status: status);
       }
     });
@@ -945,7 +943,6 @@ class ConfigManager extends ChangeNotifier {
           );
 
           if (testResult.funnelStage < 2 || testResult.currentPing == -1) {
-            // NEW: Check if failure was INIT/PARSING error
             if (testResult.lastFailedStage != null &&
                 (testResult.lastFailedStage!.contains("Init") ||
                     testResult.lastFailedStage!.contains("Stage1_ProxyInit"))) {
@@ -953,12 +950,10 @@ class ConfigManager extends ChangeNotifier {
               throw Exception("Pre-flight check failed (Invalid/Dead Config)");
             }
 
-            // Mark regular failure and throw to trigger failover
             await markFailure(target.id);
             throw Exception("Pre-flight check failed (Connectivity)");
           }
 
-          // Update metrics
           await updateConfigDirectly(testResult);
         }
 
