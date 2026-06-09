@@ -10,7 +10,7 @@ import '../services/native_vpn_service.dart';
 import '../widgets/universal_ad_widget.dart';
 import '../widgets/config_card.dart';
 import '../utils/advanced_logger.dart';
-import '../services/access_manager.dart';
+import '../services/time_wallet_service.dart';
 import '../services/ad_manager_service.dart';
 import '../services/funnel_service.dart';
 import '../services/testers/ephemeral_tester.dart';
@@ -28,7 +28,7 @@ class ConnectionHomeScreen extends StatefulWidget {
   final EphemeralTester? ephemeralTester;
   final ConfigManager? configManager;
   final AdManagerService? adManagerService;
-  final AccessManager? accessManager;
+
   final ConnectivityService? connectivityService;
   final ConfigGistService? configGistService;
 
@@ -39,7 +39,7 @@ class ConnectionHomeScreen extends StatefulWidget {
     this.ephemeralTester,
     this.configManager,
     this.adManagerService,
-    this.accessManager,
+
     this.connectivityService,
     this.configGistService,
   });
@@ -56,7 +56,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   late final EphemeralTester _ephemeralTester;
   late final ConfigManager _configManager;
   late final AdManagerService _adManagerService;
-  late final AccessManager _accessManager;
+  final TimeWalletService _timeWalletService = TimeWalletService();
   late final ConnectivityService _connectivityService;
   late final ConfigGistService _configGistService;
 
@@ -101,7 +101,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     _ephemeralTester = widget.ephemeralTester ?? EphemeralTester();
     _configManager = widget.configManager ?? ConfigManager();
     _adManagerService = widget.adManagerService ?? AdManagerService();
-    _accessManager = widget.accessManager ?? AccessManager();
+
     _connectivityService = widget.connectivityService ?? ConnectivityService();
     _configGistService = widget.configGistService ?? ConfigGistService();
 
@@ -119,10 +119,10 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     WidgetsBinding.instance.addObserver(this);
 
     // AccessManager Listener
-    _accessManager.init().then((_) {
+    _timeWalletService.init().then((_) {
       if (mounted) setState(() {});
     });
-    _accessManager.addListener(_onTimeChanged);
+    _timeWalletService.addListener(_onTimeChanged);
 
     // Register Stop Callback
     _configManager.stopVpnCallback = _nativeVpnService.disconnect;
@@ -238,7 +238,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     _vpnStatusSubscription?.cancel();
     _statsSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
-    _accessManager.removeListener(_onTimeChanged);
+    _timeWalletService.removeListener(_onTimeChanged);
     _timerUpdater?.cancel();
     _pingMonitorTimer?.cancel();
     _tabController.dispose();
@@ -330,7 +330,19 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   }
 
   void _onTimeChanged() {
-    if (mounted) setState(() {});
+    if (mounted) {
+      setState(() {});
+      // Enforced disconnection UI alert
+      if (!_timeWalletService.hasTime && _configManager.isConnected) {
+         ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Time expired! VPN Disconnected. Please watch an ad to recharge.'),
+              backgroundColor: Colors.redAccent,
+              duration: Duration(seconds: 5),
+            ),
+         );
+      }
+    }
   }
 
   String _getConnectionStatusMessage(String status) {
@@ -405,7 +417,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
       );
 
       if (claimed == true) {
-        await _accessManager.addTime(const Duration(hours: 1));
+        await _timeWalletService.rewardTime();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -924,10 +936,10 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     _configManager.setConnected(false, status: 'Connecting...');
 
     // Access Check
-    final access = _accessManager;
-    if (!access.hasAccess) {
+    final access = _timeWalletService;
+    if (!access.hasTime) {
       await _showAdSequence();
-      if (!access.hasAccess) return;
+      if (!access.hasTime) return;
     }
 
     if (_configManager.allConfigs.isEmpty) {
@@ -1056,7 +1068,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   // _buildAppHeader Removed
 
   Widget _buildSubscriptionCard() {
-    final access = _accessManager;
+    final access = _timeWalletService;
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF1E1E1E),
@@ -1074,8 +1086,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         subtitle: Text(
-          access.hasAccess
-              ? '${access.remainingTime.inHours}h ${access.remainingTime.inMinutes % 60}m remaining'
+          access.hasTime
+              ? '${(access.remainingSeconds ~/ 3600)}h ${((access.remainingSeconds % 3600) ~/ 60)}m remaining'
               : 'No active plan',
           style: const TextStyle(color: Colors.grey),
         ),

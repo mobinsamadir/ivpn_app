@@ -481,6 +481,16 @@ class SingboxConfigGenerator {
     required int httpPort,
     bool isTest = false,
   }) {
+    // HYPER-TUNING: Add Multiplexing and TCP Fast Open
+    proxyOutbound["multiplex"] = {
+      "enabled": true,
+      "padding": true,
+      "protocol": "h2mux",
+      "max_connections": 4,
+      "min_streams": 2
+    };
+    proxyOutbound["tcp_fast_open"] = true;
+
     // 1. Base Structure (Common)
     final Map<String, dynamic> config = {
       "log": {
@@ -540,6 +550,7 @@ class SingboxConfigGenerator {
           "type": "tun",
           "tag": "tun-in",
           "inet4_address": "172.19.0.1/30",
+          "mtu": 1350,
           "auto_route": true,
           "strict_route": true,
           "stack": "system", // Optimized for Windows
