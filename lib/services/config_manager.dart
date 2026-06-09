@@ -11,6 +11,8 @@ import 'package:collection/collection.dart';
 import 'package:crypto/crypto.dart'; // Import crypto for MD5
 import '../models/vpn_config_with_metrics.dart';
 import '../utils/advanced_logger.dart';
+import 'time_wallet_service.dart';
+import '../utils/connectivity_utils.dart';
 import '../utils/cancellable_operation.dart';
 import 'native_vpn_service.dart';
 import 'testers/ephemeral_tester.dart';
@@ -197,6 +199,9 @@ class ConfigManager extends ChangeNotifier {
   bool _isGlobalStopRequested = false;
   bool get isGlobalStopRequested => _isGlobalStopRequested;
 
+  // Auto-Healing Guardrails
+  int _consecutiveFailoverCount = 0;
+
   // Callbacks
   Future<void> Function()? onTriggerFunnel;
   Function(VpnConfigWithMetrics)? onAutoSwitch;
@@ -228,6 +233,55 @@ class ConfigManager extends ChangeNotifier {
     await _updateLists();
 
     // Event-Driven Network Listener
+    // Time Wallet Enforced Disconnection Listener
+    TimeWalletService().addListener(() {
+      if (isConnected && !TimeWalletService().hasTime) {
+        AdvancedLogger.warn("[ConfigManager] Time Wallet expired! Enforcing disconnect.");
+        disconnectVpn();
+      }
+    });
+
+    // PASSIVE EVENT-DRIVEN AUTO-HEALING
+    NativeVpnService().connectionStatusStream.listen((status) async {
+      _connectionStatus = status;
+
+      if (status == 'CONNECTED') {
+        _consecutiveFailoverCount = 0; // Reset on success
+        setConnected(true, status: status);
+      } else if (status == 'DISCONNECTED' || status.startsWith('ERROR')) {
+        setConnected(false, status: status);
+
+        // Check if we should auto-heal
+        if (!userInitiatedDisconnect && isAutoSwitchEnabled) {
+          final timeWallet = TimeWalletService();
+          if (!timeWallet.hasTime) {
+             AdvancedLogger.info("[Auto-Heal] Skipped: Time Wallet expired.");
+             return;
+          }
+
+          if (!await ConnectivityUtils.hasInternet()) {
+             AdvancedLogger.info("[Auto-Heal] Skipped: No physical internet connection.");
+             return;
+          }
+
+          if (_consecutiveFailoverCount >= 3) {
+             AdvancedLogger.warn("[Auto-Heal] Max retry limit reached (3). Stopping.");
+             setConnected(false, status: 'Connection Lost');
+             return;
+          }
+
+          _consecutiveFailoverCount++;
+          AdvancedLogger.info("[Auto-Heal] Attempt $_consecutiveFailoverCount: Triggering silent failover...");
+
+          // Trigger failover silently
+          connectWithSmartFailover();
+        }
+      } else {
+        // Just update status for CONNECTING, RECONNECTING, etc
+        setConnected(_isConnected, status: status);
+      }
+    });
+
     Connectivity().onConnectivityChanged.listen((_) async {
       if (_isConnected) {
         AdvancedLogger.info(
@@ -874,29 +928,39 @@ class ConfigManager extends ChangeNotifier {
       try {
         selectConfig(target); // Update UI selection
 
-        // 3. Pre-flight Check (Strict - Stage 2 Connectivity)
+        // 3. Pre-flight Check with FAST LANE logic
         setConnected(false, status: 'Verifying ${target.name}...');
-        final testResult = await tester.runTest(
-          target,
-          mode: TestMode.connectivity,
-        );
 
-        if (testResult.funnelStage < 2 || testResult.currentPing == -1) {
-          // NEW: Check if failure was INIT/PARSING error
-          if (testResult.lastFailedStage != null &&
-              (testResult.lastFailedStage!.contains("Init") ||
-                  testResult.lastFailedStage!.contains("Stage1_ProxyInit"))) {
-            await markInvalid(target.id);
-            throw Exception("Pre-flight check failed (Invalid/Dead Config)");
+        final bool isFastLane = target.lastTestedAt != null &&
+                                DateTime.now().difference(target.lastTestedAt!).inMinutes < 45 &&
+                                target.funnelStage >= 2 &&
+                                target.currentPing > 0;
+
+        if (isFastLane) {
+          AdvancedLogger.info("[ConfigManager] Fast Lane: Skipping pre-flight for ${target.name} (Recent successful test)");
+        } else {
+          final testResult = await tester.runTest(
+            target,
+            mode: TestMode.connectivity,
+          );
+
+          if (testResult.funnelStage < 2 || testResult.currentPing == -1) {
+            // NEW: Check if failure was INIT/PARSING error
+            if (testResult.lastFailedStage != null &&
+                (testResult.lastFailedStage!.contains("Init") ||
+                    testResult.lastFailedStage!.contains("Stage1_ProxyInit"))) {
+              await markInvalid(target.id);
+              throw Exception("Pre-flight check failed (Invalid/Dead Config)");
+            }
+
+            // Mark regular failure and throw to trigger failover
+            await markFailure(target.id);
+            throw Exception("Pre-flight check failed (Connectivity)");
           }
 
-          // Mark regular failure and throw to trigger failover
-          await markFailure(target.id);
-          throw Exception("Pre-flight check failed (Connectivity)");
+          // Update metrics
+          await updateConfigDirectly(testResult);
         }
-
-        // Update metrics
-        await updateConfigDirectly(testResult);
 
         if (_isGlobalStopRequested) {
           return;

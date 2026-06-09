@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import '../services/config_manager.dart';
+import '../services/time_wallet_service.dart';
 import '../utils/advanced_logger.dart';
 import '../services/ad_manager_service.dart';
 import '../services/funnel_service.dart';
@@ -92,14 +93,28 @@ class _SplashScreenState extends State<SplashScreen>
       FunnelService().startFunnel();
       AdManagerService().initialize();
 
-      // Wait until we have at least 1 valid config, OR the funnel finishes
-      int waitLoops = 0;
-      // We check for up to ~10 seconds
-      while (configManager.validatedConfigs.isEmpty && waitLoops < 10) {
-        await Future.delayed(const Duration(seconds: 1));
-        waitLoops++;
-        // If funnel finishes entirely, we can break early
-        // Currently we don't expose isRunning directly easily, but 10s wait is safe.
+      final timeWallet = TimeWalletService();
+      await timeWallet.init();
+
+      // Optimistic Startup: if Time > 0 and autoConnect is on, skip funnel wait
+      // if we have a recent/validated config available right away (e.g. from local storage)
+      bool skipWait = false;
+      if (timeWallet.hasTime && configManager.isAutoSwitchEnabled && configManager.validatedConfigs.isNotEmpty) {
+        skipWait = true;
+        AdvancedLogger.info("[Splash] Optimistic Startup enabled. Bypassing funnel wait.");
+        // We trigger connection early in background so it happens during transition
+        configManager.connectWithSmartFailover();
+      }
+
+      if (!skipWait) {
+        // Wait until we have at least 1 valid config, OR the funnel finishes
+        int waitLoops = 0;
+        // We check for up to ~10 seconds
+        while (configManager.validatedConfigs.isEmpty && waitLoops < 10) {
+          await Future.delayed(const Duration(seconds: 1));
+          waitLoops++;
+          // If funnel finishes entirely, we can break early
+        }
       }
 
       await minSplashFuture;
