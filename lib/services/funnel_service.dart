@@ -92,9 +92,10 @@ class FunnelService {
   int _activeSpeedWorkers = 0;
 
   // Limits
-  static const int _maxTcpWorkers = 10;
-  static const int _maxHttpWorkers = 5;
-  static const int _maxSpeedWorkers = 2;
+  // Limits
+  static final int _maxTcpWorkers = Platform.isWindows ? 2 : 10;
+  static final int _maxHttpWorkers = Platform.isWindows ? 2 : 5;
+  static final int _maxSpeedWorkers = Platform.isWindows ? 1 : 2;
 
   // State
   bool _isRunning = false;
