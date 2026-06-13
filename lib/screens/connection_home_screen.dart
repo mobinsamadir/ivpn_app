@@ -39,7 +39,6 @@ class ConnectionHomeScreen extends StatefulWidget {
     this.ephemeralTester,
     this.configManager,
     this.adManagerService,
-
     this.connectivityService,
     this.configGistService,
   });
@@ -334,13 +333,14 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
       setState(() {});
       // Enforced disconnection UI alert
       if (!_timeWalletService.hasTime && _configManager.isConnected) {
-         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Time expired! VPN Disconnected. Please watch an ad to recharge.'),
-              backgroundColor: Colors.redAccent,
-              duration: Duration(seconds: 5),
-            ),
-         );
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Time expired! VPN Disconnected. Please watch an ad to recharge.'),
+            backgroundColor: Colors.redAccent,
+            duration: Duration(seconds: 5),
+          ),
+        );
       }
     }
   }
@@ -530,8 +530,21 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     await _runFunnelTest();
   }
 
+  Future<void> _loadPreferences() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      setState(() {
+        _autoTestOnStartup = prefs.getBool('autoTestOnStartup') ?? true;
+        _autoRefreshOnStartup = prefs.getBool('autoRefreshOnStartup') ?? false;
+      });
+    } catch (e) {
+      AdvancedLogger.error('Failed to load preferences: $e');
+    }
+  }
+
   Future<void> _initialize() async {
     try {
+      await _loadPreferences();
       if (!_isInitialized) {
         setState(() {
           _isInitialized = true;
@@ -1167,8 +1180,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     final configManager = ConfigManager();
     final isConnected = configManager.isConnected;
     final status = configManager.connectionStatus.toLowerCase();
-    final isConnecting =
-        status.contains('connecting') ||
+    final isConnecting = status.contains('connecting') ||
         status.contains('finding') ||
         status.contains('preparing') ||
         status.contains('testing');
@@ -1227,28 +1239,27 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                           const Color(0xFF38EF7D),
                         ] // Green/Teal
                       : (isConnecting
-                            ? [
-                                const Color(0xFFF2994A),
-                                const Color(0xFFF2C94C),
-                              ] // Orange/Yellow
-                            : [
-                                const Color(0xFF4A5568),
-                                const Color(0xFF2D3748),
-                              ]), // Dark Grey
+                          ? [
+                              const Color(0xFFF2994A),
+                              const Color(0xFFF2C94C),
+                            ] // Orange/Yellow
+                          : [
+                              const Color(0xFF4A5568),
+                              const Color(0xFF2D3748),
+                            ]), // Dark Grey
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color:
-                        (isConnected
-                                ? const Color(0xFF38EF7D)
-                                : (isConnecting
-                                      ? const Color(0xFFF2994A)
-                                      : Colors.black))
-                            .withValues(
-                              alpha: isConnected || isConnecting ? 0.5 : 0.3,
-                            ),
+                    color: (isConnected
+                            ? const Color(0xFF38EF7D)
+                            : (isConnecting
+                                ? const Color(0xFFF2994A)
+                                : Colors.black))
+                        .withValues(
+                      alpha: isConnected || isConnecting ? 0.5 : 0.3,
+                    ),
                     blurRadius: isConnected || isConnecting ? 25 : 15,
                     spreadRadius: isConnected || isConnecting ? 8 : 2,
                     offset: const Offset(0, 8),

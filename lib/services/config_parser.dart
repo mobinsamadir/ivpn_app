@@ -32,11 +32,8 @@ Future<List<String>> parseConfigsInIsolate(String text) async {
     }
   }
   // 2. CHECK IF ALREADY A PROTOCOL (Before decoding)
-  else if (text.trim().startsWith(RegExp(r'(vless|vmess|trojan|ss|ssr)://'))) {
-    // It's already a config, do NOT decode
-    processedText = text;
-  } else {
-    // 3. Base64 Decode Attempt (Only if not HTML and not already protocol)
+  else {
+    // 3. Base64 Decode Attempt (Only if not HTML)
     final decoded = _safeBase64Decode(text);
     if (decoded.isNotEmpty && decoded.contains('://')) {
       processedText = decoded;
@@ -46,7 +43,7 @@ Future<List<String>> parseConfigsInIsolate(String text) async {
   // 3. Extract Configs using RELAXED "Terminator" Regex
   // Capture everything until whitespace, <, ", ', or ` (backtick)
   final regex = RegExp(
-    r'''(vless|vmess|trojan|ss):\/\/[^\s<"'`]+''',
+    r'''(vless|vmess|trojan|ss|ssr|hysteria2):\/\/[^\s<"'`]+''',
     caseSensitive: false,
     multiLine: true,
   );

@@ -64,7 +64,8 @@ class EphemeralTester {
   EphemeralTester._internal();
 
   // Limit Windows concurrent processes to 5 to prevent UI freeze
-  static final Semaphore _windowsSemaphore = Semaphore(5);
+  // Limit Windows concurrent processes to prevent UI freeze and port collision
+  static final Semaphore _windowsSemaphore = Semaphore(2);
 
   // Android Concurrency = 3 (Safe for Modern Devices)
   static final Semaphore _androidSemaphore = Semaphore(3);
@@ -144,32 +145,30 @@ class EphemeralTester {
       int p,
     ) {} // Not needed here anymore, runTestInternal handles port
 
-    _runTestInternal(config, mode, setProcess, setPort)
-        .then((result) {
-          if (!isCompleted) {
-            isCompleted = true;
-            timer.cancel();
-            if (!completer.isCompleted) completer.complete(result);
-          }
-        })
-        .catchError((e) {
-          if (!isCompleted) {
-            isCompleted = true;
-            timer.cancel();
-            if (!completer.isCompleted) {
-              completer.complete(
-                config.copyWith(
-                  funnelStage: 0,
-                  failureReason: "Test Error: $e",
-                  lastFailedStage: "Error",
-                  failureCount: config.failureCount + 1,
-                  lastTestedAt: DateTime.now(),
-                  ping: -1,
-                ),
-              );
-            }
-          }
-        });
+    _runTestInternal(config, mode, setProcess, setPort).then((result) {
+      if (!isCompleted) {
+        isCompleted = true;
+        timer.cancel();
+        if (!completer.isCompleted) completer.complete(result);
+      }
+    }).catchError((e) {
+      if (!isCompleted) {
+        isCompleted = true;
+        timer.cancel();
+        if (!completer.isCompleted) {
+          completer.complete(
+            config.copyWith(
+              funnelStage: 0,
+              failureReason: "Test Error: $e",
+              lastFailedStage: "Error",
+              failureCount: config.failureCount + 1,
+              lastTestedAt: DateTime.now(),
+              ping: -1,
+            ),
+          );
+        }
+      }
+    });
 
     return completer.future;
   }
