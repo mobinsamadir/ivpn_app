@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 // ✅ اصلاح: ایمپورت‌های صحیح در ابتدای فایل
-import 'package:webview_windows/webview_windows.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 class BackgroundAdService extends StatefulWidget {
   final Widget child;
@@ -15,14 +15,12 @@ class BackgroundAdService extends StatefulWidget {
 }
 
 class _BackgroundAdServiceState extends State<BackgroundAdService> {
-  // تعریف متغیرها با تایپ دقیق (به جای dynamic)
-  WebviewController? _popunderController;
-  WebviewController? _socialBarController;
+  WebViewController? _popunderController;
+  WebViewController? _socialBarController;
 
   @override
   void initState() {
     super.initState();
-    // فقط در ویندوز تبلیغات پس‌زمینه لود می‌شوند
     if (Platform.isWindows) {
       _initBackgroundAds();
     }
@@ -36,8 +34,10 @@ class _BackgroundAdServiceState extends State<BackgroundAdService> {
   Future<void> _initPopunderAd() async {
     if (Platform.isWindows) {
       try {
-        final controller = WebviewController();
-        await controller.initialize();
+        final controller = WebViewController()
+            ..setJavaScriptMode(JavaScriptMode.unrestricted)
+            ..enableZoom(false)
+            ..setBackgroundColor(Colors.transparent);
 
         String popunderHtml = '''
 <!DOCTYPE html>
@@ -54,7 +54,7 @@ class _BackgroundAdServiceState extends State<BackgroundAdService> {
 </html>
 ''';
 
-        await controller.loadStringContent(popunderHtml);
+        controller.loadHtmlString(popunderHtml);
 
         if (mounted) {
           setState(() {
@@ -70,8 +70,10 @@ class _BackgroundAdServiceState extends State<BackgroundAdService> {
   Future<void> _initSocialBarAd() async {
     if (Platform.isWindows) {
       try {
-        final controller = WebviewController();
-        await controller.initialize();
+        final controller = WebViewController()
+            ..setJavaScriptMode(JavaScriptMode.unrestricted)
+            ..enableZoom(false)
+            ..setBackgroundColor(Colors.transparent);
 
         String socialBarHtml = '''
 <!DOCTYPE html>
@@ -88,7 +90,7 @@ class _BackgroundAdServiceState extends State<BackgroundAdService> {
 </html>
 ''';
 
-        await controller.loadStringContent(socialBarHtml);
+        controller.loadHtmlString(socialBarHtml);
 
         if (mounted) {
           setState(() {
@@ -103,55 +105,40 @@ class _BackgroundAdServiceState extends State<BackgroundAdService> {
 
   @override
   void dispose() {
-    if (Platform.isWindows) {
-      _popunderController?.dispose();
-      _socialBarController?.dispose();
-    }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // اگر ویندوز است، تبلیغات مخفی را در Stack قرار بده
     if (Platform.isWindows) {
       return Stack(
         children: [
           widget.child,
-
-          // Hidden Popunder
           Positioned(
             top: -1000,
             left: -1000,
             child: SizedBox(
               width: 1,
               height: 1,
-              // فقط زمانی که کنترلر آماده است وب‌ویو را نشان بده
-              child:
-                  _popunderController != null &&
-                      _popunderController!.value.isInitialized
-                  ? Webview(_popunderController!)
+              child: _popunderController != null
+                  ? WebViewWidget(controller: _popunderController!)
                   : const SizedBox.shrink(),
             ),
           ),
-
-          // Hidden Social Bar
           Positioned(
             top: -2000,
             left: -2000,
             child: SizedBox(
               width: 1,
               height: 1,
-              child:
-                  _socialBarController != null &&
-                      _socialBarController!.value.isInitialized
-                  ? Webview(_socialBarController!)
+              child: _socialBarController != null
+                  ? WebViewWidget(controller: _socialBarController!)
                   : const SizedBox.shrink(),
             ),
           ),
         ],
       );
     } else {
-      // در موبایل (اندروید/iOS) فقط برنامه اصلی بدون تبلیغات پس‌زمینه
       return widget.child;
     }
   }
