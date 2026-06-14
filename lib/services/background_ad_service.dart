@@ -35,9 +35,9 @@ class _BackgroundAdServiceState extends State<BackgroundAdService> {
     if (Platform.isWindows) {
       try {
         final controller = WebViewController()
-            ..setJavaScriptMode(JavaScriptMode.unrestricted)
-            ..enableZoom(false)
-            ..setBackgroundColor(Colors.transparent);
+          ..setJavaScriptMode(JavaScriptMode.unrestricted)
+          ..enableZoom(false)
+          ..setBackgroundColor(Colors.transparent);
 
         String popunderHtml = '''
 <!DOCTYPE html>
@@ -71,9 +71,9 @@ class _BackgroundAdServiceState extends State<BackgroundAdService> {
     if (Platform.isWindows) {
       try {
         final controller = WebViewController()
-            ..setJavaScriptMode(JavaScriptMode.unrestricted)
-            ..enableZoom(false)
-            ..setBackgroundColor(Colors.transparent);
+          ..setJavaScriptMode(JavaScriptMode.unrestricted)
+          ..enableZoom(false)
+          ..setBackgroundColor(Colors.transparent);
 
         String socialBarHtml = '''
 <!DOCTYPE html>

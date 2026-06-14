@@ -94,7 +94,7 @@ class SmartPinger {
 
     final avg = successful.isNotEmpty
         ? successful.map((r) => r.latency).reduce((a, b) => a + b) /
-              successful.length
+            successful.length
         : -1.0;
 
     return SmartPingResult(
@@ -163,9 +163,8 @@ class SmartPinger {
 
       final uri = Uri.parse(endpoint);
       final host = uri.host;
-      final port = uri.port == 0
-          ? (uri.scheme == 'https' ? 443 : 80)
-          : uri.port;
+      final port =
+          uri.port == 0 ? (uri.scheme == 'https' ? 443 : 80) : uri.port;
 
       // TCP connection test
       final socket = await Socket.connect(host, port, timeout: timeout);

@@ -12,11 +12,11 @@ class DeviceMetrics {
   });
 
   Map<String, dynamic> toJson() => {
-    'latestPing': latestPing,
-    'latestSpeed': latestSpeed,
-    'lastUpdated': lastUpdated.toIso8601String(),
-    'usageCount': usageCount,
-  };
+        'latestPing': latestPing,
+        'latestSpeed': latestSpeed,
+        'lastUpdated': lastUpdated.toIso8601String(),
+        'usageCount': usageCount,
+      };
 
   factory DeviceMetrics.fromJson(Map<String, dynamic> json) {
     return DeviceMetrics(
@@ -36,10 +36,10 @@ class TestResult {
   TestResult({required this.success, this.latency = 0, this.error});
 
   Map<String, dynamic> toJson() => {
-    'success': success,
-    'latency': latency,
-    'error': error,
-  };
+        'success': success,
+        'latency': latency,
+        'error': error,
+      };
 
   factory TestResult.fromJson(Map<String, dynamic> json) {
     return TestResult(
@@ -96,9 +96,9 @@ class VpnConfigWithMetrics implements Comparable<VpnConfigWithMetrics> {
     this.lastFailedStage,
     this.failureReason,
     this.lastTestedAt,
-  }) : addedDate = addedDate ?? DateTime.now(),
-       deviceMetrics = deviceMetrics ?? {},
-       stageResults = stageResults ?? {};
+  })  : addedDate = addedDate ?? DateTime.now(),
+        deviceMetrics = deviceMetrics ?? {},
+        stageResults = stageResults ?? {};
 
   // Computed properties
   int get currentPing {
@@ -155,8 +155,7 @@ class VpnConfigWithMetrics implements Comparable<VpnConfigWithMetrics> {
     double? speed,
     bool connectionSuccess = false,
   }) {
-    final currentMetrics =
-        deviceMetrics[deviceId] ??
+    final currentMetrics = deviceMetrics[deviceId] ??
         DeviceMetrics(
           latestPing: -1,
           latestSpeed: 0.0,
@@ -229,29 +228,29 @@ class VpnConfigWithMetrics implements Comparable<VpnConfigWithMetrics> {
   }
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'rawConfig': rawConfig,
-    'name': name,
-    'countryCode': countryCode,
-    'isFavorite': isFavorite,
-    'addedDate': addedDate.toIso8601String(),
-    'deviceMetrics': deviceMetrics.map(
-      (k, v) => MapEntry<String, dynamic>(k, v.toJson()),
-    ),
-    'failureCount': failureCount,
-    'lastSuccessfulConnectionTime': lastSuccessfulConnectionTime,
-    'isAlive': isAlive,
-    'tier': tier,
-    'ping': ping,
-    'funnelStage': funnelStage,
-    'speedScore': speedScore,
-    'stageResults': stageResults.map(
-      (k, v) => MapEntry<String, dynamic>(k, v.toJson()),
-    ),
-    'lastFailedStage': lastFailedStage,
-    'failureReason': failureReason,
-    'lastTestedAt': lastTestedAt?.toIso8601String(),
-  };
+        'id': id,
+        'rawConfig': rawConfig,
+        'name': name,
+        'countryCode': countryCode,
+        'isFavorite': isFavorite,
+        'addedDate': addedDate.toIso8601String(),
+        'deviceMetrics': deviceMetrics.map(
+          (k, v) => MapEntry<String, dynamic>(k, v.toJson()),
+        ),
+        'failureCount': failureCount,
+        'lastSuccessfulConnectionTime': lastSuccessfulConnectionTime,
+        'isAlive': isAlive,
+        'tier': tier,
+        'ping': ping,
+        'funnelStage': funnelStage,
+        'speedScore': speedScore,
+        'stageResults': stageResults.map(
+          (k, v) => MapEntry<String, dynamic>(k, v.toJson()),
+        ),
+        'lastFailedStage': lastFailedStage,
+        'failureReason': failureReason,
+        'lastTestedAt': lastTestedAt?.toIso8601String(),
+      };
 
   factory VpnConfigWithMetrics.fromJson(Map<String, dynamic> json) {
     return VpnConfigWithMetrics(
@@ -264,8 +263,7 @@ class VpnConfigWithMetrics implements Comparable<VpnConfigWithMetrics> {
       addedDate: json['addedDate'] != null
           ? DateTime.parse(json['addedDate'] as String)
           : DateTime.fromMillisecondsSinceEpoch(0),
-      deviceMetrics:
-          (json['deviceMetrics'] as Map<String, dynamic>?)?.map(
+      deviceMetrics: (json['deviceMetrics'] as Map<String, dynamic>?)?.map(
             (k, v) => MapEntry<String, DeviceMetrics>(
               k,
               DeviceMetrics.fromJson(v as Map<String, dynamic>),
@@ -281,8 +279,7 @@ class VpnConfigWithMetrics implements Comparable<VpnConfigWithMetrics> {
       // Default to 0 for missing keys (Migration Safety)
       funnelStage: json['funnelStage'] as int? ?? 0,
       speedScore: json['speedScore'] as int? ?? 0,
-      stageResults:
-          (json['stageResults'] as Map<String, dynamic>?)?.map(
+      stageResults: (json['stageResults'] as Map<String, dynamic>?)?.map(
             (k, v) => MapEntry<String, TestResult>(
               k,
               TestResult.fromJson(v as Map<String, dynamic>),

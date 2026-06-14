@@ -144,22 +144,20 @@ class ConfigCard extends StatelessWidget {
                                   vertical: 2,
                                 ),
                                 decoration: BoxDecoration(
-                                  color:
-                                      (config.currentPing == -1
-                                              ? Colors.redAccent
-                                              : _getPingColor(
-                                                  config.currentPing,
-                                                ))
-                                          .withValues(alpha: 0.1),
+                                  color: (config.currentPing == -1
+                                          ? Colors.redAccent
+                                          : _getPingColor(
+                                              config.currentPing,
+                                            ))
+                                      .withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(6),
                                   border: Border.all(
-                                    color:
-                                        (config.currentPing == -1
-                                                ? Colors.redAccent
-                                                : _getPingColor(
-                                                    config.currentPing,
-                                                  ))
-                                            .withValues(alpha: 0.3),
+                                    color: (config.currentPing == -1
+                                            ? Colors.redAccent
+                                            : _getPingColor(
+                                                config.currentPing,
+                                              ))
+                                        .withValues(alpha: 0.3),
                                   ),
                                 ),
                                 child: Text(

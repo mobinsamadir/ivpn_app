@@ -104,9 +104,8 @@ class _SettingsScreenState extends State<SettingsScreen>
               _isBatteryOptimizationIgnored
                   ? Icons.shield
                   : Icons.battery_alert,
-              color: _isBatteryOptimizationIgnored
-                  ? Colors.green
-                  : Colors.orange,
+              color:
+                  _isBatteryOptimizationIgnored ? Colors.green : Colors.orange,
             ),
             title: const Text('Keep VPN Alive'),
             subtitle: Text(
