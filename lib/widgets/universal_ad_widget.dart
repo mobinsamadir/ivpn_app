@@ -5,7 +5,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-import 'package:webview_windows/webview_windows.dart';
+
 import 'package:url_launcher/url_launcher.dart';
 import 'package:chewie/chewie.dart';
 import 'package:video_player/video_player.dart';
@@ -194,7 +194,7 @@ class _VideoAdState extends State<_VideoAd> {
 class _WebViewAd extends StatelessWidget {
   final String mediaSource;
   final String
-  targetUrl; // Not used for iframe usually, but maybe for overlay click
+      targetUrl; // Not used for iframe usually, but maybe for overlay click
 
   const _WebViewAd({required this.mediaSource, required this.targetUrl});
 
@@ -216,8 +216,7 @@ class _WebViewAd extends StatelessWidget {
 
     // Step 3: Wrap in Full HTML Template (For Transparency & Centering)
     if (!content.contains("<html")) {
-      content =
-          """
+      content = """
       <!DOCTYPE html>
       <html>
       <head>
@@ -235,81 +234,7 @@ class _WebViewAd extends StatelessWidget {
       """;
     }
 
-    return Platform.isWindows
-        ? _WindowsWebView(htmlContent: content)
-        : _MobileWebView(htmlContent: content);
-  }
-}
-
-class _WindowsWebView extends StatefulWidget {
-  final String htmlContent;
-  const _WindowsWebView({required this.htmlContent});
-
-  @override
-  State<_WindowsWebView> createState() => _WindowsWebViewState();
-}
-
-class _WindowsWebViewState extends State<_WindowsWebView> {
-  final _controller = WebviewController();
-  bool _isInitialized = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _initWebview();
-  }
-
-  Future<void> _initWebview() async {
-    try {
-      await _controller.initialize();
-      await _controller.setBackgroundColor(Colors.transparent);
-      await _controller.clearCache();
-      await _controller.clearCookies();
-
-      AdvancedLogger.info('[AdWidget] Loading Windows HTML...');
-      await _controller.loadStringContent(widget.htmlContent);
-
-      _controller.url.listen((url) {
-        if (url != 'about:blank' &&
-            !url.contains('data:text/html') &&
-            !url.contains('acceptable.a-ads.com')) {
-          _launchUrl(url);
-          _controller.loadStringContent(widget.htmlContent);
-        }
-      });
-
-      if (mounted) setState(() => _isInitialized = true);
-    } catch (e) {
-      AdvancedLogger.warn('Windows WebView Error: $e');
-    }
-  }
-
-  void _launchUrl(String urlString) async {
-    final uri = Uri.parse(urlString);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
-  }
-
-  @override
-  void dispose() {
-    try {
-      if (_isInitialized) {
-        _controller.stop();
-      }
-      _controller.dispose();
-    } catch (e) {
-      // Ignore
-    }
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (!_isInitialized) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    return Container(color: Colors.transparent, child: Webview(_controller));
+    return _MobileWebView(htmlContent: content);
   }
 }
 
@@ -331,6 +256,8 @@ class _MobileWebViewState extends State<_MobileWebView> {
     AdvancedLogger.info('[AdWidget] Loading Mobile HTML...');
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..enableZoom(false)
+      ..enableZoom(false)
       ..setBackgroundColor(Colors.transparent)
       ..setNavigationDelegate(
         NavigationDelegate(
@@ -358,10 +285,8 @@ class _MobileWebViewState extends State<_MobileWebView> {
       children: [
         WebViewWidget(
           controller: _controller,
-          gestureRecognizers:
-              <
-                Factory<OneSequenceGestureRecognizer>
-              >{}, // Prevent scroll hijacking
+          gestureRecognizers: <Factory<
+              OneSequenceGestureRecognizer>>{}, // Prevent scroll hijacking
         ),
         if (_isLoading)
           const Center(
