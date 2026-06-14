@@ -69,13 +69,11 @@ Future<Map<String, dynamic>> _processConfigsInIsolate(
   Map<String, dynamic> args,
 ) async {
   final List<String> configStrings = args['configStrings'] as List<String>;
-  final Set<String> blockedHashes = (args['blockedHashes'] as List)
-      .cast<String>()
-      .toSet();
+  final Set<String> blockedHashes =
+      (args['blockedHashes'] as List).cast<String>().toSet();
   final bool checkBlacklist = args['checkBlacklist'] as bool;
-  final Set<String> existingConfigs = (args['existingConfigs'] as List)
-      .cast<String>()
-      .toSet();
+  final Set<String> existingConfigs =
+      (args['existingConfigs'] as List).cast<String>().toSet();
   int addedCount = args['initialAddedCount'] as int;
 
   final List<VpnConfigWithMetrics> newConfigs = [];
@@ -236,7 +234,8 @@ class ConfigManager extends ChangeNotifier {
     // Time Wallet Enforced Disconnection Listener
     TimeWalletService().addListener(() {
       if (isConnected && !TimeWalletService().hasTime) {
-        AdvancedLogger.warn("[ConfigManager] Time Wallet expired! Enforcing disconnect.");
+        AdvancedLogger.warn(
+            "[ConfigManager] Time Wallet expired! Enforcing disconnect.");
         disconnectVpn();
       }
     });
@@ -255,23 +254,26 @@ class ConfigManager extends ChangeNotifier {
         if (!userInitiatedDisconnect && isAutoSwitchEnabled) {
           final timeWallet = TimeWalletService();
           if (!timeWallet.hasTime) {
-             AdvancedLogger.info("[Auto-Heal] Skipped: Time Wallet expired.");
-             return;
+            AdvancedLogger.info("[Auto-Heal] Skipped: Time Wallet expired.");
+            return;
           }
 
           if (!await ConnectivityUtils.hasInternet()) {
-             AdvancedLogger.info("[Auto-Heal] Skipped: No physical internet connection.");
-             return;
+            AdvancedLogger.info(
+                "[Auto-Heal] Skipped: No physical internet connection.");
+            return;
           }
 
           if (_consecutiveFailoverCount >= 3) {
-             AdvancedLogger.warn("[Auto-Heal] Max retry limit reached (3). Stopping.");
-             setConnected(false, status: 'Connection Lost');
-             return;
+            AdvancedLogger.warn(
+                "[Auto-Heal] Max retry limit reached (3). Stopping.");
+            setConnected(false, status: 'Connection Lost');
+            return;
           }
 
           _consecutiveFailoverCount++;
-          AdvancedLogger.info("[Auto-Heal] Attempt $_consecutiveFailoverCount: Triggering silent failover...");
+          AdvancedLogger.info(
+              "[Auto-Heal] Attempt $_consecutiveFailoverCount: Triggering silent failover...");
 
           connectWithSmartFailover();
         }
@@ -516,8 +518,7 @@ class ConfigManager extends ChangeNotifier {
       if (dead &&
           (c.currentPing == -1 ||
               c.failureCount >= 3 ||
-              (!c.isAlive && c.funnelStage == 0)))
-        return true;
+              (!c.isAlive && c.funnelStage == 0))) return true;
       if (weak && c.currentPing > 1500)
         return true; // threshold for weak config
       if (untestedSpeed && c.funnelStage < 3) return true;
@@ -597,8 +598,7 @@ class ConfigManager extends ChangeNotifier {
     List<VpnConfigWithMetrics>? sourceList,
     bool performConnection = true,
   }) async {
-    final list =
-        sourceList ??
+    final list = sourceList ??
         (validatedConfigs.isNotEmpty ? validatedConfigs : allConfigs);
     if (list.isEmpty) return false;
 
@@ -920,9 +920,8 @@ class ConfigManager extends ChangeNotifier {
     final NativeVpnService nativeService = NativeVpnService();
     final EphemeralTester tester = EphemeralTester();
 
-    while (attempts < maxAttempts &&
-        target != null &&
-        !_isGlobalStopRequested) {
+    while (
+        attempts < maxAttempts && target != null && !_isGlobalStopRequested) {
       try {
         selectConfig(target); // Update UI selection
 
@@ -930,12 +929,13 @@ class ConfigManager extends ChangeNotifier {
         setConnected(false, status: 'Verifying ${target.name}...');
 
         final bool isFastLane = target.lastTestedAt != null &&
-                                DateTime.now().difference(target.lastTestedAt!).inMinutes < 45 &&
-                                target.funnelStage >= 2 &&
-                                target.currentPing > 0;
+            DateTime.now().difference(target.lastTestedAt!).inMinutes < 45 &&
+            target.funnelStage >= 2 &&
+            target.currentPing > 0;
 
         if (isFastLane) {
-          AdvancedLogger.info("[ConfigManager] Fast Lane: Skipping pre-flight for ${target.name} (Recent successful test)");
+          AdvancedLogger.info(
+              "[ConfigManager] Fast Lane: Skipping pre-flight for ${target.name} (Recent successful test)");
         } else {
           final testResult = await tester.runTest(
             target,
@@ -965,16 +965,14 @@ class ConfigManager extends ChangeNotifier {
         setConnected(false, status: 'Connecting to ${target.name}...');
         try {
           // Put a timeout strictly on the connection invocation process itself
-          await nativeService
-              .connect(target.rawConfig)
-              .timeout(
-                const Duration(seconds: 15),
-                onTimeout: () {
-                  throw TimeoutException(
-                    "Connection to Native Service timed out",
-                  );
-                },
+          await nativeService.connect(target.rawConfig).timeout(
+            const Duration(seconds: 15),
+            onTimeout: () {
+              throw TimeoutException(
+                "Connection to Native Service timed out",
               );
+            },
+          );
 
           // 5. Success (optimistic native call success)
           await updateConfigMetrics(target.id, connectionSuccess: true);
