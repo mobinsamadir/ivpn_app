@@ -28,14 +28,18 @@ jobs:
               - 'lib/**'
               - 'android/**'
               - 'pubspec.yaml'
+              - '.github/workflows/**'
+              - 'tool/**'
             windows:
               - 'lib/**'
               - 'windows/**'
               - 'pubspec.yaml'
+              - '.github/workflows/**'
+              - 'tool/**'
 
   build-windows:
     needs: changes
-    if: ${{ needs.changes.outputs.windows == 'true' }}
+    if: ${{ needs.changes.outputs.windows == 'true' || github.event_name == 'workflow_dispatch' }}
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -93,7 +97,7 @@ jobs:
 
   build-android:
     needs: changes
-    if: ${{ needs.changes.outputs.android == 'true' }}
+    if: ${{ needs.changes.outputs.android == 'true' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
