@@ -1,0 +1,63 @@
+name: Manual Windows Build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Cache Pub Dependencies
+        uses: actions/cache@v4
+        with:
+          path: C:\Users\runneradmin\AppData\Local\Pub\Cache
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Cache Windows Assets
+        id: assets-cache
+        uses: actions/cache@v4
+        with:
+          path: assets
+          key: windows-assets-v2-${{ hashFiles('tool/setup_core.dart') }}
+
+      - name: Setup Core Assets (Download Binaries)
+        run: |
+          flutter pub get
+          dart run tool/setup_core.dart
+
+      - name: Update Version Code (Dynamic)
+        run: dart run tool/update_version.dart
+
+      - name: Build iVPN Windows
+        run: |
+          flutter pub get
+          flutter build windows --release
+
+      - name: Compress Windows Release
+        shell: pwsh
+        run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath ivpn-windows.zip -Force
+
+      - name: Create Release and Upload Windows
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: windows-manual-${{ github.run_number }}
+          name: Manual Windows Build ${{ github.run_number }}
+          files: ivpn-windows.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
