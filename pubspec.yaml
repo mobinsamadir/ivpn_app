@@ -80,6 +80,3 @@ flutter:
     - assets/geosite.db
     - assets/html/
 
-dependency_overrides:
-  window_manager:
-    path: ./local_plugins/window_manager/packages/window_manager

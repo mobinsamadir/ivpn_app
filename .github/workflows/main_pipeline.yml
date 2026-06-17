@@ -76,8 +76,11 @@ jobs:
 
       - name: Build iVPN Windows
         run: |
+          flutter clean
           flutter pub get
-          flutter build windows --release
+          flutter clean
+          flutter pub get
+          flutter build windows --release --dart-define=FLUTTER_TARGET_PLATFORM=windows -- /p:CppLanguageVersion=Latest /p:AdditionalOptions="/permissive- /await"
 
       - name: Compress Windows Release
         shell: pwsh
