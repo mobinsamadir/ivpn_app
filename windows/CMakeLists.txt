@@ -26,6 +26,10 @@ set(BINARY_NAME "iVPN")
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.
 set(CMAKE_CXX_STANDARD 20)
+if(MSVC)
+    add_compile_options(/permissive- /await)
+    string(APPEND CMAKE_CXX_FLAGS " /std:c++latest")
+endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 cmake_policy(VERSION 3.14...3.25)
 
