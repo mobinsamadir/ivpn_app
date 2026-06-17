@@ -49,7 +49,7 @@ jobs:
       - name: Cache Pub Dependencies
         uses: actions/cache@v4
         with:
-          path: C:\Users\runneradmin\AppData\Local\Pub\Cache
+          path: C:\\Users\\runneradmin\\AppData\\Local\\Pub\\Cache
           key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
           restore-keys: |
             ${{ runner.os }}-pub-
@@ -73,6 +73,26 @@ jobs:
 
       - name: Update Version Code (Dynamic)
         run: dart run tool/update_version.dart
+
+      - name: Clean Flutter & Regenerate Windows plugins
+        shell: pwsh
+        run: |
+          # Clean previous build artifacts
+          flutter clean
+
+          # Ensure ephemeral plugin artifacts are removed so they'll be regenerated
+          if (Test-Path windows\flutter\ephemeral) {
+            Write-Host "Removing windows\flutter\ephemeral to force plugin regeneration"
+            Remove-Item -Recurse -Force windows\flutter\ephemeral
+          }
+
+          # Extra: remove plugin symlinks dir if present (defensive)
+          if (Test-Path windows\flutter\ephemeral\.plugin_symlinks) {
+            Remove-Item -Recurse -Force windows\flutter\ephemeral\.plugin_symlinks
+          }
+
+          # Recreate pub artifacts
+          flutter pub get
 
       - name: Build iVPN Windows
         run: |
