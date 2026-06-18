@@ -93,7 +93,7 @@ class WindowManagerPlugin : public flutter::Plugin {
 };
 
 // static
-void RegisterWithRegistrar(
+void WindowManagerPlugin::RegisterWithRegistrar(
     flutter::PluginRegistrarWindows* registrar) {
   auto plugin = std::make_unique<WindowManagerPlugin>(registrar);
 
@@ -122,7 +122,7 @@ WindowManagerPlugin::~WindowManagerPlugin() {
   channel = nullptr;
 }
 
-void _EmitEvent(std::string eventName) {
+void WindowManagerPlugin::_EmitEvent(std::string eventName) {
   if (channel == nullptr)
     return;
   flutter::EncodableMap args = flutter::EncodableMap();
@@ -132,7 +132,7 @@ void _EmitEvent(std::string eventName) {
                         std::make_unique<flutter::EncodableValue>(args));
 }
 
-std::optional<LRESULT> HandleWindowProc(HWND hWnd,
+std::optional<LRESULT> WindowManagerPlugin::HandleWindowProc(HWND hWnd,
                                                              UINT message,
                                                              WPARAM wParam,
                                                              LPARAM lParam) {
@@ -339,7 +339,7 @@ std::optional<LRESULT> HandleWindowProc(HWND hWnd,
   return result;
 }
 
-void HandleMethodCall(
+void WindowManagerPlugin::HandleMethodCall(
     const flutter::MethodCall<flutter::EncodableValue>& method_call,
     std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
   std::string method_name = method_call.method_name();
@@ -591,7 +591,7 @@ void HandleMethodCall(
 
 void WindowManagerPluginRegisterWithRegistrar(
     FlutterDesktopPluginRegistrarRef registrar) {
-  RegisterWithRegistrar(
+  WindowManagerPlugin::RegisterWithRegistrar(
       flutter::PluginRegistrarManager::GetInstance()
           ->GetRegistrar<flutter::PluginRegistrarWindows>(registrar));
 }
