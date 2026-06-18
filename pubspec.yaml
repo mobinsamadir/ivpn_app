@@ -80,3 +80,7 @@ flutter:
     - assets/geosite.db
     - assets/html/
 
+
+dependency_overrides:
+  window_manager:
+    path: packages/window_manager
