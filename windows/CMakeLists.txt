@@ -27,7 +27,7 @@ set(BINARY_NAME "iVPN")
 # versions of CMake.
 set(CMAKE_CXX_STANDARD 20)
 if(MSVC)
-    add_compile_options(/permissive- /await)
+    add_compile_options(/permissive-)
     string(APPEND CMAKE_CXX_FLAGS " /std:c++latest")
 endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
