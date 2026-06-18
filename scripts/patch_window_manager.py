@@ -2,7 +2,6 @@ import os
 
 def strip_qualifier(filepath, qualifier):
     if not os.path.exists(filepath):
-        print(f"File not found: {filepath}")
         return
     with open(filepath, 'r', encoding='utf-8') as f:
         content = f.read()
@@ -16,4 +15,4 @@ def strip_qualifier(filepath, qualifier):
 base_path = 'packages/window_manager/windows'
 strip_qualifier(f'{base_path}/window_manager.cpp', 'WindowManager')
 strip_qualifier(f'{base_path}/window_manager_plugin.cpp', 'WindowManagerPlugin')
-print("✅ C++ files patched successfully.")
+print("✅ C++ files patched successfully in the flattened directory.")
