@@ -1,5 +1,7 @@
 # ivpn_new
 
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/mobinsamadir/ivpn_app)
+
 A new Flutter project.
 
 ## Getting Started
