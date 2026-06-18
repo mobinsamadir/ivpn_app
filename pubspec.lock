@@ -912,12 +912,11 @@ packages:
     source: hosted
     version: "0.2.1"
   screen_retriever_windows:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: screen_retriever_windows
-      sha256: c44b38a4c4bab34af259180a70a4eee1e29384e7b82e627c9faa68afcdab2e73
-      url: "https://pub.dev"
-    source: hosted
+      path: "packages/screen_retriever_windows"
+      relative: true
+    source: path
     version: "0.2.1"
   shared_preferences:
     dependency: "direct main"
