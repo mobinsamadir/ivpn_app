@@ -84,3 +84,5 @@ flutter:
 dependency_overrides:
   window_manager:
     path: packages/window_manager
+  screen_retriever_windows:
+    path: packages/screen_retriever_windows
