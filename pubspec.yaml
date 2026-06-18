@@ -84,3 +84,5 @@ flutter:
 dependency_overrides:
   window_manager:
     path: packages/window_manager
+  permission_handler_windows:
+    path: packages/permission_handler_windows
