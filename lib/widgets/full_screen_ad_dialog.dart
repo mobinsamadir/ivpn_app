@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'universal_ad_widget.dart';
+import '../services/ad_manager_service.dart';
 
 class FullScreenAdDialog extends StatefulWidget {
   final String unitId;
@@ -49,6 +50,13 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
 
   @override
   Widget build(BuildContext context) {
+    if (!kEnableAds) {
+      // Short-circuit: Immediately close and return success when ads are disabled
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.of(context).pop(true);
+      });
+      return const SizedBox.shrink();
+    }
     // PopScope prevents Back Button to enforce "The Wall" until dismissed
     return PopScope(
       canPop: false,

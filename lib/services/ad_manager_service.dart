@@ -7,6 +7,10 @@ import '../models/ad_config.dart';
 import '../utils/advanced_logger.dart';
 import '../widgets/full_screen_ad_dialog.dart';
 
+// Global toggle for Ads (True = Ads Enabled, False = Ads Disabled / Premium Free Mode)
+// Now driven by remote configuration `global_ads_enabled`
+bool kEnableAds = false;
+
 class AdManagerService {
   static final AdManagerService _instance = AdManagerService._internal();
   factory AdManagerService() => _instance;
@@ -46,6 +50,7 @@ class AdManagerService {
   // Construct the JSON structure
   static final Map<String, dynamic> _defaultFallbackMap = {
     "config_version": "fallback_v1",
+    "global_ads_enabled": 0,
     "ads": {
       "home_banner_top": {
         "isEnabled": true,
@@ -114,6 +119,10 @@ class AdManagerService {
       if (jsonString != null) {
         final jsonMap = jsonDecode(jsonString);
         final cachedConfig = AdConfig.fromJson(jsonMap);
+        // Load global toggle from cache
+        final int globalAds = jsonMap['global_ads_enabled'] as int? ?? 0;
+        kEnableAds = (globalAds == 1);
+
         configNotifier.value = cachedConfig;
         AdvancedLogger.info(
           "[AdManager] Loaded cached config: ${cachedConfig.configVersion}",
@@ -144,6 +153,10 @@ class AdManagerService {
         }
 
         final remoteConfig = AdConfig.fromJson(data);
+        // Handle global_ads_enabled: 1 = ON, 0 = OFF (Fallback to false if missing or 0)
+        final int globalAds = data['global_ads_enabled'] as int? ?? 0;
+        kEnableAds = (globalAds == 1);
+
         configNotifier.value = remoteConfig;
         AdvancedLogger.info(
           "[AdManager] Success! Updating cache and UI. Version: ${remoteConfig.configVersion}",
