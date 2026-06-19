@@ -69,11 +69,13 @@ Future<Map<String, dynamic>> _processConfigsInIsolate(
   Map<String, dynamic> args,
 ) async {
   final List<String> configStrings = args['configStrings'] as List<String>;
-  final Set<String> blockedHashes =
-      (args['blockedHashes'] as List).cast<String>().toSet();
+  final Set<String> blockedHashes = (args['blockedHashes'] as List)
+      .cast<String>()
+      .toSet();
   final bool checkBlacklist = args['checkBlacklist'] as bool;
-  final Set<String> existingConfigs =
-      (args['existingConfigs'] as List).cast<String>().toSet();
+  final Set<String> existingConfigs = (args['existingConfigs'] as List)
+      .cast<String>()
+      .toSet();
   int addedCount = args['initialAddedCount'] as int;
 
   final List<VpnConfigWithMetrics> newConfigs = [];
@@ -235,7 +237,8 @@ class ConfigManager extends ChangeNotifier {
     TimeWalletService().addListener(() {
       if (isConnected && !TimeWalletService().hasTime) {
         AdvancedLogger.warn(
-            "[ConfigManager] Time Wallet expired! Enforcing disconnect.");
+          "[ConfigManager] Time Wallet expired! Enforcing disconnect.",
+        );
         disconnectVpn();
       }
     });
@@ -260,20 +263,23 @@ class ConfigManager extends ChangeNotifier {
 
           if (!await ConnectivityUtils.hasInternet()) {
             AdvancedLogger.info(
-                "[Auto-Heal] Skipped: No physical internet connection.");
+              "[Auto-Heal] Skipped: No physical internet connection.",
+            );
             return;
           }
 
           if (_consecutiveFailoverCount >= 3) {
             AdvancedLogger.warn(
-                "[Auto-Heal] Max retry limit reached (3). Stopping.");
+              "[Auto-Heal] Max retry limit reached (3). Stopping.",
+            );
             setConnected(false, status: 'Connection Lost');
             return;
           }
 
           _consecutiveFailoverCount++;
           AdvancedLogger.info(
-              "[Auto-Heal] Attempt $_consecutiveFailoverCount: Triggering silent failover...");
+            "[Auto-Heal] Attempt $_consecutiveFailoverCount: Triggering silent failover...",
+          );
 
           connectWithSmartFailover();
         }
@@ -518,7 +524,8 @@ class ConfigManager extends ChangeNotifier {
       if (dead &&
           (c.currentPing == -1 ||
               c.failureCount >= 3 ||
-              (!c.isAlive && c.funnelStage == 0))) return true;
+              (!c.isAlive && c.funnelStage == 0)))
+        return true;
       if (weak && c.currentPing > 1500)
         return true; // threshold for weak config
       if (untestedSpeed && c.funnelStage < 3) return true;
@@ -598,7 +605,8 @@ class ConfigManager extends ChangeNotifier {
     List<VpnConfigWithMetrics>? sourceList,
     bool performConnection = true,
   }) async {
-    final list = sourceList ??
+    final list =
+        sourceList ??
         (validatedConfigs.isNotEmpty ? validatedConfigs : allConfigs);
     if (list.isEmpty) return false;
 
@@ -920,22 +928,25 @@ class ConfigManager extends ChangeNotifier {
     final NativeVpnService nativeService = NativeVpnService();
     final EphemeralTester tester = EphemeralTester();
 
-    while (
-        attempts < maxAttempts && target != null && !_isGlobalStopRequested) {
+    while (attempts < maxAttempts &&
+        target != null &&
+        !_isGlobalStopRequested) {
       try {
         selectConfig(target); // Update UI selection
 
         // 3. Pre-flight Check with FAST LANE logic
         setConnected(false, status: 'Verifying ${target.name}...');
 
-        final bool isFastLane = target.lastTestedAt != null &&
+        final bool isFastLane =
+            target.lastTestedAt != null &&
             DateTime.now().difference(target.lastTestedAt!).inMinutes < 45 &&
             target.funnelStage >= 2 &&
             target.currentPing > 0;
 
         if (isFastLane) {
           AdvancedLogger.info(
-              "[ConfigManager] Fast Lane: Skipping pre-flight for ${target.name} (Recent successful test)");
+            "[ConfigManager] Fast Lane: Skipping pre-flight for ${target.name} (Recent successful test)",
+          );
         } else {
           final testResult = await tester.runTest(
             target,
@@ -965,14 +976,16 @@ class ConfigManager extends ChangeNotifier {
         setConnected(false, status: 'Connecting to ${target.name}...');
         try {
           // Put a timeout strictly on the connection invocation process itself
-          await nativeService.connect(target.rawConfig).timeout(
-            const Duration(seconds: 15),
-            onTimeout: () {
-              throw TimeoutException(
-                "Connection to Native Service timed out",
+          await nativeService
+              .connect(target.rawConfig)
+              .timeout(
+                const Duration(seconds: 15),
+                onTimeout: () {
+                  throw TimeoutException(
+                    "Connection to Native Service timed out",
+                  );
+                },
               );
-            },
-          );
 
           // 5. Success (optimistic native call success)
           await updateConfigMetrics(target.id, connectionSuccess: true);
@@ -1027,6 +1040,50 @@ class ConfigManager extends ChangeNotifier {
     // 8. Final Failure State
     if (!_isGlobalStopRequested) {
       setConnected(false, status: 'Connection Failed');
+    }
+  }
+
+  // --- MANUAL FORCED CONNECTION ---
+  Future<void> connectManual(VpnConfigWithMetrics target) async {
+    userInitiatedDisconnect = false;
+    isConnectionCancelled = false;
+    _isGlobalStopRequested = false;
+
+    AdvancedLogger.info(
+      '[ConfigManager] Starting Manual Connection to ${target.name}...',
+    );
+    setConnected(false, status: 'Connecting...');
+    selectConfig(target);
+
+    final NativeVpnService nativeService = NativeVpnService();
+
+    try {
+      // Initiate native connection
+      await nativeService.connect(target.rawConfig);
+
+      // Wait for CONNECTED state with strict 10-second timeout
+      await nativeService.connectionStatusStream
+          .firstWhere((status) => status == 'CONNECTED')
+          .timeout(const Duration(seconds: 10));
+
+      AdvancedLogger.info(
+        '[ConfigManager] Manual Connection Success: ${target.name}',
+      );
+      // Optional: nativeService emits 'CONNECTED' and UI will catch it via stream listener.
+      // But we can ensure state is updated.
+      // Do not call setConnected(true) here if NativeVpnService handles broadcasting it to main UI,
+      // but if we rely on it, wait for stream is sufficient.
+    } catch (e) {
+      AdvancedLogger.warn('[ConfigManager] Manual Connection Failed: $e');
+
+      // Force native disconnect immediately
+      await nativeService.disconnect();
+
+      // Notify UI of failure so it can show the red banner
+      setConnected(false, status: 'Connection Failed');
+
+      // Throw exception so caller can also catch if needed
+      throw Exception("Manual connection failed: $e");
     }
   }
 

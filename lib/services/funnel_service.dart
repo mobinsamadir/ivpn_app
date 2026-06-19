@@ -20,7 +20,18 @@ List<VpnConfigWithMetrics> _buildQueueInIsolate(Map<String, dynamic> args) {
   final softFail = <VpnConfigWithMetrics>[];
   final dead = <VpnConfigWithMetrics>[];
 
+  final now = DateTime.now();
+
   for (final c in allConfigs) {
+    // Constraint 1: Time-Bound Smart Caching (TTL Logic)
+    // If we are auto-running (retestDead = false) and the config was tested < 2 hours ago, skip entirely.
+    if (!retestDead && c.lastTestedAt != null) {
+      final hoursSinceTested = now.difference(c.lastTestedAt!).inHours;
+      if (hoursSinceTested < 2) {
+        continue;
+      }
+    }
+
     if (c.isFavorite) {
       favorites.add(c);
     } else if (c.isValidated || c.funnelStage > 0) {
@@ -107,6 +118,7 @@ class FunnelService {
   int _tcpPassed = 0;
   int _httpPassed = 0;
   int _speedFinished = 0;
+  int _totalFailed = 0;
 
   // Progress Stream
   final _progressController = StreamController<String>.broadcast();
@@ -127,6 +139,7 @@ class FunnelService {
 
     _progressController.add("Stopped");
     AdvancedLogger.info("FunnelService: Stopped by user.");
+    _printTelemetrySummary();
   }
 
   Future<void> startFunnel({bool retestDead = false}) async {
@@ -140,6 +153,7 @@ class FunnelService {
     _tcpPassed = 0;
     _httpPassed = 0;
     _speedFinished = 0;
+    _totalFailed = 0;
 
     AdvancedLogger.info(
       "FunnelService: Starting Pipeline (RetestDead: $retestDead)",
@@ -185,6 +199,16 @@ class FunnelService {
     _spawnWorkers(_maxSpeedWorkers, _speedWorker, "Speed");
   }
 
+  void _printTelemetrySummary() {
+    debugPrint("--- [TELEMETRY] FUNNEL RUN SUMMARY ---");
+    debugPrint("Total Tested: $_totalConfigs");
+    debugPrint("Total Passed TCP: $_tcpPassed");
+    debugPrint("Total Passed HTTP: $_httpPassed");
+    debugPrint("Total Passed Speed: $_speedFinished");
+    debugPrint("Total Failed: $_totalFailed");
+    debugPrint("--------------------------------------");
+  }
+
   void _startUiThrottle() {
     _uiThrottleTimer?.cancel();
     _uiThrottleTimer = Timer.periodic(const Duration(milliseconds: 500), (
@@ -211,6 +235,7 @@ class FunnelService {
           if (_tcpQueue.isEmpty && _activeTcpWorkers == 0 && _isRunning) {
             stop();
             _progressController.add("Completed");
+            _printTelemetrySummary();
           }
         });
       }
@@ -276,9 +301,17 @@ class FunnelService {
           // We don't save to disk yet to avoid IO thrashing
         } else {
           // Failed TCP - Mark Dead
+          _totalFailed++;
+          debugPrint(
+            "[TELEMETRY] ${config.name} | LastPassedStage: 0 | PingDuration: N/A | ExactException: TCP Connect Timeout",
+          );
           await _configManager.markFailure(config.id);
         }
       } catch (e) {
+        _totalFailed++;
+        debugPrint(
+          "[TELEMETRY] ${config?.name ?? 'Unknown'} | LastPassedStage: 0 | PingDuration: N/A | ExactException: $e",
+        );
         AdvancedLogger.warn("TCP Worker Error: $e");
       } finally {
         _activeTcpWorkers--;
@@ -309,6 +342,9 @@ class FunnelService {
         if (result.funnelStage >= 2) {
           // Success (2 or 3)
           _httpPassed++;
+          debugPrint(
+            "[TELEMETRY] ${config.name} | LastPassedStage: 2 | PingDuration: ${result.currentPing} | ExactException: None",
+          );
 
           // Update Manager (triggers Sort & UI update)
           await _configManager.updateConfigDirectly(result);
@@ -316,9 +352,17 @@ class FunnelService {
           // Promote to Speed Queue
           _speedQueue.add(result);
         } else {
+          _totalFailed++;
+          debugPrint(
+            "[TELEMETRY] ${config.name} | LastPassedStage: 1 | PingDuration: ${result.currentPing} | ExactException: HTTP Failed (No 204)",
+          );
           await _configManager.markFailure(config.id);
         }
       } catch (e) {
+        _totalFailed++;
+        debugPrint(
+          "[TELEMETRY] ${config?.name ?? 'Unknown'} | LastPassedStage: 1 | PingDuration: N/A | ExactException: $e",
+        );
         AdvancedLogger.warn("HTTP Worker Error: $e");
       } finally {
         _activeHttpWorkers--;
