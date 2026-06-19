@@ -8,12 +8,6 @@ def strip_qualifier(filepath, qualifier):
     with open(filepath, 'r', encoding='utf-8') as f:
         content = f.read()
 
-    # Find the class definition block
-    class_match = re.search(r'(class\s+' + qualifier + r'\s*(?::\s*[^{]+)?\{)(.*?)(^\s*\};\s*$)', content, re.MULTILINE | re.DOTALL)
-    if class_match:
-        prefix = class_match.group(1)
-        body = class_match.group(2)
-        suffix = class_match.group(3)
         
         # In the body, replace `Qualifier::` with ``
         body = body.replace(f"{qualifier}::", "")
