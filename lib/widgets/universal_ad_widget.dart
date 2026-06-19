@@ -62,6 +62,10 @@ class _UniversalAdWidgetState extends State<UniversalAdWidget> {
 
   @override
   Widget build(BuildContext context) {
+    if (!kEnableAds) {
+      return const SizedBox.shrink();
+    }
+
     if (_currentAd == null || !_currentAd!.isEnabled) {
       return const SizedBox.shrink();
     }
@@ -194,7 +198,7 @@ class _VideoAdState extends State<_VideoAd> {
 class _WebViewAd extends StatelessWidget {
   final String mediaSource;
   final String
-      targetUrl; // Not used for iframe usually, but maybe for overlay click
+  targetUrl; // Not used for iframe usually, but maybe for overlay click
 
   const _WebViewAd({required this.mediaSource, required this.targetUrl});
 
@@ -216,7 +220,8 @@ class _WebViewAd extends StatelessWidget {
 
     // Step 3: Wrap in Full HTML Template (For Transparency & Centering)
     if (!content.contains("<html")) {
-      content = """
+      content =
+          """
       <!DOCTYPE html>
       <html>
       <head>
@@ -285,8 +290,10 @@ class _MobileWebViewState extends State<_MobileWebView> {
       children: [
         WebViewWidget(
           controller: _controller,
-          gestureRecognizers: <Factory<
-              OneSequenceGestureRecognizer>>{}, // Prevent scroll hijacking
+          gestureRecognizers:
+              <
+                Factory<OneSequenceGestureRecognizer>
+              >{}, // Prevent scroll hijacking
         ),
         if (_isLoading)
           const Center(

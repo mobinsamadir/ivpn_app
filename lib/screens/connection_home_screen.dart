@@ -363,6 +363,13 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
 
   // --- AD REWARD LOGIC ---
   Future<void> _showAdSequence() async {
+    if (!kEnableAds) {
+      // Short-circuit: Give reward automatically if ads are disabled
+      _timeWalletService.addRewardTime();
+      _showToast("Premium active! +1 Hour Added.");
+      return;
+    }
+
     final adSuccess = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
@@ -1390,7 +1397,14 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                 final url = _urlController.text.trim();
                 if (url.isNotEmpty) {
                   Navigator.of(context).pop();
-                  final added = await _configManager.addConfigs([url]);
+                  // Constraint: Properly split multiline input for multiple configs
+                  final lines = url
+                      .split(RegExp(r'\r?\n|\s+'))
+                      .where((e) => e.trim().isNotEmpty)
+                      .toList();
+                  final added = await _configManager.addConfigs(
+                    lines.isNotEmpty ? lines : [url],
+                  );
                   if (added > 0) {
                     _showToast("Server added successfully!");
                     setState(() {});

@@ -1,8 +1,13 @@
 class AdConfig {
   final String configVersion;
+  final int globalAdsEnabled;
   final Map<String, AdUnit> ads;
 
-  AdConfig({required this.configVersion, required this.ads});
+  AdConfig({
+    required this.configVersion,
+    required this.globalAdsEnabled,
+    required this.ads,
+  });
 
   factory AdConfig.fromJson(Map<String, dynamic> json) {
     final adsJson = json['ads'] as Map<String, dynamic>? ?? {};
@@ -13,6 +18,7 @@ class AdConfig {
 
     return AdConfig(
       configVersion: json['config_version'] as String? ?? 'v1',
+      globalAdsEnabled: json['global_ads_enabled'] as int? ?? 0,
       ads: adsMap,
     );
   }
@@ -20,6 +26,7 @@ class AdConfig {
   Map<String, dynamic> toJson() {
     return {
       'config_version': configVersion,
+      'global_ads_enabled': globalAdsEnabled,
       'ads': ads.map((key, value) => MapEntry(key, value.toJson())),
     };
   }
