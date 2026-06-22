@@ -662,6 +662,46 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                       const SizedBox(height: 8),
                       _buildSubscriptionCard(),
                       const SizedBox(height: 16),
+
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16.0,
+                            vertical: 8.0,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.autorenew,
+                                    color: Colors.blueAccent,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    'Auto Switch',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Switch(
+                                value: _configManager.isAutoSwitchEnabled,
+                                activeColor: Colors.blueAccent,
+                                onChanged: (val) {
+                                  setState(() {
+                                    _configManager.isAutoSwitchEnabled = val;
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                       ListenableBuilder(
                         listenable: _configManager,
                         builder: (context, _) => Column(
@@ -893,12 +933,21 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                               _configManager.selectedConfig?.id == config.id,
                           isTesting: _activeTestIds.contains(config.id),
                           onTap: () async {
-                            final wasConnected = _configManager.isConnected;
                             _configManager.selectConfig(config);
                             setState(() {});
-                            if (wasConnected) {
-                              // Start the switch process properly within ConfigManager to avoid race conditions
-                              await _configManager.switchConfig(config);
+
+                            if (_configManager.isAutoSwitchEnabled) {
+                              if (_configManager.isConnected) {
+                                // Start the switch process properly within ConfigManager to avoid race conditions
+                                await _configManager.switchConfig(config);
+                              }
+                            } else {
+                              // Forced manual connect
+                              try {
+                                await _configManager.connectManual(config);
+                              } catch (e) {
+                                _showToast('Connection failed: $e');
+                              }
                             }
                           },
                           onTestLatency: () => _runSingleTest(config),
@@ -1188,7 +1237,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     final configManager = ConfigManager();
     final isConnected = configManager.isConnected;
     final status = configManager.connectionStatus.toLowerCase();
-    final isConnecting = status.contains('connecting') ||
+    final isConnecting =
+        status.contains('connecting') ||
         status.contains('finding') ||
         status.contains('preparing') ||
         status.contains('testing');
@@ -1247,27 +1297,28 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                           const Color(0xFF38EF7D),
                         ] // Green/Teal
                       : (isConnecting
-                          ? [
-                              const Color(0xFFF2994A),
-                              const Color(0xFFF2C94C),
-                            ] // Orange/Yellow
-                          : [
-                              const Color(0xFF4A5568),
-                              const Color(0xFF2D3748),
-                            ]), // Dark Grey
+                            ? [
+                                const Color(0xFFF2994A),
+                                const Color(0xFFF2C94C),
+                              ] // Orange/Yellow
+                            : [
+                                const Color(0xFF4A5568),
+                                const Color(0xFF2D3748),
+                              ]), // Dark Grey
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: (isConnected
-                            ? const Color(0xFF38EF7D)
-                            : (isConnecting
-                                ? const Color(0xFFF2994A)
-                                : Colors.black))
-                        .withValues(
-                      alpha: isConnected || isConnecting ? 0.5 : 0.3,
-                    ),
+                    color:
+                        (isConnected
+                                ? const Color(0xFF38EF7D)
+                                : (isConnecting
+                                      ? const Color(0xFFF2994A)
+                                      : Colors.black))
+                            .withValues(
+                              alpha: isConnected || isConnecting ? 0.5 : 0.3,
+                            ),
                     blurRadius: isConnected || isConnecting ? 25 : 15,
                     spreadRadius: isConnected || isConnecting ? 8 : 2,
                     offset: const Offset(0, 8),
