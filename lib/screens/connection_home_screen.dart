@@ -663,7 +663,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                       _buildSubscriptionCard(),
                       const SizedBox(height: 16),
 
-                      SliverToBoxAdapter(
+                      Container(
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 16.0,
