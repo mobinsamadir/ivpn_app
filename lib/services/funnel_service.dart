@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import '../models/vpn_config_with_metrics.dart';
 import 'config_manager.dart'; // Correct relative import (same folder)
@@ -102,11 +103,23 @@ class FunnelService {
   int _activeHttpWorkers = 0;
   int _activeSpeedWorkers = 0;
 
+  static int _getDynamicWorkerCount(int maxAllowed) {
+    try {
+      final cores = Platform.numberOfProcessors;
+      // Use at least 2 workers, but don't exceed maxAllowed or cores
+      return min(max(cores, 2), maxAllowed);
+    } catch (e) {
+      return 2; // Safe fallback
+    }
+  }
+
   // Limits
-  // Limits
-  static final int _maxTcpWorkers = Platform.isWindows ? 2 : 10;
-  static final int _maxHttpWorkers = Platform.isWindows ? 2 : 5;
-  static final int _maxSpeedWorkers = Platform.isWindows ? 1 : 2;
+
+  static int get _maxTcpWorkers =>
+      Platform.isWindows ? 2 : _getDynamicWorkerCount(6);
+  static int get _maxHttpWorkers =>
+      Platform.isWindows ? 2 : _getDynamicWorkerCount(3);
+  static int get _maxSpeedWorkers => 1;
 
   // State
   bool _isRunning = false;
@@ -254,6 +267,8 @@ class FunnelService {
 
   Future<void> _tcpWorker() async {
     while (_isRunning && !_stopRequested) {
+      // Yield to event loop to prevent ANR/OOM on Android
+      await Future.delayed(const Duration(milliseconds: 50));
       VpnConfigWithMetrics? config;
 
       // Critical Section: Pop
@@ -310,7 +325,7 @@ class FunnelService {
       } catch (e) {
         _totalFailed++;
         debugPrint(
-          "[TELEMETRY] ${config?.name ?? 'Unknown'} | LastPassedStage: 0 | PingDuration: N/A | ExactException: $e",
+          "[TELEMETRY] ${config.name} | LastPassedStage: 0 | PingDuration: N/A | ExactException: $e",
         );
         AdvancedLogger.warn("TCP Worker Error: $e");
       } finally {
@@ -321,6 +336,8 @@ class FunnelService {
 
   Future<void> _httpWorker() async {
     while (_isRunning && !_stopRequested) {
+      // Yield to event loop to prevent ANR/OOM on Android
+      await Future.delayed(const Duration(milliseconds: 50));
       VpnConfigWithMetrics? config;
 
       if (_httpQueue.isNotEmpty) {
@@ -361,7 +378,7 @@ class FunnelService {
       } catch (e) {
         _totalFailed++;
         debugPrint(
-          "[TELEMETRY] ${config?.name ?? 'Unknown'} | LastPassedStage: 1 | PingDuration: N/A | ExactException: $e",
+          "[TELEMETRY] ${config.name} | LastPassedStage: 1 | PingDuration: N/A | ExactException: $e",
         );
         AdvancedLogger.warn("HTTP Worker Error: $e");
       } finally {
@@ -372,6 +389,8 @@ class FunnelService {
 
   Future<void> _speedWorker() async {
     while (_isRunning && !_stopRequested) {
+      // Yield to event loop to prevent ANR/OOM on Android
+      await Future.delayed(const Duration(milliseconds: 50));
       VpnConfigWithMetrics? config;
 
       if (_speedQueue.isNotEmpty) {
