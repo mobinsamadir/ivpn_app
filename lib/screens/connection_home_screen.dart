@@ -204,10 +204,6 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
       }
     });
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initAppSequence();
-    });
-
     _timerUpdater = Timer.periodic(const Duration(minutes: 1), (timer) {
       if (mounted) setState(() {});
     });
@@ -559,6 +555,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
         });
       }
       AdvancedLogger.info('[HomeScreen] Initialized successfully');
+
+      // Start app sequence now that preferences are loaded
+      _initAppSequence();
     } catch (e) {
       AdvancedLogger.error('[HomeScreen] Initialization failed: $e');
     }
@@ -662,7 +661,6 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                       const SizedBox(height: 8),
                       _buildSubscriptionCard(),
                       const SizedBox(height: 16),
-
                       Container(
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
@@ -1237,8 +1235,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     final configManager = ConfigManager();
     final isConnected = configManager.isConnected;
     final status = configManager.connectionStatus.toLowerCase();
-    final isConnecting =
-        status.contains('connecting') ||
+    final isConnecting = status.contains('connecting') ||
         status.contains('finding') ||
         status.contains('preparing') ||
         status.contains('testing');
@@ -1297,28 +1294,27 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                           const Color(0xFF38EF7D),
                         ] // Green/Teal
                       : (isConnecting
-                            ? [
-                                const Color(0xFFF2994A),
-                                const Color(0xFFF2C94C),
-                              ] // Orange/Yellow
-                            : [
-                                const Color(0xFF4A5568),
-                                const Color(0xFF2D3748),
-                              ]), // Dark Grey
+                          ? [
+                              const Color(0xFFF2994A),
+                              const Color(0xFFF2C94C),
+                            ] // Orange/Yellow
+                          : [
+                              const Color(0xFF4A5568),
+                              const Color(0xFF2D3748),
+                            ]), // Dark Grey
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color:
-                        (isConnected
-                                ? const Color(0xFF38EF7D)
-                                : (isConnecting
-                                      ? const Color(0xFFF2994A)
-                                      : Colors.black))
-                            .withValues(
-                              alpha: isConnected || isConnecting ? 0.5 : 0.3,
-                            ),
+                    color: (isConnected
+                            ? const Color(0xFF38EF7D)
+                            : (isConnecting
+                                ? const Color(0xFFF2994A)
+                                : Colors.black))
+                        .withValues(
+                      alpha: isConnected || isConnecting ? 0.5 : 0.3,
+                    ),
                     blurRadius: isConnected || isConnecting ? 25 : 15,
                     spreadRadius: isConnected || isConnecting ? 8 : 2,
                     offset: const Offset(0, 8),

@@ -145,32 +145,30 @@ class EphemeralTester {
       int p,
     ) {} // Not needed here anymore, runTestInternal handles port
 
-    _runTestInternal(config, mode, setProcess, setPort)
-        .then((result) {
-          if (!isCompleted) {
-            isCompleted = true;
-            timer.cancel();
-            if (!completer.isCompleted) completer.complete(result);
-          }
-        })
-        .catchError((e) {
-          if (!isCompleted) {
-            isCompleted = true;
-            timer.cancel();
-            if (!completer.isCompleted) {
-              completer.complete(
-                config.copyWith(
-                  funnelStage: 0,
-                  failureReason: "Test Error: $e",
-                  lastFailedStage: "Error",
-                  failureCount: config.failureCount + 1,
-                  lastTestedAt: DateTime.now(),
-                  ping: -1,
-                ),
-              );
-            }
-          }
-        });
+    _runTestInternal(config, mode, setProcess, setPort).then((result) {
+      if (!isCompleted) {
+        isCompleted = true;
+        timer.cancel();
+        if (!completer.isCompleted) completer.complete(result);
+      }
+    }).catchError((e) {
+      if (!isCompleted) {
+        isCompleted = true;
+        timer.cancel();
+        if (!completer.isCompleted) {
+          completer.complete(
+            config.copyWith(
+              funnelStage: 0,
+              failureReason: "Test Error: $e",
+              lastFailedStage: "Error",
+              failureCount: config.failureCount + 1,
+              lastTestedAt: DateTime.now(),
+              ping: -1,
+            ),
+          );
+        }
+      }
+    });
 
     return completer.future;
   }
@@ -277,31 +275,49 @@ class EphemeralTester {
           client.findProxy = (uri) => "SOCKS5 127.0.0.1:$proxyPort";
           client.connectionTimeout = const Duration(seconds: 5);
 
-          // Test HTTP (Stage 2)
+          // Test HTTP (Stage 2) with Retry for HandshakeException
+          // Delay briefly to allow sing-box to establish upstream TLS
+          await Future.delayed(const Duration(milliseconds: 500));
+
           final sw = Stopwatch()..start();
-          try {
-            AdvancedLogger.warn(
-              '[TESTER] HTTP Probe started to http://127.0.0.1:$proxyPort',
-            );
-            final req = await client.getUrl(
-              Uri.parse('https://www.google.com/generate_204'),
-            );
-            final resp = await req.close().timeout(const Duration(seconds: 5));
-            sw.stop();
+          int httpAttempts = 0;
 
-            AdvancedLogger.warn(
-              '[TESTER] HTTP Response received: ${resp.statusCode}',
-            );
+          while (httpAttempts < 2) {
+            try {
+              AdvancedLogger.warn(
+                '[TESTER] HTTP Probe started to http://127.0.0.1:$proxyPort (Attempt ${httpAttempts + 1})',
+              );
+              final req = await client.getUrl(
+                Uri.parse('https://www.google.com/generate_204'),
+              );
+              final resp =
+                  await req.close().timeout(const Duration(seconds: 5));
+              sw.stop();
 
-            if (resp.statusCode == 204) {
-              latency = sw.elapsedMilliseconds;
-              stage2Success = true;
-            } else {
-              throw Exception("HTTP Status ${resp.statusCode}");
+              AdvancedLogger.warn(
+                '[TESTER] HTTP Response received: ${resp.statusCode}',
+              );
+
+              if (resp.statusCode == 204) {
+                latency = sw.elapsedMilliseconds;
+                stage2Success = true;
+                break;
+              } else {
+                throw Exception("HTTP Status ${resp.statusCode}");
+              }
+            } catch (e) {
+              httpAttempts++;
+              if (httpAttempts < 2 &&
+                  (e.toString().contains('HandshakeException') ||
+                      e.toString().contains('SocketException'))) {
+                AdvancedLogger.warn(
+                    '[TESTER] HTTP Handshake failed, retrying in 1s... $e');
+                await Future.delayed(const Duration(seconds: 1));
+              } else {
+                AdvancedLogger.warn('[TESTER] HTTP Response Error: $e');
+                throw Exception("Stage 2 (HTTP) Failed: $e");
+              }
             }
-          } catch (e) {
-            AdvancedLogger.warn('[TESTER] HTTP Response Error: $e');
-            throw Exception("Stage 2 (HTTP) Failed: $e");
           }
 
           // Test Speed (Stage 3)
@@ -485,31 +501,48 @@ class EphemeralTester {
         if (!stage1Success)
           throw Exception("Local Proxy failed to start on port $port");
 
-        // STAGE 2 (HTTP)
+        // STAGE 2 (HTTP) with Retry for HandshakeException
+        // Delay briefly to allow sing-box to establish upstream TLS
+        await Future.delayed(const Duration(milliseconds: 500));
+
         final sw = Stopwatch()..start();
-        try {
-          AdvancedLogger.warn(
-            '[TESTER] HTTP Probe started to http://127.0.0.1:${port + 1}',
-          );
-          final req = await dartHttpClient.getUrl(
-            Uri.parse('https://www.google.com/generate_204'),
-          );
-          final resp = await req.close().timeout(const Duration(seconds: 5));
-          sw.stop();
+        int httpAttempts = 0;
 
-          AdvancedLogger.warn(
-            '[TESTER] HTTP Response received: ${resp.statusCode}',
-          );
+        while (httpAttempts < 2) {
+          try {
+            AdvancedLogger.warn(
+              '[TESTER] HTTP Probe started to http://127.0.0.1:${port + 1} (Attempt ${httpAttempts + 1})',
+            );
+            final req = await dartHttpClient.getUrl(
+              Uri.parse('https://www.google.com/generate_204'),
+            );
+            final resp = await req.close().timeout(const Duration(seconds: 5));
+            sw.stop();
 
-          if (resp.statusCode == 204) {
-            latency = sw.elapsedMilliseconds;
-            stage2Success = true;
-          } else {
-            throw Exception("Status ${resp.statusCode}");
+            AdvancedLogger.warn(
+              '[TESTER] HTTP Response received: ${resp.statusCode}',
+            );
+
+            if (resp.statusCode == 204) {
+              latency = sw.elapsedMilliseconds;
+              stage2Success = true;
+              break;
+            } else {
+              throw Exception("Status ${resp.statusCode}");
+            }
+          } catch (e) {
+            httpAttempts++;
+            if (httpAttempts < 2 &&
+                (e.toString().contains('HandshakeException') ||
+                    e.toString().contains('SocketException'))) {
+              AdvancedLogger.warn(
+                  '[TESTER] HTTP Handshake failed, retrying in 1s... $e');
+              await Future.delayed(const Duration(seconds: 1));
+            } else {
+              AdvancedLogger.warn('[TESTER] HTTP Response Error: $e');
+              throw Exception("Stage 2 Failed: $e");
+            }
           }
-        } catch (e) {
-          AdvancedLogger.warn('[TESTER] HTTP Response Error: $e');
-          throw Exception("Stage 2 Failed: $e");
         }
 
         // STAGE 3 (Speed)
