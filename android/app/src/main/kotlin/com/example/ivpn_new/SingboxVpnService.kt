@@ -150,6 +150,7 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
 
                 // SAFE CALL to Libbox - pass JSON content string
                 val server = try {
+                    Libbox.setupEnvironment(tempDir.absolutePath)
                     Libbox.newCommandServer(StubCommandServerHandler(), StubPlatformInterface())
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -233,6 +234,7 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
 
                 // SAFE CALL - pass JSON content string
                 val testServer = try {
+                    Libbox.setupEnvironment(tempDir.absolutePath)
                     Libbox.newCommandServer(StubCommandServerHandler(), StubPlatformInterface())
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -357,6 +359,7 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
 
                 // SAFE CALL - pass JSON content string
                 try {
+                    Libbox.setupEnvironment(configDir.absolutePath)
                     mainServer = Libbox.newCommandServer(StubCommandServerHandler(), this@SingboxVpnService)
                     mainServer?.startOrReloadService(jsonObject.toString(), null)
                 } catch (e: Exception) {
