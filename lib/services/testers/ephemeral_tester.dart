@@ -483,23 +483,24 @@ class EphemeralTester {
         // STAGE 1 (TCP)
         // Just check if port is open
         int attempts = 0;
-        while (attempts < 3) {
+        while (attempts < 5) {
           try {
             final socket = await Socket.connect(
               '127.0.0.1',
               port,
-              timeout: const Duration(milliseconds: 1500),
+              timeout: const Duration(milliseconds: 2000),
             );
             socket.destroy();
             stage1Success = true;
             break;
           } catch (e) {
             attempts++;
-            await Future.delayed(const Duration(milliseconds: 500));
+            await Future.delayed(const Duration(milliseconds: 1000));
           }
         }
-        if (!stage1Success)
-          throw Exception("Local Proxy failed to start on port $port");
+        if (!stage1Success) {
+          throw Exception("Local Proxy failed to start on port $port after $attempts attempts");
+        }
 
         // STAGE 2 (HTTP) with Retry for HandshakeException
         // Delay briefly to allow sing-box to establish upstream TLS

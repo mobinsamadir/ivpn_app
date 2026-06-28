@@ -72,6 +72,11 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   bool _isSwitching = false;
   String _lastNativeStatus = "DISCONNECTED";
   bool _isAdmin = true;
+  
+  // NEW: Auto-switch throttle and limits
+  int _consecutiveFailures = 0;
+  DateTime? _lastAutoSwitchAttempt;
+
 
   // Auto-switch Variables
   int _highPingCounter = 0;
@@ -158,26 +163,67 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
           );
         });
 
-        if (status == 'DISCONNECTED') {
+        if (status == 'DISCONNECTED' || status.contains('Administrator privileges required') || status.contains('Administrator')) {
+          if (status.contains('Administrator privileges required') || status.contains('Administrator')) {
+            _isAdmin = false;
+            _configManager.userInitiatedDisconnect = true; // Stop auto-switching
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('نیاز به دسترسی ادمین (Run as Administrator)'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          }
+
           setState(() {
             _rxBytes = 0;
             _txBytes = 0;
           });
           if (!_configManager.userInitiatedDisconnect &&
               !_configManager.isConnectionCancelled) {
-            AdvancedLogger.warn(
-              "[HomeScreen] Unexpected disconnect. Attempting auto-switch...",
-            );
-            final validConfigs = _configManager.validatedConfigs;
-            if (validConfigs.isNotEmpty) {
-              if (_configManager.selectedConfig != null) {
-                _configManager.setConnected(false, status: 'Failed');
+            
+            final now = DateTime.now();
+            if (_lastAutoSwitchAttempt != null && now.difference(_lastAutoSwitchAttempt!).inSeconds < 3) {
+              AdvancedLogger.warn("[HomeScreen] Auto-switch throttled.");
+              return;
+            }
+            _lastAutoSwitchAttempt = now;
+            _consecutiveFailures++;
+
+            if (_consecutiveFailures > 5) {
+              AdvancedLogger.warn("[HomeScreen] Auto-switch stopped due to too many consecutive failures.");
+              _configManager.userInitiatedDisconnect = true;
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('اتصال مکرراً قطع شد. سوییچ خودکار متوقف شد.'),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
               }
-              _skipServer();
             } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('هیچ کانفیگ معتبری یافت نشد')),
+              AdvancedLogger.warn(
+                "[HomeScreen] Unexpected disconnect. Attempting auto-switch (Attempt $_consecutiveFailures)...",
               );
+              final validConfigs = _configManager.validatedConfigs;
+              if (validConfigs.isNotEmpty) {
+                if (_configManager.selectedConfig != null) {
+                  _configManager.setConnected(false, status: 'Failed');
+                }
+                
+                Future.delayed(const Duration(seconds: 2), () {
+                  if (mounted && !_configManager.userInitiatedDisconnect) {
+                     _skipServer();
+                  }
+                });
+                
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('هیچ کانفیگ معتبری یافت نشد')),
+                );
+              }
             }
           }
           _configManager.userInitiatedDisconnect = false;
@@ -186,6 +232,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
 
         // NEW: Post-Connect Logic (Anti-Censorship)
         if (status == 'CONNECTED') {
+          _consecutiveFailures = 0; // Reset on success
+
           AdvancedLogger.info(
             "[HomeScreen] VPN Connected. Retrying config fetch...",
           );
