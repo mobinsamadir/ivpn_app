@@ -69,11 +69,13 @@ Future<Map<String, dynamic>> _processConfigsInIsolate(
   Map<String, dynamic> args,
 ) async {
   final List<String> configStrings = args['configStrings'] as List<String>;
-  final Set<String> blockedHashes =
-      (args['blockedHashes'] as List).cast<String>().toSet();
+  final Set<String> blockedHashes = (args['blockedHashes'] as List)
+      .cast<String>()
+      .toSet();
   final bool checkBlacklist = args['checkBlacklist'] as bool;
-  final Set<String> existingConfigs =
-      (args['existingConfigs'] as List).cast<String>().toSet();
+  final Set<String> existingConfigs = (args['existingConfigs'] as List)
+      .cast<String>()
+      .toSet();
   int addedCount = args['initialAddedCount'] as int;
 
   final List<VpnConfigWithMetrics> newConfigs = [];
@@ -127,35 +129,6 @@ Future<Map<String, dynamic>> _processConfigsInIsolate(
     'newConfigs': newConfigs,
     'hashesToRemoveFromBlacklist': hashesToRemoveFromBlacklist,
     'addedCount': addedCount,
-  };
-}
-
-/// Isolate entry point for sorting configs
-Map<String, List<VpnConfigWithMetrics>> _sortConfigsInIsolate(
-  List<VpnConfigWithMetrics> configs,
-) {
-  // Sort logic helper: Score Descending, then Date Descending
-  int compareScore(VpnConfigWithMetrics a, VpnConfigWithMetrics b) {
-    final scoreCmp = b.score.compareTo(a.score);
-    if (scoreCmp != 0) return scoreCmp;
-    return b.addedDate.compareTo(a.addedDate);
-  }
-
-  // Create local copy to sort
-  final allConfigs = List<VpnConfigWithMetrics>.from(configs);
-  allConfigs.sort(compareScore);
-
-  final validatedConfigs = allConfigs.where((c) => c.isValidated).toList();
-  final favoriteConfigs = allConfigs.where((c) => c.isFavorite).toList();
-
-  // Ensure sublists are also sorted
-  validatedConfigs.sort(compareScore);
-  favoriteConfigs.sort(compareScore);
-
-  return {
-    'all': allConfigs,
-    'validated': validatedConfigs,
-    'favorite': favoriteConfigs,
   };
 }
 
@@ -360,56 +333,63 @@ class ConfigManager extends ChangeNotifier {
     List<String> configStrings, {
     bool checkBlacklist = true,
   }) async {
-    // Prepare data for Isolate
-    // We pass list versions of Sets because Sets aren't always transferrable if they contain custom objects,
-    // but Strings are fine. Just to be safe and consistent with typical isolate args.
-    final args = {
-      'configStrings': configStrings,
-      'blockedHashes': _blockedConfigs.toList(),
-      'checkBlacklist': checkBlacklist,
-      'existingConfigs': allConfigs.map((c) => c.rawConfig.trim()).toList(),
-      'initialAddedCount':
-          0, // We can let the isolate handle local count, or pass a global counter if needed.
-      // Current logic uses local addedCount in loop, let's stick to that but we risk ID collisions if we added multiple batches very fast.
-      // Actually the ID uses DateTime.now() inside the loop. In isolate, DateTime.now() is fine.
-    };
-
     AdvancedLogger.info(
-      '[ConfigManager] Spawning isolate to process ${configStrings.length} configs...',
+      '[ConfigManager] Starting to process ${configStrings.length} configs in batches...',
     );
 
-    try {
-      final result = await compute(_processConfigsInIsolate, args);
+    int totalAdded = 0;
+    int initialAddedCount = 0;
+    final int batchSize = 100;
 
-      final newConfigs = result['newConfigs'] as List<VpnConfigWithMetrics>;
-      final hashesToRemove =
-          result['hashesToRemoveFromBlacklist'] as List<String>;
+    // Process in chunks to avoid Isolate memory overload
+    for (int i = 0; i < configStrings.length; i += batchSize) {
+      final chunk = configStrings.skip(i).take(batchSize).toList();
 
-      // Update Blacklist
-      if (hashesToRemove.isNotEmpty) {
-        _blockedConfigs.removeAll(hashesToRemove);
-        await _saveBlacklist();
-        AdvancedLogger.info(
-          "[ConfigManager] Manual overwrite: Removed ${hashesToRemove.length} configs from blacklist.",
-        );
+      final args = {
+        'configStrings': chunk,
+        'blockedHashes': _blockedConfigs.toList(),
+        'checkBlacklist': checkBlacklist,
+        'existingConfigs': allConfigs.map((c) => c.rawConfig.trim()).toList(),
+        'initialAddedCount': initialAddedCount,
+      };
+
+      try {
+        final result = await compute(_processConfigsInIsolate, args);
+
+        final newConfigs = result['newConfigs'] as List<VpnConfigWithMetrics>;
+        final hashesToRemove =
+            result['hashesToRemoveFromBlacklist'] as List<String>;
+        initialAddedCount = result['addedCount'] as int;
+
+        // Update Blacklist
+        if (hashesToRemove.isNotEmpty) {
+          _blockedConfigs.removeAll(hashesToRemove);
+          await _saveBlacklist();
+          AdvancedLogger.info(
+            "[ConfigManager] Manual overwrite: Removed ${hashesToRemove.length} configs from blacklist.",
+          );
+        }
+
+        // Add New Configs
+        if (newConfigs.isNotEmpty) {
+          allConfigs.addAll(newConfigs);
+          totalAdded += newConfigs.length;
+        }
+      } catch (e) {
+        AdvancedLogger.error('[ConfigManager] Failed to process chunk: $e');
       }
-
-      // Add New Configs
-      if (newConfigs.isNotEmpty) {
-        allConfigs.addAll(newConfigs);
-        await _updateLists();
-        await _saveAllConfigs();
-        _safeNotifyListeners();
-        AdvancedLogger.info(
-          '[ConfigManager] Successfully added ${newConfigs.length} configs via Isolate.',
-        );
-      }
-
-      return newConfigs.length;
-    } catch (e) {
-      AdvancedLogger.error('[ConfigManager] Error in addConfigs isolate: $e');
-      return 0;
     }
+
+    if (totalAdded > 0) {
+      await _updateLists();
+      await _saveAllConfigs();
+      _safeNotifyListeners();
+      AdvancedLogger.info(
+        '[ConfigManager] Successfully added $totalAdded configs via batched Isolates.',
+      );
+    }
+
+    return totalAdded;
   }
 
   Future<void> updateConfigMetrics(
@@ -522,7 +502,8 @@ class ConfigManager extends ChangeNotifier {
       if (dead &&
           (c.currentPing == -1 ||
               c.failureCount >= 3 ||
-              (!c.isAlive && c.funnelStage == 0))) return true;
+              (!c.isAlive && c.funnelStage == 0)))
+        return true;
       if (weak && c.currentPing > 1500)
         return true; // threshold for weak config
       if (untestedSpeed && c.funnelStage < 3) return true;
@@ -602,7 +583,8 @@ class ConfigManager extends ChangeNotifier {
     List<VpnConfigWithMetrics>? sourceList,
     bool performConnection = true,
   }) async {
-    final list = sourceList ??
+    final list =
+        sourceList ??
         (validatedConfigs.isNotEmpty ? validatedConfigs : allConfigs);
     if (list.isEmpty) return false;
 
@@ -706,14 +688,18 @@ class ConfigManager extends ChangeNotifier {
   }
 
   Future<void> _updateLists() async {
-    // Offload heavy sorting to isolate
     try {
-      final result = await compute(_sortConfigsInIsolate, allConfigs);
-      allConfigs = result['all']!;
-      validatedConfigs = result['validated']!;
-      favoriteConfigs = result['favorite']!;
+      int compareScore(VpnConfigWithMetrics a, VpnConfigWithMetrics b) {
+        final scoreCmp = b.score.compareTo(a.score);
+        if (scoreCmp != 0) return scoreCmp;
+        return b.addedDate.compareTo(a.addedDate);
+      }
+
+      allConfigs.sort(compareScore);
+      validatedConfigs = allConfigs.where((c) => c.isValidated).toList();
+      favoriteConfigs = allConfigs.where((c) => c.isFavorite).toList();
     } catch (e) {
-      AdvancedLogger.error("[ConfigManager] Sorting isolate failed: $e");
+      AdvancedLogger.error("[ConfigManager] Sorting failed: $e");
     }
   }
 
@@ -924,15 +910,17 @@ class ConfigManager extends ChangeNotifier {
     final NativeVpnService nativeService = NativeVpnService();
     final EphemeralTester tester = EphemeralTester();
 
-    while (
-        attempts < maxAttempts && target != null && !_isGlobalStopRequested) {
+    while (attempts < maxAttempts &&
+        target != null &&
+        !_isGlobalStopRequested) {
       try {
         selectConfig(target); // Update UI selection
 
         // 3. Pre-flight Check with FAST LANE logic
         setConnected(false, status: 'Verifying ${target.name}...');
 
-        final bool isFastLane = target.lastTestedAt != null &&
+        final bool isFastLane =
+            target.lastTestedAt != null &&
             DateTime.now().difference(target.lastTestedAt!).inMinutes < 45 &&
             target.funnelStage >= 2 &&
             target.currentPing > 0;
@@ -978,7 +966,8 @@ class ConfigManager extends ChangeNotifier {
               .timeout(const Duration(seconds: 15));
 
           AdvancedLogger.info(
-              "[ConfigManager] Native Connection Success: ${target.name}");
+            "[ConfigManager] Native Connection Success: ${target.name}",
+          );
 
           // 5. Success (optimistic native call success)
           await updateConfigMetrics(target.id, connectionSuccess: true);

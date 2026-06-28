@@ -8,72 +8,18 @@ import 'singbox_config_generator.dart';
 import 'testers/ephemeral_tester.dart';
 import '../utils/advanced_logger.dart';
 
-// Top-level function for priority queue building in isolate
-List<VpnConfigWithMetrics> _buildQueueInIsolate(Map<String, dynamic> args) {
-  final List<VpnConfigWithMetrics> allConfigs =
-      args['configs'] as List<VpnConfigWithMetrics>;
-  final bool retestDead = args['retestDead'] as bool;
-
-  // Priority order: Favorites > Validated (funnelStage > 0) > Fresh/Untested > Soft Fail > Dead
-  final favorites = <VpnConfigWithMetrics>[];
-  final validated = <VpnConfigWithMetrics>[];
-  final fresh = <VpnConfigWithMetrics>[];
-  final softFail = <VpnConfigWithMetrics>[];
-  final dead = <VpnConfigWithMetrics>[];
-
-  final now = DateTime.now();
-
-  for (final c in allConfigs) {
-    // Constraint 1: Time-Bound Smart Caching (TTL Logic)
-    // If we are auto-running (retestDead = false) and the config was tested < 2 hours ago, skip entirely.
-    if (!retestDead && c.lastTestedAt != null) {
-      final hoursSinceTested = now.difference(c.lastTestedAt!).inHours;
-      if (hoursSinceTested < 2) {
-        continue;
-      }
-    }
-
-    if (c.isFavorite) {
-      favorites.add(c);
-    } else if (c.isValidated || c.funnelStage > 0) {
-      validated.add(c);
-    } else if (c.funnelStage == 0 && c.failureCount == 0) {
-      fresh.add(c);
-    } else if (c.failureCount < 3) {
-      softFail.add(c);
-    } else {
-      dead.add(c);
-    }
-  }
-
-  // Sort groups internally by score (best first)
-  int compareScore(VpnConfigWithMetrics a, VpnConfigWithMetrics b) {
-    return b.calculatedScore.compareTo(a.calculatedScore);
-  }
-
-  favorites.sort(compareScore);
-  validated.sort(compareScore);
-
-  final queue = [...favorites, ...validated, ...fresh, ...softFail];
-  if (retestDead) {
-    queue.addAll(dead);
-  }
-
-  return queue;
-}
-
 // Top-level function for batch processing in Isolate
 Map<String, Map<String, dynamic>> batchProcessConfigsInIsolate(
-  List<VpnConfigWithMetrics> configs,
+  List<Map<String, String>> configs,
 ) {
   final Map<String, Map<String, dynamic>> results = {};
   for (final config in configs) {
     try {
       final details = SingboxConfigGenerator.extractServerDetails(
-        config.rawConfig,
+        config['rawConfig']!,
       );
       if (details != null && details['host'] != null) {
-        results[config.id] = details;
+        results[config['id']!] = details;
       }
     } catch (e) {
       // Silently ignore malformed configs to prevent batch crash
@@ -177,12 +123,44 @@ class FunnelService {
 
     _progressController.add("Initializing Pipeline...");
 
-    // 1. Populate TCP Queue (Initial Feed)
-    // Offload to isolate
-    final all = await compute(_buildQueueInIsolate, {
-      'configs': _configManager.allConfigs,
-      'retestDead': retestDead,
-    });
+    // 1. Populate TCP Queue (Initial Feed) - Run locally to avoid isolate serialization overhead
+    final allConfigs = _configManager.allConfigs;
+    final favorites = <VpnConfigWithMetrics>[];
+    final validated = <VpnConfigWithMetrics>[];
+    final fresh = <VpnConfigWithMetrics>[];
+    final softFail = <VpnConfigWithMetrics>[];
+    final dead = <VpnConfigWithMetrics>[];
+    final now = DateTime.now();
+
+    for (final c in allConfigs) {
+      if (!retestDead && c.lastTestedAt != null) {
+        final hoursSinceTested = now.difference(c.lastTestedAt!).inHours;
+        if (hoursSinceTested < 2) continue;
+      }
+      if (c.isFavorite) {
+        favorites.add(c);
+      } else if (c.isValidated || c.funnelStage > 0) {
+        validated.add(c);
+      } else if (c.funnelStage == 0 && c.failureCount == 0) {
+        fresh.add(c);
+      } else if (c.failureCount < 3) {
+        softFail.add(c);
+      } else {
+        dead.add(c);
+      }
+    }
+
+    int compareScore(VpnConfigWithMetrics a, VpnConfigWithMetrics b) {
+      return b.calculatedScore.compareTo(a.calculatedScore);
+    }
+
+    favorites.sort(compareScore);
+    validated.sort(compareScore);
+
+    final all = [...favorites, ...validated, ...fresh, ...softFail];
+    if (retestDead) {
+      all.addAll(dead);
+    }
 
     _totalConfigs = all.length;
     _tcpQueue.addAll(all);
@@ -192,7 +170,21 @@ class FunnelService {
       AdvancedLogger.info(
         "FunnelService: Pre-processing $_totalConfigs configs in Isolate...",
       );
-      _cachedServerDetails = await compute(batchProcessConfigsInIsolate, all);
+
+      // Map to lightweight representation to avoid Isolate serialization overload
+      final lightweightConfigs = all
+          .map((c) => {'id': c.id, 'rawConfig': c.rawConfig})
+          .toList();
+
+      // Batch the processing to avoid huge object transfers
+      _cachedServerDetails = {};
+      final int batchSize = 200;
+      for (int i = 0; i < lightweightConfigs.length; i += batchSize) {
+        final chunk = lightweightConfigs.skip(i).take(batchSize).toList();
+        final chunkResults = await compute(batchProcessConfigsInIsolate, chunk);
+        _cachedServerDetails.addAll(chunkResults);
+      }
+
       AdvancedLogger.info(
         "FunnelService: Pre-processing complete. Cached ${_cachedServerDetails.length} valid details.",
       );
