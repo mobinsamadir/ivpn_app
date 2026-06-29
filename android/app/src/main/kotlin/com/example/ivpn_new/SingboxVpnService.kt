@@ -468,7 +468,7 @@ class StubPlatformInterface : PlatformInterface {
         return WIFIState("wlan0", "00:00:00:00:00:00") 
     }
     override fun useProcFS(): Boolean = false
-    fun writeLog(message: String?) { }
+    fun writeLog(message: String?) { MainActivity.sendVpnStatus(message ?: "") }
     override fun closeDefaultInterfaceMonitor(listener: InterfaceUpdateListener?) { }
     override fun findConnectionOwner(ipProtocol: Int, sourceAddress: String?, sourcePort: Int, destinationAddress: String?, destinationPort: Int): io.nekohasekai.libbox.ConnectionOwner? = null
     override fun getInterfaces(): NetworkInterfaceIterator { return StubNetworkInterfaceIterator() }
