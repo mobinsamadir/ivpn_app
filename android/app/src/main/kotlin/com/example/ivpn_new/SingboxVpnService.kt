@@ -150,7 +150,11 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
 
                 // SAFE CALL to Libbox - pass JSON content string
                 val server = try {
-                    Libbox.setupEnvironment(tempDir.absolutePath)
+                    val options = io.nekohasekai.libbox.SetupOptions()
+                    options.setBasePath(tempDir.absolutePath)
+                    options.setWorkingPath(tempDir.absolutePath)
+                    options.setTempPath(tempDir.absolutePath)
+                    Libbox.setup(options)
                     Libbox.newCommandServer(StubCommandServerHandler(), StubPlatformInterface())
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -234,7 +238,11 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
 
                 // SAFE CALL - pass JSON content string
                 val testServer = try {
-                    Libbox.setupEnvironment(tempDir.absolutePath)
+                    val options = io.nekohasekai.libbox.SetupOptions()
+                    options.setBasePath(tempDir.absolutePath)
+                    options.setWorkingPath(tempDir.absolutePath)
+                    options.setTempPath(tempDir.absolutePath)
+                    Libbox.setup(options)
                     Libbox.newCommandServer(StubCommandServerHandler(), StubPlatformInterface())
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -359,7 +367,11 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
 
                 // SAFE CALL - pass JSON content string
                 try {
-                    Libbox.setupEnvironment(configDir.absolutePath)
+                    val options = io.nekohasekai.libbox.SetupOptions()
+                    options.setBasePath(configDir.absolutePath)
+                    options.setWorkingPath(configDir.absolutePath)
+                    options.setTempPath(configDir.absolutePath)
+                    Libbox.setup(options)
                     mainServer = Libbox.newCommandServer(StubCommandServerHandler(), this@SingboxVpnService)
                     mainServer?.startOrReloadService(jsonObject.toString(), null)
                 } catch (e: Exception) {
@@ -469,24 +481,12 @@ class StubPlatformInterface : PlatformInterface {
     override fun systemCertificates(): StringIterator { return StubStringIterator() }
     override fun underNetworkExtension(): Boolean = false
 
-    override fun checkPlatformShell() {}
-    override fun closeNeighborMonitor(listener: io.nekohasekai.libbox.NeighborUpdateListener?) {}
-    override fun lookupSFTPServer(): String? = null
-    override fun lookupUser(username: String?): io.nekohasekai.libbox.PlatformUser? = null
-    override fun openShellSession(user: io.nekohasekai.libbox.PlatformUser?, command: String?, environ: StringIterator?, term: String?, rows: Int, cols: Int): io.nekohasekai.libbox.ShellSession? = null
-    override fun readSystemSSHHostKey(): String? = null
-    override fun registerMyInterface(name: String?) {}
-    override fun startNeighborMonitor(listener: io.nekohasekai.libbox.NeighborUpdateListener?) {}
-    override fun tailscaleHostname(): String? = null
-    override fun usePlatformShell(): Boolean = false
 }
 
 class StubCommandServerHandler : io.nekohasekai.libbox.CommandServerHandler {
-    override fun connectSSHAgent(): Int = -1
     override fun getSystemProxyStatus(): io.nekohasekai.libbox.SystemProxyStatus? = null
     override fun serviceReload() {}
     override fun serviceStop() {}
     override fun setSystemProxyEnabled(enabled: Boolean) {}
-    override fun triggerNativeCrash() {}
     override fun writeDebugMessage(message: String?) {}
 }
