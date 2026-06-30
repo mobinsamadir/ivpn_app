@@ -26,14 +26,11 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         multiDexEnabled = true
-        ndk {
-            abiFilters.clear()
-        }
     }
 
     splits {
         abi {
-            isEnable = false
+            isEnable = true
             reset()
             include("armeabi-v7a", "arm64-v8a", "x86_64")
             isUniversalApk = false
