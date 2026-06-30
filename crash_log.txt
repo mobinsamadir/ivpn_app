@@ -1,0 +1,1312 @@
+--------- beginning of main
+06-30 06:22:24.745 D/TelephonyProvider( 2552): Using old permission behavior for telephony provider compat
+06-30 06:22:24.816 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:25.034 I/chatty  (  741): uid=1000(system) HwBinder:741_2 identical 13 lines
+06-30 06:22:25.123 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:25.387 I/vendor.qti.hardware.servicetracker@1.2-service(  793): unbindService is called for service : com.google.android.gms/.chimera.PersistentBoundBrokerService and for client com.google.android.googlequicksearchbox:search
+06-30 06:22:25.388 I/vendor.qti.hardware.servicetracker@1.2-service(  793): size of service connections for service: com.google.android.gms/.chimera.PersistentBoundBrokerServiceafter removal is 3
+06-30 06:22:25.388 I/vendor.qti.hardware.servicetracker@1.2-service(  793): size of client connections for client: com.google.android.googlequicksearchbox:searchafter removal is 3
+06-30 06:22:25.753 D/TelephonyProvider( 2552): Using old permission behavior for telephony provider compat
+06-30 06:22:25.834 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:26.033 I/chatty  (  741): uid=1000(system) HwBinder:741_2 identical 12 lines
+06-30 06:22:26.048 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:26.049 W/charge_logger(11766): type=1400 audit(0.0:3075467): avc: denied { remove_name } for name="charge_logger_a.csv" dev="sda15" ino=150 scontext=u:r:charge_logger:s0 tcontext=u:object_r:charge_logger_data_file:s0 tclass=dir permissive=0
+06-30 06:22:26.066 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:26.098 I/vendor.qti.hardware.servicetracker@1.2-service(  793): unbindService is called for service : com.google.android.gms/.chimera.GmsApiService and for client com.google.android.googlequicksearchbox:search
+06-30 06:22:26.099 I/vendor.qti.hardware.servicetracker@1.2-service(  793): size of service connections for service: com.google.android.gms/.chimera.GmsApiServiceafter removal is 1
+06-30 06:22:26.099 I/vendor.qti.hardware.servicetracker@1.2-service(  793): size of client connections for client: com.google.android.googlequicksearchbox:searchafter removal is 2
+06-30 06:22:26.154 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:26.310 I/AlarmManager(14916): setExactAndAllowWhileIdle [name: GCM_HB_ALARM type: 2 triggerAtMillis: 304766392]
+06-30 06:22:26.323 I/AlarmManager(14916): setExactAndAllowWhileIdle [name: GCM_HB_ALARM type: 2 triggerAtMillis: 304766405]
+06-30 06:22:26.324 I/vendor.qti.hardware.servicetracker@1.2-service(  793): bindService is called for service : com.google.android.gms/.chimera.PersistentDirectBootAwareApiService and for client com.google.android.gms.persistent
+06-30 06:22:26.324 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for service : com.google.android.gms/.chimera.PersistentDirectBootAwareApiServiceare :20
+06-30 06:22:26.324 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for client : com.google.android.gms.persistentare :5
+06-30 06:22:26.761 D/TelephonyProvider( 2552): Using old permission behavior for telephony provider compat
+06-30 06:22:26.833 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:27.049 I/chatty  (  741): uid=1000(system) HwBinder:741_2 identical 13 lines
+06-30 06:22:27.140 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:27.771 D/TelephonyProvider( 2552): Using old permission behavior for telephony provider compat
+06-30 06:22:27.850 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:27.854 I/chatty  (  741): uid=1000(system) HwBinder:741_2 identical 1 line
+06-30 06:22:27.938 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:28.689 W/ThreadPoolForeg(14617): type=1400 audit(0.0:3075468): avc: denied { write } for name="traced_producer" dev="tmpfs" ino=28906 scontext=u:r:gmscore_app:s0:c512,c768 tcontext=u:object_r:traced_producer_socket:s0 tclass=sock_file permissive=0
+06-30 06:22:28.780 D/TelephonyProvider( 2552): Using old permission behavior for telephony provider compat
+06-30 06:22:28.849 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:29.049 I/chatty  (  741): uid=1000(system) HwBinder:741_2 identical 12 lines
+06-30 06:22:29.067 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:29.071 I/Finsky  (11968): [11314] AIM: AppInfoManager-Perf > Destroying AppInfoManager ...
+06-30 06:22:29.108 D/DurationCollector( 9626): updateRecord. beginDate = 2026-06-30, isSameDay = true, infos = [{"appVerCode":4062698,"beginTime":1782761851140,"delayTickCount":2,"duration":2033143},{"appVerCode":4062698,"beginTime":1782763915032,"delayTickCount":0,"duration":270768},{"appVerCode":4062698,"beginTime":1782767498915,"delayTickCount":20,"duration":16669535},{"appVerCode":4062698,"beginTime":1782784213367,"delayTickCount":0,"duration":135735}]
+06-30 06:22:29.155 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:30.394 D/BatteryService( 1184): /data/anr/adb_enable file.exists() =  false  mPlugType==2
+06-30 06:22:30.397 D/BatteryController( 2170): onReceive ACTION_BATTERY_CHANGED eLevel = 71; eScale = 100; mLevel = 71; mPluggedIn = true; mCharged = false; mCharging = true
+06-30 06:22:30.397 D/BatteryMeterView( 2170): onBatteryLevelChanged level = 71; pluggedIn = true; charging = true; mLevel = 71
+06-30 06:22:30.399 D/BatteryMeterView( 2170): onBatteryLevelChanged level = 71; pluggedIn = true; charging = true; mLevel = 71
+06-30 06:22:30.400 D/DeviceStatisticsService( 2499): chargerType=2 batteryLevel=71 totalBatteryCapacity=4447000
+06-30 06:22:30.400 D/DeviceInfoHidlClient( 2499): isPowerInfoNeverSent()=true
+06-30 06:22:30.400 D/BatteryMeterView( 2170): onBatteryLevelChanged level = 71; pluggedIn = true; charging = true; mLevel = 71
+06-30 06:22:30.401 D/KeyguardUpdateMonitor( 2170): received broadcast android.intent.action.BATTERY_CHANGED
+06-30 06:22:30.423 D/KeyguardUpdateMonitor( 2170): handleBatteryUpdate
+06-30 06:22:30.433 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:30.438 I/chatty  (  741): uid=1000(system) HwBinder:741_2 identical 1 line
+06-30 06:22:30.521 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:31.069 W/charge_logger(11767): type=1400 audit(0.0:3075469): avc: denied { remove_name } for name="charge_logger_a.csv" dev="sda15" ino=150 scontext=u:r:charge_logger:s0 tcontext=u:object_r:charge_logger_data_file:s0 tclass=dir permissive=0
+06-30 06:22:32.385 I/vendor.qti.hardware.servicetracker@1.2-service(  793): unbindService is called for service : com.google.android.gms/.chimera.PersistentDirectBootAwareApiService and for client com.google.android.googlequicksearchbox:search
+06-30 06:22:32.385 I/vendor.qti.hardware.servicetracker@1.2-service(  793): size of service connections for service: com.google.android.gms/.chimera.PersistentDirectBootAwareApiServiceafter removal is 19
+06-30 06:22:32.385 I/vendor.qti.hardware.servicetracker@1.2-service(  793): size of client connections for client: com.google.android.googlequicksearchbox:searchafter removal is 1
+06-30 06:22:32.912 I/system_server( 1184): Background young concurrent copying GC freed 394033(22MB) AllocSpace objects, 11(908KB) LOS objects, 34% free, 45MB/69MB, paused 236us total 114.213ms
+06-30 06:22:32.923 W/System  ( 1184): A resource failed to call close. 
+--------- beginning of system
+06-30 06:22:34.039 I/ActivityTaskManager( 1184): START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10200000 cmp=com.example.ivpn_new/.MainActivity bnds=[292,698][429,902]} from uid 10160
+06-30 06:22:34.042 D/EventSequenceValidator( 1184): IntentStarted during UNKNOWN. Intent { act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10200000 cmp=com.example.ivpn_new/.MainActivity bnds=[292,698][429,902] }
+06-30 06:22:34.042 D/EventSequenceValidator( 1184): java.lang.Throwable: EventSequenceValidator#getStackTrace
+06-30 06:22:34.042 D/EventSequenceValidator( 1184): 	at com.google.android.startop.iorap.EventSequenceValidator.logWarningWithStackTrace(EventSequenceValidator.java:260)
+06-30 06:22:34.042 D/EventSequenceValidator( 1184): 	at com.google.android.startop.iorap.EventSequenceValidator.onIntentStarted(EventSequenceValidator.java:106)
+06-30 06:22:34.042 D/EventSequenceValidator( 1184): 	at com.android.server.wm.LaunchObserverRegistryImpl.handleOnIntentStarted(LaunchObserverRegistryImpl.java:139)
+06-30 06:22:34.042 D/EventSequenceValidator( 1184): 	at com.android.server.wm.LaunchObserverRegistryImpl.lambda$veRn_GhgLZLlOHOJ0ZYT6KcfYqo(Unknown Source:0)
+06-30 06:22:34.042 D/EventSequenceValidator( 1184): 	at com.android.server.wm.-$$Lambda$LaunchObserverRegistryImpl$veRn_GhgLZLlOHOJ0ZYT6KcfYqo.accept(Unknown Source:10)
+06-30 06:22:34.042 D/EventSequenceValidator( 1184): 	at com.android.internal.util.function.pooled.PooledLambdaImpl.doInvoke(PooledLambdaImpl.java:292)
+06-30 06:22:34.042 D/EventSequenceValidator( 1184): 	at com.android.internal.util.function.pooled.PooledLambdaImpl.invoke(PooledLambdaImpl.java:201)
+06-30 06:22:34.042 D/EventSequenceValidator( 1184): 	at com.android.internal.util.function.pooled.OmniFunction.run(OmniFunction.java:97)
+06-30 06:22:34.042 D/EventSequenceValidator( 1184): 	at android.os.Handler.handleCallback(Handler.java:938)
+06-30 06:22:34.042 D/EventSequenceValidator( 1184): 	at android.os.Handler.dispatchMessage(Handler.java:99)
+06-30 06:22:34.042 D/EventSequenceValidator( 1184): 	at android.os.Looper.loop(Looper.java:223)
+06-30 06:22:34.042 D/EventSequenceValidator( 1184): 	at android.os.HandlerThread.run(HandlerThread.java:67)
+06-30 06:22:34.042 D/EventSequenceValidator( 1184): 	at com.android.server.ServiceThread.run(ServiceThread.java:44)
+06-30 06:22:34.042 D/EventSequenceValidator( 1184): inc AccIntentStartedEvents to 2
+06-30 06:22:34.050 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:34.055 V/ActivityTaskManager( 1184): Calling mServicetracker.OnActivityStateChange with flag falsestateINITIALIZING
+06-30 06:22:34.056 V/ActivityTaskManager( 1184): Calling mServicetracker.OnActivityStateChange with flag truestateINITIALIZING
+06-30 06:22:34.056 I/vendor.qti.hardware.servicetracker@1.2-service(  793): Activity state is changed to : 0
+06-30 06:22:34.056 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:34.058 I/vendor.qti.hardware.servicetracker@1.2-service(  793): Activity state is changed to : 0
+06-30 06:22:34.062 E/ANDR-PERF-JNI( 1184): com_qualcomm_qtiperformance_native_perf_io_prefetch_start
+06-30 06:22:34.068 E/ANDR-IOP(  781): io prefetch is disabled
+06-30 06:22:34.076 D/CompatibilityInfo( 1184): mCompatibilityFlags - 0
+06-30 06:22:34.076 D/CompatibilityInfo( 1184): applicationDensity - 320
+06-30 06:22:34.076 D/CompatibilityInfo( 1184): applicationScale - 1.0
+06-30 06:22:34.076 V/ActivityTaskManager( 1184): Calling mServicetracker.OnActivityStateChange with flag truestateRESUMED
+06-30 06:22:34.077 I/vendor.qti.hardware.servicetracker@1.2-service(  793): Activity state is changed to : 2
+06-30 06:22:34.077 V/ActivityTaskManager( 1184): Calling mServicetracker.OnActivityStateChange with flag truestatePAUSING
+06-30 06:22:34.077 D/ActivityTrigger( 1184): ActivityTrigger activityPauseTrigger 
+06-30 06:22:34.077 I/vendor.qti.hardware.servicetracker@1.2-service(  793): Activity state is changed to : 3
+06-30 06:22:34.077 V/ActivityTaskManager( 1184): Calling mServicetracker.OnActivityStateChange with flag falsestatePAUSING
+06-30 06:22:34.078 I/vendor.qti.hardware.servicetracker@1.2-service(  793): Activity state is changed to : 3
+06-30 06:22:34.080 E/statsd  (  605): Predicate 5980654721335871649 dropping data for dimension key (10)0x2010101->10335[I] (10)0x30000->*launch*[S] 
+06-30 06:22:34.084 D/AutomaticBrightnessController( 1184): updateAutoBrightness: mScreenAutoBrightness=0.3191889, newScreenAutoBrightness=0.3191889, settingBrightness=0.3191889, mAmbientLux=293.37518, value=0.3191889, sendUpdate=true, isManuallySet=false
+06-30 06:22:34.086 D/PredictionService( 4864): onAppTargetEvent
+06-30 06:22:34.090 V/ActivityTaskManager( 1184): Calling mServicetracker.OnActivityStateChange with flag truestatePAUSED
+06-30 06:22:34.090 V/ActivityTaskManager( 1184): Calling mServicetracker.OnActivityStateChange with flag falsestatePAUSED
+06-30 06:22:34.090 I/vendor.qti.hardware.servicetracker@1.2-service(  793): Activity state is changed to : 4
+06-30 06:22:34.091 V/ActivityTaskManager( 1184): Calling mServicetracker.OnActivityStateChange with flag truestateRESUMED
+06-30 06:22:34.090 I/vendor.qti.hardware.servicetracker@1.2-service(  793): Activity state is changed to : 4
+06-30 06:22:34.092 I/vendor.qti.hardware.servicetracker@1.2-service(  793): Activity state is changed to : 2
+06-30 06:22:34.097 D/CompatibilityChangeReporter( 1184): Compat change id reported: 135634846; UID 10335; state: DISABLED
+06-30 06:22:34.097 D/CompatibilityChangeReporter( 1184): Compat change id reported: 135754954; UID 10335; state: ENABLED
+06-30 06:22:34.098 D/CompatibilityChangeReporter( 1184): Compat change id reported: 143937733; UID 10335; state: ENABLED
+06-30 06:22:34.098 D/EventSequenceValidator( 1184): onActivityLaunched during UNKNOWN.
+06-30 06:22:34.098 D/EventSequenceValidator( 1184): java.lang.Throwable: EventSequenceValidator#getStackTrace
+06-30 06:22:34.098 D/EventSequenceValidator( 1184): 	at com.google.android.startop.iorap.EventSequenceValidator.logWarningWithStackTrace(EventSequenceValidator.java:260)
+06-30 06:22:34.098 D/EventSequenceValidator( 1184): 	at com.google.android.startop.iorap.EventSequenceValidator.onActivityLaunched(EventSequenceValidator.java:149)
+06-30 06:22:34.098 D/EventSequenceValidator( 1184): 	at com.android.server.wm.LaunchObserverRegistryImpl.handleOnActivityLaunched(LaunchObserverRegistryImpl.java:157)
+06-30 06:22:34.098 D/EventSequenceValidator( 1184): 	at com.android.server.wm.LaunchObserverRegistryImpl.lambda$UGY1OclnLIQLMEL9B55qjERFf4o(Unknown Source:0)
+06-30 06:22:34.098 D/EventSequenceValidator( 1184): 	at com.android.server.wm.-$$Lambda$LaunchObserverRegistryImpl$UGY1OclnLIQLMEL9B55qjERFf4o.accept(Unknown Source:10)
+06-30 06:22:34.098 D/EventSequenceValidator( 1184): 	at com.android.internal.util.function.pooled.PooledLambdaImpl.doInvoke(PooledLambdaImpl.java:292)
+06-30 06:22:34.098 D/EventSequenceValidator( 1184): 	at com.android.internal.util.function.pooled.PooledLambdaImpl.invoke(PooledLambdaImpl.java:201)
+06-30 06:22:34.098 D/EventSequenceValidator( 1184): 	at com.android.internal.util.function.pooled.OmniFunction.run(OmniFunction.java:97)
+06-30 06:22:34.098 D/EventSequenceValidator( 1184): 	at android.os.Handler.handleCallback(Handler.java:938)
+06-30 06:22:34.098 D/EventSequenceValidator( 1184): 	at android.os.Handler.dispatchMessage(Handler.java:99)
+06-30 06:22:34.098 D/EventSequenceValidator( 1184): 	at android.os.Looper.loop(Looper.java:223)
+06-30 06:22:34.098 D/EventSequenceValidator( 1184): 	at android.os.HandlerThread.run(HandlerThread.java:67)
+06-30 06:22:34.098 D/EventSequenceValidator( 1184): 	at com.android.server.ServiceThread.run(ServiceThread.java:44)
+06-30 06:22:34.099 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:34.115 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:34.118 D/Zygote  (  607): Forked child process 11778
+06-30 06:22:34.122 I/ActivityManager( 1184): Start proc 11778:com.example.ivpn_new/u0a335 for pre-top-activity {com.example.ivpn_new/com.example.ivpn_new.MainActivity}
+06-30 06:22:34.122 W/Zygote  (11778): Unable to open libbeluga.so: dlopen failed: library "libbeluga.so" not found.
+06-30 06:22:34.132 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:34.146 E/xample.ivpn_ne(11778): Not starting debugger since process cannot load the jdwp agent.
+06-30 06:22:34.149 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:34.157 D/CompatibilityInfo( 1184): mCompatibilityFlags - 0
+06-30 06:22:34.157 D/CompatibilityInfo( 1184): applicationDensity - 320
+06-30 06:22:34.157 D/CompatibilityInfo( 1184): applicationScale - 1.0
+06-30 06:22:34.159 D/CompatibilityInfo( 1184): mCompatibilityFlags - 0
+06-30 06:22:34.159 D/CompatibilityInfo( 1184): applicationDensity - 320
+06-30 06:22:34.159 D/CompatibilityInfo( 1184): applicationScale - 1.0
+06-30 06:22:34.159 V/ActivityTaskManager( 1184): Calling mServicetracker.OnActivityStateChange with flag truestateRESUMED
+06-30 06:22:34.160 V/ActivityTaskManager( 1184): Calling mServicetracker.OnActivityStateChange with flag falsestateRESUMED
+06-30 06:22:34.160 I/vendor.qti.hardware.servicetracker@1.2-service(  793): Activity state is changed to : 2
+06-30 06:22:34.160 I/vendor.qti.hardware.servicetracker@1.2-service(  793): Activity state is changed to : 2
+06-30 06:22:34.165 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:34.182 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:34.191 I/caww    ( 9690): onPause
+06-30 06:22:34.194 I/fpod    ( 2170): updateFingerprintListeningState
+06-30 06:22:34.194 I/fpod    ( 2170): mFingerprintRunningState = 0
+06-30 06:22:34.194 D/KeyguardFace( 2170): shouldListenForFace ( return false, Face is not default condition)
+06-30 06:22:34.195 D/KeyguardUpdateMonitor( 2170): updateFaceListeningState shouldListenForFace==false  mFaceRunningState==0
+06-30 06:22:34.199 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:34.211 I/Perf    (11778): Connecting to perf service.
+06-30 06:22:34.216 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:34.216 I/chatty  (  741): uid=1000(system) HwBinder:741_2 identical 1 line
+06-30 06:22:34.219 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:34.219 D/NetworkSecurityConfig(11778): No Network Security Config specified, using platform default
+06-30 06:22:34.220 D/NetworkSecurityConfig(11778): No Network Security Config specified, using platform default
+06-30 06:22:34.232 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:34.249 I/chatty  (  741): uid=1000(system) HwBinder:741_2 identical 2 lines
+06-30 06:22:34.251 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:34.265 W/DisplayIdentification(  862): Invalid EDID: falling back to serial number due to missing display name.
+06-30 06:22:34.265 W/DisplayIdentification(  862): Invalid EDID: falling back to ASCII text due to missing serial number.
+06-30 06:22:34.267 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:34.365 I/chatty  (  741): uid=1000(system) HwBinder:741_2 identical 12 lines
+06-30 06:22:34.368 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:34.369 D/skia    (11778): [SkFontMgr Android Parser] '/product/etc/fonts_customization.xml' could not be opened
+06-30 06:22:34.382 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:34.482 I/chatty  (  741): uid=1000(system) HwBinder:741_2 identical 12 lines
+06-30 06:22:34.485 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:34.479 W/xample.ivpn_new(11778): type=1400 audit(0.0:3075470): avc: denied { read } for name="max_map_count" dev="proc" ino=12681757 scontext=u:r:untrusted_app:s0:c79,c257,c512,c768 tcontext=u:object_r:proc_max_map_count:s0 tclass=file permissive=0
+06-30 06:22:34.500 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:34.503 E/libc    (11778): Access denied finding property "ro.vendor.mediatek.platform"
+06-30 06:22:34.504 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:34.550 I/chatty  (  741): uid=1000(system) HwBinder:741_2 identical 5 lines
+06-30 06:22:34.554 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:34.559 D/vulkan  (11778): searching for layers in '/data/app/~~T3si92fUqQfAkJcFhNqaiQ==/com.example.ivpn_new-9ChEtvbOZCJ2yfo4oRUR-A==/lib/arm64'
+06-30 06:22:34.559 D/vulkan  (11778): searching for layers in '/data/app/~~T3si92fUqQfAkJcFhNqaiQ==/com.example.ivpn_new-9ChEtvbOZCJ2yfo4oRUR-A==/base.apk!/lib/arm64-v8a'
+06-30 06:22:34.566 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:34.570 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:34.579 I/AdrenoVK-0(11778): ===== BEGIN DUMP OF OVERRIDDEN SETTINGS =====
+06-30 06:22:34.579 I/AdrenoVK-0(11778): ===== END DUMP OF OVERRIDDEN SETTINGS =====
+06-30 06:22:34.580 I/AdrenoVK-0(11778): QUALCOMM build          : d4cfdf3, Ic907de5ed0
+06-30 06:22:34.580 I/AdrenoVK-0(11778): Build Date              : 09/25/20
+06-30 06:22:34.580 I/AdrenoVK-0(11778): Shader Compiler Version : EV031.32.02.01
+06-30 06:22:34.580 I/AdrenoVK-0(11778): Local Branch            : mybrancheaff3d46-e51f-f136-8926-1458d0b52af0
+06-30 06:22:34.580 I/AdrenoVK-0(11778): Remote Branch           : quic/gfx-adreno.lnx.1.0.r116-rel
+06-30 06:22:34.580 I/AdrenoVK-0(11778): Remote Branch           : NONE
+06-30 06:22:34.580 I/AdrenoVK-0(11778): Reconstruct Branch      : NOTHING
+06-30 06:22:34.580 I/AdrenoVK-0(11778): Build Config            : S P 10.0.7 AArch64
+06-30 06:22:34.580 I/AdrenoVK-0(11778): Driver Path             : /vendor/lib64/hw/vulkan.adreno.so
+06-30 06:22:34.583 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:34.587 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:34.599 I/flutter (11778): [IMPORTANT:flutter/shell/platform/android/android_context_vk_impeller.cc(62)] Using the Impeller rendering backend (Vulkan).
+06-30 06:22:34.607 I/AdrenoGLES-0(11778): QUALCOMM build                   : d4cfdf3, Ic907de5ed0
+06-30 06:22:34.607 I/AdrenoGLES-0(11778): Build Date                       : 09/25/20
+06-30 06:22:34.607 I/AdrenoGLES-0(11778): OpenGL ES Shader Compiler Version: EV031.32.02.01
+06-30 06:22:34.607 I/AdrenoGLES-0(11778): Local Branch                     : mybrancheaff3d46-e51f-f136-8926-1458d0b52af0
+06-30 06:22:34.607 I/AdrenoGLES-0(11778): Remote Branch                    : quic/gfx-adreno.lnx.1.0.r116-rel
+06-30 06:22:34.607 I/AdrenoGLES-0(11778): Remote Branch                    : NONE
+06-30 06:22:34.607 I/AdrenoGLES-0(11778): Reconstruct Branch               : NOTHING
+06-30 06:22:34.607 I/AdrenoGLES-0(11778): Build Config                     : S P 10.0.7 AArch64
+06-30 06:22:34.607 I/AdrenoGLES-0(11778): Driver Path                      : /vendor/lib64/egl/libGLESv2_adreno.so
+06-30 06:22:34.614 I/AdrenoGLES-0(11778): PFP: 0x016ee190, ME: 0x00000000
+06-30 06:22:34.631 E/Layer   (  862): [Surface(name=Task=189)/@0x3a795d2 - animation-leash#0] No local sync point found
+06-30 06:22:34.631 E/Layer   (  862): [Surface(name=Task=1)/@0x665e81b - animation-leash#0] No local sync point found
+06-30 06:22:34.648 I/flutter (11778): [IMPORTANT:flutter/shell/platform/android/android_context_gl_impeller.cc(104)] Using the Impeller rendering backend (OpenGLES).
+06-30 06:22:34.767 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:34.770 I/TetheringManager(11778): registerTetheringEventCallback:com.example.ivpn_new
+06-30 06:22:34.845 I/Choreographer(11778): Skipped 35 frames!  The application may be doing too much work on its main thread.
+06-30 06:22:34.863 W/ServiceManager(  862): Permission failure: android.permission.ACCESS_SURFACE_FLINGER from uid=10335 pid=11778
+06-30 06:22:34.863 D/PermissionCache(  862): checking android.permission.ACCESS_SURFACE_FLINGER for uid=10335 => denied (439 us)
+06-30 06:22:35.631 D/TelephonyProvider( 2552): Using old permission behavior for telephony provider compat
+06-30 06:22:35.681 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:35.899 I/chatty  (  741): uid=1000(system) HwBinder:741_2 identical 12 lines
+06-30 06:22:35.986 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:36.039 W/charge_logger(11820): type=1400 audit(0.0:3075471): avc: denied { remove_name } for name="charge_logger_a.csv" dev="sda15" ino=150 scontext=u:r:charge_logger:s0 tcontext=u:object_r:charge_logger_data_file:s0 tclass=dir permissive=0
+06-30 06:22:36.253 I/flutter (11778): ✅ AdvancedLogger initialized: /data/user/0/com.example.ivpn_new/app_flutter/vpn_log_2026-06-30T06-22-34.jsonl
+06-30 06:22:36.253 I/flutter (11778): [2026-06-30T06:22:36.253827] ------------------------------------------
+06-30 06:22:36.263 I/flutter (11778): [2026-06-30T06:22:36.263685] Session Started: 2026-06-30 06:22:36.263644
+06-30 06:22:36.266 I/Choreographer(11778): Skipped 84 frames!  The application may be doing too much work on its main thread.
+06-30 06:22:36.268 I/flutter (11778): [2026-06-30T06:22:36.268890] Application starting...
+06-30 06:22:36.289 I/FontLog (14916): (REDACTED) Received query %s, URI %s
+06-30 06:22:36.292 I/FontLog (14916): (REDACTED) Query [%s] resolved to %s
+06-30 06:22:36.323 I/FontLog (14916): (REDACTED) Fetch %s end status %s
+06-30 06:22:36.328 I/FontLog (14916): (REDACTED) Pulling font file for id = %d, cache size = %d
+06-30 06:22:36.334 W/TelephonyPermissions( 1184): reportAccessDeniedToReadIdentifiers:com.example.ivpn_new:getSerial:-1
+06-30 06:22:36.352 I/xample.ivpn_ne(11778): Waiting for a blocking GC ProfileSaver
+06-30 06:22:36.353 I/FontLog (14916): (REDACTED) Pulling font file for id = %d, cache size = %d
+06-30 06:22:36.399 D/EventSequenceValidator( 1184): onActivityLaunchFinished during UNKNOWN.
+06-30 06:22:36.399 D/EventSequenceValidator( 1184): java.lang.Throwable: EventSequenceValidator#getStackTrace
+06-30 06:22:36.399 D/EventSequenceValidator( 1184): 	at com.google.android.startop.iorap.EventSequenceValidator.logWarningWithStackTrace(EventSequenceValidator.java:260)
+06-30 06:22:36.399 D/EventSequenceValidator( 1184): 	at com.google.android.startop.iorap.EventSequenceValidator.onActivityLaunchFinished(EventSequenceValidator.java:185)
+06-30 06:22:36.399 D/EventSequenceValidator( 1184): 	at com.android.server.wm.LaunchObserverRegistryImpl.handleOnActivityLaunchFinished(LaunchObserverRegistryImpl.java:175)
+06-30 06:22:36.399 D/EventSequenceValidator( 1184): 	at com.android.server.wm.LaunchObserverRegistryImpl.lambda$QcawcFcJtEX4EhYptq_Vb4j368Y(Unknown Source:0)
+06-30 06:22:36.399 D/EventSequenceValidator( 1184): 	at com.android.server.wm.-$$Lambda$LaunchObserverRegistryImpl$QcawcFcJtEX4EhYptq_Vb4j368Y.accept(Unknown Source:10)
+06-30 06:22:36.399 D/EventSequenceValidator( 1184): 	at com.android.internal.util.function.pooled.PooledLambdaImpl.doInvoke(PooledLambdaImpl.java:292)
+06-30 06:22:36.399 D/EventSequenceValidator( 1184): 	at com.android.internal.util.function.pooled.PooledLambdaImpl.invoke(PooledLambdaImpl.java:201)
+06-30 06:22:36.399 D/EventSequenceValidator( 1184): 	at com.android.internal.util.function.pooled.OmniFunction.run(OmniFunction.java:97)
+06-30 06:22:36.399 D/EventSequenceValidator( 1184): 	at android.os.Handler.handleCallback(Handler.java:938)
+06-30 06:22:36.399 D/EventSequenceValidator( 1184): 	at android.os.Handler.dispatchMessage(Handler.java:99)
+06-30 06:22:36.399 D/EventSequenceValidator( 1184): 	at android.os.Looper.loop(Looper.java:223)
+06-30 06:22:36.399 D/EventSequenceValidator( 1184): 	at android.os.HandlerThread.run(HandlerThread.java:67)
+06-30 06:22:36.399 D/EventSequenceValidator( 1184): 	at com.android.server.ServiceThread.run(ServiceThread.java:44)
+06-30 06:22:36.400 D/EventSequenceValidator( 1184): dec AccIntentStartedEvents to 1
+06-30 06:22:36.400 I/flutter (11778): [33m[warn ][0m [V2RAY_CORE] DISCONNECTED
+06-30 06:22:36.400 D/EventSequenceValidator( 1184): onReportFullyDrawn during UNKNOWN.
+06-30 06:22:36.400 D/EventSequenceValidator( 1184): java.lang.Throwable: EventSequenceValidator#getStackTrace
+06-30 06:22:36.400 D/EventSequenceValidator( 1184): 	at com.google.android.startop.iorap.EventSequenceValidator.logWarningWithStackTrace(EventSequenceValidator.java:260)
+06-30 06:22:36.400 D/EventSequenceValidator( 1184): 	at com.google.android.startop.iorap.EventSequenceValidator.onReportFullyDrawn(EventSequenceValidator.java:205)
+06-30 06:22:36.400 D/EventSequenceValidator( 1184): 	at com.android.server.wm.LaunchObserverRegistryImpl.handleOnReportFullyDrawn(LaunchObserverRegistryImpl.java:184)
+06-30 06:22:36.400 D/EventSequenceValidator( 1184): 	at com.android.server.wm.LaunchObserverRegistryImpl.lambda$FhvLqBbd_XMsJK45WV5Mlt8JSYM(Unknown Source:0)
+06-30 06:22:36.400 D/EventSequenceValidator( 1184): 	at com.android.server.wm.-$$Lambda$LaunchObserverRegistryImpl$FhvLqBbd_XMsJK45WV5Mlt8JSYM.accept(Unknown Source:10)
+06-30 06:22:36.400 D/EventSequenceValidator( 1184): 	at com.android.internal.util.function.pooled.PooledLambdaImpl.doInvoke(PooledLambdaImpl.java:292)
+06-30 06:22:36.400 D/EventSequenceValidator( 1184): 	at com.android.internal.util.function.pooled.PooledLambdaImpl.invoke(PooledLambdaImpl.java:201)
+06-30 06:22:36.400 D/EventSequenceValidator( 1184): 	at com.android.internal.util.function.pooled.OmniFunction.run(OmniFunction.java:97)
+06-30 06:22:36.400 D/EventSequenceValidator( 1184): 	at android.os.Handler.handleCallback(Handler.java:938)
+06-30 06:22:36.400 D/EventSequenceValidator( 1184): 	at android.os.Handler.dispatchMessage(Handler.java:99)
+06-30 06:22:36.400 D/EventSequenceValidator( 1184): 	at android.os.Looper.loop(Looper.java:223)
+06-30 06:22:36.400 D/EventSequenceValidator( 1184): 	at android.os.HandlerThread.run(HandlerThread.java:67)
+06-30 06:22:36.400 D/EventSequenceValidator( 1184): 	at com.android.server.ServiceThread.run(ServiceThread.java:44)
+06-30 06:22:36.402 D/ConnectivityService( 1184): requestNetwork for uid/pid:10335/11778 NetworkRequest [ TRACK_DEFAULT id=3147, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED Uid: 10335 AdministratorUids: [] RequestorUid: 10335 RequestorPackageName: com.example.ivpn_new] ]
+06-30 06:22:36.402 D/ConnectivityService( 1184): NetReassign [3147 : null → 115]
+06-30 06:22:36.402 D/ArtManagerInternalImpl( 1184): /data/misc/iorapd/com.example.ivpn_new/1782763020/com.example.ivpn_new.MainActivity/compiled_traces/compiled_trace.pb doesn't exist
+06-30 06:22:36.403 D/Ethernet( 1184): got request NetworkRequest [ TRACK_DEFAULT id=3147, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED Uid: 10335 AdministratorUids: [] RequestorUid: 10335 RequestorPackageName: com.example.ivpn_new] ] with score 50 and providerId 4
+06-30 06:22:36.403 D/WifiNetworkFactory( 1184): got request NetworkRequest [ TRACK_DEFAULT id=3147, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED Uid: 10335 AdministratorUids: [] RequestorUid: 10335 RequestorPackageName: com.example.ivpn_new] ] with score 50 and providerId 4
+06-30 06:22:36.404 D/UntrustedWifiNetworkFactory( 1184): got request NetworkRequest [ TRACK_DEFAULT id=3147, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED Uid: 10335 AdministratorUids: [] RequestorUid: 10335 RequestorPackageName: com.example.ivpn_new] ] with score 50 and providerId 4
+06-30 06:22:36.404 D/PhoneSwitcherNetworkRequstListener( 2552): got request NetworkRequest [ TRACK_DEFAULT id=3147, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED Uid: 10335 AdministratorUids: [] RequestorUid: 10335 RequestorPackageName: com.example.ivpn_new] ] with score 50 and providerId 4
+06-30 06:22:36.408 V/ActivityTaskManager( 1184): Calling mServicetracker.OnActivityStateChange with flag truestateSTOPPING
+06-30 06:22:36.408 V/ActivityTaskManager( 1184): Calling mServicetracker.OnActivityStateChange with flag falsestateSTOPPING
+06-30 06:22:36.408 E/statsd  (  605): Predicate 5980654721335871649 dropping data for dimension key (10)0x2010101->10335[I] (10)0x30000->*launch*[S] 
+06-30 06:22:36.409 I/vendor.qti.hardware.servicetracker@1.2-service(  793): Activity state is changed to : 5
+06-30 06:22:36.409 I/vendor.qti.hardware.servicetracker@1.2-service(  793): Activity state is changed to : 5
+06-30 06:22:36.410 I/ActivityTaskManager( 1184): Displayed com.example.ivpn_new/.MainActivity: +2s356ms
+06-30 06:22:36.419 I/ActivityTaskManager( 1184): Fully drawn com.example.ivpn_new/.MainActivity: +2s356ms
+06-30 06:22:36.421 I/vendor.qti.hardware.servicetracker@1.2-service(  793): unbindService is called for service : com.google.android.googlequicksearchbox/com.google.android.apps.gsa.nowoverlayservice.DrawerOverlayService and for client com.android.launcher3
+06-30 06:22:36.431 I/caww    ( 9690): onStop
+06-30 06:22:36.439 I/GoogleInputMethodService(27808): GoogleInputMethodService.onFinishInput():2274 
+06-30 06:22:36.440 I/Module  (27808): DeviceLockedStatusModuleProvider$Module.updateDeviceLockedStatusInternal():128 repeatCheckTimes = 0, locked = false
+06-30 06:22:36.441 I/GoogleInputMethodService(27808): GoogleInputMethodService.onStartInput():1459 onStartInput(EditorInfo{EditorInfo{packageName=com.example.ivpn_new, inputType=0, inputTypeString=NULL, enableLearning=false, autoCorrection=false, autoComplete=false, imeOptions=0, privateImeOptions=null, actionName=UNSPECIFIED, actionLabel=null, initialSelStart=-1, initialSelEnd=-1, initialCapsMode=0, label=null, fieldId=-1, fieldName=null, extras=null, hintText=null, hintLocales=[]}}, false)
+06-30 06:22:36.442 W/LatinIMEBase(27808): LatinIMEBase.updateInputViewCoverNavigation():322 Null input view, cannot update padding!
+06-30 06:22:36.444 I/Module  (27808): DeviceLockedStatusModuleProvider$Module.updateDeviceLockedStatusInternal():128 repeatCheckTimes = 1, locked = false
+06-30 06:22:36.451 V/ActivityTaskManager( 1184): Calling mServicetracker.OnActivityStateChange with flag truestateSTOPPED
+06-30 06:22:36.452 V/ActivityTaskManager( 1184): Calling mServicetracker.OnActivityStateChange with flag falsestateSTOPPED
+06-30 06:22:36.452 I/vendor.qti.hardware.servicetracker@1.2-service(  793): Activity state is changed to : 6
+06-30 06:22:36.452 I/vendor.qti.hardware.servicetracker@1.2-service(  793): Activity state is changed to : 6
+06-30 06:22:36.469 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:37.117 I/chatty  (  741): uid=1000(system) HwBinder:741_2 identical 48 lines
+06-30 06:22:37.132 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:37.148 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:38.517 I/chatty  (  741): uid=1000(system) HwBinder:741_1 identical 82 lines
+06-30 06:22:38.533 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:38.533 D/BatteryService( 1184): /data/anr/adb_enable file.exists() =  false  mPlugType==2
+06-30 06:22:38.538 D/BatteryController( 2170): onReceive ACTION_BATTERY_CHANGED eLevel = 71; eScale = 100; mLevel = 71; mPluggedIn = true; mCharged = false; mCharging = true
+06-30 06:22:38.539 D/BatteryMeterView( 2170): onBatteryLevelChanged level = 71; pluggedIn = true; charging = true; mLevel = 71
+06-30 06:22:38.541 I/chatty  ( 2170): uid=1000(system) com.android.systemui identical 1 line
+06-30 06:22:38.542 D/BatteryMeterView( 2170): onBatteryLevelChanged level = 71; pluggedIn = true; charging = true; mLevel = 71
+06-30 06:22:38.543 D/KeyguardUpdateMonitor( 2170): received broadcast android.intent.action.BATTERY_CHANGED
+06-30 06:22:38.543 D/DeviceStatisticsService( 2499): chargerType=2 batteryLevel=71 totalBatteryCapacity=4447000
+06-30 06:22:38.543 D/DeviceInfoHidlClient( 2499): isPowerInfoNeverSent()=true
+06-30 06:22:38.549 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:38.552 D/KeyguardUpdateMonitor( 2170): handleBatteryUpdate
+06-30 06:22:38.566 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:38.616 I/chatty  (  741): uid=1000(system) HwBinder:741_1 identical 4 lines
+06-30 06:22:38.633 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:38.647 D/TelephonyProvider( 2552): Using old permission behavior for telephony provider compat
+06-30 06:22:38.649 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:38.849 I/chatty  (  741): uid=1000(system) HwBinder:741_1 identical 21 lines
+06-30 06:22:38.849 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:38.853 I/flutter (11778): --- [TELEMETRY] FUNNEL RUN SUMMARY ---
+06-30 06:22:38.854 I/flutter (11778): Total Tested: 0
+06-30 06:22:38.854 I/flutter (11778): Total Passed TCP: 0
+06-30 06:22:38.854 I/flutter (11778): Total Passed HTTP: 0
+06-30 06:22:38.854 I/flutter (11778): Total Passed Speed: 0
+06-30 06:22:38.854 I/flutter (11778): Total Failed: 0
+06-30 06:22:38.854 I/flutter (11778): --------------------------------------
+06-30 06:22:38.854 I/flutter (11778): --- [TELEMETRY] FUNNEL RUN SUMMARY ---
+06-30 06:22:38.854 I/flutter (11778): Total Tested: 0
+06-30 06:22:38.854 I/flutter (11778): Total Passed TCP: 0
+06-30 06:22:38.854 I/flutter (11778): Total Passed HTTP: 0
+06-30 06:22:38.854 I/flutter (11778): Total Passed Speed: 0
+06-30 06:22:38.854 I/flutter (11778): Total Failed: 0
+06-30 06:22:38.854 I/flutter (11778): --------------------------------------
+06-30 06:22:38.867 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:39.950 I/chatty  (  741): uid=1000(system) HwBinder:741_1 identical 70 lines
+06-30 06:22:39.966 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:39.973 D/ProfileInstaller(11778): Installing profile for com.example.ivpn_new
+06-30 06:22:39.983 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:40.234 I/chatty  (  741): uid=1000(system) HwBinder:741_1 identical 15 lines
+06-30 06:22:40.251 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:40.253 I/dzdy    (11691): Scheduling one-off OpaEnabledBroadcastWorker now
+06-30 06:22:40.266 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:40.283 D/WM-SystemJobScheduler(11691): Scheduling work ID e544d19c-8866-41ad-8b9d-e39d362a1cbd (com.google.apps.tiktok.contrib.work.TikTokListenableWorker), Job ID 10757
+06-30 06:22:40.284 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:40.288 I/vendor.qti.hardware.servicetracker@1.2-service(  793): bindService is called for service : com.google.android.googlequicksearchbox/androidx.work.impl.background.systemjob.SystemJobService and for client system
+06-30 06:22:40.288 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for service : com.google.android.googlequicksearchbox/androidx.work.impl.background.systemjob.SystemJobServiceare :1
+06-30 06:22:40.288 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for client : systemare :18
+06-30 06:22:40.291 D/CompatibilityInfo( 1184): mCompatibilityFlags - 0
+06-30 06:22:40.291 D/CompatibilityInfo( 1184): applicationDensity - 320
+06-30 06:22:40.291 D/CompatibilityInfo( 1184): applicationScale - 1.0
+06-30 06:22:40.293 I/vendor.qti.hardware.servicetracker@1.2-service(  793): startService() is called for servicecom.google.android.googlequicksearchbox/androidx.work.impl.background.systemjob.SystemJobService
+06-30 06:22:40.295 D/WM-GreedyScheduler(11691): Ignoring {WorkSpec: e5cd2a58-e09e-4264-8e42-94c7e7064cfc}. Requires device idle.
+06-30 06:22:40.295 D/WM-GreedyScheduler(11691): Ignoring {WorkSpec: 468788b4-1e76-445c-87e2-c402cf5d905a}. Requires device idle.
+06-30 06:22:40.295 D/WM-GreedyScheduler(11691): Ignoring {WorkSpec: 019f1e01-0461-4ee4-95d0-ac431e7e9c12}. Requires device idle.
+06-30 06:22:40.295 D/WM-GreedyScheduler(11691): Ignoring {WorkSpec: 04384267-0d13-405e-8f69-a2377bbb371a}. Requires ContentUri triggers.
+06-30 06:22:40.296 D/WM-GreedyScheduler(11691): Starting work for e544d19c-8866-41ad-8b9d-e39d362a1cbd
+06-30 06:22:40.296 D/WM-GreedyScheduler(11691): Starting tracking for f5902dd9-dd27-4dfb-8f3e-591a2e22f429,685f8672-ed5e-4882-a899-3c6ade303fc6,ecc375b8-a602-413b-8491-b4be8a303eae,6d74465c-534b-4aca-aae0-e7d291c75329
+06-30 06:22:40.299 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:40.301 D/WM-Processor(11691): qwl: processing WorkGenerationalId(workSpecId=e544d19c-8866-41ad-8b9d-e39d362a1cbd, generation=0)
+06-30 06:22:40.305 D/WM-SystemJobService(11691): onStartJob for WorkGenerationalId(workSpecId=e544d19c-8866-41ad-8b9d-e39d362a1cbd, generation=0)
+06-30 06:22:40.315 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:40.332 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:40.333 D/WM-WorkerWrapper(11691): Starting work for com.google.apps.tiktok.contrib.work.TikTokListenableWorker
+06-30 06:22:40.341 D/WM-Processor(11691): Work WorkGenerationalId(workSpecId=e544d19c-8866-41ad-8b9d-e39d362a1cbd, generation=0) is already enqueued for processing
+06-30 06:22:40.345 I/dzea    (11691): Broadcasting OPA enabled
+06-30 06:22:40.348 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:40.349 I/dzea    (11691): Broadcasting OPA user enabled
+06-30 06:22:40.358 I/WM-WorkerWrapper(11691): Worker result SUCCESS for Work [ id=e544d19c-8866-41ad-8b9d-e39d362a1cbd, class=com.google.apps.tiktok.contrib.work.TikTokListenableWorker, tags={ com.google.apps.tiktok.contrib.work.TikTokListenableWorker,TikTokWorker#com.google.android.libraries.search.assistant.launcher.OpaEnabledBroadcastWorker } ]
+06-30 06:22:40.362 D/WM-Processor(11691): qwl e544d19c-8866-41ad-8b9d-e39d362a1cbd executed; reschedule = false
+06-30 06:22:40.363 D/WM-SystemJobService(11691): e544d19c-8866-41ad-8b9d-e39d362a1cbd executed on JobScheduler
+06-30 06:22:40.365 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:40.373 I/vendor.qti.hardware.servicetracker@1.2-service(  793): unbindService is called for service : com.google.android.googlequicksearchbox/androidx.work.impl.background.systemjob.SystemJobService and for client system
+06-30 06:22:40.373 I/vendor.qti.hardware.servicetracker@1.2-service(  793): size of service connections for service: com.google.android.googlequicksearchbox/androidx.work.impl.background.systemjob.SystemJobServiceafter removal is 0
+06-30 06:22:40.373 I/vendor.qti.hardware.servicetracker@1.2-service(  793): size of client connections for client: systemafter removal is 17
+06-30 06:22:40.373 I/vendor.qti.hardware.servicetracker@1.2-service(  793): destroyService is called for service : com.google.android.googlequicksearchbox/androidx.work.impl.background.systemjob.SystemJobService
+06-30 06:22:40.381 D/WM-GreedyScheduler(11691): Cancelling work ID e544d19c-8866-41ad-8b9d-e39d362a1cbd
+06-30 06:22:40.382 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:40.384 I/vendor.qti.hardware.servicetracker@1.2-service(  793): bindService is called for service : cab.snapp.passenger/androidx.work.impl.background.systemjob.SystemJobService and for client system
+06-30 06:22:40.384 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for service : cab.snapp.passenger/androidx.work.impl.background.systemjob.SystemJobServiceare :1
+06-30 06:22:40.385 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for client : systemare :18
+06-30 06:22:40.386 D/CompatibilityChangeReporter( 1184): Compat change id reported: 135634846; UID 10270; state: DISABLED
+06-30 06:22:40.386 D/CompatibilityChangeReporter( 1184): Compat change id reported: 135754954; UID 10270; state: ENABLED
+06-30 06:22:40.387 D/CompatibilityChangeReporter( 1184): Compat change id reported: 143937733; UID 10270; state: ENABLED
+06-30 06:22:40.389 D/WM-GreedyScheduler(11691): Ignoring {WorkSpec: e5cd2a58-e09e-4264-8e42-94c7e7064cfc}. Requires device idle.
+06-30 06:22:40.389 D/WM-GreedyScheduler(11691): Ignoring {WorkSpec: 468788b4-1e76-445c-87e2-c402cf5d905a}. Requires device idle.
+06-30 06:22:40.389 D/WM-GreedyScheduler(11691): Ignoring {WorkSpec: 019f1e01-0461-4ee4-95d0-ac431e7e9c12}. Requires device idle.
+06-30 06:22:40.389 D/WM-GreedyScheduler(11691): Ignoring {WorkSpec: 04384267-0d13-405e-8f69-a2377bbb371a}. Requires ContentUri triggers.
+06-30 06:22:40.389 D/WM-GreedyScheduler(11691): Starting tracking for f5902dd9-dd27-4dfb-8f3e-591a2e22f429,685f8672-ed5e-4882-a899-3c6ade303fc6,ecc375b8-a602-413b-8491-b4be8a303eae,6d74465c-534b-4aca-aae0-e7d291c75329
+06-30 06:22:40.399 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:40.410 D/Zygote  (  607): Forked child process 11832
+06-30 06:22:40.413 I/ActivityManager( 1184): Start proc 11832:cab.snapp.passenger/u0a270 for service {cab.snapp.passenger/androidx.work.impl.background.systemjob.SystemJobService}
+06-30 06:22:40.413 W/Zygote  (11832): Unable to open libbeluga.so: dlopen failed: library "libbeluga.so" not found.
+06-30 06:22:40.415 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:40.432 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:40.437 E/snapp.passenge(11832): Not starting debugger since process cannot load the jdwp agent.
+06-30 06:22:40.449 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:40.452 D/CompatibilityInfo( 1184): mCompatibilityFlags - 0
+06-30 06:22:40.452 D/CompatibilityInfo( 1184): applicationDensity - 320
+06-30 06:22:40.452 D/CompatibilityInfo( 1184): applicationScale - 1.0
+06-30 06:22:40.454 D/CompatibilityInfo( 1184): mCompatibilityFlags - 0
+06-30 06:22:40.454 D/CompatibilityInfo( 1184): applicationDensity - 320
+06-30 06:22:40.454 D/CompatibilityInfo( 1184): applicationScale - 1.0
+06-30 06:22:40.455 I/vendor.qti.hardware.servicetracker@1.2-service(  793): startService() is called for servicecab.snapp.passenger/androidx.work.impl.background.systemjob.SystemJobService
+06-30 06:22:40.465 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:40.475 I/snapp.passenge(11832): The ClassLoaderContext is a special shared library.
+06-30 06:22:40.482 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:40.533 I/chatty  (  741): uid=1000(system) HwBinder:741_1 identical 3 lines
+06-30 06:22:40.548 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:40.566 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:40.633 I/chatty  (  741): uid=1000(system) HwBinder:741_2 identical 4 lines
+06-30 06:22:40.649 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:40.658 I/Perf    (11832): Connecting to perf service.
+06-30 06:22:40.664 D/NetworkSecurityConfig(11832): Using Network Security Config from resource network_security_config debugBuild: false
+06-30 06:22:40.665 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:40.667 D/NetworkSecurityConfig(11832): Using Network Security Config from resource network_security_config debugBuild: false
+06-30 06:22:40.682 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:40.814 I/chatty  (  741): uid=1000(system) HwBinder:741_2 identical 8 lines
+06-30 06:22:40.831 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:40.862 W/snapp.passenge(11832): ClassLoaderContext classpath size mismatch. expected=15, found=0 (DLC[];PCL[base.apk*1956064868:base.apk!classes2.dex*3873100257:base.apk!classes3.dex*4220888012:base.apk!classes4.dex*2899712779:base.apk!classes5.dex*1582392212:base.apk!classes6.dex*4195018059:base.apk!classes7.dex*1608240014:base.apk!classes8.dex*3800358500:base.apk!classes9.dex*3000084513:base.apk!classes10.dex*476190065:base.apk!classes11.dex*3354857070:base.apk!classes12.dex*1530461620:base.apk!classes13.dex*3065404232:base.apk!classes14.dex*523854093:base.apk!classes15.dex*685965955]{PCL[/system/framework/org.apache.http.legacy.jar*1522375157]#PCL[/system/framework/com.android.location.provider.jar*1664931834]#PCL[/system/framework/com.android.media.remotedisplay.jar*1573936315]} | DLC[];PCL[])
+06-30 06:22:40.879 W/System  (11832): ClassLoader referenced unknown path: 
+06-30 06:22:40.915 W/snapp.passenge(11832): ClassLoaderContext classpath size mismatch. expected=15, found=9 (DLC[];PCL[base.apk*1956064868:base.apk!classes2.dex*3873100257:base.apk!classes3.dex*4220888012:base.apk!classes4.dex*2899712779:base.apk!classes5.dex*1582392212:base.apk!classes6.dex*4195018059:base.apk!classes7.dex*1608240014:base.apk!classes8.dex*3800358500:base.apk!classes9.dex*3000084513:base.apk!classes10.dex*476190065:base.apk!classes11.dex*3354857070:base.apk!classes12.dex*1530461620:base.apk!classes13.dex*3065404232:base.apk!classes14.dex*523854093:base.apk!classes15.dex*685965955]{PCL[/system/framework/org.apache.http.legacy.jar*1522375157]#PCL[/system/framework/com.android.location.provider.jar*1664931834]#PCL[/system/framework/com.android.media.remotedisplay.jar*1573936315]} | DLC[];PCL[/data/app/~~4Gq7soXA-A0P3YFDD5NMSg==/cab.snapp.passenger-QLHGbzu5FKcVg3ybKF11GQ==/base.apk*2363693701:/data/app/~~4Gq7soXA-A0P3YFDD5NMSg==/cab.snapp.passenger-QLHGbzu5FKcVg3ybKF11GQ==/base.apk!classes2.dex*3336698964:/data/app/~~4Gq7soXA-A0P3YFDD5NMSg==/cab.snapp.passenger-QLHGbzu5FKcVg3ybKF11GQ==/base.apk!classes3.dex*1931621052:/data/app/~~4Gq7soXA-A0P3YFDD5NMSg==/cab.snapp.passenger-QLHGbzu5FKcVg3ybKF11GQ==/base.apk!classes4.dex*3302925260:/data/app/~~4Gq7soXA-A0P3YFDD5NMSg==/cab.snapp.passenger-QLHGbzu5FKcVg3ybKF11GQ==/base.apk!classes5.dex*282131887:/data/app/~~4Gq7soXA-A0P3YFDD5NMSg==/cab.snapp.passenger-QLHGbzu5FKcVg3ybKF11GQ==/base.apk!classes6.dex*2460163451:/data/app/~~4Gq7soXA-A0P3YFDD5NMSg==/cab.snapp.passenger-QLHGbzu5FKcVg3ybKF11GQ==/base.apk!classes7.dex*1457540349:/data/app/~~4Gq7soXA-A0P3YFDD5NMSg==/cab.snapp.passenger-QLHGbzu5FKcVg3ybKF11GQ==/base.apk!classes8.dex*2566765879:/data/app/~~4Gq7soXA-A0P3YFDD5NMSg==/cab.snapp.passenger-QLHGbzu5FKcVg3ybKF11GQ==/base.apk!classes9.dex*1293004484]{PCL[/system/framework/org.apache.http.legacy.jar*1522375157]})
+06-30 06:22:40.918 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:40.928 W/snapp.passenge(11832): Found duplicate classes, falling back to extracting from APK : /data/app/~~rrSIp-Y_XZiVrBH6UuPMug==/com.google.android.gms-a29TJi312OWgYmEVyYZj_g==/split_MeasurementDynamite_installtime.apk
+06-30 06:22:40.928 W/snapp.passenge(11832): NOTE: This wastes RAM and hurts startup performance.
+06-30 06:22:40.928 W/snapp.passenge(11832): Found duplicated class when checking oat files: 'Landroid/app/AppComponentFactory;' in /data/app/~~4Gq7soXA-A0P3YFDD5NMSg==/cab.snapp.passenger-QLHGbzu5FKcVg3ybKF11GQ==/base.apk and /data/app/~~rrSIp-Y_XZiVrBH6UuPMug==/com.google.android.gms-a29TJi312OWgYmEVyYZj_g==/split_MeasurementDynamite_installtime.apk!classes2.dex
+06-30 06:22:40.998 I/vendor.qti.hardware.servicetracker@1.2-service(  793): bindService is called for service : cab.snapp.passenger/com.mapbox.common.LifecycleService and for client cab.snapp.passenger
+06-30 06:22:40.998 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for service : cab.snapp.passenger/com.mapbox.common.LifecycleServiceare :1
+06-30 06:22:40.998 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for client : cab.snapp.passengerare :1
+06-30 06:22:40.998 D/CompatibilityInfo( 1184): mCompatibilityFlags - 0
+06-30 06:22:40.998 D/CompatibilityInfo( 1184): applicationDensity - 320
+06-30 06:22:40.998 D/CompatibilityInfo( 1184): applicationScale - 1.0
+06-30 06:22:40.999 I/vendor.qti.hardware.servicetracker@1.2-service(  793): startService() is called for servicecab.snapp.passenger/com.mapbox.common.LifecycleService
+06-30 06:22:41.064 W/ActivityManager( 1184): Background start not allowed: service Intent { cmp=cab.snapp.passenger/com.webengage.sdk.android.ExecutorService (has extras) } to cab.snapp.passenger/com.webengage.sdk.android.ExecutorService from pid=11832 uid=10270 pkg=cab.snapp.passenger startFg?=false
+06-30 06:22:41.070 I/vendor.qti.hardware.servicetracker@1.2-service(  793): bindService is called for service : cab.snapp.passenger/com.webengage.sdk.android.ExecutorService and for client cab.snapp.passenger
+06-30 06:22:41.071 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for service : cab.snapp.passenger/com.webengage.sdk.android.ExecutorServiceare :1
+06-30 06:22:41.071 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for client : cab.snapp.passengerare :2
+06-30 06:22:41.072 D/CompatibilityInfo( 1184): mCompatibilityFlags - 0
+06-30 06:22:41.072 D/CompatibilityInfo( 1184): applicationDensity - 320
+06-30 06:22:41.072 D/CompatibilityInfo( 1184): applicationScale - 1.0
+06-30 06:22:41.059 W/charge_logger(11877): type=1400 audit(0.0:3075472): avc: denied { remove_name } for name="charge_logger_a.csv" dev="sda15" ino=150 scontext=u:r:charge_logger:s0 tcontext=u:object_r:charge_logger_data_file:s0 tclass=dir permissive=0
+06-30 06:22:41.073 I/vendor.qti.hardware.servicetracker@1.2-service(  793): startService() is called for servicecab.snapp.passenger/com.webengage.sdk.android.ExecutorService
+06-30 06:22:41.079 I/vendor.qti.hardware.servicetracker@1.2-service(  793): bindService is called for service : com.google.android.gms/.chimera.PersistentApiService and for client cab.snapp.passenger
+06-30 06:22:41.079 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for service : com.google.android.gms/.chimera.PersistentApiServiceare :37
+06-30 06:22:41.079 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for client : cab.snapp.passengerare :3
+06-30 06:22:41.089 I/AppMetrica(11832): AppMetrica [12124-IAA-CDE-1] Initializing of AppMetrica, Release type, Version 7.14.0, API Level 116, Dated 26.11.2025.
+06-30 06:22:41.108 I/PhenotypeResourceReader(14916): unable to find any Phenotype resource metadata for cab.snapp.passenger
+06-30 06:22:41.124 I/vendor.qti.hardware.servicetracker@1.2-service(  793): bindService is called for service : cab.snapp.passenger/io.appmetrica.analytics.internal.AppMetricaService and for client cab.snapp.passenger
+06-30 06:22:41.125 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for service : cab.snapp.passenger/io.appmetrica.analytics.internal.AppMetricaServiceare :1
+06-30 06:22:41.125 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for client : cab.snapp.passengerare :4
+06-30 06:22:41.125 D/CompatibilityInfo( 1184): mCompatibilityFlags - 0
+06-30 06:22:41.126 D/CompatibilityInfo( 1184): applicationDensity - 320
+06-30 06:22:41.126 D/CompatibilityInfo( 1184): applicationScale - 1.0
+06-30 06:22:41.128 I/vendor.qti.hardware.servicetracker@1.2-service(  793): startService() is called for servicecab.snapp.passenger/io.appmetrica.analytics.internal.AppMetricaService
+06-30 06:22:41.138 I/AppMetrica(11832): AppMetrica [12124-IAA-CDE-1] Activate AppMetrica with APIKey c652fe3d-xxxx-xxxx-xxxx-xxxxxxxx737c
+06-30 06:22:41.140 I/AppMetrica(11832): AppMetrica [12124-IAA-CDE-1] Activate reporter with APIKey 20799a27-xxxx-xxxx-xxxx-xxxxxxxx4180
+06-30 06:22:41.145 I/DrmUtils(11832): found android.hardware.drm@1.0::IDrmFactory clearkey
+06-30 06:22:41.155 I/DrmUtils(11832): found android.hardware.drm@1.0::IDrmFactory wfdhdcp
+06-30 06:22:41.158 I/DrmUtils(11832): found android.hardware.drm@1.0::IDrmFactory widevine
+06-30 06:22:41.161 V/NativeCrypto(11832): Registering org/conscrypt/NativeCrypto's 288 native methods...
+06-30 06:22:41.163 I/DrmUtils(11832): found android.hardware.drm@1.1::IDrmFactory clearkey
+06-30 06:22:41.165 I/DrmUtils(11832): found android.hardware.drm@1.1::IDrmFactory wfdhdcp
+06-30 06:22:41.167 I/DrmUtils(11832): found android.hardware.drm@1.1::IDrmFactory widevine
+06-30 06:22:41.171 I/DrmUtils(11832): found android.hardware.drm@1.2::IDrmFactory clearkey
+06-30 06:22:41.173 I/DrmUtils(11832): found android.hardware.drm@1.2::IDrmFactory wfdhdcp
+06-30 06:22:41.174 I/DrmUtils(11832): found android.hardware.drm@1.2::IDrmFactory widevine
+06-30 06:22:41.178 I/DrmUtils(11832): found android.hardware.drm@1.3::IDrmFactory clearkey
+06-30 06:22:41.180 I/DrmUtils(11832): found android.hardware.drm@1.3::IDrmFactory wfdhdcp
+06-30 06:22:41.181 I/DrmUtils(11832): found android.hardware.drm@1.3::IDrmFactory widevine
+06-30 06:22:41.182 E/snapp.passenge(11832): No package ID 6b found for ID 0x6b0b0013.
+06-30 06:22:41.183 I/FA      (11832): App measurement initialized, version: 172000
+06-30 06:22:41.183 I/FA      (11832): To enable debug logging run: adb shell setprop log.tag.FA VERBOSE
+06-30 06:22:41.183 I/FA      (11832): To enable faster debug mode event logging run:
+06-30 06:22:41.183 I/FA      (11832):   adb shell setprop debug.firebase.analytics.app cab.snapp.passenger
+06-30 06:22:41.190 I/WVCdm   (  736): [app][cab.snapp.passenger] calling virtual Return<void> wvdrm::hardware::drm::V1_3::widevine::WVDrmFactory::createPlugin(const hidl_array<uint8_t, 16> &, const android::hardware::hidl_string &, android::hardware::drm::V1_3::IDrmFactory::createPlugin_cb)
+06-30 06:22:41.190 D/WVCdm   (  736): Instantiating CDM.
+06-30 06:22:41.194 I/WVCdm   (  736): [cdm_engine.cpp(574):QueryStatus] Querying status
+06-30 06:22:41.198 I/WVCdm   (  736): [oemcrypto_adapter_dynamic.cpp(835):Initialize] Level 3 Build Info (v16): OEMCrypto Level3 Code 22590 May 28 2021 19:37:25
+06-30 06:22:41.198 I/WVCdm   (  736): [(0):] Level3 Library 22590 May 28 2021 19:37:25
+06-30 06:22:41.204 I/vendor.qti.hardware.servicetracker@1.2-service(  793): bindService is called for service : com.google.android.gms/.measurement.service.MeasurementBrokerService and for client cab.snapp.passenger
+06-30 06:22:41.204 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for service : com.google.android.gms/.measurement.service.MeasurementBrokerServiceare :1
+06-30 06:22:41.204 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for client : cab.snapp.passengerare :5
+06-30 06:22:41.204 D/CompatibilityInfo( 1184): mCompatibilityFlags - 0
+06-30 06:22:41.204 D/CompatibilityInfo( 1184): applicationDensity - 320
+06-30 06:22:41.205 D/CompatibilityInfo( 1184): applicationScale - 1.0
+06-30 06:22:41.206 I/vendor.qti.hardware.servicetracker@1.2-service(  793): startService() is called for servicecom.google.android.gms/.measurement.service.MeasurementBrokerService
+06-30 06:22:41.209 D/BoundBrokerSvc(14617): onBind: Intent { act=com.google.android.gms.measurement.START pkg=com.google.android.gms }
+06-30 06:22:41.209 D/BoundBrokerSvc(14617): Loading bound service for intent: Intent { act=com.google.android.gms.measurement.START pkg=com.google.android.gms }
+06-30 06:22:41.210 I/WVCdm   (  736): [oemcrypto_adapter_dynamic.cpp(849):Initialize] L3 Initialized. Trying L1.
+06-30 06:22:41.212 I/QCOM-OEMCrypto(  736): OEMCrypto_Initialize
+06-30 06:22:41.213 D/QSEECOMAPI(  736): QSEECom_get_handle sb_length = 0x64000
+06-30 06:22:41.213 D/QSEECOMAPI(  736): App is not loaded in QSEE
+06-30 06:22:41.214 D/QSEECOMAPI(  736): app_arch = 2, total_files = 9
+06-30 06:22:41.261 D/QSEECOMAPI(  736): Loaded image: APP id = 126
+06-30 06:22:41.262 I/QCOM-OEMCrypto(  736): ---------------Widevine OEMCrypto configuration-----------------
+06-30 06:22:41.262 I/QCOM-OEMCrypto(  736): TA-HLOS interface                    :   QSEECOM
+06-30 06:22:41.262 I/QCOM-OEMCrypto(  736): Crypto Engine SMMU Virtual Address   :   No
+06-30 06:22:41.263 I/QCOM-OEMCrypto(  736): Measure elapsed time                 :   No
+06-30 06:22:41.263 I/QCOM-OEMCrypto(  736): Inplace decryption for clear buffer  :   Yes
+06-30 06:22:41.263 I/QCOM-OEMCrypto(  736): Frame Assembly                       :   Yes
+06-30 06:22:41.263 I/QCOM-OEMCrypto(  736): Scratch buffer size                  :   4194304
+06-30 06:22:41.263 I/QCOM-OEMCrypto(  736): Decrypt hash tests                   :   No
+06-30 06:22:41.263 I/QCOM-OEMCrypto(  736): Secure buffer tests                  :   No
+06-30 06:22:41.263 I/QCOM-OEMCrypto(  736): ----------------------------------------------------------------
+06-30 06:22:41.267 D/DrmLibTime(  522): got the req here! ret=0
+06-30 06:22:41.267 D/DrmLibTime(  522): command id, time_cmd_id = 770
+06-30 06:22:41.267 D/DrmLibTime(  522): time_getutcsec starts!
+06-30 06:22:41.267 D/DrmLibTime(  522): QSEE Time Listener: time_getutcsec
+06-30 06:22:41.267 D/DrmLibTime(  522): QSEE Time Listener: get_utc_seconds
+06-30 06:22:41.267 D/DrmLibTime(  522): QSEE Time Listener: time_get_modem_time
+06-30 06:22:41.267 D/DrmLibTime(  522): QSEE Time Listener: Checking if ATS_MODEM is set or not.
+06-30 06:22:41.269 D/QC-time-services(  522): Lib:time_genoff_operation: pargs->base = 13
+06-30 06:22:41.269 D/QC-time-services(  522): Lib:time_genoff_operation: pargs->operation = 2
+06-30 06:22:41.269 D/QC-time-services(  522): Lib:time_genoff_operation: pargs->ts_val = 0
+06-30 06:22:41.269 D/QC-time-services(  522): Lib:time_genoff_operation: Send to server  passed!!
+06-30 06:22:41.271 D/QC-time-services(  597): Daemon: Connection accepted:time_genoff
+06-30 06:22:41.272 D/QC-time-services(  597): Daemon:Received base = 13, unit = 1, operation = 2,value = 0
+06-30 06:22:41.272 D/QC-time-services(  597): Daemon:genoff_opr: Base = 13, val = 0, operation = 2
+06-30 06:22:41.272 D/QC-time-services(  597): offset is: 1 for base: 13
+06-30 06:22:41.272 E/QC-time-services(  522): Receive Passed == base = 13, unit = 1, operation = 2, result = 0
+06-30 06:22:41.272 D/DrmLibTime(  522): QSEE Time Listener: ATS_MODEM is set. Try to retrieve it.
+06-30 06:22:41.272 E/QC-time-services(  597): Daemon: Time-services: Waiting to acceptconnection
+06-30 06:22:41.273 D/QC-time-services(  597): Daemon: Connection accepted:time_genoff
+06-30 06:22:41.273 D/QC-time-services(  597): Daemon:Received base = 13, unit = 1, operation = 1,value = 0
+06-30 06:22:41.273 D/QC-time-services(  597): Daemon:genoff_opr: Base = 13, val = 0, operation = 1
+06-30 06:22:41.273 D/QC-time-services(  597): Daemon: genoff get for 13
+06-30 06:22:41.273 D/QC-time-services(  597): Daemon:Value read from QTimer mseconds = 304476699
+06-30 06:22:41.273 D/QC-time-services(  597): Daemon:Value read from RTC mseconds on boot = 5884506000
+06-30 06:22:41.273 D/QC-time-services(  597): Daemon:Value read from QTimer mseconds = 304476699
+06-30 06:22:41.273 D/QC-time-services(  597): Daemon:Value read from generic offset = 1776595389711
+06-30 06:22:41.273 D/QC-time-services(  597): Daemon:Delta read on boot mseconds = 5884494860
+06-30 06:22:41.274 D/QC-time-services(  597): Daemon:Final Time = 1782784361270
+06-30 06:22:41.274 D/DrmLibTime(  522): QSEE Time Listener: Time GenOff - seconds: 1782784361
+06-30 06:22:41.274 D/DrmLibTime(  522): time_getutcsec returns 0, sec = 1782784361; nsec = 0
+06-30 06:22:41.274 D/DrmLibTime(  522): time_getutcsec finished! 
+06-30 06:22:41.274 D/DrmLibTime(  522): iotcl_continue_command finished! and return 0 
+06-30 06:22:41.274 D/DrmLibTime(  522): before calling ioctl to read the next time_cmd
+06-30 06:22:41.277 E/QC-time-services(  597): Daemon: Time-services: Waiting to acceptconnection
+06-30 06:22:41.302 I/QCOM-OEMCrypto(  736): Allocated all scratch buffers
+06-30 06:22:41.302 I/QCOM-OEMCrypto(  736): LibOEMCrypto version 1.33
+06-30 06:22:41.302 I/QCOM-OEMCrypto(  736): TA   version 1.55
+06-30 06:22:41.302 I/QCOM-OEMCrypto(  736): Api  version 16.3
+06-30 06:22:41.307 W/WVCdm   (  736): [oemcrypto_adapter_dynamic.cpp(1048):LoadLevel1] Could not load L1 _oecc113.
+06-30 06:22:41.308 W/WVCdm   (  736): [oemcrypto_adapter_dynamic.cpp(1049):LoadLevel1] Could not load L1 _oecc114.
+06-30 06:22:41.308 D/WVCdm   (  736): [oemcrypto_adapter_dynamic.cpp(868):Initialize] OEMCrypto_Initialize Level 1 success. I will use level 1.
+06-30 06:22:41.308 I/QCOM-OEMCrypto(  736): Created OEMCrypto idle_thread
+06-30 06:22:41.308 I/WVCdm   (  736): [oemcrypto_adapter_dynamic.cpp(871):Initialize] Level 1 Build Info (v16): Build Information: API_Version: 16.3 LibOEMCrypto_Version: 1.33 TA_Version: 1.55
+06-30 06:22:41.309 E/QCOM-OEMCrypto(  736): Error at trusted_app_is_keybox_or_oemcert_valid : 735
+06-30 06:22:41.309 E/QCOM-OEMCrypto(  736): TA Result : 17 OEMCryptoResult : 10
+06-30 06:22:41.310 I/QCOM-OEMCrypto(  736): -----------------------------------------------------------------
+06-30 06:22:41.310 I/QCOM-OEMCrypto(  736): Error stack trace[1] for TA version 1:55
+06-30 06:22:41.310 E/QCOM-OEMCrypto(  736): 	 i_widevine_oemcrypto_is_keybox_or_oemcert_valid : 736
+06-30 06:22:41.310 I/QCOM-OEMCrypto(  736): -----------------------------------------------------------------
+06-30 06:22:41.310 E/QCOM-OEMCrypto(  736): Error at _oecc05 : 637
+06-30 06:22:41.310 W/WVCdm   (  736): [oemcrypto_adapter_dynamic.cpp(1295):ValidateOrInstallL1KeyboxOrCert] Bad Level 1 Root of Trust. Falling back to L3
+06-30 06:22:41.310 W/WVCdm   (  736): [oemcrypto_adapter_dynamic.cpp(1438):OEMCrypto_InitializeAndCheckKeybox] Keybox error: 25. Falling back to L3.
+06-30 06:22:41.311 I/QCOM-OEMCrypto(  736): Exit OEMCrypto idle_thread
+06-30 06:22:41.311 I/QCOM-OEMCrypto(  736): OEMCrypto_Terminate
+06-30 06:22:41.313 I/QCOM-OEMCrypto(  736): Freed all scratch buffers
+06-30 06:22:41.314 D/QSEECOMAPI(  736): QSEECom_dealloc_memory 
+06-30 06:22:41.314 D/QSEECOMAPI(  736): QSEECom_shutdown_app, app_id = 126
+06-30 06:22:41.318 D/WVCdm   (  736): [crypto_session.cpp(371):CacheVersion] OEMCrypto version (default security level): 16.3
+06-30 06:22:41.318 D/WVCdm   (  736): [crypto_session.cpp(380):CacheVersion] OEMCrypto version (L3 security level): 16.3
+06-30 06:22:41.318 D/WVCdm   (  736): [crypto_session.cpp(805):Open] Opening crypto session: requested_security_level = Default
+06-30 06:22:41.325 I/WVCdm   (  736): [usage_table_header.cpp(159):Init] Initializing usage table header: security_level = 3
+06-30 06:22:41.325 D/WVCdm   (  736): [usage_table_header.cpp(188):Init] Usage table capacity is unlimited: security_level = 3
+06-30 06:22:41.326 I/WVCdm   (  736): [usage_table_header.cpp(212):Init] Number of usage entries: 0
+06-30 06:22:41.329 E/WVCdm   (  736): [wv_content_decryption_module.cpp(398):GetMetricsInternal] Cdm Identifier not found
+06-30 06:22:41.332 E/WVCdm   (  736): [wv_content_decryption_module.cpp(457):CloseCdm] Cdm Identifier not found
+06-30 06:22:41.332 E/WVCdm   (  736): Failed to close cdm. status 12
+06-30 06:22:41.333 I/WVCdm   (  736): [(0):] L3 Terminate.
+06-30 06:22:41.335 I/DrmUtils(11832): found android.hardware.drm@1.0::IDrmFactory clearkey
+06-30 06:22:41.338 I/DrmUtils(11832): found android.hardware.drm@1.0::IDrmFactory wfdhdcp
+06-30 06:22:41.340 I/DrmUtils(11832): found android.hardware.drm@1.0::IDrmFactory widevine
+06-30 06:22:41.343 I/DrmUtils(11832): found android.hardware.drm@1.1::IDrmFactory clearkey
+06-30 06:22:41.345 I/DrmUtils(11832): found android.hardware.drm@1.1::IDrmFactory wfdhdcp
+06-30 06:22:41.347 I/DrmUtils(11832): found android.hardware.drm@1.1::IDrmFactory widevine
+06-30 06:22:41.350 I/DrmUtils(11832): found android.hardware.drm@1.2::IDrmFactory clearkey
+06-30 06:22:41.352 I/DrmUtils(11832): found android.hardware.drm@1.2::IDrmFactory wfdhdcp
+06-30 06:22:41.354 I/DrmUtils(11832): found android.hardware.drm@1.2::IDrmFactory widevine
+06-30 06:22:41.357 I/DrmUtils(11832): found android.hardware.drm@1.3::IDrmFactory clearkey
+06-30 06:22:41.359 I/DrmUtils(11832): found android.hardware.drm@1.3::IDrmFactory wfdhdcp
+06-30 06:22:41.361 I/DrmUtils(11832): found android.hardware.drm@1.3::IDrmFactory widevine
+06-30 06:22:41.361 I/WVCdm   (  736): [app][cab.snapp.passenger] calling virtual Return<void> wvdrm::hardware::drm::V1_3::widevine::WVDrmFactory::createPlugin(const hidl_array<uint8_t, 16> &, const android::hardware::hidl_string &, android::hardware::drm::V1_3::IDrmFactory::createPlugin_cb)
+06-30 06:22:41.361 D/WVCdm   (  736): Instantiating CDM.
+06-30 06:22:41.362 I/WVCdm   (  736): [cdm_engine.cpp(574):QueryStatus] Querying status
+06-30 06:22:41.362 I/WVCdm   (  736): [oemcrypto_adapter_dynamic.cpp(835):Initialize] Level 3 Build Info (v16): OEMCrypto Level3 Code 22590 May 28 2021 19:37:25
+06-30 06:22:41.363 I/WVCdm   (  736): [(0):] Level3 Library 22590 May 28 2021 19:37:25
+06-30 06:22:41.369 I/WVCdm   (  736): [oemcrypto_adapter_dynamic.cpp(849):Initialize] L3 Initialized. Trying L1.
+06-30 06:22:41.369 I/QCOM-OEMCrypto(  736): OEMCrypto_Initialize
+06-30 06:22:41.369 D/QSEECOMAPI(  736): QSEECom_get_handle sb_length = 0x64000
+06-30 06:22:41.369 D/QSEECOMAPI(  736): App is not loaded in QSEE
+06-30 06:22:41.370 D/QSEECOMAPI(  736): app_arch = 2, total_files = 9
+06-30 06:22:41.397 I/vendor.qti.hardware.servicetracker@1.2-service(  793): bindService is called for service : com.google.android.gms/com.google.android.location.internal.GoogleLocationManagerService and for client cab.snapp.passenger
+06-30 06:22:41.397 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for service : com.google.android.gms/com.google.android.location.internal.GoogleLocationManagerServiceare :6
+06-30 06:22:41.397 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for client : cab.snapp.passengerare :6
+06-30 06:22:41.398 I/vendor.qti.hardware.servicetracker@1.2-service(  793): unbindService is called for service : com.google.android.gms/.chimera.PersistentDirectBootAwareApiService and for client com.google.android.gms.persistent
+06-30 06:22:41.425 D/QSEECOMAPI(  736): Loaded image: APP id = 127
+06-30 06:22:41.428 I/QCOM-OEMCrypto(  736): ---------------Widevine OEMCrypto configuration-----------------
+06-30 06:22:41.428 I/QCOM-OEMCrypto(  736): TA-HLOS interface                    :   QSEECOM
+06-30 06:22:41.428 I/QCOM-OEMCrypto(  736): Crypto Engine SMMU Virtual Address   :   No
+06-30 06:22:41.428 I/QCOM-OEMCrypto(  736): Measure elapsed time                 :   No
+06-30 06:22:41.428 I/QCOM-OEMCrypto(  736): Inplace decryption for clear buffer  :   Yes
+06-30 06:22:41.428 I/QCOM-OEMCrypto(  736): Frame Assembly                       :   Yes
+06-30 06:22:41.428 I/QCOM-OEMCrypto(  736): Scratch buffer size                  :   4194304
+06-30 06:22:41.428 I/QCOM-OEMCrypto(  736): Decrypt hash tests                   :   No
+06-30 06:22:41.428 I/QCOM-OEMCrypto(  736): Secure buffer tests                  :   No
+06-30 06:22:41.428 I/QCOM-OEMCrypto(  736): ----------------------------------------------------------------
+06-30 06:22:41.433 D/DrmLibTime(  522): got the req here! ret=0
+06-30 06:22:41.433 D/DrmLibTime(  522): command id, time_cmd_id = 770
+06-30 06:22:41.433 D/DrmLibTime(  522): time_getutcsec starts!
+06-30 06:22:41.433 D/DrmLibTime(  522): QSEE Time Listener: time_getutcsec
+06-30 06:22:41.433 D/DrmLibTime(  522): QSEE Time Listener: get_utc_seconds
+06-30 06:22:41.433 D/DrmLibTime(  522): QSEE Time Listener: time_get_modem_time
+06-30 06:22:41.433 D/DrmLibTime(  522): QSEE Time Listener: Checking if ATS_MODEM is set or not.
+06-30 06:22:41.433 D/QC-time-services(  522): Lib:time_genoff_operation: pargs->base = 13
+06-30 06:22:41.433 D/QC-time-services(  522): Lib:time_genoff_operation: pargs->operation = 2
+06-30 06:22:41.433 D/QC-time-services(  522): Lib:time_genoff_operation: pargs->ts_val = 0
+06-30 06:22:41.433 D/QC-time-services(  522): Lib:time_genoff_operation: Send to server  passed!!
+06-30 06:22:41.433 D/QC-time-services(  597): Daemon: Connection accepted:time_genoff
+06-30 06:22:41.434 D/QC-time-services(  597): Daemon:Received base = 13, unit = 1, operation = 2,value = 0
+06-30 06:22:41.434 D/QC-time-services(  597): Daemon:genoff_opr: Base = 13, val = 0, operation = 2
+06-30 06:22:41.434 D/QC-time-services(  597): offset is: 1 for base: 13
+06-30 06:22:41.434 E/QC-time-services(  522): Receive Passed == base = 13, unit = 1, operation = 2, result = 0
+06-30 06:22:41.434 D/DrmLibTime(  522): QSEE Time Listener: ATS_MODEM is set. Try to retrieve it.
+06-30 06:22:41.435 E/QC-time-services(  597): Daemon: Time-services: Waiting to acceptconnection
+06-30 06:22:41.435 D/QC-time-services(  597): Daemon: Connection accepted:time_genoff
+06-30 06:22:41.435 D/QC-time-services(  597): Daemon:Received base = 13, unit = 1, operation = 1,value = 0
+06-30 06:22:41.435 D/QC-time-services(  597): Daemon:genoff_opr: Base = 13, val = 0, operation = 1
+06-30 06:22:41.435 D/QC-time-services(  597): Daemon: genoff get for 13
+06-30 06:22:41.435 D/QC-time-services(  597): Daemon:Value read from QTimer mseconds = 304476861
+06-30 06:22:41.435 D/QC-time-services(  597): Daemon:Value read from RTC mseconds on boot = 5884506000
+06-30 06:22:41.435 D/QC-time-services(  597): Daemon:Value read from QTimer mseconds = 304476861
+06-30 06:22:41.435 D/QC-time-services(  597): Daemon:Value read from generic offset = 1776595389711
+06-30 06:22:41.435 D/QC-time-services(  597): Daemon:Delta read on boot mseconds = 5884494860
+06-30 06:22:41.435 D/QC-time-services(  597): Daemon:Final Time = 1782784361432
+06-30 06:22:41.435 D/DrmLibTime(  522): QSEE Time Listener: Time GenOff - seconds: 1782784361
+06-30 06:22:41.435 D/DrmLibTime(  522): time_getutcsec returns 0, sec = 1782784361; nsec = 0
+06-30 06:22:41.435 D/DrmLibTime(  522): time_getutcsec finished! 
+06-30 06:22:41.435 D/DrmLibTime(  522): iotcl_continue_command finished! and return 0 
+06-30 06:22:41.435 D/DrmLibTime(  522): before calling ioctl to read the next time_cmd
+06-30 06:22:41.436 E/QC-time-services(  597): Daemon: Time-services: Waiting to acceptconnection
+06-30 06:22:41.453 I/TetheringManager(11832): registerTetheringEventCallback:cab.snapp.passenger
+06-30 06:22:41.463 I/QCOM-OEMCrypto(  736): Allocated all scratch buffers
+06-30 06:22:41.463 I/QCOM-OEMCrypto(  736): LibOEMCrypto version 1.33
+06-30 06:22:41.463 I/QCOM-OEMCrypto(  736): TA   version 1.55
+06-30 06:22:41.463 I/QCOM-OEMCrypto(  736): Api  version 16.3
+06-30 06:22:41.463 W/WVCdm   (  736): [oemcrypto_adapter_dynamic.cpp(1048):LoadLevel1] Could not load L1 _oecc113.
+06-30 06:22:41.463 W/WVCdm   (  736): [oemcrypto_adapter_dynamic.cpp(1049):LoadLevel1] Could not load L1 _oecc114.
+06-30 06:22:41.463 D/WVCdm   (  736): [oemcrypto_adapter_dynamic.cpp(868):Initialize] OEMCrypto_Initialize Level 1 success. I will use level 1.
+06-30 06:22:41.463 I/QCOM-OEMCrypto(  736): Created OEMCrypto idle_thread
+06-30 06:22:41.463 I/WVCdm   (  736): [oemcrypto_adapter_dynamic.cpp(871):Initialize] Level 1 Build Info (v16): Build Information: API_Version: 16.3 LibOEMCrypto_Version: 1.33 TA_Version: 1.55
+06-30 06:22:41.465 E/QCOM-OEMCrypto(  736): Error at trusted_app_is_keybox_or_oemcert_valid : 735
+06-30 06:22:41.465 E/QCOM-OEMCrypto(  736): TA Result : 17 OEMCryptoResult : 10
+06-30 06:22:41.465 I/QCOM-OEMCrypto(  736): -----------------------------------------------------------------
+06-30 06:22:41.465 I/QCOM-OEMCrypto(  736): Error stack trace[1] for TA version 1:55
+06-30 06:22:41.465 E/QCOM-OEMCrypto(  736): 	 i_widevine_oemcrypto_is_keybox_or_oemcert_valid : 736
+06-30 06:22:41.465 I/QCOM-OEMCrypto(  736): -----------------------------------------------------------------
+06-30 06:22:41.465 E/QCOM-OEMCrypto(  736): Error at _oecc05 : 637
+06-30 06:22:41.466 W/WVCdm   (  736): [oemcrypto_adapter_dynamic.cpp(1295):ValidateOrInstallL1KeyboxOrCert] Bad Level 1 Root of Trust. Falling back to L3
+06-30 06:22:41.466 W/WVCdm   (  736): [oemcrypto_adapter_dynamic.cpp(1438):OEMCrypto_InitializeAndCheckKeybox] Keybox error: 25. Falling back to L3.
+06-30 06:22:41.466 I/QCOM-OEMCrypto(  736): OEMCrypto_Terminate
+06-30 06:22:41.468 I/QCOM-OEMCrypto(  736): Freed all scratch buffers
+06-30 06:22:41.468 D/QSEECOMAPI(  736): QSEECom_dealloc_memory 
+06-30 06:22:41.468 D/QSEECOMAPI(  736): QSEECom_shutdown_app, app_id = 127
+06-30 06:22:41.469 D/WVCdm   (  736): [crypto_session.cpp(371):CacheVersion] OEMCrypto version (default security level): 16.3
+06-30 06:22:41.469 D/WVCdm   (  736): [crypto_session.cpp(380):CacheVersion] OEMCrypto version (L3 security level): 16.3
+06-30 06:22:41.469 D/WVCdm   (  736): [crypto_session.cpp(805):Open] Opening crypto session: requested_security_level = Default
+06-30 06:22:41.470 I/WVCdm   (  736): [usage_table_header.cpp(159):Init] Initializing usage table header: security_level = 3
+06-30 06:22:41.470 D/WVCdm   (  736): [usage_table_header.cpp(188):Init] Usage table capacity is unlimited: security_level = 3
+06-30 06:22:41.470 I/WVCdm   (  736): [usage_table_header.cpp(212):Init] Number of usage entries: 0
+06-30 06:22:41.472 E/WVCdm   (  736): [wv_content_decryption_module.cpp(398):GetMetricsInternal] Cdm Identifier not found
+06-30 06:22:41.473 E/WVCdm   (  736): [wv_content_decryption_module.cpp(457):CloseCdm] Cdm Identifier not found
+06-30 06:22:41.473 E/WVCdm   (  736): Failed to close cdm. status 12
+06-30 06:22:41.473 I/WVCdm   (  736): [(0):] L3 Terminate.
+06-30 06:22:41.489 W/pool-27-thread-(11832): type=1400 audit(0.0:3075473): avc: denied { read } for name="version" dev="proc" ino=4026532062 scontext=u:r:untrusted_app:s0:c14,c257,c512,c768 tcontext=u:object_r:proc_version:s0 tclass=file permissive=0
+06-30 06:22:41.501 D/ConnectivityService( 1184): requestNetwork for uid/pid:10270/11832 NetworkRequest [ TRACK_DEFAULT id=3148, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED Uid: 10270 AdministratorUids: [] RequestorUid: 10270 RequestorPackageName: cab.snapp.passenger] ]
+06-30 06:22:41.502 D/ConnectivityService( 1184): NetReassign [3148 : null → 115]
+06-30 06:22:41.503 D/WifiNetworkFactory( 1184): got request NetworkRequest [ TRACK_DEFAULT id=3148, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED Uid: 10270 AdministratorUids: [] RequestorUid: 10270 RequestorPackageName: cab.snapp.passenger] ] with score 50 and providerId 4
+06-30 06:22:41.503 D/UntrustedWifiNetworkFactory( 1184): got request NetworkRequest [ TRACK_DEFAULT id=3148, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED Uid: 10270 AdministratorUids: [] RequestorUid: 10270 RequestorPackageName: cab.snapp.passenger] ] with score 50 and providerId 4
+06-30 06:22:41.503 D/Ethernet( 1184): got request NetworkRequest [ TRACK_DEFAULT id=3148, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED Uid: 10270 AdministratorUids: [] RequestorUid: 10270 RequestorPackageName: cab.snapp.passenger] ] with score 50 and providerId 4
+06-30 06:22:41.504 D/PhoneSwitcherNetworkRequstListener( 2552): got request NetworkRequest [ TRACK_DEFAULT id=3148, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED Uid: 10270 AdministratorUids: [] RequestorUid: 10270 RequestorPackageName: cab.snapp.passenger] ] with score 50 and providerId 4
+06-30 06:22:41.523 I/CameraManagerGlobal(11832): Connecting to camera service
+06-30 06:22:41.535 W/ServiceManager(  982): Permission failure: android.permission.CAMERA_OPEN_CLOSE_LISTENER from uid=10270 pid=11832
+06-30 06:22:41.519 W/DefaultDispatch(11832): type=1400 audit(0.0:3075474): avc: denied { read } for name="u:object_r:vendor_persist_camera_prop:s0" dev="tmpfs" ino=22289 scontext=u:r:untrusted_app:s0:c14,c257,c512,c768 tcontext=u:object_r:vendor_persist_camera_prop:s0 tclass=file permissive=0
+06-30 06:22:41.536 E/libc    (11832): Access denied finding property "vendor.camera.aux.packagelist"
+06-30 06:22:41.536 I/chatty  (11832): uid=10270(cab.snapp.passenger) DefaultDispatch identical 1 line
+06-30 06:22:41.536 E/libc    (11832): Access denied finding property "vendor.camera.aux.packagelist"
+06-30 06:22:41.536 W/CameraManagerGlobal(11832): [soar.cts] ignore the status update of camera: 20
+06-30 06:22:41.536 E/libc    (11832): Access denied finding property "vendor.camera.aux.packagelist"
+06-30 06:22:41.536 W/CameraManagerGlobal(11832): [soar.cts] ignore the status update of camera: 21
+06-30 06:22:41.519 W/DefaultDispatch(11832): type=1400 audit(0.0:3075475): avc: denied { read } for name="u:object_r:vendor_persist_camera_prop:s0" dev="tmpfs" ino=22289 scontext=u:r:untrusted_app:s0:c14,c257,c512,c768 tcontext=u:object_r:vendor_persist_camera_prop:s0 tclass=file permissive=0
+06-30 06:22:41.529 I/chatty  (11832): uid=1000(system) cab.snapp.passenger identical 2 lines
+06-30 06:22:41.529 W/DefaultDispatch(11832): type=1400 audit(0.0:3075478): avc: denied { read } for name="u:object_r:vendor_persist_camera_prop:s0" dev="tmpfs" ino=22289 scontext=u:r:untrusted_app:s0:c14,c257,c512,c768 tcontext=u:object_r:vendor_persist_camera_prop:s0 tclass=file permissive=0
+06-30 06:22:41.537 E/libc    (11832): Access denied finding property "vendor.camera.aux.packagelist"
+06-30 06:22:41.537 W/CameraManagerGlobal(11832): [soar.cts] ignore the status update of camera: 61
+06-30 06:22:41.529 W/DefaultDispatch(11832): type=1400 audit(0.0:3075479): avc: denied { read } for name="u:object_r:vendor_persist_camera_prop:s0" dev="tmpfs" ino=22289 scontext=u:r:untrusted_app:s0:c14,c257,c512,c768 tcontext=u:object_r:vendor_persist_camera_prop:s0 tclass=file permissive=0
+06-30 06:22:41.537 E/libc    (11832): Access denied finding property "vendor.camera.aux.packagelist"
+06-30 06:22:41.539 W/ServiceManager(  982): Permission failure: android.permission.CAMERA from uid=10270 pid=11832
+06-30 06:22:41.540 E/libc    (11832): Access denied finding property "vendor.camera.aux.packagelist"
+06-30 06:22:41.540 E/libc    (11832): Access denied finding property "vendor.camera.aux.packagelist"
+06-30 06:22:41.540 W/CameraManagerGlobal(11832): ignore the torch status update of camera: 21
+06-30 06:22:41.541 E/libc    (11832): Access denied finding property "vendor.camera.aux.packagelist"
+06-30 06:22:41.541 W/CameraManagerGlobal(11832): ignore the torch status update of camera: 61
+06-30 06:22:41.529 W/Binder:11832_3(11832): type=1400 audit(0.0:3075480): avc: denied { read } for name="u:object_r:vendor_persist_camera_prop:s0" dev="tmpfs" ino=22289 scontext=u:r:untrusted_app:s0:c14,c257,c512,c768 tcontext=u:object_r:vendor_persist_camera_prop:s0 tclass=file permissive=0
+06-30 06:22:41.550 W/ServiceManager(  982): Permission failure: android.permission.CAMERA from uid=10270 pid=11832
+06-30 06:22:41.552 E/libc    (11832): Access denied finding property "vendor.camera.aux.packagelist"
+06-30 06:22:41.554 W/ServiceManager(  982): Permission failure: android.permission.CAMERA from uid=10270 pid=11832
+06-30 06:22:41.554 I/vendor.qti.hardware.servicetracker@1.2-service(  793): bindService is called for service : com.google.android.gms/.ads.identifier.service.AdvertisingIdService and for client cab.snapp.passenger
+06-30 06:22:41.554 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for service : com.google.android.gms/.ads.identifier.service.AdvertisingIdServiceare :5
+06-30 06:22:41.554 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for client : cab.snapp.passengerare :7
+06-30 06:22:41.558 W/ServiceManager(  982): Permission failure: android.permission.CAMERA from uid=10270 pid=11832
+06-30 06:22:41.559 E/libc    (11832): Access denied finding property "vendor.camera.aux.packagelist"
+06-30 06:22:41.561 W/ServiceManager(  982): Permission failure: android.permission.CAMERA from uid=10270 pid=11832
+06-30 06:22:41.563 W/ServiceManager(  982): Permission failure: android.permission.CAMERA from uid=10270 pid=11832
+06-30 06:22:41.564 E/libc    (11832): Access denied finding property "vendor.camera.aux.packagelist"
+06-30 06:22:41.565 W/ServiceManager(  982): Permission failure: android.permission.CAMERA from uid=10270 pid=11832
+06-30 06:22:41.567 W/ServiceManager(  982): Permission failure: android.permission.CAMERA from uid=10270 pid=11832
+06-30 06:22:41.593 I/vendor.qti.hardware.servicetracker@1.2-service(  793): unbindService is called for service : com.google.android.gms/.ads.identifier.service.AdvertisingIdService and for client cab.snapp.passenger
+06-30 06:22:41.593 I/vendor.qti.hardware.servicetracker@1.2-service(  793): size of service connections for service: com.google.android.gms/.ads.identifier.service.AdvertisingIdServiceafter removal is 4
+06-30 06:22:41.593 I/vendor.qti.hardware.servicetracker@1.2-service(  793): size of client connections for client: cab.snapp.passengerafter removal is 6
+06-30 06:22:41.598 I/vendor.qti.hardware.servicetracker@1.2-service(  793): bindService is called for service : com.google.android.gms/.ads.identifier.service.AdvertisingIdService and for client cab.snapp.passenger
+06-30 06:22:41.598 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for service : com.google.android.gms/.ads.identifier.service.AdvertisingIdServiceare :5
+06-30 06:22:41.598 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for client : cab.snapp.passengerare :7
+06-30 06:22:41.606 I/vendor.qti.hardware.servicetracker@1.2-service(  793): unbindService is called for service : com.google.android.gms/.ads.identifier.service.AdvertisingIdService and for client cab.snapp.passenger
+06-30 06:22:41.607 I/vendor.qti.hardware.servicetracker@1.2-service(  793): size of service connections for service: com.google.android.gms/.ads.identifier.service.AdvertisingIdServiceafter removal is 4
+06-30 06:22:41.607 I/vendor.qti.hardware.servicetracker@1.2-service(  793): size of client connections for client: cab.snapp.passengerafter removal is 6
+06-30 06:22:41.613 I/vendor.qti.hardware.servicetracker@1.2-service(  793): bindService is called for service : com.google.android.gms/.ads.identifier.service.AdvertisingIdService and for client cab.snapp.passenger
+06-30 06:22:41.613 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for service : com.google.android.gms/.ads.identifier.service.AdvertisingIdServiceare :5
+06-30 06:22:41.613 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for client : cab.snapp.passengerare :7
+06-30 06:22:41.618 I/vendor.qti.hardware.servicetracker@1.2-service(  793): unbindService is called for service : com.google.android.gms/.ads.identifier.service.AdvertisingIdService and for client cab.snapp.passenger
+06-30 06:22:41.618 I/vendor.qti.hardware.servicetracker@1.2-service(  793): size of service connections for service: com.google.android.gms/.ads.identifier.service.AdvertisingIdServiceafter removal is 4
+06-30 06:22:41.618 I/vendor.qti.hardware.servicetracker@1.2-service(  793): size of client connections for client: cab.snapp.passengerafter removal is 6
+06-30 06:22:41.622 I/vendor.qti.hardware.servicetracker@1.2-service(  793): bindService is called for service : com.google.android.gms/.ads.identifier.service.AdvertisingIdService and for client cab.snapp.passenger
+06-30 06:22:41.622 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for service : com.google.android.gms/.ads.identifier.service.AdvertisingIdServiceare :5
+06-30 06:22:41.622 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for client : cab.snapp.passengerare :7
+06-30 06:22:41.630 D/AdvertisingIdClient(14617): AdvertisingIdClient already created.
+06-30 06:22:41.630 D/AdvertisingIdClient(14617): AdvertisingIdClient is not bounded. Starting to bind it...
+06-30 06:22:41.632 I/vendor.qti.hardware.servicetracker@1.2-service(  793): unbindService is called for service : com.google.android.gms/.ads.identifier.service.AdvertisingIdService and for client cab.snapp.passenger
+06-30 06:22:41.632 I/vendor.qti.hardware.servicetracker@1.2-service(  793): size of service connections for service: com.google.android.gms/.ads.identifier.service.AdvertisingIdServiceafter removal is 4
+06-30 06:22:41.632 I/vendor.qti.hardware.servicetracker@1.2-service(  793): size of client connections for client: cab.snapp.passengerafter removal is 6
+06-30 06:22:41.638 I/vendor.qti.hardware.servicetracker@1.2-service(  793): bindService is called for service : com.google.android.gms/.ads.identifier.service.AdvertisingIdService and for client com.google.android.gms
+06-30 06:22:41.638 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for service : com.google.android.gms/.ads.identifier.service.AdvertisingIdServiceare :4
+06-30 06:22:41.638 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for client : com.google.android.gmsare :1
+06-30 06:22:41.638 D/AdvertisingIdClient(14617): AdvertisingIdClient is bounded
+06-30 06:22:41.638 I/vendor.qti.hardware.servicetracker@1.2-service(  793): bindService is called for service : com.google.android.gms/.ads.identifier.service.AdvertisingIdService and for client cab.snapp.passenger
+06-30 06:22:41.638 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for service : com.google.android.gms/.ads.identifier.service.AdvertisingIdServiceare :5
+06-30 06:22:41.638 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for client : cab.snapp.passengerare :7
+06-30 06:22:41.642 I/AdvertisingIdClient(14617): shouldSendLog 303981618
+06-30 06:22:41.642 I/AdvertisingIdClient(14617): GetInfoInternal elapse 11ms
+06-30 06:22:41.645 I/vendor.qti.hardware.servicetracker@1.2-service(  793): bindService is called for service : com.google.android.gms/.ads.identifier.service.AdvertisingIdService and for client cab.snapp.passenger
+06-30 06:22:41.645 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for service : com.google.android.gms/.ads.identifier.service.AdvertisingIdServiceare :5
+06-30 06:22:41.645 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for client : cab.snapp.passengerare :7
+06-30 06:22:41.646 I/vendor.qti.hardware.servicetracker@1.2-service(  793): unbindService is called for service : com.google.android.gms/.ads.identifier.service.AdvertisingIdService and for client cab.snapp.passenger
+06-30 06:22:41.651 I/vendor.qti.hardware.servicetracker@1.2-service(  793): unbindService is called for service : com.google.android.gms/.ads.identifier.service.AdvertisingIdService and for client cab.snapp.passenger
+06-30 06:22:41.651 I/AppMetrica(11832): AppMetrica-Attribution [12166-IAA-STE-10] Update distribution data: ClidsInfo(chosen=Candidate(clids=null, source=APP), candidates=[Candidate(clids=null, source=APP)]) -> ClidsInfo(chosen=Candidate(clids={}, source=APP), candidates=[Candidate(clids={}, source=APP)])
+06-30 06:22:41.651 I/vendor.qti.hardware.servicetracker@1.2-service(  793): size of service connections for service: com.google.android.gms/.ads.identifier.service.AdvertisingIdServiceafter removal is 4
+06-30 06:22:41.651 I/vendor.qti.hardware.servicetracker@1.2-service(  793): size of client connections for client: cab.snapp.passengerafter removal is 6
+06-30 06:22:41.654 I/vendor.qti.hardware.servicetracker@1.2-service(  793): bindService is called for service : com.google.android.gms/.ads.identifier.service.AdvertisingIdService and for client cab.snapp.passenger
+06-30 06:22:41.654 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for service : com.google.android.gms/.ads.identifier.service.AdvertisingIdServiceare :5
+06-30 06:22:41.654 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for client : cab.snapp.passengerare :7
+06-30 06:22:41.659 I/vendor.qti.hardware.servicetracker@1.2-service(  793): bindService is called for service : com.google.android.gms/.ads.identifier.service.AdvertisingIdService and for client cab.snapp.passenger
+06-30 06:22:41.659 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for service : com.google.android.gms/.ads.identifier.service.AdvertisingIdServiceare :5
+06-30 06:22:41.659 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for client : cab.snapp.passengerare :7
+06-30 06:22:41.662 I/vendor.qti.hardware.servicetracker@1.2-service(  793): unbindService is called for service : com.google.android.gms/.ads.identifier.service.AdvertisingIdService and for client cab.snapp.passenger
+06-30 06:22:41.665 I/vendor.qti.hardware.servicetracker@1.2-service(  793): unbindService is called for service : com.google.android.gms/.ads.identifier.service.AdvertisingIdService and for client cab.snapp.passenger
+06-30 06:22:41.665 I/vendor.qti.hardware.servicetracker@1.2-service(  793): size of service connections for service: com.google.android.gms/.ads.identifier.service.AdvertisingIdServiceafter removal is 4
+06-30 06:22:41.665 I/vendor.qti.hardware.servicetracker@1.2-service(  793): size of client connections for client: cab.snapp.passengerafter removal is 6
+06-30 06:22:41.686 I/vendor.qti.hardware.servicetracker@1.2-service(  793): bindService is called for service : com.google.android.gms/.chimera.GmsApiService and for client cab.snapp.passenger
+06-30 06:22:41.686 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for service : com.google.android.gms/.chimera.GmsApiServiceare :2
+06-30 06:22:41.686 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for client : cab.snapp.passengerare :7
+06-30 06:22:41.686 D/BoundBrokerSvc(14617): onRebind: Intent { act=com.google.android.gms.appset.service.START dat=chimera-action: cmp=com.google.android.gms/.chimera.GmsApiService }
+06-30 06:22:41.707 I/vendor.qti.hardware.servicetracker@1.2-service(  793): bindService is called for service : com.android.vending/com.google.android.finsky.developergroupidinfo.DeveloperGroupIdInfoService and for client com.google.android.gms
+06-30 06:22:41.707 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for service : com.android.vending/com.google.android.finsky.developergroupidinfo.DeveloperGroupIdInfoServiceare :1
+06-30 06:22:41.707 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for client : com.google.android.gmsare :2
+06-30 06:22:41.709 D/CompatibilityInfo( 1184): mCompatibilityFlags - 0
+06-30 06:22:41.709 D/CompatibilityInfo( 1184): applicationDensity - 320
+06-30 06:22:41.709 D/CompatibilityInfo( 1184): applicationScale - 1.0
+06-30 06:22:41.710 I/vendor.qti.hardware.servicetracker@1.2-service(  793): startService() is called for servicecom.android.vending/com.google.android.finsky.developergroupidinfo.DeveloperGroupIdInfoService
+06-30 06:22:41.729 W/ActivityManager( 1184): Background start not allowed: service Intent { cmp=cab.snapp.passenger/com.webengage.sdk.android.ExecutorService (has extras) } to cab.snapp.passenger/com.webengage.sdk.android.ExecutorService from pid=11832 uid=10270 pkg=cab.snapp.passenger startFg?=false
+06-30 06:22:41.733 I/AppMetrica(11832): AppMetrica-Attribution [12166-IAA-STE-10] Update distribution data: ClidsInfo(chosen=Candidate(clids={}, source=APP), candidates=[Candidate(clids={}, source=APP)]) -> ClidsInfo(chosen=Candidate(clids=null, source=APP), candidates=[Candidate(clids=null, source=APP)])
+06-30 06:22:41.735 I/vendor.qti.hardware.servicetracker@1.2-service(  793): unbindService is called for service : cab.snapp.passenger/com.webengage.sdk.android.ExecutorService and for client cab.snapp.passenger
+06-30 06:22:41.735 I/vendor.qti.hardware.servicetracker@1.2-service(  793): size of service connections for service: cab.snapp.passenger/com.webengage.sdk.android.ExecutorServiceafter removal is 0
+06-30 06:22:41.735 I/vendor.qti.hardware.servicetracker@1.2-service(  793): size of client connections for client: cab.snapp.passengerafter removal is 6
+06-30 06:22:41.735 I/vendor.qti.hardware.servicetracker@1.2-service(  793): destroyService is called for service : cab.snapp.passenger/com.webengage.sdk.android.ExecutorService
+06-30 06:22:42.062 I/vendor.qti.hardware.servicetracker@1.2-service(  793): unbindService is called for service : cab.snapp.passenger/androidx.work.impl.background.systemjob.SystemJobService and for client system
+06-30 06:22:42.062 I/vendor.qti.hardware.servicetracker@1.2-service(  793): size of service connections for service: cab.snapp.passenger/androidx.work.impl.background.systemjob.SystemJobServiceafter removal is 0
+06-30 06:22:42.062 I/vendor.qti.hardware.servicetracker@1.2-service(  793): size of client connections for client: systemafter removal is 17
+06-30 06:22:42.065 I/vendor.qti.hardware.servicetracker@1.2-service(  793): destroyService is called for service : cab.snapp.passenger/androidx.work.impl.background.systemjob.SystemJobService
+06-30 06:22:42.317 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:42.650 I/chatty  (  741): uid=1000(system) HwBinder:741_2 identical 21 lines
+06-30 06:22:42.666 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:42.668 D/TelephonyProvider( 2552): Using old permission behavior for telephony provider compat
+06-30 06:22:42.684 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:42.965 I/chatty  (  741): uid=1000(system) HwBinder:741_2 identical 21 lines
+06-30 06:22:43.055 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:43.676 D/TelephonyProvider( 2552): Using old permission behavior for telephony provider compat
+06-30 06:22:43.749 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:44.666 I/chatty  (  741): uid=1000(system) HwBinder:741_2 identical 36 lines
+06-30 06:22:44.684 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:44.687 D/TelephonyProvider( 2552): Using old permission behavior for telephony provider compat
+06-30 06:22:44.700 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:44.983 I/chatty  (  741): uid=1000(system) HwBinder:741_2 identical 21 lines
+06-30 06:22:45.069 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:45.334 D/BatteryService( 1184): /data/anr/adb_enable file.exists() =  false  mPlugType==2
+06-30 06:22:45.339 D/BatteryController( 2170): onReceive ACTION_BATTERY_CHANGED eLevel = 71; eScale = 100; mLevel = 71; mPluggedIn = true; mCharged = false; mCharging = true
+06-30 06:22:45.339 D/BatteryMeterView( 2170): onBatteryLevelChanged level = 71; pluggedIn = true; charging = true; mLevel = 71
+06-30 06:22:45.342 D/BatteryMeterView( 2170): onBatteryLevelChanged level = 71; pluggedIn = true; charging = true; mLevel = 71
+06-30 06:22:45.343 D/DeviceStatisticsService( 2499): chargerType=2 batteryLevel=71 totalBatteryCapacity=4447000
+06-30 06:22:45.343 D/DeviceInfoHidlClient( 2499): isPowerInfoNeverSent()=true
+06-30 06:22:45.344 D/BatteryMeterView( 2170): onBatteryLevelChanged level = 71; pluggedIn = true; charging = true; mLevel = 71
+06-30 06:22:45.345 D/KeyguardUpdateMonitor( 2170): received broadcast android.intent.action.BATTERY_CHANGED
+06-30 06:22:45.355 D/KeyguardUpdateMonitor( 2170): handleBatteryUpdate
+06-30 06:22:45.367 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:45.456 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:45.699 D/TelephonyProvider( 2552): Using old permission behavior for telephony provider compat
+06-30 06:22:45.783 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:46.000 I/chatty  (  741): uid=1000(system) HwBinder:741_2 identical 12 lines
+06-30 06:22:46.088 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:46.079 W/charge_logger(11962): type=1400 audit(0.0:3075486): avc: denied { remove_name } for name="charge_logger_a.csv" dev="sda15" ino=150 scontext=u:r:charge_logger:s0 tcontext=u:object_r:charge_logger_data_file:s0 tclass=dir permissive=0
+06-30 06:22:46.318 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:46.651 I/chatty  (  741): uid=1000(system) HwBinder:741_2 identical 21 lines
+06-30 06:22:46.667 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:46.668 D/BatteryService( 1184): /data/anr/adb_enable file.exists() =  false  mPlugType==2
+06-30 06:22:46.671 D/BatteryController( 2170): onReceive ACTION_BATTERY_CHANGED eLevel = 71; eScale = 100; mLevel = 71; mPluggedIn = true; mCharged = false; mCharging = true
+06-30 06:22:46.672 D/BatteryMeterView( 2170): onBatteryLevelChanged level = 71; pluggedIn = true; charging = true; mLevel = 71
+06-30 06:22:46.673 D/BatteryMeterView( 2170): onBatteryLevelChanged level = 71; pluggedIn = true; charging = true; mLevel = 71
+06-30 06:22:46.674 D/DeviceStatisticsService( 2499): chargerType=2 batteryLevel=71 totalBatteryCapacity=4447000
+06-30 06:22:46.674 D/DeviceInfoHidlClient( 2499): isPowerInfoNeverSent()=true
+06-30 06:22:46.674 D/BatteryMeterView( 2170): onBatteryLevelChanged level = 71; pluggedIn = true; charging = true; mLevel = 71
+06-30 06:22:46.675 D/KeyguardUpdateMonitor( 2170): received broadcast android.intent.action.BATTERY_CHANGED
+06-30 06:22:46.683 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:46.688 D/KeyguardUpdateMonitor( 2170): handleBatteryUpdate
+06-30 06:22:46.700 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:47.566 I/chatty  (  741): uid=1000(system) HwBinder:741_2 identical 50 lines
+06-30 06:22:47.583 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:47.590 E/android.hardware.usb@1.0-service(  766): uevent received SUBSYSTEM=dual_role_usb
+06-30 06:22:47.590 I/android.hardware.usb@1.0-service(  766): otg_default
+06-30 06:22:47.591 I/android.hardware.usb@1.0-service(  766): canChangeMode: 1 canChagedata: 0 canChangePower:0
+06-30 06:22:47.592 I/UsbPortManager( 1184): ClientCallback V1_0: otg_default
+06-30 06:22:47.598 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:47.615 I/chatty  (  741): uid=1000(system) HwBinder:741_2 identical 1 line
+06-30 06:22:47.632 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:47.643 D/BatteryService( 1184): /data/anr/adb_enable file.exists() =  false  mPlugType==2
+06-30 06:22:47.645 D/BatteryController( 2170): onReceive ACTION_BATTERY_CHANGED eLevel = 71; eScale = 100; mLevel = 71; mPluggedIn = true; mCharged = false; mCharging = true
+06-30 06:22:47.645 D/BatteryMeterView( 2170): onBatteryLevelChanged level = 71; pluggedIn = true; charging = true; mLevel = 71
+06-30 06:22:47.646 I/chatty  ( 2170): uid=1000(system) com.android.systemui identical 1 line
+06-30 06:22:47.647 D/BatteryMeterView( 2170): onBatteryLevelChanged level = 71; pluggedIn = true; charging = true; mLevel = 71
+06-30 06:22:47.648 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:47.650 D/KeyguardUpdateMonitor( 2170): received broadcast android.intent.action.BATTERY_CHANGED
+06-30 06:22:47.651 D/KeyguardUpdateMonitor( 2170): handleBatteryUpdate
+06-30 06:22:47.665 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:47.666 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:47.675 D/DeviceStatisticsService( 2499): chargerType=2 batteryLevel=71 totalBatteryCapacity=4447000
+06-30 06:22:47.675 D/DeviceInfoHidlClient( 2499): isPowerInfoNeverSent()=true
+06-30 06:22:47.675 D/BatteryService( 1184): /data/anr/adb_enable file.exists() =  false  mPlugType==2
+06-30 06:22:47.678 D/BatteryController( 2170): onReceive ACTION_BATTERY_CHANGED eLevel = 71; eScale = 100; mLevel = 71; mPluggedIn = true; mCharged = false; mCharging = true
+06-30 06:22:47.678 D/BatteryMeterView( 2170): onBatteryLevelChanged level = 71; pluggedIn = true; charging = true; mLevel = 71
+06-30 06:22:47.679 I/chatty  ( 2170): uid=1000(system) com.android.systemui identical 1 line
+06-30 06:22:47.679 D/BatteryMeterView( 2170): onBatteryLevelChanged level = 71; pluggedIn = true; charging = true; mLevel = 71
+06-30 06:22:47.679 D/KeyguardUpdateMonitor( 2170): received broadcast android.intent.action.BATTERY_CHANGED
+06-30 06:22:47.680 D/DeviceStatisticsService( 2499): chargerType=2 batteryLevel=71 totalBatteryCapacity=4447000
+06-30 06:22:47.681 D/DeviceInfoHidlClient( 2499): isPowerInfoNeverSent()=true
+06-30 06:22:47.682 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:47.685 D/KeyguardUpdateMonitor( 2170): handleBatteryUpdate
+06-30 06:22:47.698 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:47.698 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:47.709 D/TelephonyProvider( 2552): Using old permission behavior for telephony provider compat
+06-30 06:22:47.715 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:48.249 I/chatty  (  741): uid=1000(system) HwBinder:741_2 identical 39 lines
+06-30 06:22:48.340 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:48.572 I/flutter (11778): [31m[error][0m [ConfigGistService] All mirrors failed.
+06-30 06:22:48.575 I/flutter (11778): [33m[warn ][0m ⚠️ Network failure. Using last known good configuration.
+06-30 06:22:48.632 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:49.350 I/chatty  (  741): uid=1000(system) HwBinder:741_2 identical 42 lines
+06-30 06:22:49.367 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:49.375 W/ANDR-PERF-LM(  783): FeatureState: readState() 149: warning: appName is NULL, returning default State
+06-30 06:22:49.382 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:49.383 W/ANDR-PERF-LM(  783): FeatureState: readState() 149: warning: appName is NULL, returning default State
+06-30 06:22:49.383 W/ANDR-PERF-LM(  783): MetaMeter: handleSecondaryAsync() 149: PreKill MetaMeterThread start(). No MeterMgr Available to handle this Secondary/Data Async. !!!! 
+06-30 06:22:49.400 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:49.700 I/chatty  (  741): uid=1000(system) HwBinder:741_2 identical 18 lines
+06-30 06:22:49.716 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:49.720 D/TelephonyProvider( 2552): Using old permission behavior for telephony provider compat
+06-30 06:22:49.733 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:50.699 I/chatty  (  741): uid=1000(system) HwBinder:741_2 identical 54 lines
+06-30 06:22:50.716 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:50.730 I/flutter (11778): [TELEMETRY] [🇺🇸 US] US_2629a_0056 | LastPassedStage: 0 | PingDuration: N/A | ExactException: TCP Connect Timeout
+06-30 06:22:50.732 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:50.738 I/flutter (11778): [TELEMETRY] [🇸🇨 SC] TW_2629a_0053 | LastPassedStage: 0 | PingDuration: N/A | ExactException: TCP Connect Timeout
+06-30 06:22:50.746 I/flutter (11778): [TELEMETRY] [🇸🇨 SC] ID_2629a_0013 | LastPassedStage: 0 | PingDuration: N/A | ExactException: TCP Connect Timeout
+06-30 06:22:50.754 I/flutter (11778): [TELEMETRY] [🇸🇨 SC] ID_2629a_0012 | LastPassedStage: 0 | PingDuration: N/A | ExactException: TCP Connect Timeout
+06-30 06:22:50.761 I/flutter (11778): [TELEMETRY] [🇸🇨 SC] ID_2629a_0011 | LastPassedStage: 0 | PingDuration: N/A | ExactException: TCP Connect Timeout
+06-30 06:22:50.768 I/flutter (11778): [TELEMETRY] [🇸🇨 SC] ID_2629a_0010 | LastPassedStage: 0 | PingDuration: N/A | ExactException: TCP Connect Timeout
+06-30 06:22:50.820 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:51.079 W/charge_logger(11990): type=1400 audit(0.0:3075487): avc: denied { remove_name } for name="charge_logger_a.csv" dev="sda15" ino=150 scontext=u:r:charge_logger:s0 tcontext=u:object_r:charge_logger_data_file:s0 tclass=dir permissive=0
+06-30 06:22:51.113 D/mfosal  (24556): [DEBUG] vendor/qcom/proprietary/embms-noship/embmssl_server/common/embms_service/qmi_transport/qmi_cci_transport.cpp:1334 ti=482103319744  EMBMSSL_SERVERqmiCciNasIndCbWrap: Received NAS indication callback
+06-30 06:22:51.113 D/mfosal  (24556): [DEBUG] vendor/qcom/proprietary/embms-noship/embmssl_server/common/embms_service/qmi_transport/qmi_cci_transport.cpp:1116 ti=482103319744  EMBMSSL_SERVERqmiCciNasIndCb
+06-30 06:22:51.113 D/mfosal  (24556): [DEBUG] vendor/qcom/proprietary/embms-noship/embmssl_server/common/embms_service/qmi_transport/qmi_cci_transport.cpp:1154 ti=482103319744  EMBMSSL_SERVERqmiCciHandleIndication
+06-30 06:22:51.113 D/mfosal  (24556): [DEBUG] vendor/qcom/proprietary/embms-noship/embmssl_server/common/embms_service/qmi_transport/qmi_cci_transport.cpp:1164 ti=482103319744  EMBMSSL_SERVERReceived a NAS indication of size : 21
+06-30 06:22:51.113 D/mfosal  (24556): [DEBUG] vendor/qcom/proprietary/embms-noship/embmssl_server/common/embms_service/qmi_transport/qmi_transport_base.cpp:480 ti=482103319744  QMI-Transport-Base: handleQmiMessage: Received a message. Posting to the Receiver Queue. Message size is (bytes): 34
+06-30 06:22:51.114 D/mfosal  (24556): [DEBUG] vendor/qcom/proprietary/embms-noship/embmssl_server/common/embms_service/qmi_transport/qmi_cci_transport.cpp:1334 ti=482103319744  EMBMSSL_SERVERqmiCciNasIndCbWrap: Received NAS indication callback
+06-30 06:22:51.114 D/mfosal  (24556): [DEBUG] vendor/qcom/proprietary/embms-noship/embmssl_server/common/embms_service/qmi_transport/qmi_cci_transport.cpp:1116 ti=482103319744  EMBMSSL_SERVERqmiCciNasIndCb
+06-30 06:22:51.114 D/mfosal  (24556): [DEBUG] vendor/qcom/proprietary/embms-noship/embmssl_server/common/embms_service/qmi_transport/qmi_cci_transport.cpp:1154 ti=482103319744  EMBMSSL_SERVERqmiCciHandleIndication
+06-30 06:22:51.114 D/mfosal  (24556): [DEBUG] vendor/qcom/proprietary/embms-noship/embmssl_server/common/embms_service/qmi_transport/qmi_cci_transport.cpp:1164 ti=482103319744  EMBMSSL_SERVERReceived a NAS indication of size : 135
+06-30 06:22:51.114 D/mfosal  (24556): [DEBUG] vendor/qcom/proprietary/embms-noship/embmssl_server/common/embms_service/qmi_transport/qmi_transport_base.cpp:480 ti=482103319744  QMI-Transport-Base: handleQmiMessage: Received a message. Posting to the Receiver Queue. Message size is (bytes): 148
+06-30 06:22:51.114 I/qcc-trd ( 1206): qdmaConnectivityInfoProvider: Into the callback
+06-30 06:22:51.114 I/qcc-trd ( 1206): qdmaConnectivityInfoProvider callback messageID 36
+06-30 06:22:51.114 D/mfosal  (24556): [DEBUG] vendor/qcom/proprietary/embms-noship/embmssl_server/common/embms_service/qmi_message_receiver.cpp:32 ti=482173549760  handleQmiMessage
+06-30 06:22:51.115 D/mfosal  (24556): [DEBUG] vendor/qcom/proprietary/embms-noship/embmssl_server/common/embms_service/messages/message_utils.cpp:219 ti=482173549760  parseQmiHeaders
+06-30 06:22:51.115 D/mfosal  (24556): [DEBUG] vendor/qcom/proprietary/embms-noship/embmssl_server/common/embms_service/messages/message_utils.cpp:214 ti=482173549760  msg_len = 34 Bytes
+06-30 06:22:51.115 D/mfosal  (24556): [DEBUG] vendor/qcom/proprietary/embms-noship/embmssl_server/common/embms_service/messages/message_utils.cpp:215 ti=482173549760  msg = 01 21 00 80 03 01 04 01 00 24 00 15 00 01 06 00 01 01 01 02 01 08 11 02 00 01 0b 1e 04 00 16 62 05 02 
+06-30 06:22:51.115 D/mfosal  (24556): [DEBUG] vendor/qcom/proprietary/embms-noship/embmssl_server/common/embms_service/messages/message_utils.cpp:256 ti=482173549760  qmi_rx_ctrl_flags: 4
+06-30 06:22:51.115 D/mfosal  (24556): [DEBUG] vendor/qcom/proprietary/embms-noship/embmssl_server/common/embms_service/messages/message_utils.cpp:257 ti=482173549760  msg Body Len: 21
+06-30 06:22:51.115 D/mfosal  (24556): [DEBUG] vendor/qcom/proprietary/embms-noship/embmssl_server/common/embms_service/messages/qmi_message_header.cpp:15 ti=482173549760  QmiMessageHeader Constructor
+06-30 06:22:51.115 D/mfosal  (24556): [DEBUG] vendor/qcom/proprietary/embms-noship/embmssl_server/common/embms_service/messages/qmi_message_header.cpp:23 ti=482173549760  QmiMessageHeader Destructor
+06-30 06:22:51.115 D/mfosal  (24556): [DEBUG] vendor/qcom/proprietary/embms-noship/embmssl_server/common/embms_service/qmi_message_receiver.cpp:237 ti=482173549760  handleNasMessage
+06-30 06:22:51.115 D/mfosal  (24556): [DEBUG] vendor/qcom/proprietary/embms-noship/embmssl_server/common/embms_service/qmi_message_receiver.cpp:256 ti=482173549760  handleNasIndicationMessage
+06-30 06:22:51.115 D/mfosal  (24556): [DEBUG] vendor/qcom/proprietary/embms-noship/embmssl_server/common/embms_service/qmi_message_receiver.cpp:273 ti=482173549760  Unhandled message type: 36
+06-30 06:22:51.115 D/mfosal  (24556): [DEBUG] vendor/qcom/proprietary/embms-noship/embmssl_server/common/embms_service/qmi_message_receiver.cpp:32 ti=482173549760  handleQmiMessage
+06-30 06:22:51.115 D/mfosal  (24556): [DEBUG] vendor/qcom/proprietary/embms-noship/embmssl_server/common/embms_service/messages/message_utils.cpp:219 ti=482173549760  parseQmiHeaders
+06-30 06:22:51.115 D/mfosal  (24556): [DEBUG] vendor/qcom/proprietary/embms-noship/embmssl_server/common/embms_service/messages/message_utils.cpp:214 ti=482173549760  msg_len = 148 Bytes
+06-30 06:22:51.115 D/mfosal  (24556): [DEBUG] vendor/qcom/proprietary/embms-noship/embmssl_server/common/embms_service/messages/message_utils.cpp:215 ti=482173549760  msg = 01 93 00 80 03 01 04 01 00 4e 00 87 00 12 03 00 00 00 00 13 03 00 00 00 00 14 03 00 02 02 00 19 1d 00 01 03 01 03 01 00 01 00 00 ff ff 01 16 62 05 02 00 00 00 01 34 33 32 33 35 ff 01 1c 58 1e 02 00 ff ff 21 01 00 01 27 01 00 00 28 04 00 01 00 00 00 2a 01 00 01 2b 04 00 03 00 00 00 30 04 00 00 00 00 00 32 04 00 00 00 00 00 35 02 00 ff ff 39 04 00 03 00 00 00 3a 04 00 00 00 00 00 3f 04 00 00 00 00 00 45 04 00 03 00 00 00 47 04 00 04 00 00 00 
+06-30 06:22:51.115 D/mfosal  (24556): [DEBUG] vendor/qcom/proprietary/embms-noship/embmssl_server/common/embms_service/messages/message_utils.cpp:256 ti=482173549760  qmi_rx_ctrl_flags: 4
+06-30 06:22:51.115 D/mfosal  (24556): [DEBUG] vendor/qcom/proprietary/embms-noship/embmssl_server/common/embms_service/messages/message_utils.cpp:257 ti=482173549760  msg Body Len: 135
+06-30 06:22:51.115 D/mfosal  (24556): [DEBUG] vendor/qcom/proprietary/embms-noship/embmssl_server/common/embms_service/messages/qmi_message_header.cpp:15 ti=482173549760  QmiMessageHeader Constructor
+06-30 06:22:51.115 D/mfosal  (24556): [DEBUG] vendor/qcom/proprietary/embms-noship/embmssl_server/common/embms_service/messages/qmi_message_header.cpp:23 ti=482173549760  QmiMessageHeader Destructor
+06-30 06:22:51.115 D/mfosal  (24556): [DEBUG] vendor/qcom/proprietary/embms-noship/embmssl_server/common/embms_service/qmi_message_receiver.cpp:237 ti=482173549760  handleNasMessage
+06-30 06:22:51.115 D/mfosal  (24556): [DEBUG] vendor/qcom/proprietary/embms-noship/embmssl_server/common/embms_service/qmi_message_receiver.cpp:256 ti=482173549760  handleNasIndicationMessage
+06-30 06:22:51.115 D/mfosal  (24556): [DEBUG] vendor/qcom/proprietary/embms-noship/embmssl_server/common/embms_service/qmi_message_receiver.cpp:889 ti=482173549760  handleNasSysInfoInd called
+06-30 06:22:51.115 D/mfosal  (24556): [DEBUG] vendor/qcom/proprietary/embms-noship/embmssl_server/common/embms_service/messages/message_utils.cpp:110 ti=482173549760  DecodeQmiMessage Called
+06-30 06:22:51.115 D/mfosal  (24556): [DEBUG] vendor/qcom/proprietary/embms-noship/embmssl_server/common/embms_service/messages/message_utils.cpp:130 ti=482173549760  Decode Success
+06-30 06:22:51.116 D/mfosal  (24556): [DEBUG] vendor/qcom/proprietary/embms-noship/embmssl_server/common/embms_service/qmi_message_receiver.cpp:906 ti=482173549760  handleNasSysInfoMessage called
+06-30 06:22:51.116 D/mfosal  (24556): [INFO] vendor/qcom/proprietary/embms-noship/embmssl_server/common/embms_service/qmi_message_receiver.cpp:972 ti=482173549760  handleNasSysInfoMessage: received embms_coverage_valid:  1 embms_coverage: 0 trace_id_valid: 1 trace_id: -1
+06-30 06:22:51.116 D/mfosal  (24556): [DEBUG] vendor/qcom/proprietary/embms-noship/embmssl_server/common/embms_service/messages/qmi_message_header.cpp:23 ti=482173549760  QmiMessageHeader Destructor
+06-30 06:22:51.116 D/mfosal  (24556): [DEBUG] vendor/qcom/proprietary/embms-noship/embmssl_server/common/embms_service/messages/qmi_message_header.cpp:23 ti=482173549760  QmiMessageHeader Destructor
+06-30 06:22:51.117 D/mfosal  (24556): [DEBUG] vendor/qcom/proprietary/embms-noship/embmssl_server/common/embms_service/embms_callback_generator.cpp:88 ti=482172509376  handleBroadcastCoverageNotification called
+06-30 06:22:51.117 E/EMBMSSL_SERVER(24556): EmbmsServerImpl::broadcastCoverageNotification state : 1
+06-30 06:22:51.117 D/mfosal  (24556): [DEBUG] vendor/qcom/proprietary/embms-noship/embmssl_server/common/embms_service/embms_callback_generator.cpp:94 ti=482172509376  handleCellGlobalIdNotification called
+06-30 06:22:51.117 E/EMBMSSL_SERVER(24556): EmbmsServerImpl::radioStateNotification  mnn: 432 , mnc: 35 , cellId: 33907222 
+06-30 06:22:51.183 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:51.365 I/chatty  (  741): uid=1000(system) HwBinder:741_2 identical 12 lines
+06-30 06:22:51.383 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:51.399 I/QCC:QccNasService( 2575): phoneListener onServiceStateChanged : {mVoiceRegState=0(IN_SERVICE), mDataRegState=0(IN_SERVICE), mChannelNumber=2850, duplexMode()=1, mCellBandwidths=[], mOperatorAlphaLong=Irancell, mOperatorAlphaShort=Irancell, isManualNetworkSelection=false(automatic), getRilVoiceRadioTechnology=14(LTE), getRilDataRadioTechnology=14(LTE), mCssIndicator=unsupported, mNetworkId=-1, mSystemId=-1, mCdmaRoamingIndicator=-1, mCdmaDefaultRoamingIndicator=-1, mIsEmergencyOnly=false, isUsingCarrierAggregation=false, mLteEarfcnRsrpBoost=0, mNetworkRegistrationInfos=[NetworkRegistrationInfo{ domain=CS transportType=WWAN registrationState=HOME roamingType=NOT_ROAMING accessNetworkTechnology=LTE rejectCause=0 emergencyEnabled=false availableServices=[VOICE,SMS,VIDEO] cellIdentity=CellIdentityLte:{ mCi=xxxx mPci=xxxx mTac=xxxx mEarfcn=xxxx mBands=[] mBandwidth=xxxx mMcc=xxxx mMnc=xxxx mAlphaLong=Irancell mAlphaShort=Irancell mAdditionalPlmns={} mCsgInfo=null} voiceSpecificInfo=VoiceSpecificRegistrationInfo { mCssSupported=false mRoamingIndicator=1 mSystemIsInPrl=-1 mDefaultRoamingIndicator=-1} dataSpecificInfo=null nrState=NONE rRplmn=43235}, NetworkRegistrationInfo{ domain=PS transportType=WWAN registrationState=HOME roamingType=NOT_ROAMING accessNetworkTechnology=LTE rejectCause=0 emergencyEnabled=false availableServices=[DATA] cellIdentity=CellIdentityLte:{ mCi=xxxx mPci=xxxx mTac=xxxx mEarfcn=xxxx mBands=[] mBandwidth=xxxx mMcc=xxxx mMnc=xxxx mAlphaLong=Irancell mAlphaShort=Irancell mAdditionalPlmns={} mCsgInfo=null} voiceSpecificInfo=null dataSpecificInfo=android.telephony.DataSpecificRegistrationInfo :{ maxDataCalls = 20 isDcNrRestricted = false isNrAvailable = false isEnDcAvailable = false LteVopsSupportInfo :  mVopsSupport = 2 mEmcBearerSupport = 3 mIsUsingCarrierAggregation = false } nrState=NONE rRplmn=43235}], mNrFrequencyRange=0, mOperatorAlphaLongRaw=Irancell, mOperatorAlphaShortRaw=Irancell, mIsDataRoamingFromRegistration=false, mIsIwlanPreferred=false}
+06-30 06:22:51.399 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:51.399 I/QCC:QccNasService( 2575): phoneListener STATE_IN_SERVICE 
+06-30 06:22:51.406 D/ServiceStateProvider( 2552): subId=25
+06-30 06:22:51.409 D/CompatibilityInfo( 1184): mCompatibilityFlags - 0
+06-30 06:22:51.409 D/CompatibilityInfo( 1184): applicationDensity - 320
+06-30 06:22:51.409 D/CompatibilityInfo( 1184): applicationScale - 1.0
+06-30 06:22:51.415 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:51.417 D/CellBroadcastReceiver( 8845): onReceive Intent { act=android.intent.action.SERVICE_STATE flg=0x1000010 cmp=com.android.cellbroadcastreceiver/.CellBroadcastReceiver (has extras) }
+06-30 06:22:51.421 D/QCNEJ/WwanInfoRelay( 2525): onServiceStateChanged: dataState: 2 DDS:2 Notify service state update
+06-30 06:22:51.432 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:51.439 I/flutter (11778): [33m[warn ][0m [TESTER] Initializing on Port: 11000
+06-30 06:22:51.440 D/KeyguardUpdateMonitor( 2170): received broadcast android.intent.action.SERVICE_STATE
+06-30 06:22:51.441 V/KeyguardUpdateMonitor( 2170): action android.intent.action.SERVICE_STATE serviceState={mVoiceRegState=0(IN_SERVICE), mDataRegState=0(IN_SERVICE), mChannelNumber=2850, duplexMode()=1, mCellBandwidths=[], mOperatorAlphaLong=Irancell, mOperatorAlphaShort=Irancell, isManualNetworkSelection=false(automatic), getRilVoiceRadioTechnology=14(LTE), getRilDataRadioTechnology=14(LTE), mCssIndicator=unsupported, mNetworkId=-1, mSystemId=-1, mCdmaRoamingIndicator=-1, mCdmaDefaultRoamingIndicator=-1, mIsEmergencyOnly=false, isUsingCarrierAggregation=false, mLteEarfcnRsrpBoost=0, mNetworkRegistrationInfos=[NetworkRegistrationInfo{ domain=CS transportType=WWAN registrationState=HOME roamingType=NOT_ROAMING accessNetworkTechnology=LTE rejectCause=0 emergencyEnabled=false availableServices=[VOICE,SMS,VIDEO] cellIdentity=CellIdentityLte:{ mCi=xxxx mPci=xxxx mTac=xxxx mEarfcn=xxxx mBands=[] mBandwidth=xxxx mMcc=xxxx mMnc=xxxx mAlphaLong=Irancell mAlphaShort=Irancell mAdditionalPlmns={} mCsgInfo=null} voiceSpecificInfo=VoiceSpecificRegistrationInfo { mCssSupported=false mRoamingIndicator=1 mSystemIsInPrl=-1 mDefaultRoamingIndicator=-1} dataSpecificInfo=null nrState=NONE rRplmn=43235}, NetworkRegistrationInfo{ domain=PS transportType=WWAN registrationState=HOME roamingType=NOT_ROAMING accessNetworkTechnology=LTE rejectCause=0 emergencyEnabled=false availableServices=[DATA] cellIdentity=CellIdentityLte:{ mCi=xxxx mPci=xxxx mTac=xxxx mEarfcn=xxxx mBands=[] mBandwidth=xxxx mMcc=xxxx mMnc=xxxx mAlphaLong=Irancell mAlphaShort=Irancell mAdditionalPlmns={} mCsgInfo=null} voiceSpecificInfo=null dataSpecificInfo=android.telephony.DataSpecificRegistrationInfo :{ maxDataCalls = 20 isDcNrRestricted = false isNrAvailable = false isEnDcAvailable = false LteVopsSupportInfo :  mVopsSupport = 2 mEmcBearerSupport = 3 mIsUsingCarrierAggregation = false } nrState=NONE rRplmn=43235}], mNrFrequencyRange=0, mOperatorAlphaLongRaw=Irancell, mOperatorAlphaShortRaw=Irancell, mIsDataRoamingFromRegistration=false, mIsIwlanPreferred=false} subId=25
+06-30 06:22:51.441 D/KeyguardUpdateMonitor( 2170): handleServiceStateChange(subId=25, serviceState={mVoiceRegState=0(IN_SERVICE), mDataRegState=0(IN_SERVICE), mChannelNumber=2850, duplexMode()=1, mCellBandwidths=[], mOperatorAlphaLong=Irancell, mOperatorAlphaShort=Irancell, isManualNetworkSelection=false(automatic), getRilVoiceRadioTechnology=14(LTE), getRilDataRadioTechnology=14(LTE), mCssIndicator=unsupported, mNetworkId=-1, mSystemId=-1, mCdmaRoamingIndicator=-1, mCdmaDefaultRoamingIndicator=-1, mIsEmergencyOnly=false, isUsingCarrierAggregation=false, mLteEarfcnRsrpBoost=0, mNetworkRegistrationInfos=[NetworkRegistrationInfo{ domain=CS transportType=WWAN registrationState=HOME roamingType=NOT_ROAMING accessNetworkTechnology=LTE rejectCause=0 emergencyEnabled=false availableServices=[VOICE,SMS,VIDEO] cellIdentity=CellIdentityLte:{ mCi=xxxx mPci=xxxx mTac=xxxx mEarfcn=xxxx mBands=[] mBandwidth=xxxx mMcc=xxxx mMnc=xxxx mAlphaLong=Irancell mAlphaShort=Irancell mAdditionalPlmns={} mCsgInfo=null} voiceSpecificInfo=VoiceSpecificRegistrationInfo { mCssSupported=false mRoamingIndicator=1 mSystemIsInPrl=-1 mDefaultRoamingIndicator=-1} dataSpecificInfo=null nrState=NONE rRplmn=43235}, NetworkRegistrationInfo{ domain=PS transportType=WWAN registrationState=HOME roamingType=NOT_ROAMING accessNetworkTechnology=LTE rejectCause=0 emergencyEnabled=false availableServices=[DATA] cellIdentity=CellIdentityLte:{ mCi=xxxx mPci=xxxx mTac=xxxx mEarfcn=xxxx mBands=[] mBandwidth=xxxx mMcc=xxxx mMnc=xxxx mAlphaLong=Irancell mAlphaShort=Irancell mAdditionalPlmns={} mCsgInfo=null} voiceSpecificInfo=null dataSpecificInfo=android.telephony.DataSpecificRegistrationInfo :{ maxDataCalls = 20 isDcNrRestricted = false isNrAvailable = false isEnDcAvailable = false LteVopsSupportInfo :  mVopsSupport = 2 mEmcBearerSupport = 3 mIsUsingCarrierAggregation = false } nrState=NONE rRplmn=43235}], mNrFrequencyRange=0, mOperatorAlphaLongRaw=Irancell, mOperatorAlphaShortRaw=Irancell, mIsDataRoamingFromRegistration=false, mIsIwlanPreferred=false}
+06-30 06:22:51.443 I/flutter (11778): [33m[warn ][0m [DEBUG-INTERNAL] Config start: {"log":{"l
+06-30 06:22:51.448 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:51.452 D/CarrierTextController( 2170): onRefreshCarrierInfo(), mTelephonyCapable: true
+06-30 06:22:51.452 D/CarrierTextController( 2170): updateCarrierText(): 2
+06-30 06:22:51.452 D/CarrierTextController( 2170): updateCarrierText(): 2
+06-30 06:22:51.452 D/CarrierTextController( 2170): Handling (subId=25): 5 Irancell
+06-30 06:22:51.453 D/CarrierTextController( 2170): SIM ready and in service: subId=25, ss={mVoiceRegState=0(IN_SERVICE), mDataRegState=0(IN_SERVICE), mChannelNumber=2850, duplexMode()=1, mCellBandwidths=[], mOperatorAlphaLong=Irancell, mOperatorAlphaShort=Irancell, isManualNetworkSelection=false(automatic), getRilVoiceRadioTechnology=14(LTE), getRilDataRadioTechnology=14(LTE), mCssIndicator=unsupported, mNetworkId=-1, mSystemId=-1, mCdmaRoamingIndicator=-1, mCdmaDefaultRoamingIndicator=-1, mIsEmergencyOnly=false, isUsingCarrierAggregation=false, mLteEarfcnRsrpBoost=0, mNetworkRegistrationInfos=[NetworkRegistrationInfo{ domain=CS transportType=WWAN registrationState=HOME roamingType=NOT_ROAMING accessNetworkTechnology=LTE rejectCause=0 emergencyEnabled=false availableServices=[VOICE,SMS,VIDEO] cellIdentity=CellIdentityLte:{ mCi=xxxx mPci=xxxx mTac=xxxx mEarfcn=xxxx mBands=[] mBandwidth=xxxx mMcc=xxxx mMnc=xxxx mAlphaLong=Irancell mAlphaShort=Irancell mAdditionalPlmns={} mCsgInfo=null} voiceSpecificInfo=VoiceSpecificRegistrationInfo { mCssSupported=false mRoamingIndicator=1 mSystemIsInPrl=-1 mDefaultRoamingIndicator=-1} dataSpecificInfo=null nrState=NONE rRplmn=43235}, NetworkRegistrationInfo{ domain=PS transportType=WWAN registrationState=HOME roamingType=NOT_ROAMING accessNetworkTechnology=LTE rejectCause=0 emergencyEnabled=false availableServices=[DATA] cellIdentity=CellIdentityLte:{ mCi=xxxx mPci=xxxx mTac=xxxx mEarfcn=xxxx mBands=[] mBandwidth=xxxx mMcc=xxxx mMnc=xxxx mAlphaLong=Irancell mAlphaShort=Irancell mAdditionalPlmns={} mCsgInfo=null} voiceSpecificInfo=null dataSpecificInfo=android.telephony.DataSpecificRegistrationInfo :{ maxDataCalls = 20 isDcNrRestricted = false isNrAvailable = false isEnDcAvailable = false LteVopsSupportInfo :  mVopsSupport = 2 mEmcBearerSupport = 3 mIsUsingCarrierAggregation = false } nrState=NONE rRplmn=43235}], mNrFrequencyRange=0, mOperatorAlphaLongRaw=Irancell, mOperatorAlphaShortRaw=Irancell, mIsDataRoamingFromRegistration=false, mIsIwlanPreferred=false}
+06-30 06:22:51.453 D/CarrierTextController( 2170): Handling (subId=2): 5 Irancell
+06-30 06:22:51.453 D/CarrierTextController( 2170): SIM ready and in service: subId=2, ss={mVoiceRegState=0(IN_SERVICE), mDataRegState=0(IN_SERVICE), mChannelNumber=100, duplexMode()=1, mCellBandwidths=[20000], mOperatorAlphaLong=Irancell, mOperatorAlphaShort=Irancell, isManualNetworkSelection=false(automatic), getRilVoiceRadioTechnology=14(LTE), getRilDataRadioTechnology=14(LTE), mCssIndicator=unsupported, mNetworkId=-1, mSystemId=-1, mCdmaRoamingIndicator=-1, mCdmaDefaultRoamingIndicator=-1, mIsEmergencyOnly=false, isUsingCarrierAggregation=false, mLteEarfcnRsrpBoost=0, mNetworkRegistrationInfos=[NetworkRegistrationInfo{ domain=CS transportType=WWAN registrationState=HOME roamingType=NOT_ROAMING accessNetworkTechnology=LTE rejectCause=0 emergencyEnabled=false availableServices=[VOICE,SMS,VIDEO] cellIdentity=CellIdentityLte:{ mCi=xxxx mPci=xxxx mTac=xxxx mEarfcn=xxxx mBands=[] mBandwidth=xxxx mMcc=xxxx mMnc=xxxx mAlphaLong=Irancell mAlphaShort=Irancell mAdditionalPlmns={} mCsgInfo=null} voiceSpecificInfo=VoiceSpecificRegistrationInfo { mCssSupported=false mRoamingIndicator=1 mSystemIsInPrl=-1 mDefaultRoamingIndicator=-1} dataSpecificInfo=null nrState=NONE rRplmn=43235}, NetworkRegistrationInfo{ domain=PS transportType=WWAN registrationState=HOME roamingType=NOT_ROAMING accessNetworkTechnology=LTE rejectCause=0 emergencyEnabled=false availableServices=[DATA] cellIdentity=CellIdentityLte:{ mCi=xxxx mPci=xxxx mTac=xxxx mEarfcn=xxxx mBands=[] mBandwidth=xxxx mMcc=xxxx mMnc=xxxx mAlphaLong=Irancell mAlphaShort=Irancell mAdditionalPlmns={} mCsgInfo=null} voiceSpecificInfo=null dataSpecificInfo=android.telephony.DataSpecificRegistrationInfo :{ maxDataCalls = 20 isDcNrRestricted = false isNrAvailable = false isEnDcAvailable = false LteVopsSupportInfo :  mVopsSupport = 2 mEmcBearerSupport = 3 mIsUsingCarrierAggregation = false } nrState=NONE rRplmn=43235}], mNrFrequencyRange=0, mOperatorAlphaLongRaw=Irancell, mOperatorAlphaShortRaw=Irancell, mIsDataRoamingFromRegistration=false, mIsIwlanPreferred=false}
+06-30 06:22:51.453 D/CarrierTextController( 2170): onRefreshCarrierInfo(), mTelephonyCapable: true
+06-30 06:22:51.453 D/CarrierTextController( 2170): updateCarrierText(): 2
+06-30 06:22:51.453 D/CarrierTextController( 2170): updateCarrierText(): 2
+06-30 06:22:51.453 D/CarrierTextController( 2170): Handling (subId=25): 5 Irancell
+06-30 06:22:51.454 D/CarrierTextController( 2170): SIM ready and in service: subId=25, ss={mVoiceRegState=0(IN_SERVICE), mDataRegState=0(IN_SERVICE), mChannelNumber=2850, duplexMode()=1, mCellBandwidths=[], mOperatorAlphaLong=Irancell, mOperatorAlphaShort=Irancell, isManualNetworkSelection=false(automatic), getRilVoiceRadioTechnology=14(LTE), getRilDataRadioTechnology=14(LTE), mCssIndicator=unsupported, mNetworkId=-1, mSystemId=-1, mCdmaRoamingIndicator=-1, mCdmaDefaultRoamingIndicator=-1, mIsEmergencyOnly=false, isUsingCarrierAggregation=false, mLteEarfcnRsrpBoost=0, mNetworkRegistrationInfos=[NetworkRegistrationInfo{ domain=CS transportType=WWAN registrationState=HOME roamingType=NOT_ROAMING accessNetworkTechnology=LTE rejectCause=0 emergencyEnabled=false availableServices=[VOICE,SMS,VIDEO] cellIdentity=CellIdentityLte:{ mCi=xxxx mPci=xxxx mTac=xxxx mEarfcn=xxxx mBands=[] mBandwidth=xxxx mMcc=xxxx mMnc=xxxx mAlphaLong=Irancell mAlphaShort=Irancell mAdditionalPlmns={} mCsgInfo=null} voiceSpecificInfo=VoiceSpecificRegistrationInfo { mCssSupported=false mRoamingIndicator=1 mSystemIsInPrl=-1 mDefaultRoamingIndicator=-1} dataSpecificInfo=null nrState=NONE rRplmn=43235}, NetworkRegistrationInfo{ domain=PS transportType=WWAN registrationState=HOME roamingType=NOT_ROAMING accessNetworkTechnology=LTE rejectCause=0 emergencyEnabled=false availableServices=[DATA] cellIdentity=CellIdentityLte:{ mCi=xxxx mPci=xxxx mTac=xxxx mEarfcn=xxxx mBands=[] mBandwidth=xxxx mMcc=xxxx mMnc=xxxx mAlphaLong=Irancell mAlphaShort=Irancell mAdditionalPlmns={} mCsgInfo=null} voiceSpecificInfo=null dataSpecificInfo=android.telephony.DataSpecificRegistrationInfo :{ maxDataCalls = 20 isDcNrRestricted = false isNrAvailable = false isEnDcAvailable = false LteVopsSupportInfo :  mVopsSupport = 2 mEmcBearerSupport = 3 mIsUsingCarrierAggregation = false } nrState=NONE rRplmn=43235}], mNrFrequencyRange=0, mOperatorAlphaLongRaw=Irancell, mOperatorAlphaShortRaw=Irancell, mIsDataRoamingFromRegistration=false, mIsIwlanPreferred=false}
+06-30 06:22:51.454 D/CarrierTextController( 2170): Handling (subId=2): 5 Irancell
+06-30 06:22:51.454 D/CarrierTextController( 2170): SIM ready and in service: subId=2, ss={mVoiceRegState=0(IN_SERVICE), mDataRegState=0(IN_SERVICE), mChannelNumber=100, duplexMode()=1, mCellBandwidths=[20000], mOperatorAlphaLong=Irancell, mOperatorAlphaShort=Irancell, isManualNetworkSelection=false(automatic), getRilVoiceRadioTechnology=14(LTE), getRilDataRadioTechnology=14(LTE), mCssIndicator=unsupported, mNetworkId=-1, mSystemId=-1, mCdmaRoamingIndicator=-1, mCdmaDefaultRoamingIndicator=-1, mIsEmergencyOnly=false, isUsingCarrierAggregation=false, mLteEarfcnRsrpBoost=0, mNetworkRegistrationInfos=[NetworkRegistrationInfo{ domain=CS transportType=WWAN registrationState=HOME roamingType=NOT_ROAMING accessNetworkTechnology=LTE rejectCause=0 emergencyEnabled=false availableServices=[VOICE,SMS,VIDEO] cellIdentity=CellIdentityLte:{ mCi=xxxx mPci=xxxx mTac=xxxx mEarfcn=xxxx mBands=[] mBandwidth=xxxx mMcc=xxxx mMnc=xxxx mAlphaLong=Irancell mAlphaShort=Irancell mAdditionalPlmns={} mCsgInfo=null} voiceSpecificInfo=VoiceSpecificRegistrationInfo { mCssSupported=false mRoamingIndicator=1 mSystemIsInPrl=-1 mDefaultRoamingIndicator=-1} dataSpecificInfo=null nrState=NONE rRplmn=43235}, NetworkRegistrationInfo{ domain=PS transportType=WWAN registrationState=HOME roamingType=NOT_ROAMING accessNetworkTechnology=LTE rejectCause=0 emergencyEnabled=false availableServices=[DATA] cellIdentity=CellIdentityLte:{ mCi=xxxx mPci=xxxx mTac=xxxx mEarfcn=xxxx mBands=[] mBandwidth=xxxx mMcc=xxxx mMnc=xxxx mAlphaLong=Irancell mAlphaShort=Irancell mAdditionalPlmns={} mCsgInfo=null} voiceSpecificInfo=null dataSpecificInfo=android.telephony.DataSpecificRegistrationInfo :{ maxDataCalls = 20 isDcNrRestricted = false isNrAvailable = false isEnDcAvailable = false LteVopsSupportInfo :  mVopsSupport = 2 mEmcBearerSupport = 3 mIsUsingCarrierAggregation = false } nrState=NONE rRplmn=43235}], mNrFrequencyRange=0, mOperatorAlphaLongRaw=Irancell, mOperatorAlphaShortRaw=Irancell, mIsDataRoamingFromRegistration=false, mIsIwlanPreferred=false}
+06-30 06:22:51.464 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:51.467 I/flutter (11778): [33m[warn ][0m [TESTER] Initializing on Port: 11002
+06-30 06:22:51.468 I/flutter (11778): [33m[warn ][0m [DEBUG-INTERNAL] Config start: {"log":{"l
+06-30 06:22:51.470 I/System.out(11778): ❌ [Native] Cannot start Test Proxy: Another test is already running
+06-30 06:22:51.472 I/flutter (11778): [33m[warn ][0m [TESTER] Native Process Spawned (via Service). Port: -2
+06-30 06:22:51.477 I/flutter (11778): [TELEMETRY] [🇷🇺 RU] 🇷🇺 俄罗斯 071 | LastPassedStage: 1 | PingDuration: -1 | ExactException: HTTP Failed (No 204)
+06-30 06:22:51.482 D/ServiceStateProvider( 2552): subId=2
+06-30 06:22:51.482 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:51.488 D/CompatibilityInfo( 1184): mCompatibilityFlags - 0
+06-30 06:22:51.488 D/CompatibilityInfo( 1184): applicationDensity - 320
+06-30 06:22:51.488 D/CompatibilityInfo( 1184): applicationScale - 1.0
+06-30 06:22:51.490 D/CellBroadcastReceiver( 8845): onReceive Intent { act=android.intent.action.SERVICE_STATE flg=0x1000010 cmp=com.android.cellbroadcastreceiver/.CellBroadcastReceiver (has extras) }
+06-30 06:22:51.492 D/QCNEJ/WwanInfoRelay( 2525): Received action: android.intent.action.ANY_DATA_STATE
+06-30 06:22:51.493 I/QCNEJ/WwanInfoRelay( 2525): cacheWwanInfo state = CONNECTED
+06-30 06:22:51.493 I/QCNEJ/WwanInfoRelay( 2525): cacheWwanInfo subId = 2 phoneId = 1 slotId = 1
+06-30 06:22:51.496 W/DPMJ    ( 2356): |SERVICE| DPM received unexpected action: android.intent.action.ANY_DATA_STATE
+06-30 06:22:51.499 I/Telephony( 2552): isRttCurrentlySupported -- regular acct, hasVoiceAvailability: false
+06-30 06:22:51.499 I/Telephony( 2552):  isRttSupported: false
+06-30 06:22:51.499 I/Telephony( 2552):  isRoaming: false
+06-30 06:22:51.499 I/Telephony( 2552):  isOnWfc: false
+06-30 06:22:51.501 D/KeyguardUpdateMonitor( 2170): received broadcast android.intent.action.SERVICE_STATE
+06-30 06:22:51.502 V/KeyguardUpdateMonitor( 2170): action android.intent.action.SERVICE_STATE serviceState={mVoiceRegState=0(IN_SERVICE), mDataRegState=0(IN_SERVICE), mChannelNumber=2850, duplexMode()=1, mCellBandwidths=[20000], mOperatorAlphaLong=Irancell, mOperatorAlphaShort=Irancell, isManualNetworkSelection=false(automatic), getRilVoiceRadioTechnology=14(LTE), getRilDataRadioTechnology=14(LTE), mCssIndicator=unsupported, mNetworkId=-1, mSystemId=-1, mCdmaRoamingIndicator=-1, mCdmaDefaultRoamingIndicator=-1, mIsEmergencyOnly=false, isUsingCarrierAggregation=false, mLteEarfcnRsrpBoost=0, mNetworkRegistrationInfos=[NetworkRegistrationInfo{ domain=CS transportType=WWAN registrationState=HOME roamingType=NOT_ROAMING accessNetworkTechnology=LTE rejectCause=0 emergencyEnabled=false availableServices=[VOICE,SMS,VIDEO] cellIdentity=CellIdentityLte:{ mCi=xxxx mPci=xxxx mTac=xxxx mEarfcn=xxxx mBands=[] mBandwidth=xxxx mMcc=xxxx mMnc=xxxx mAlphaLong=Irancell mAlphaShort=Irancell mAdditionalPlmns={} mCsgInfo=null} voiceSpecificInfo=VoiceSpecificRegistrationInfo { mCssSupported=false mRoamingIndicator=1 mSystemIsInPrl=-1 mDefaultRoamingIndicator=-1} dataSpecificInfo=null nrState=NONE rRplmn=43235}, NetworkRegistrationInfo{ domain=PS transportType=WWAN registrationState=HOME roamingType=NOT_ROAMING accessNetworkTechnology=LTE rejectCause=0 emergencyEnabled=false availableServices=[DATA] cellIdentity=CellIdentityLte:{ mCi=xxxx mPci=xxxx mTac=xxxx mEarfcn=xxxx mBands=[] mBandwidth=xxxx mMcc=xxxx mMnc=xxxx mAlphaLong=Irancell mAlphaShort=Irancell mAdditionalPlmns={} mCsgInfo=null} voiceSpecificInfo=null dataSpecificInfo=android.telephony.DataSpecificRegistrationInfo :{ maxDataCalls = 20 isDcNrRestricted = false isNrAvailable = false isEnDcAvailable = false LteVopsSupportInfo :  mVopsSupport = 2 mEmcBearerSupport = 3 mIsUsingCarrierAggregation = false } nrState=NONE rRplmn=43235}], mNrFrequencyRange=0, mOperatorAlphaLongRaw=Irancell, mOperatorAlphaShortRaw=Irancell, mIsDataRoamingFromRegistration=false, mIsIwlanPreferred=false} subId=2
+06-30 06:22:51.503 D/KeyguardUpdateMonitor( 2170): handleServiceStateChange(subId=2, serviceState={mVoiceRegState=0(IN_SERVICE), mDataRegState=0(IN_SERVICE), mChannelNumber=2850, duplexMode()=1, mCellBandwidths=[20000], mOperatorAlphaLong=Irancell, mOperatorAlphaShort=Irancell, isManualNetworkSelection=false(automatic), getRilVoiceRadioTechnology=14(LTE), getRilDataRadioTechnology=14(LTE), mCssIndicator=unsupported, mNetworkId=-1, mSystemId=-1, mCdmaRoamingIndicator=-1, mCdmaDefaultRoamingIndicator=-1, mIsEmergencyOnly=false, isUsingCarrierAggregation=false, mLteEarfcnRsrpBoost=0, mNetworkRegistrationInfos=[NetworkRegistrationInfo{ domain=CS transportType=WWAN registrationState=HOME roamingType=NOT_ROAMING accessNetworkTechnology=LTE rejectCause=0 emergencyEnabled=false availableServices=[VOICE,SMS,VIDEO] cellIdentity=CellIdentityLte:{ mCi=xxxx mPci=xxxx mTac=xxxx mEarfcn=xxxx mBands=[] mBandwidth=xxxx mMcc=xxxx mMnc=xxxx mAlphaLong=Irancell mAlphaShort=Irancell mAdditionalPlmns={} mCsgInfo=null} voiceSpecificInfo=VoiceSpecificRegistrationInfo { mCssSupported=false mRoamingIndicator=1 mSystemIsInPrl=-1 mDefaultRoamingIndicator=-1} dataSpecificInfo=null nrState=NONE rRplmn=43235}, NetworkRegistrationInfo{ domain=PS transportType=WWAN registrationState=HOME roamingType=NOT_ROAMING accessNetworkTechnology=LTE rejectCause=0 emergencyEnabled=false availableServices=[DATA] cellIdentity=CellIdentityLte:{ mCi=xxxx mPci=xxxx mTac=xxxx mEarfcn=xxxx mBands=[] mBandwidth=xxxx mMcc=xxxx mMnc=xxxx mAlphaLong=Irancell mAlphaShort=Irancell mAdditionalPlmns={} mCsgInfo=null} voiceSpecificInfo=null dataSpecificInfo=android.telephony.DataSpecificRegistrationInfo :{ maxDataCalls = 20 isDcNrRestricted = false isNrAvailable = false isEnDcAvailable = false LteVopsSupportInfo :  mVopsSupport = 2 mEmcBearerSupport = 3 mIsUsingCarrierAggregation = false } nrState=NONE rRplmn=43235}], mNrFrequencyRange=0, mOperatorAlphaLongRaw=Irancell, mOperatorAlphaShortRaw=Irancell, mIsDataRoamingFromRegistration=false, mIsIwlanPreferred=false}
+06-30 06:22:51.505 I/Telephony( 2552): isRttCurrentlySupported -- regular acct, hasVoiceAvailability: false
+06-30 06:22:51.505 I/Telephony( 2552):  isRttSupported: false
+06-30 06:22:51.505 I/Telephony( 2552):  isRoaming: false
+06-30 06:22:51.505 I/Telephony( 2552):  isOnWfc: false
+06-30 06:22:51.509 D/CarrierTextController( 2170): onRefreshCarrierInfo(), mTelephonyCapable: true
+06-30 06:22:51.509 D/CarrierTextController( 2170): updateCarrierText(): 2
+06-30 06:22:51.509 D/CarrierTextController( 2170): updateCarrierText(): 2
+06-30 06:22:51.509 D/CarrierTextController( 2170): Handling (subId=25): 5 Irancell
+06-30 06:22:51.510 D/CarrierTextController( 2170): SIM ready and in service: subId=25, ss={mVoiceRegState=0(IN_SERVICE), mDataRegState=0(IN_SERVICE), mChannelNumber=2850, duplexMode()=1, mCellBandwidths=[], mOperatorAlphaLong=Irancell, mOperatorAlphaShort=Irancell, isManualNetworkSelection=false(automatic), getRilVoiceRadioTechnology=14(LTE), getRilDataRadioTechnology=14(LTE), mCssIndicator=unsupported, mNetworkId=-1, mSystemId=-1, mCdmaRoamingIndicator=-1, mCdmaDefaultRoamingIndicator=-1, mIsEmergencyOnly=false, isUsingCarrierAggregation=false, mLteEarfcnRsrpBoost=0, mNetworkRegistrationInfos=[NetworkRegistrationInfo{ domain=CS transportType=WWAN registrationState=HOME roamingType=NOT_ROAMING accessNetworkTechnology=LTE rejectCause=0 emergencyEnabled=false availableServices=[VOICE,SMS,VIDEO] cellIdentity=CellIdentityLte:{ mCi=xxxx mPci=xxxx mTac=xxxx mEarfcn=xxxx mBands=[] mBandwidth=xxxx mMcc=xxxx mMnc=xxxx mAlphaLong=Irancell mAlphaShort=Irancell mAdditionalPlmns={} mCsgInfo=null} voiceSpecificInfo=VoiceSpecificRegistrationInfo { mCssSupported=false mRoamingIndicator=1 mSystemIsInPrl=-1 mDefaultRoamingIndicator=-1} dataSpecificInfo=null nrState=NONE rRplmn=43235}, NetworkRegistrationInfo{ domain=PS transportType=WWAN registrationState=HOME roamingType=NOT_ROAMING accessNetworkTechnology=LTE rejectCause=0 emergencyEnabled=false availableServices=[DATA] cellIdentity=CellIdentityLte:{ mCi=xxxx mPci=xxxx mTac=xxxx mEarfcn=xxxx mBands=[] mBandwidth=xxxx mMcc=xxxx mMnc=xxxx mAlphaLong=Irancell mAlphaShort=Irancell mAdditionalPlmns={} mCsgInfo=null} voiceSpecificInfo=null dataSpecificInfo=android.telephony.DataSpecificRegistrationInfo :{ maxDataCalls = 20 isDcNrRestricted = false isNrAvailable = false isEnDcAvailable = false LteVopsSupportInfo :  mVopsSupport = 2 mEmcBearerSupport = 3 mIsUsingCarrierAggregation = false } nrState=NONE rRplmn=43235}], mNrFrequencyRange=0, mOperatorAlphaLongRaw=Irancell, mOperatorAlphaShortRaw=Irancell, mIsDataRoamingFromRegistration=false, mIsIwlanPreferred=false}
+06-30 06:22:51.510 D/CarrierTextController( 2170): Handling (subId=2): 5 Irancell
+06-30 06:22:51.510 D/CarrierTextController( 2170): SIM ready and in service: subId=2, ss={mVoiceRegState=0(IN_SERVICE), mDataRegState=0(IN_SERVICE), mChannelNumber=2850, duplexMode()=1, mCellBandwidths=[20000], mOperatorAlphaLong=Irancell, mOperatorAlphaShort=Irancell, isManualNetworkSelection=false(automatic), getRilVoiceRadioTechnology=14(LTE), getRilDataRadioTechnology=14(LTE), mCssIndicator=unsupported, mNetworkId=-1, mSystemId=-1, mCdmaRoamingIndicator=-1, mCdmaDefaultRoamingIndicator=-1, mIsEmergencyOnly=false, isUsingCarrierAggregation=false, mLteEarfcnRsrpBoost=0, mNetworkRegistrationInfos=[NetworkRegistrationInfo{ domain=CS transportType=WWAN registrationState=HOME roamingType=NOT_ROAMING accessNetworkTechnology=LTE rejectCause=0 emergencyEnabled=false availableServices=[VOICE,SMS,VIDEO] cellIdentity=CellIdentityLte:{ mCi=xxxx mPci=xxxx mTac=xxxx mEarfcn=xxxx mBands=[] mBandwidth=xxxx mMcc=xxxx mMnc=xxxx mAlphaLong=Irancell mAlphaShort=Irancell mAdditionalPlmns={} mCsgInfo=null} voiceSpecificInfo=VoiceSpecificRegistrationInfo { mCssSupported=false mRoamingIndicator=1 mSystemIsInPrl=-1 mDefaultRoamingIndicator=-1} dataSpecificInfo=null nrState=NONE rRplmn=43235}, NetworkRegistrationInfo{ domain=PS transportType=WWAN registrationState=HOME roamingType=NOT_ROAMING accessNetworkTechnology=LTE rejectCause=0 emergencyEnabled=false availableServices=[DATA] cellIdentity=CellIdentityLte:{ mCi=xxxx mPci=xxxx mTac=xxxx mEarfcn=xxxx mBands=[] mBandwidth=xxxx mMcc=xxxx mMnc=xxxx mAlphaLong=Irancell mAlphaShort=Irancell mAdditionalPlmns={} mCsgInfo=null} voiceSpecificInfo=null dataSpecificInfo=android.telephony.DataSpecificRegistrationInfo :{ maxDataCalls = 20 isDcNrRestricted = false isNrAvailable = false isEnDcAvailable = false LteVopsSupportInfo :  mVopsSupport = 2 mEmcBearerSupport = 3 mIsUsingCarrierAggregation = false } nrState=NONE rRplmn=43235}], mNrFrequencyRange=0, mOperatorAlphaLongRaw=Irancell, mOperatorAlphaShortRaw=Irancell, mIsDataRoamingFromRegistration=false, mIsIwlanPreferred=false}
+06-30 06:22:51.510 D/CarrierTextController( 2170): onRefreshCarrierInfo(), mTelephonyCapable: true
+06-30 06:22:51.510 D/CarrierTextController( 2170): updateCarrierText(): 2
+06-30 06:22:51.510 D/CarrierTextController( 2170): updateCarrierText(): 2
+06-30 06:22:51.510 D/CarrierTextController( 2170): Handling (subId=25): 5 Irancell
+06-30 06:22:51.511 D/CarrierTextController( 2170): SIM ready and in service: subId=25, ss={mVoiceRegState=0(IN_SERVICE), mDataRegState=0(IN_SERVICE), mChannelNumber=2850, duplexMode()=1, mCellBandwidths=[], mOperatorAlphaLong=Irancell, mOperatorAlphaShort=Irancell, isManualNetworkSelection=false(automatic), getRilVoiceRadioTechnology=14(LTE), getRilDataRadioTechnology=14(LTE), mCssIndicator=unsupported, mNetworkId=-1, mSystemId=-1, mCdmaRoamingIndicator=-1, mCdmaDefaultRoamingIndicator=-1, mIsEmergencyOnly=false, isUsingCarrierAggregation=false, mLteEarfcnRsrpBoost=0, mNetworkRegistrationInfos=[NetworkRegistrationInfo{ domain=CS transportType=WWAN registrationState=HOME roamingType=NOT_ROAMING accessNetworkTechnology=LTE rejectCause=0 emergencyEnabled=false availableServices=[VOICE,SMS,VIDEO] cellIdentity=CellIdentityLte:{ mCi=xxxx mPci=xxxx mTac=xxxx mEarfcn=xxxx mBands=[] mBandwidth=xxxx mMcc=xxxx mMnc=xxxx mAlphaLong=Irancell mAlphaShort=Irancell mAdditionalPlmns={} mCsgInfo=null} voiceSpecificInfo=VoiceSpecificRegistrationInfo { mCssSupported=false mRoamingIndicator=1 mSystemIsInPrl=-1 mDefaultRoamingIndicator=-1} dataSpecificInfo=null nrState=NONE rRplmn=43235}, NetworkRegistrationInfo{ domain=PS transportType=WWAN registrationState=HOME roamingType=NOT_ROAMING accessNetworkTechnology=LTE rejectCause=0 emergencyEnabled=false availableServices=[DATA] cellIdentity=CellIdentityLte:{ mCi=xxxx mPci=xxxx mTac=xxxx mEarfcn=xxxx mBands=[] mBandwidth=xxxx mMcc=xxxx mMnc=xxxx mAlphaLong=Irancell mAlphaShort=Irancell mAdditionalPlmns={} mCsgInfo=null} voiceSpecificInfo=null dataSpecificInfo=android.telephony.DataSpecificRegistrationInfo :{ maxDataCalls = 20 isDcNrRestricted = false isNrAvailable = false isEnDcAvailable = false LteVopsSupportInfo :  mVopsSupport = 2 mEmcBearerSupport = 3 mIsUsingCarrierAggregation = false } nrState=NONE rRplmn=43235}], mNrFrequencyRange=0, mOperatorAlphaLongRaw=Irancell, mOperatorAlphaShortRaw=Irancell, mIsDataRoamingFromRegistration=false, mIsIwlanPreferred=false}
+06-30 06:22:51.511 D/CarrierTextController( 2170): Handling (subId=2): 5 Irancell
+06-30 06:22:51.512 D/CarrierTextController( 2170): SIM ready and in service: subId=2, ss={mVoiceRegState=0(IN_SERVICE), mDataRegState=0(IN_SERVICE), mChannelNumber=2850, duplexMode()=1, mCellBandwidths=[20000], mOperatorAlphaLong=Irancell, mOperatorAlphaShort=Irancell, isManualNetworkSelection=false(automatic), getRilVoiceRadioTechnology=14(LTE), getRilDataRadioTechnology=14(LTE), mCssIndicator=unsupported, mNetworkId=-1, mSystemId=-1, mCdmaRoamingIndicator=-1, mCdmaDefaultRoamingIndicator=-1, mIsEmergencyOnly=false, isUsingCarrierAggregation=false, mLteEarfcnRsrpBoost=0, mNetworkRegistrationInfos=[NetworkRegistrationInfo{ domain=CS transportType=WWAN registrationState=HOME roamingType=NOT_ROAMING accessNetworkTechnology=LTE rejectCause=0 emergencyEnabled=false availableServices=[VOICE,SMS,VIDEO] cellIdentity=CellIdentityLte:{ mCi=xxxx mPci=xxxx mTac=xxxx mEarfcn=xxxx mBands=[] mBandwidth=xxxx mMcc=xxxx mMnc=xxxx mAlphaLong=Irancell mAlphaShort=Irancell mAdditionalPlmns={} mCsgInfo=null} voiceSpecificInfo=VoiceSpecificRegistrationInfo { mCssSupported=false mRoamingIndicator=1 mSystemIsInPrl=-1 mDefaultRoamingIndicator=-1} dataSpecificInfo=null nrState=NONE rRplmn=43235}, NetworkRegistrationInfo{ domain=PS transportType=WWAN registrationState=HOME roamingType=NOT_ROAMING accessNetworkTechnology=LTE rejectCause=0 emergencyEnabled=false availableServices=[DATA] cellIdentity=CellIdentityLte:{ mCi=xxxx mPci=xxxx mTac=xxxx mEarfcn=xxxx mBands=[] mBandwidth=xxxx mMcc=xxxx mMnc=xxxx mAlphaLong=Irancell mAlphaShort=Irancell mAdditionalPlmns={} mCsgInfo=null} voiceSpecificInfo=null dataSpecificInfo=android.telephony.DataSpecificRegistrationInfo :{ maxDataCalls = 20 isDcNrRestricted = false isNrAvailable = false isEnDcAvailable = false LteVopsSupportInfo :  mVopsSupport = 2 mEmcBearerSupport = 3 mIsUsingCarrierAggregation = false } nrState=NONE rRplmn=43235}], mNrFrequencyRange=0, mOperatorAlphaLongRaw=Irancell, mOperatorAlphaShortRaw=Irancell, mIsDataRoamingFromRegistration=false, mIsIwlanPreferred=false}
+06-30 06:22:51.549 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:51.582 I/chatty  (  741): uid=1000(system) HwBinder:741_2 identical 4 lines
+06-30 06:22:51.599 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:51.601 I/vendor.qti.hardware.servicetracker@1.2-service(  793): unbindService is called for service : cab.snapp.passenger/io.appmetrica.analytics.internal.AppMetricaService and for client cab.snapp.passenger
+06-30 06:22:51.601 I/vendor.qti.hardware.servicetracker@1.2-service(  793): size of service connections for service: cab.snapp.passenger/io.appmetrica.analytics.internal.AppMetricaServiceafter removal is 0
+06-30 06:22:51.601 I/vendor.qti.hardware.servicetracker@1.2-service(  793): size of client connections for client: cab.snapp.passengerafter removal is 5
+06-30 06:22:51.605 I/vendor.qti.hardware.servicetracker@1.2-service(  793): destroyService is called for service : cab.snapp.passenger/io.appmetrica.analytics.internal.AppMetricaService
+06-30 06:22:51.615 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:51.682 I/chatty  (  741): uid=1000(system) HwBinder:741_2 identical 5 lines
+06-30 06:22:51.699 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:51.699 I/vendor.qti.hardware.servicetracker@1.2-service(  793): unbindService is called for service : com.google.android.gms/.measurement.service.MeasurementBrokerService and for client cab.snapp.passenger
+06-30 06:22:51.699 I/vendor.qti.hardware.servicetracker@1.2-service(  793): size of service connections for service: com.google.android.gms/.measurement.service.MeasurementBrokerServiceafter removal is 0
+06-30 06:22:51.699 I/vendor.qti.hardware.servicetracker@1.2-service(  793): size of client connections for client: cab.snapp.passengerafter removal is 4
+06-30 06:22:51.689 W/DefaultDispatch(11778): type=1400 audit(0.0:3075488): avc: denied { read } for name="tcp" dev="proc" ino=4026532080 scontext=u:r:untrusted_app:s0:c79,c257,c512,c768 tcontext=u:object_r:proc_net_tcp_udp:s0 tclass=file permissive=0
+06-30 06:22:51.700 I/vendor.qti.hardware.servicetracker@1.2-service(  793): destroyService is called for service : com.google.android.gms/.measurement.service.MeasurementBrokerService
+06-30 06:22:51.700 D/BoundBrokerSvc(14617): onUnbind: Intent { act=com.google.android.gms.measurement.START pkg=com.google.android.gms }
+06-30 06:22:51.715 E/Go      (11778): panic: runtime error: invalid memory address or nil pointer dereference
+06-30 06:22:51.715 E/Go      (11778): [signal SIGSEGV: segmentation violation code=0x1 addr=0x8 pc=0x70e2762fac]
+06-30 06:22:51.715 E/Go      (11778): 
+06-30 06:22:51.715 E/Go      (11778): goroutine 17 [running, locked to thread]:
+06-30 06:22:51.715 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:51.717 E/Go      (11778): github.com/sagernet/sing-box/experimental/libbox.(*CommandServer).StartOrReloadService(0x40000d2c30, {0x4000278000, 0x3eb}, 0x0)
+06-30 06:22:51.717 E/Go      (11778): 	github.com/sagernet/sing-box/experimental/libbox/command_server.go:175 +0x2c
+06-30 06:22:51.717 E/Go      (11778): main.proxylibbox_CommandServer_StartOrReloadService(0x180000?, {0xb4000072bb2f9cf0, 0x3eb, {0x0, 0x0, 0x0, 0x0}}, 0x29)
+06-30 06:22:51.717 E/Go      (11778): 	github.com/sagernet/sing-box/build/arm64/libbox/go_libboxmain.go:462 +0x88
+06-30 06:22:51.717 E/Go      (11778): 
+06-30 06:22:51.717 E/Go      (11778): goroutine 4 [runnable]:
+06-30 06:22:51.717 E/Go      (11778): github.com/sagernet/sing/common/observable.NewObserver[...].gowrap1()
+06-30 06:22:51.717 E/Go      (11778): 	github.com/sagernet/sing@v0.8.11/common/observable/observer.go:27
+06-30 06:22:51.717 E/Go      (11778): runtime.goexit({})
+06-30 06:22:51.717 E/Go      (11778): 	runtime/asm_arm64.s:1268 +0x4
+06-30 06:22:51.717 E/Go      (11778): created by github.com/sagernet/sing/common/observable.NewObserver[...] in goroutine 17
+06-30 06:22:51.718 E/Go      (11778): 	github.com/sagernet/sing@v0.8.11/common/observable/observer.go:27 +0xe0
+06-30 06:22:51.719 E/Go      (11778): 
+06-30 06:22:51.719 E/Go      (11778): goroutine 3 [syscall]:
+06-30 06:22:51.719 E/Go      (11778): os/signal.signal_recv()
+06-30 06:22:51.719 E/Go      (11778): 	runtime/sigqueue.go:152 +0x30
+06-30 06:22:51.719 E/Go      (11778): os/signal.loop()
+06-30 06:22:51.719 E/Go      (11778): 	os/signal/signal_unix.go:23 +0x1c
+06-30 06:22:51.719 E/Go      (11778): created by os/signal.Notify.func1.1 in goroutine 1
+06-30 06:22:51.719 E/Go      (11778): 	os/signal/signal.go:152 +0x28
+06-30 06:22:51.719 E/Go      (11778): 
+06-30 06:22:51.719 E/Go      (11778): goroutine 5 [runnable]:
+06-30 06:22:51.719 E/Go      (11778): github.com/sagernet/sing/common/observable.NewObserver[...].gowrap1()
+06-30 06:22:51.719 E/Go      (11778): 	github.com/sagernet/sing@v0.8.11/common/observable/observer.go:27
+06-30 06:22:51.719 E/Go      (11778): runtime.goexit({})
+06-30 06:22:51.719 E/Go      (11778): 	runtime/asm_arm64.s:1268 +0x4
+06-30 06:22:51.719 E/Go      (11778): created by github.com/sagernet/sing/common/observable.NewObserver[...] in goroutine 17
+06-30 06:22:51.719 E/Go      (11778): 	github.com/sagernet/sing@v0.8.11/common/observable/observer.go:27 +0xe0
+06-30 06:22:51.719 E/Go      (11778): 
+06-30 06:22:51.719 E/Go      (11778): goroutine 6 [runnable]:
+06-30 06:22:51.719 E/Go      (11778): github.com/sagernet/sing/common/observable.NewObserver[...].gowrap1()
+06-30 06:22:51.719 E/Go      (11778): 	github.com/sagernet/sing@v0.8.11/common/observable/observer.go:27
+06-30 06:22:51.719 E/Go      (11778): runtime.goexit({})
+06-30 06:22:51.719 E/Go      (11778): 	runtime/asm_arm64.s:1268 +0x4
+06-30 06:22:51.719 E/Go      (11778): created by github.com/sagernet/sing/common/observable.NewObserver[...] in goroutine 17
+06-30 06:22:51.719 E/Go      (11778): 	github.com/sagernet/sing@v0.8.11/common/observable/observer.go:27 +0xe0
+06-30 06:22:51.719 E/Go      (11778): 
+06-30 06:22:51.719 E/Go      (11778): goroutine 7 [runnable]:
+06-30 06:22:51.719 E/Go      (11778): github.com/sagernet/sing/common/observable.NewObserver[...].gowrap1()
+06-30 06:22:51.719 E/Go      (11778): 	github.com/sagernet/sing@v0.8.11/common/observable/observer.go:27
+06-30 06:22:51.719 E/Go      (11778): runtime.goexit({})
+06-30 06:22:51.719 E/Go      (11778): 	runtime/asm_arm64.s:1268 +0x4
+06-30 06:22:51.719 E/Go      (11778): created by github.com/sagernet/sing/common/observable.NewObserver[...] in goroutine 17
+06-30 06:22:51.719 E/Go      (11778): 	github.com/sagernet/sing@v0.8.11/common/observable/observer.go:27 +0xe0
+06-30 06:22:51.719 E/Go      (11778): 
+06-30 06:22:51.719 E/Go      (11778): goroutine 8 [runnable]:
+06-30 06:22:51.719 E/Go      (11778): github.com/sagernet/sing/common/observable.NewObserver[...].gowrap1()
+06-30 06:22:51.719 E/Go      (11778): 	github.com/sagernet/sing@v0.8.11/common/observable/observer.go:27
+06-30 06:22:51.719 E/Go      (11778): runtime.goexit({})
+06-30 06:22:51.719 E/Go      (11778): 	runtime/asm_arm64.s:1268 +0x4
+06-30 06:22:51.719 E/Go      (11778): created by github.com/sagernet/sing/common/observable.NewObserver[...] in goroutine 17
+06-30 06:22:51.719 E/Go      (11778): 	github.com/sagernet/sing@v0.8.11/common/observable/observer.go:27 +0xe0
+--------- beginning of crash
+06-30 06:22:51.722 F/libc    (11778): Fatal signal 6 (SIGABRT), code -6 (SI_TKILL) in tid 12008 (DefaultDispatch), pid 11778 (xample.ivpn_new)
+06-30 06:22:51.732 D/TelephonyProvider( 2552): Using old permission behavior for telephony provider compat
+06-30 06:22:51.733 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:51.799 I/chatty  (  741): uid=1000(system) HwBinder:741_2 identical 3 lines
+06-30 06:22:51.825 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:51.884 I/crash_dump64(12037): obtaining output fd from tombstoned, type: kDebuggerdTombstone
+06-30 06:22:51.890 I/flutter (11778): [33m[warn ][0m [TESTER] Initializing on Port: 11004
+06-30 06:22:51.892 I/flutter (11778): [33m[warn ][0m [DEBUG-INTERNAL] Config start: {"log":{"l
+06-30 06:22:51.896 I/tombstoned(  596): received crash request for pid 12008
+06-30 06:22:51.898 I/crash_dump64(12037): performing dump of process 11778 (target tid = 12008)
+06-30 06:22:51.899 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:51.909 F/DEBUG   (12037): *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+06-30 06:22:51.910 F/DEBUG   (12037): Build fingerprint: 'Xiaomi/laurel_sprout_eea/laurel_sprout:11/RKQ1.200903.002/V12.0.23.0.RFQEUXM:user/release-keys'
+06-30 06:22:51.910 F/DEBUG   (12037): Revision: '0'
+06-30 06:22:51.910 F/DEBUG   (12037): ABI: 'arm64'
+06-30 06:22:51.910 F/DEBUG   (12037): Timestamp: 2026-06-30 06:22:51+0430
+06-30 06:22:51.910 F/DEBUG   (12037): pid: 11778, tid: 12008, name: DefaultDispatch  >>> com.example.ivpn_new <<<
+06-30 06:22:51.910 F/DEBUG   (12037): uid: 10335
+06-30 06:22:51.910 F/DEBUG   (12037): signal 6 (SIGABRT), code -6 (SI_TKILL), fault addr --------
+06-30 06:22:51.910 F/DEBUG   (12037):     x0  0000000000000000  x1  0000000000002ee8  x2  0000000000000006  x3  0000000000000008
+06-30 06:22:51.910 F/DEBUG   (12037):     x4  0000000000000001  x5  0000000000000001  x6  00000070e145be18  x7  000000000000000a
+06-30 06:22:51.910 F/DEBUG   (12037):     x8  0000000000000083  x9  0000000000000049  x10 000000000000000e  x11 00000070e3b90532
+06-30 06:22:51.910 F/DEBUG   (12037):     x12 0000000000000000  x13 0000000000000000  x14 38223a2273736572  x15 2c22382e382e382e
+06-30 06:22:51.910 F/DEBUG   (12037):     x16 0000007158e163a0  x17 0000007158f191a0  x18 00000070e7f2e000  x19 0000000000002e02
+06-30 06:22:51.910 F/DEBUG   (12037):     x20 0000007158f19050  x21 000000400007e008  x22 00000000ffffffe7  x23 0000000000000000
+06-30 06:22:51.910 F/DEBUG   (12037):     x24 00000070f696b4a8  x25 0000007158f1c000  x26 0000000000000000  x27 0000000000000010
+06-30 06:22:51.910 F/DEBUG   (12037):     x28 0000004000002700  x29 000000400008cb88
+06-30 06:22:51.910 F/DEBUG   (12037):     lr  00000070e161a90c  sp  000000400008cb90  pc  00000070e1642318  pst 0000000080000000
+06-30 06:22:51.911 F/DEBUG   (12037): backtrace:
+06-30 06:22:51.911 F/DEBUG   (12037):       #00 pc 0000000000b5f318  /data/app/~~T3si92fUqQfAkJcFhNqaiQ==/com.example.ivpn_new-9ChEtvbOZCJ2yfo4oRUR-A==/base.apk (offset 0x918000)
+06-30 06:22:52.199 I/chatty  (  741): uid=1000(system) HwBinder:741_2 identical 19 lines
+06-30 06:22:52.215 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:52.219 I/flutter (11778): [33m[warn ][0m [TESTER] Initializing on Port: 11006
+06-30 06:22:52.221 I/flutter (11778): [33m[warn ][0m [DEBUG-INTERNAL] Config start: {"log":{"l
+06-30 06:22:52.222 I/System.out(11778): ❌ [Native] Cannot start Test Proxy: Another test is already running
+06-30 06:22:52.223 I/flutter (11778): [33m[warn ][0m [TESTER] Native Process Spawned (via Service). Port: -2
+06-30 06:22:52.225 I/flutter (11778): [TELEMETRY] VMESS Server 737 | LastPassedStage: 1 | PingDuration: -1 | ExactException: HTTP Failed (No 204)
+06-30 06:22:52.231 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:52.599 I/chatty  (  741): uid=1000(system) HwBinder:741_2 identical 20 lines
+06-30 06:22:52.616 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:52.629 I/flutter (11778): [33m[warn ][0m [TESTER] Initializing on Port: 11008
+06-30 06:22:52.630 I/flutter (11778): [33m[warn ][0m [DEBUG-INTERNAL] Config start: {"log":{"l
+06-30 06:22:52.632 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:52.715 I/chatty  (  741): uid=1000(system) HwBinder:741_2 identical 5 lines
+06-30 06:22:52.732 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:52.729 W/ThreadPoolForeg(14916): type=1400 audit(0.0:3075489): avc: denied { write } for name="traced_producer" dev="tmpfs" ino=28906 scontext=u:r:gmscore_app:s0:c512,c768 tcontext=u:object_r:traced_producer_socket:s0 tclass=sock_file permissive=0
+06-30 06:22:52.749 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:52.765 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:52.769 E/tombstoned(  596): Tombstone written to: /data/tombstones/tombstone_07
+06-30 06:22:52.777 W/ActivityTaskManager( 1184):   Force finishing activity com.example.ivpn_new/.MainActivity
+06-30 06:22:52.781 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:52.784 I/DropBoxManagerService( 1184): add tag=data_app_native_crash isTagEnabled=true flags=0x2
+06-30 06:22:52.786 I/BootReceiver( 1184): Copying /data/tombstones/tombstone_07 to DropBox (SYSTEM_TOMBSTONE)
+06-30 06:22:52.787 I/DropBoxManagerService( 1184): add tag=SYSTEM_TOMBSTONE isTagEnabled=true flags=0x2
+06-30 06:22:52.789 W/DropBoxManagerService( 1184): Dropping: data_app_native_crash (1584 > 0 bytes)
+06-30 06:22:52.791 W/DropBoxManagerService( 1184): Dropping: SYSTEM_TOMBSTONE (10 > 0 bytes)
+06-30 06:22:52.811 V/ActivityTaskManager( 1184): Calling mServicetracker.OnActivityStateChange with flag truestatePAUSING
+06-30 06:22:52.811 D/ActivityTrigger( 1184): ActivityTrigger activityPauseTrigger 
+06-30 06:22:52.811 I/vendor.qti.hardware.servicetracker@1.2-service(  793): Activity state is changed to : 3
+06-30 06:22:52.811 V/ActivityTaskManager( 1184): Calling mServicetracker.OnActivityStateChange with flag falsestatePAUSING
+06-30 06:22:52.813 I/vendor.qti.hardware.servicetracker@1.2-service(  793): Activity state is changed to : 3
+06-30 06:22:52.813 E/statsd  (  605): Predicate 5980654721335871649 dropping data for dimension key (10)0x2010101->10335[I] (10)0x30000->*launch*[S] 
+06-30 06:22:52.817 W/BroadcastQueue( 1184): Background execution not allowed: receiving Intent { act=android.intent.action.DROPBOX_ENTRY_ADDED flg=0x10 (has extras) } to com.google.android.gms/.stats.service.DropBoxEntryAddedReceiver
+06-30 06:22:52.828 D/CompatibilityInfo( 1184): mCompatibilityFlags - 0
+06-30 06:22:52.828 D/CompatibilityInfo( 1184): applicationDensity - 320
+06-30 06:22:52.828 D/CompatibilityInfo( 1184): applicationScale - 1.0
+06-30 06:22:52.829 I/vendor.qti.hardware.servicetracker@1.2-service(  793): startService() is called for servicecom.google.android.gms/.chimera.PersistentIntentOperationService
+06-30 06:22:52.893 I/vendor.qti.hardware.servicetracker@1.2-service(  793): bindService is called for service : com.google.android.gms/.chimera.PersistentDirectBootAwareApiService and for client com.google.android.gms.persistent
+06-30 06:22:52.893 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for service : com.google.android.gms/.chimera.PersistentDirectBootAwareApiServiceare :19
+06-30 06:22:52.893 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for client : com.google.android.gms.persistentare :5
+06-30 06:22:52.896 D/CompatibilityInfo( 1184): mCompatibilityFlags - 0
+06-30 06:22:52.896 D/CompatibilityInfo( 1184): applicationDensity - 320
+06-30 06:22:52.896 D/CompatibilityInfo( 1184): applicationScale - 1.0
+06-30 06:22:52.896 I/vendor.qti.hardware.servicetracker@1.2-service(  793): startService() is called for servicecom.google.android.gms/.stats.service.DropBoxEntryAddedService
+06-30 06:22:52.897 D/BoundBrokerSvc(14916): onRebind: Intent { act=com.google.android.gms.libs.gmscorelogger.service.START dat=chimera-action: cmp=com.google.android.gms/.chimera.PersistentDirectBootAwareApiService }
+06-30 06:22:52.921 I/ndroid.systemu( 2170): NativeAlloc concurrent copying GC freed 74677(4627KB) AllocSpace objects, 18(360KB) LOS objects, 49% free, 10189KB/19MB, paused 142us total 102.104ms
+06-30 06:22:52.934 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:52.819 W/BroadcastQueue( 1184): Background execution not allowed: receiving Intent { act=android.intent.action.DROPBOX_ENTRY_ADDED flg=0x10 (has extras) } to com.google.android.gms/.stats.service.DropBoxEntryAddedReceiver
+06-30 06:22:52.944 D/ConnectivityService( 1184): ConnectivityService NetworkRequestInfo binderDied(NetworkRequest [ TRACK_DEFAULT id=3147, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED Uid: 10335 AdministratorUids: [] RequestorUid: 10335 RequestorPackageName: com.example.ivpn_new] ], android.os.BinderProxy@9c84212)
+06-30 06:22:52.944 I/ActivityManager( 1184): Process com.example.ivpn_new (pid 11778) has died: prcp TOP 
+06-30 06:22:52.945 D/ConnectivityService( 1184): releasing NetworkRequest [ TRACK_DEFAULT id=3147, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED Uid: 10335 AdministratorUids: [] RequestorUid: 10335 RequestorPackageName: com.example.ivpn_new] ] (release request)
+06-30 06:22:52.945 I/WindowManager( 1184): WIN DEATH: Window{f637a94 u0 com.example.ivpn_new/com.example.ivpn_new.MainActivity}
+06-30 06:22:52.945 W/InputDispatcher( 1184): Attempted to unregister already unregistered input channel 'f637a94 com.example.ivpn_new/com.example.ivpn_new.MainActivity (server)'
+06-30 06:22:52.950 I/Zygote  (  607): Process 11778 exited due to signal 6 (Aborted)
+06-30 06:22:52.953 I/vendor.qti.hardware.servicetracker@1.2-service(  793): killProcess is called for pid : 11778
+06-30 06:22:52.954 V/ActivityTaskManager( 1184): Calling mServicetracker.OnActivityStateChange with flag truestateDESTROYED
+06-30 06:22:52.954 V/ActivityTaskManager( 1184): Calling mServicetracker.OnActivityStateChange with flag falsestateDESTROYED
+06-30 06:22:52.955 I/vendor.qti.hardware.servicetracker@1.2-service(  793): Activity state is changed to : 9
+06-30 06:22:52.955 V/ActivityTaskManager( 1184): Calling mServicetracker.OnActivityStateChange with flag truestateDESTROYED
+06-30 06:22:52.961 V/ActivityTaskManager( 1184): Calling mServicetracker.OnActivityStateChange with flag truestateRESUMED
+06-30 06:22:52.955 I/chatty  (  793): uid=1000(system) HwBinder:793_5 identical 1 line
+06-30 06:22:52.955 I/vendor.qti.hardware.servicetracker@1.2-service(  793): Activity state is changed to : 9
+06-30 06:22:52.961 I/vendor.qti.hardware.servicetracker@1.2-service(  793): Activity state is changed to : 2
+06-30 06:22:52.962 V/ActivityTaskManager( 1184): Calling mServicetracker.OnActivityStateChange with flag falsestateRESUMED
+06-30 06:22:52.962 I/vendor.qti.hardware.servicetracker@1.2-service(  793): Activity state is changed to : 2
+06-30 06:22:52.963 E/statsd  (  605): Predicate 5980654721335871649 dropping data for dimension key (10)0x2010101->10335[I] (10)0x30000->*launch*[S] 
+06-30 06:22:52.987 I/libprocessgroup( 1184): Successfully killed process cgroup uid 10335 pid 11778 in 41ms
+06-30 06:22:52.991 W/ActivityManager( 1184): setHasOverlayUi called on unknown pid: 11778
+06-30 06:22:52.994 I/vendor.qti.hardware.servicetracker@1.2-service(  793): bindService is called for service : com.google.android.gms/.chimera.PersistentDirectBootAwareApiService and for client com.google.android.gms.persistent
+06-30 06:22:52.994 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for service : com.google.android.gms/.chimera.PersistentDirectBootAwareApiServiceare :19
+06-30 06:22:52.994 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for client : com.google.android.gms.persistentare :5
+06-30 06:22:52.999 I/cr_BindingManager(28353): onTrimMemory: level=5, size=0
+06-30 06:22:53.001 I/Finsky  (11968): [2] Memory trim requested to level 5
+06-30 06:22:53.004 I/vendor.qti.hardware.servicetracker@1.2-service(  793): bindService is called for service : com.google.android.googlequicksearchbox/com.google.android.apps.gsa.nowoverlayservice.DrawerOverlayService and for client com.android.launcher3
+06-30 06:22:53.004 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for service : com.google.android.googlequicksearchbox/com.google.android.apps.gsa.nowoverlayservice.DrawerOverlayServiceare :1
+06-30 06:22:53.004 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for client : com.android.launcher3are :1
+06-30 06:22:53.037 D/PredictionService( 4864): onRequestPredictionUpdate
+06-30 06:22:53.038 D/PredictionService( 4864): update predictions
+06-30 06:22:53.044 I/vendor.qti.hardware.servicetracker@1.2-service(  793): bindService is called for service : com.google.android.gms/.chimera.PersistentApiService and for client com.google.android.gms.persistent
+06-30 06:22:53.044 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for service : com.google.android.gms/.chimera.PersistentApiServiceare :37
+06-30 06:22:53.044 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for client : com.google.android.gms.persistentare :5
+06-30 06:22:53.044 I/caww    ( 9690): onStart
+06-30 06:22:53.045 I/caww    ( 9690): onResume
+06-30 06:22:53.050 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:53.050 I/chatty  (  741): uid=1000(system) HwBinder:741_2 identical 1 line
+06-30 06:22:53.053 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:53.057 I/Finsky:background(10382): [2] Memory trim requested to level 60
+06-30 06:22:53.085 I/AppBase (27808): AppBase.onTrimMemory():280 onTrimMemory(): 5
+06-30 06:22:53.095 I/KeyboardDefCache(27808): MemoryFileCache$1.onTrimMemory():124 clearMemory() for trim memory: 5
+06-30 06:22:53.102 I/vendor.qti.hardware.servicetracker@1.2-service(  793): bindService is called for service : com.google.android.gms/com.google.android.location.reporting.service.ReportingAndroidService and for client com.google.android.gms.persistent
+06-30 06:22:53.103 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for service : com.google.android.gms/com.google.android.location.reporting.service.ReportingAndroidServiceare :1
+06-30 06:22:53.103 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for client : com.google.android.gms.persistentare :6
+06-30 06:22:53.104 D/CompatibilityInfo( 1184): mCompatibilityFlags - 0
+06-30 06:22:53.104 D/CompatibilityInfo( 1184): applicationDensity - 320
+06-30 06:22:53.104 D/CompatibilityInfo( 1184): applicationScale - 1.0
+06-30 06:22:53.105 I/vendor.qti.hardware.servicetracker@1.2-service(  793): startService() is called for servicecom.google.android.gms/com.google.android.location.reporting.service.ReportingAndroidService
+06-30 06:22:53.110 I/vendor.qti.hardware.servicetracker@1.2-service(  793): bindService is called for service : com.google.android.gms/.chimera.GmsApiService and for client com.google.android.gms.persistent
+06-30 06:22:53.110 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for service : com.google.android.gms/.chimera.GmsApiServiceare :3
+06-30 06:22:53.110 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for client : com.google.android.gms.persistentare :7
+06-30 06:22:53.111 I/KeyboardDefCache(27808): MemoryFileCache.clearMemory():408 evictAll()
+06-30 06:22:53.111 I/GoogleInputMethodService(27808): GoogleInputMethodService.onTrimMemory():3019 onTrimMemory(): 5
+06-30 06:22:53.112 D/BoundBrokerSvc(14617): onRebind: Intent { act=com.google.android.gms.semanticlocationhistory.service.START dat=chimera-action: cmp=com.google.android.gms/.chimera.GmsApiService }
+06-30 06:22:53.122 I/GoogleInputMethodService(27808): GoogleInputMethodService.onFinishInput():2274 
+06-30 06:22:53.123 I/Module  (27808): DeviceLockedStatusModuleProvider$Module.updateDeviceLockedStatusInternal():128 repeatCheckTimes = 0, locked = false
+06-30 06:22:53.124 I/GoogleInputMethodService(27808): GoogleInputMethodService.onStartInput():1459 onStartInput(EditorInfo{EditorInfo{packageName=com.android.launcher3, inputType=0, inputTypeString=NULL, enableLearning=false, autoCorrection=false, autoComplete=false, imeOptions=0, privateImeOptions=null, actionName=UNSPECIFIED, actionLabel=null, initialSelStart=-1, initialSelEnd=-1, initialCapsMode=0, label=null, fieldId=-1, fieldName=null, extras=null, hintText=null, hintLocales=[]}}, false)
+06-30 06:22:53.124 W/LatinIMEBase(27808): LatinIMEBase.updateInputViewCoverNavigation():322 Null input view, cannot update padding!
+06-30 06:22:53.126 I/Module  (27808): DeviceLockedStatusModuleProvider$Module.updateDeviceLockedStatusInternal():128 repeatCheckTimes = 1, locked = false
+06-30 06:22:53.181 I/ForwardSyncCache( 9148): reclaimMemory: Clearing caches
+06-30 06:22:53.185 I/BugleSpam( 9148): HadesBitmapStore: Purged 0 images during memory reclamation
+06-30 06:22:53.193 I/BugleRestore( 9148): reclaimMemory: Clearing persistent caches
+06-30 06:22:53.210 W/Bugle   ( 9148): TextClassifierLibManagerImpl: Reclaiming memory at level: 40
+06-30 06:22:53.233 E/qdmetadata(  741): paramType 2048 not supported
+06-30 06:22:53.243 I/DropBoxUtil(14916): (REDACTED) Reading dropbox entry with tag %s and timestamp %d
+06-30 06:22:53.247 E/DropBoxUtil(14916): [DropboxRealtime] null InputStream [CONTEXT service_id=254 ]
+06-30 06:22:53.247 E/DropBoxUtil(14916): java.io.IOException: null InputStream
+06-30 06:22:53.247 E/DropBoxUtil(14916): 	at emum.c(:com.google.android.gms@262334022@26.23.34 (150400-933906539):183)
+06-30 06:22:53.247 E/DropBoxUtil(14916): 	at emum.d(:com.google.android.gms@262334022@26.23.34 (150400-933906539):9)
+06-30 06:22:53.247 E/DropBoxUtil(14916): 	at emsu.i(:com.google.android.gms@262334022@26.23.34 (150400-933906539):321)
+06-30 06:22:53.247 E/DropBoxUtil(14916): 	at emqf.d(:com.google.android.gms@262334022@26.23.34 (150400-933906539):1)
+06-30 06:22:53.247 E/DropBoxUtil(14916): 	at emsn.c(:com.google.android.gms@262334022@26.23.34 (150400-933906539):196)
+06-30 06:22:53.247 E/DropBoxUtil(14916): 	at com.google.android.gms.stats.service.DropBoxEntryAddedChimeraService.a(:com.google.android.gms@262334022@26.23.34 (150400-933906539):183)
+06-30 06:22:53.247 E/DropBoxUtil(14916): 	at com.google.android.gms.framework.tracing.wrapper.TracingIntentService.onHandleIntent(:com.google.android.gms@262334022@26.23.34 (150400-933906539):13)
+06-30 06:22:53.247 E/DropBoxUtil(14916): 	at zte.handleMessage(:com.google.android.gms@262334022@26.23.34 (150400-933906539):7)
+06-30 06:22:53.247 E/DropBoxUtil(14916): 	at android.os.Handler.dispatchMessage(Handler.java:106)
+06-30 06:22:53.247 E/DropBoxUtil(14916): 	at android.os.Looper.loop(Looper.java:223)
+06-30 06:22:53.247 E/DropBoxUtil(14916): 	at android.os.HandlerThread.run(HandlerThread.java:67)
+06-30 06:22:53.247 I/DropBoxUtil(14916): (REDACTED) Reading dropbox entry with tag %s and timestamp %d
+06-30 06:22:53.248 E/DropBoxUtil(14916): [DropboxRealtime] null InputStream [CONTEXT service_id=254 ]
+06-30 06:22:53.248 E/DropBoxUtil(14916): java.io.IOException: null InputStream
+06-30 06:22:53.248 E/DropBoxUtil(14916): 	at emum.c(:com.google.android.gms@262334022@26.23.34 (150400-933906539):183)
+06-30 06:22:53.248 E/DropBoxUtil(14916): 	at emum.d(:com.google.android.gms@262334022@26.23.34 (150400-933906539):9)
+06-30 06:22:53.248 E/DropBoxUtil(14916): 	at emsu.i(:com.google.android.gms@262334022@26.23.34 (150400-933906539):321)
+06-30 06:22:53.248 E/DropBoxUtil(14916): 	at emqf.d(:com.google.android.gms@262334022@26.23.34 (150400-933906539):1)
+06-30 06:22:53.248 E/DropBoxUtil(14916): 	at emsn.c(:com.google.android.gms@262334022@26.23.34 (150400-933906539):196)
+06-30 06:22:53.248 E/DropBoxUtil(14916): 	at com.google.android.gms.stats.service.DropBoxEntryAddedChimeraService.a(:com.google.android.gms@262334022@26.23.34 (150400-933906539):183)
+06-30 06:22:53.248 E/DropBoxUtil(14916): 	at com.google.android.gms.framework.tracing.wrapper.TracingIntentService.onHandleIntent(:com.google.android.gms@262334022@26.23.34 (150400-933906539):13)
+06-30 06:22:53.248 E/DropBoxUtil(14916): 	at zte.handleMessage(:com.google.android.gms@262334022@26.23.34 (150400-933906539):7)
+06-30 06:22:53.248 E/DropBoxUtil(14916): 	at android.os.Handler.dispatchMessage(Handler.java:106)
+06-30 06:22:53.248 E/DropBoxUtil(14916): 	at android.os.Looper.loop(Looper.java:223)
+06-30 06:22:53.248 E/DropBoxUtil(14916): 	at android.os.HandlerThread.run(HandlerThread.java:67)
+06-30 06:22:53.296 I/DropBoxUtil(14916): (REDACTED) Reading dropbox entry with tag %s and timestamp %d
+06-30 06:22:53.297 E/DropBoxUtil(14916): [AppDoctor] null InputStream [CONTEXT service_id=254 ]
+06-30 06:22:53.297 E/DropBoxUtil(14916): java.io.IOException: null InputStream
+06-30 06:22:53.297 E/DropBoxUtil(14916): 	at emum.c(:com.google.android.gms@262334022@26.23.34 (150400-933906539):183)
+06-30 06:22:53.297 E/DropBoxUtil(14916): 	at emsu.l(:com.google.android.gms@262334022@26.23.34 (150400-933906539):4)
+06-30 06:22:53.297 E/DropBoxUtil(14916): 	at emsf.apply(:com.google.android.gms@262334022@26.23.34 (150400-933906539):37)
+06-30 06:22:53.297 E/DropBoxUtil(14916): 	at emsn.b(:com.google.android.gms@262334022@26.23.34 (150400-933906539):68)
+06-30 06:22:53.297 E/DropBoxUtil(14916): 	at com.google.android.gms.stats.service.DropBoxEntryAddedChimeraService.a(:com.google.android.gms@262334022@26.23.34 (150400-933906539):202)
+06-30 06:22:53.297 E/DropBoxUtil(14916): 	at com.google.android.gms.framework.tracing.wrapper.TracingIntentService.onHandleIntent(:com.google.android.gms@262334022@26.23.34 (150400-933906539):13)
+06-30 06:22:53.297 E/DropBoxUtil(14916): 	at zte.handleMessage(:com.google.android.gms@262334022@26.23.34 (150400-933906539):7)
+06-30 06:22:53.297 E/DropBoxUtil(14916): 	at android.os.Handler.dispatchMessage(Handler.java:106)
+06-30 06:22:53.297 E/DropBoxUtil(14916): 	at android.os.Looper.loop(Looper.java:223)
+06-30 06:22:53.297 E/DropBoxUtil(14916): 	at android.os.HandlerThread.run(HandlerThread.java:67)
+06-30 06:22:53.306 I/vendor.qti.hardware.servicetracker@1.2-service(  793): destroyService is called for service : com.google.android.gms/.stats.service.DropBoxEntryAddedService
+06-30 06:22:53.308 I/DropBoxUtil(14916): (REDACTED) Reading dropbox entry with tag %s and timestamp %d
+06-30 06:22:53.312 E/DropBoxUtil(14916): [AppErrors] null InputStream [CONTEXT service_id=254 ]
+06-30 06:22:53.312 E/DropBoxUtil(14916): java.io.IOException: null InputStream
+06-30 06:22:53.312 E/DropBoxUtil(14916): 	at emum.c(:com.google.android.gms@262334022@26.23.34 (150400-933906539):183)
+06-30 06:22:53.312 E/DropBoxUtil(14916): 	at emsu.l(:com.google.android.gms@262334022@26.23.34 (150400-933906539):4)
+06-30 06:22:53.312 E/DropBoxUtil(14916): 	at emsi.apply(:com.google.android.gms@262334022@26.23.34 (150400-933906539):39)
+06-30 06:22:53.312 E/DropBoxUtil(14916): 	at aenc.apply(:com.google.android.gms@262334022@26.23.34 (150400-933906539):5)
+06-30 06:22:53.312 E/DropBoxUtil(14916): 	at aeno.apply(:com.google.android.gms@262334022@26.23.34 (150400-933906539):45)
+06-30 06:22:53.312 E/DropBoxUtil(14916): 	at fkmy.a(:com.google.android.gms@262334022@26.23.34 (150400-933906539):3)
+06-30 06:22:53.312 E/DropBoxUtil(14916): 	at fwvo.a(:com.google.android.gms@262334022@26.23.34 (150400-933906539):17)
+06-30 06:22:53.312 E/DropBoxUtil(14916): 	at gfiv.d(:com.google.android.gms@262334022@26.23.34 (150400-933906539):3)
+06-30 06:22:53.312 E/DropBoxUtil(14916): 	at gfix.run(:com.google.android.gms@262334022@26.23.34 (150400-933906539):47)
+06-30 06:22:53.312 E/DropBoxUtil(14916): 	at gfkk.execute(:com.google.android.gms@262334022@26.23.34 (150400-933906539):1)
+06-30 06:22:53.312 E/DropBoxUtil(14916): 	at gfik.f(:com.google.android.gms@262334022@26.23.34 (150400-933906539):1)
+06-30 06:22:53.312 E/DropBoxUtil(14916): 	at gfik.m(:com.google.android.gms@262334022@26.23.34 (150400-933906539):101)
+06-30 06:22:53.312 E/DropBoxUtil(14916): 	at gfik.s(:com.google.android.gms@262334022@26.23.34 (150400-933906539):28)
+06-30 06:22:53.312 E/DropBoxUtil(14916): 	at gfiv.e(:com.google.android.gms@262334022@26.23.34 (150400-933906539):3)
+06-30 06:22:53.312 E/DropBoxUtil(14916): 	at gfix.run(:com.google.android.gms@262334022@26.23.34 (150400-933906539):53)
+06-30 06:22:53.312 E/DropBoxUtil(14916): 	at gfkk.execute(:com.google.android.gms@262334022@26.23.34 (150400-933906539):1)
+06-30 06:22:53.312 E/DropBoxUtil(14916): 	at gfik.f(:com.google.android.gms@262334022@26.23.34 (150400-933906539):1)
+06-30 06:22:53.312 E/DropBoxUtil(14916): 	at gfik.m(:com.google.android.gms@262334022@26.23.34 (150400-933906539):101)
+06-30 06:22:53.312 E/DropBoxUtil(14916): 	at gfik.s(:com.google.android.gms@262334022@26.23.34 (150400-933906539):28)
+06-30 06:22:53.312 E/DropBoxUtil(14916): 	at gflg.run(:com.google.android.gms@262334022@26.23.34 (150400-933906539):5)
+06-30 06:22:53.312 E/DropBoxUtil(14916): 	at gfkk.execute(:com.google.android.gms@262334022@26.23.34 (150400-933906539):1)
+06-30 06:22:53.312 E/DropBoxUtil(14916): 	at gfik.f(:com.google.android.gms@262334022@26.23.34 (150400-933906539):1)
+06-30 06:22:53.312 E/DropBoxUtil(14916): 	at gfik.m(:com.google.android.gms@262334022@26.23.34 (150400-933906539):101)
+06-30 06:22:53.312 E/DropBoxUtil(14916): 	at gfik.s(:com.google.android.gms@262334022@26.23.34 (150400-933906539):28)
+06-30 06:22:53.312 E/DropBoxUtil(14916): 	at gflg.run(:com.google.android.gms@262334022@26.23.34 (150400-933906539):5)
+06-30 06:22:53.312 E/DropBoxUtil(14916): 	at gfkk.execute(:com.google.android.gms@262334022@26.23.34 (150400-933906539):1)
+06-30 06:22:53.312 E/DropBoxUtil(14916): 	at gfik.f(:com.google.android.gms@262334022@26.23.34 (150400-933906539):1)
+06-30 06:22:53.312 E/DropBoxUtil(14916): 	at gfik.m(:com.google.android.gms@262334022@26.23.34 (150400-933906539):101)
+06-30 06:22:53.312 E/DropBoxUtil(14916): 	at gfik.s(:com.google.android.gms@262334022@26.23.34 (150400-933906539):28)
+06-30 06:22:53.312 E/DropBoxUtil(14916): 	at gfmv.e(:com.google.android.gms@262334022@26.23.34 (150400-933906539):5)
+06-30 06:22:53.312 E/DropBoxUtil(14916): 	at gflw.run(:com.google.android.gms@262334022@26.23.34 (150400-933906539):73)
+06-30 06:22:53.312 E/DropBoxUtil(14916): 	at gfmx.run(:com.google.android.gms@262334022@26.23.34 (150400-933906539):5)
+06-30 06:22:53.312 E/DropBoxUtil(14916): 	at gfkt.run(:com.google.android.gms@262334022@26.23.34 (150400-933906539):20)
+06-30 06:22:53.312 E/DropBoxUtil(14916): 	at gfmn.run(:com.google.android.gms@262334022@26.23.34 (150400-933906539):64)
+06-30 06:22:53.312 E/DropBoxUtil(14916): 	at bhha.c(:com.google.android.gms@262334022@26.23.34 (150400-933906539):50)
+06-30 06:22:53.312 E/DropBoxUtil(14916): 	at bhha.run(:com.google.android.gms@262334022@26.23.34 (150400-933906539):66)
+06-30 06:22:53.312 E/DropBoxUtil(14916): 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1167)
+06-30 06:22:53.312 E/DropBoxUtil(14916): 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:641)
+06-30 06:22:53.312 E/DropBoxUtil(14916): 	at bhms.run(:com.google.android.gms@262334022@26.23.34 (150400-933906539):8)
+06-30 06:22:53.312 E/DropBoxUtil(14916): 	at java.lang.Thread.run(Thread.java:923)
+06-30 06:22:54.198 I/vendor.qti.hardware.servicetracker@1.2-service(  793): bindService is called for service : com.google.android.gms/.chimera.PersistentDirectBootAwareApiService and for client com.google.android.apps.messaging
+06-30 06:22:54.198 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for service : com.google.android.gms/.chimera.PersistentDirectBootAwareApiServiceare :19
+06-30 06:22:54.198 I/vendor.qti.hardware.servicetracker@1.2-service(  793): total connections for client : com.google.android.apps.messagingare :1
+06-30 06:22:54.790 D/BatteryService( 1184): /data/anr/adb_enable file.exists() =  false  mPlugType==2
+06-30 06:22:54.795 D/BatteryController( 2170): onReceive ACTION_BATTERY_CHANGED eLevel = 71; eScale = 100; mLevel = 71; mPluggedIn = true; mCharged = false; mCharging = true
+06-30 06:22:54.796 D/BatteryMeterView( 2170): onBatteryLevelChanged level = 71; pluggedIn = true; charging = true; mLevel = 71
+06-30 06:22:54.799 I/chatty  ( 2170): uid=1000(system) com.android.systemui identical 1 line
+06-30 06:22:54.800 D/BatteryMeterView( 2170): onBatteryLevelChanged level = 71; pluggedIn = true; charging = true; mLevel = 71
+06-30 06:22:54.802 D/KeyguardUpdateMonitor( 2170): received broadcast android.intent.action.BATTERY_CHANGED
+06-30 06:22:54.804 D/DeviceStatisticsService( 2499): chargerType=2 batteryLevel=71 totalBatteryCapacity=4447000
+06-30 06:22:54.804 D/DeviceInfoHidlClient( 2499): isPowerInfoNeverSent()=true
+06-30 06:22:54.823 D/KeyguardUpdateMonitor( 2170): handleBatteryUpdate
+06-30 06:22:54.850 E/qdmetadata(  741): paramType 2048 not supported
