@@ -62,6 +62,7 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
                         testServer?.close()
                         testServer = null
                         android.util.Log.d("NativeVpnLifecycle", "testServer successfully closed.")
+                        delay(100) // Ensure OS cleans up socket/goroutine
                     } catch (e: Exception) {
                         android.util.Log.e("NativeVpnLifecycle", "Error closing testServer: ${e.message}")
                         e.printStackTrace()
@@ -101,11 +102,10 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
                 return@withContext
             }
 
-            if (!isTestRunning.compareAndSet(false, true)) {
-                 println("❌ [Native] Cannot start Test Proxy: Another test is already running")
-                 result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-2) } }
-                 return@withContext
-            }
+            // Forcefully cancel any ongoing test to prevent queuing and await its termination
+            closeTestServer()
+            isTestRunning.set(true)
+
 
             try {
                 // STRICT VALIDATION
@@ -219,10 +219,10 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
                 result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
                 return@withContext
             }
-            if (!isTestRunning.compareAndSet(false, true)) {
-                result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
-                return@withContext
-            }
+            // Forcefully cancel any ongoing test and await its termination
+            closeTestServer()
+            isTestRunning.set(true)
+
 
             try {
                 // STRICT VALIDATION
@@ -343,21 +343,23 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
     private fun startVpn(rawInput: String) {
         if (isVpnRunning.get()) return
 
-        if (isTestRunning.get()) {
-             // test server close handled normally
-             isTestRunning.set(false)
-        }
-
         isVpnRunning.set(true)
         createNotificationChannel()
         startForeground(VPN_NOTIFICATION_ID, createNotification())
 
         serviceScope.launch {
             try {
+                // Wait for any running test to finish closing before starting main VPN
+                closeTestServer()
+                isTestRunning.set(false)
+
                 // STRICT VALIDATION
                 val configJson: String
                 try {
                     configJson = getValidJsonConfig(rawInput)
+                    if (configJson.isNullOrBlank()) {
+                         throw IllegalArgumentException("Config string is null or empty")
+                    }
                 } catch (e: Exception) {
                     MainActivity.sendVpnStatus("ERROR: CONFIG_ERROR - ${e.message}")
                     stopVpn()
