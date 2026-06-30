@@ -180,8 +180,12 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
                 }
 
                 try {
-                    server.startOrReloadService(testConfigStr, null)
+                    server?.startOrReloadService(testConfigStr, null)
+                    testMutex.withLock {
+                        testServer = server
+                    }
                 } catch (e: Exception) {
+                    server?.close()
                     e.printStackTrace()
                     result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
                     return@withContext
