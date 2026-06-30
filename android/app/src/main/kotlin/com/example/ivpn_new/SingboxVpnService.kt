@@ -52,6 +52,23 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
         val isVpnRunning = AtomicBoolean(false)
         private val isTestRunning = AtomicBoolean(false)
         private val testMutex = Mutex()
+        private var testServer: io.nekohasekai.libbox.CommandServer? = null
+
+        private suspend fun closeTestServer() {
+            testMutex.withLock {
+                if (testServer != null) {
+                    try {
+                        android.util.Log.d("NativeVpnLifecycle", "Closing existing testServer...")
+                        testServer?.close()
+                        testServer = null
+                        android.util.Log.d("NativeVpnLifecycle", "testServer successfully closed.")
+                    } catch (e: Exception) {
+                        android.util.Log.e("NativeVpnLifecycle", "Error closing testServer: ${e.message}")
+                        e.printStackTrace()
+                    }
+                }
+            }
+        }
 
         private fun getValidJsonConfig(input: String): String {
             val trimmed = input.trim()
@@ -184,7 +201,7 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
         suspend fun stopTestProxy() = withContext(Dispatchers.IO) {
             if (isTestRunning.get()) {
                 try {
-                    // stop test proxy
+                    closeTestServer()
                 } catch (e: Exception) {
                     e.printStackTrace()
                 } finally {
@@ -236,8 +253,10 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
                 val testConfigFile = File(tempDir, "test_${System.currentTimeMillis()}.json")
                 testConfigFile.writeText(json.toString())
 
+                closeTestServer()
+
                 // SAFE CALL - pass JSON content string
-                val testServer = try {
+                val newTestServer = try {
                     val options = io.nekohasekai.libbox.SetupOptions()
                     options.setBasePath(tempDir.absolutePath)
                     options.setWorkingPath(tempDir.absolutePath)
@@ -246,15 +265,23 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
                     Libbox.newCommandServer(StubCommandServerHandler(), StubPlatformInterface())
                 } catch (e: Exception) {
                     e.printStackTrace()
+                    MainActivity.sendVpnStatus("ERROR: TEST_START_FAILED - ${e.message}")
                     result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
+                    isTestRunning.set(false)
                     return@withContext
                 }
 
                 try {
-                    testServer.startOrReloadService(json.toString(), null)
+                    newTestServer?.startOrReloadService(json.toString(), null)
+                    testMutex.withLock {
+                        testServer = newTestServer
+                    }
                 } catch (e: Exception) {
+                    newTestServer?.close()
                     e.printStackTrace()
+                    MainActivity.sendVpnStatus("ERROR: TEST_START_FAILED - ${e.message}")
                     result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
+                    isTestRunning.set(false)
                     return@withContext
                 }
                 delay(500)
@@ -376,6 +403,7 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
                     mainServer?.startOrReloadService(jsonObject.toString(), null)
                 } catch (e: Exception) {
                     e.printStackTrace()
+                    android.util.Log.e("NativeVpnLifecycle", "StartOrReloadService Error: ${e.message}")
                     MainActivity.sendVpnStatus("ERROR: START_FAILED - ${e.message}")
                     stopVpn()
                     return@launch
@@ -396,6 +424,7 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
     private fun stopVpn() {
         if (!isVpnRunning.get()) return
         isVpnRunning.set(false)
+        android.util.Log.d("NativeVpnLifecycle", "stopVpn called")
 
         try {
             mainServer?.close()
@@ -407,8 +436,9 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
 
             // CRITICAL FIX: Broadcast "DISCONNECTED" State to Dart
             MainActivity.sendVpnStatus("DISCONNECTED")
-
+            android.util.Log.d("NativeVpnLifecycle", "stopVpn completed successfully")
         } catch (e: Exception) {
+            android.util.Log.e("NativeVpnLifecycle", "stopVpn error: ${e.message}")
             e.printStackTrace()
         }
     }
@@ -443,8 +473,12 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
 
     override fun onDestroy() {
         super.onDestroy()
+        android.util.Log.d("NativeVpnLifecycle", "onDestroy called")
         stopVpn()
-        serviceScope.cancel()
+        serviceScope.launch {
+            closeTestServer()
+            serviceScope.cancel()
+        }
     }
 }
 

@@ -37,12 +37,13 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
 
-    _progressController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 4), // Fallback visual duration
-    )..addListener(() {
-        setState(() {});
-      });
+    _progressController =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(seconds: 4), // Fallback visual duration
+        )..addListener(() {
+          setState(() {});
+        });
 
     // Start progress animation
     _progressController.forward();
@@ -101,7 +102,8 @@ class _SplashScreenState extends State<SplashScreen>
           configManager.validatedConfigs.isNotEmpty) {
         skipWait = true;
         AdvancedLogger.info(
-            "[Splash] Optimistic Startup enabled. Bypassing funnel wait.");
+          "[Splash] Optimistic Startup enabled. Bypassing funnel wait.",
+        );
         configManager.connectWithSmartFailover();
       }
 

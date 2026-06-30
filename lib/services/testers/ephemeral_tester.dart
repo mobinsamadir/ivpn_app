@@ -145,30 +145,32 @@ class EphemeralTester {
       int p,
     ) {} // Not needed here anymore, runTestInternal handles port
 
-    _runTestInternal(config, mode, setProcess, setPort).then((result) {
-      if (!isCompleted) {
-        isCompleted = true;
-        timer.cancel();
-        if (!completer.isCompleted) completer.complete(result);
-      }
-    }).catchError((e) {
-      if (!isCompleted) {
-        isCompleted = true;
-        timer.cancel();
-        if (!completer.isCompleted) {
-          completer.complete(
-            config.copyWith(
-              funnelStage: 0,
-              failureReason: "Test Error: $e",
-              lastFailedStage: "Error",
-              failureCount: config.failureCount + 1,
-              lastTestedAt: DateTime.now(),
-              ping: -1,
-            ),
-          );
-        }
-      }
-    });
+    _runTestInternal(config, mode, setProcess, setPort)
+        .then((result) {
+          if (!isCompleted) {
+            isCompleted = true;
+            timer.cancel();
+            if (!completer.isCompleted) completer.complete(result);
+          }
+        })
+        .catchError((e) {
+          if (!isCompleted) {
+            isCompleted = true;
+            timer.cancel();
+            if (!completer.isCompleted) {
+              completer.complete(
+                config.copyWith(
+                  funnelStage: 0,
+                  failureReason: "Test Error: $e",
+                  lastFailedStage: "Error",
+                  failureCount: config.failureCount + 1,
+                  lastTestedAt: DateTime.now(),
+                  ping: -1,
+                ),
+              );
+            }
+          }
+        });
 
     return completer.future;
   }
@@ -290,8 +292,9 @@ class EphemeralTester {
               final req = await client.getUrl(
                 Uri.parse('https://www.google.com/generate_204'),
               );
-              final resp =
-                  await req.close().timeout(const Duration(seconds: 5));
+              final resp = await req.close().timeout(
+                const Duration(seconds: 5),
+              );
               sw.stop();
 
               AdvancedLogger.warn(
@@ -311,7 +314,8 @@ class EphemeralTester {
                   (e.toString().contains('HandshakeException') ||
                       e.toString().contains('SocketException'))) {
                 AdvancedLogger.warn(
-                    '[TESTER] HTTP Handshake failed, retrying in 1s... $e');
+                  '[TESTER] HTTP Handshake failed, retrying in 1s... $e',
+                );
                 await Future.delayed(const Duration(seconds: 1));
               } else {
                 AdvancedLogger.warn('[TESTER] HTTP Response Error: $e');
@@ -499,7 +503,9 @@ class EphemeralTester {
           }
         }
         if (!stage1Success) {
-          throw Exception("Local Proxy failed to start on port $port after $attempts attempts");
+          throw Exception(
+            "Local Proxy failed to start on port $port after $attempts attempts",
+          );
         }
 
         // STAGE 2 (HTTP) with Retry for HandshakeException
@@ -537,7 +543,8 @@ class EphemeralTester {
                 (e.toString().contains('HandshakeException') ||
                     e.toString().contains('SocketException'))) {
               AdvancedLogger.warn(
-                  '[TESTER] HTTP Handshake failed, retrying in 1s... $e');
+                '[TESTER] HTTP Handshake failed, retrying in 1s... $e',
+              );
               await Future.delayed(const Duration(seconds: 1));
             } else {
               AdvancedLogger.warn('[TESTER] HTTP Response Error: $e');

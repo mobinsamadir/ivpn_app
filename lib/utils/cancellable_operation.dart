@@ -8,15 +8,17 @@ class CancellableOperation<T> {
   bool _isCancelled = false;
 
   CancellableOperation(Future<T> future) {
-    future.then((value) {
-      if (!_isCancelled) {
-        _completer.complete(value);
-      }
-    }).catchError((error, stackTrace) {
-      if (!_isCancelled) {
-        _completer.completeError(error, stackTrace);
-      }
-    });
+    future
+        .then((value) {
+          if (!_isCancelled) {
+            _completer.complete(value);
+          }
+        })
+        .catchError((error, stackTrace) {
+          if (!_isCancelled) {
+            _completer.completeError(error, stackTrace);
+          }
+        });
   }
 
   Future<T> get value => _completer.future;
