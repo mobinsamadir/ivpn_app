@@ -46,7 +46,7 @@ class MainActivity : FlutterActivity() {
                 override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
                     eventSink = events
                     // Send current state if known (optional, but good practice)
-                    if (SingboxVpnService.isVpnRunning.get()) {
+                    if (SingboxVpnService.isVpnRunning) {
                          events?.success("CONNECTED")
                     } else {
                          events?.success("DISCONNECTED")

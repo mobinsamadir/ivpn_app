@@ -251,7 +251,7 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
                 val testConfigFile = File(tempDir, "test_${System.currentTimeMillis()}.json")
                 testConfigFile.writeText(json.toString())
 
-                closeTestServer()
+                closeTestServerUnlocked()
 
                 // SAFE CALL - pass JSON content string
                 val newTestServer = try {
@@ -271,9 +271,7 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
 
                 try {
                     newTestServer?.startOrReloadService(json.toString(), null)
-                    testMutex.withLock {
-                        testServer = newTestServer
-                    }
+                    testServer = newTestServer
                 } catch (e: Exception) {
                     newTestServer?.close()
                     e.printStackTrace()
