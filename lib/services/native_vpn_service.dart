@@ -208,12 +208,8 @@ class NativeVpnService {
 
       // We will explicitly push an ERROR event if we don't hear back within 15 seconds.
       Timer(const Duration(seconds: 15), () {
-        if (_lastStatus != "CONNECTED" && !_lastStatus.startsWith("ERROR")) {
-          AdvancedLogger.warn(
-            "Native layer timed out. Injecting synthetic ERROR event.",
-          );
-          _statusController.add("ERROR: NATIVE_TIMEOUT");
-        }
+        AdvancedLogger.warn("Native layer timed out. Injecting synthetic ERROR event.");
+        _statusController.add("ERROR: NATIVE_TIMEOUT");
       });
 
       AdvancedLogger.info(
