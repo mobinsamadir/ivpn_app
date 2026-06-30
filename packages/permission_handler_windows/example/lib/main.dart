@@ -3,24 +3,30 @@ import 'package:flutter/material.dart';
 import 'package:permission_handler_platform_interface/permission_handler_platform_interface.dart';
 
 void main() {
-  runApp(BaseflowPluginExample(
+  runApp(
+    BaseflowPluginExample(
       pluginName: 'Permission Handler',
       githubURL: 'https://github.com/Baseflow/flutter-permission-handler',
       pubDevURL: 'https://pub.dev/packages/permission_handler',
-      pages: [PermissionHandlerWidget.createPage()]));
+      pages: [PermissionHandlerWidget.createPage()],
+    ),
+  );
 }
 
 ///Defines the main theme color
 final MaterialColor themeMaterialColor =
     BaseflowPluginExample.createMaterialColor(
-        const Color.fromRGBO(48, 49, 60, 1));
+      const Color.fromRGBO(48, 49, 60, 1),
+    );
 
 /// A Flutter application demonstrating the functionality of this plugin
 class PermissionHandlerWidget extends StatefulWidget {
   /// Create a page containing the functionality of this plugin
   static ExamplePage createPage() {
     return ExamplePage(
-        Icons.location_on, (context) => PermissionHandlerWidget());
+      Icons.location_on,
+      (context) => PermissionHandlerWidget(),
+    );
   }
 
   @override
@@ -33,18 +39,19 @@ class _PermissionHandlerWidgetState extends State<PermissionHandlerWidget> {
   Widget build(BuildContext context) {
     return Center(
       child: ListView(
-          children: Permission.values
-              .where((permission) {
-                return permission != Permission.unknown &&
-                    permission != Permission.mediaLibrary &&
-                    permission != Permission.photos &&
-                    permission != Permission.photosAddOnly &&
-                    permission != Permission.reminders &&
-                    permission != Permission.appTrackingTransparency &&
-                    permission != Permission.criticalAlerts;
-              })
-              .map((permission) => PermissionWidget(permission))
-              .toList()),
+        children: Permission.values
+            .where((permission) {
+              return permission != Permission.unknown &&
+                  permission != Permission.mediaLibrary &&
+                  permission != Permission.photos &&
+                  permission != Permission.photosAddOnly &&
+                  permission != Permission.reminders &&
+                  permission != Permission.appTrackingTransparency &&
+                  permission != Permission.criticalAlerts;
+            })
+            .map((permission) => PermissionWidget(permission))
+            .toList(),
+      ),
     );
   }
 }
@@ -106,14 +113,14 @@ class _PermissionState extends State<PermissionWidget> {
       ),
       trailing: (_permission is PermissionWithService)
           ? IconButton(
-              icon: const Icon(
-                Icons.info,
-                color: Colors.white,
-              ),
+              icon: const Icon(Icons.info, color: Colors.white),
               onPressed: () {
                 checkServiceStatus(
-                    context, _permission as PermissionWithService);
-              })
+                  context,
+                  _permission as PermissionWithService,
+                );
+              },
+            )
           : null,
       onTap: () {
         requestPermission(_permission);
@@ -122,11 +129,16 @@ class _PermissionState extends State<PermissionWidget> {
   }
 
   void checkServiceStatus(
-      BuildContext context, PermissionWithService permission) async {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(
-          (await _permissionHandler.checkServiceStatus(permission)).toString()),
-    ));
+    BuildContext context,
+    PermissionWithService permission,
+  ) async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          (await _permissionHandler.checkServiceStatus(permission)).toString(),
+        ),
+      ),
+    );
   }
 
   Future<void> requestPermission(Permission permission) async {

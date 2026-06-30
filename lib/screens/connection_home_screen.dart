@@ -77,7 +77,6 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   int _consecutiveFailures = 0;
   DateTime? _lastAutoSwitchAttempt;
 
-
   // Auto-switch Variables
   int _highPingCounter = 0;
   static const int _consecutiveHighPingCount =
@@ -163,10 +162,14 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
           );
         });
 
-        if (status == 'DISCONNECTED' || status.contains('Administrator privileges required') || status.contains('Administrator')) {
-          if (status.contains('Administrator privileges required') || status.contains('Administrator')) {
+        if (status == 'DISCONNECTED' ||
+            status.contains('Administrator privileges required') ||
+            status.contains('Administrator')) {
+          if (status.contains('Administrator privileges required') ||
+              status.contains('Administrator')) {
             _isAdmin = false;
-            _configManager.userInitiatedDisconnect = true; // Stop auto-switching
+            _configManager.userInitiatedDisconnect =
+                true; // Stop auto-switching
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
@@ -183,9 +186,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
           });
           if (!_configManager.userInitiatedDisconnect &&
               !_configManager.isConnectionCancelled) {
-
             final now = DateTime.now();
-            if (_lastAutoSwitchAttempt != null && now.difference(_lastAutoSwitchAttempt!).inSeconds < 3) {
+            if (_lastAutoSwitchAttempt != null &&
+                now.difference(_lastAutoSwitchAttempt!).inSeconds < 3) {
               AdvancedLogger.warn("[HomeScreen] Auto-switch throttled.");
               return;
             }
@@ -193,12 +196,16 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
             _consecutiveFailures++;
 
             if (_consecutiveFailures > 5) {
-              AdvancedLogger.warn("[HomeScreen] Auto-switch stopped due to too many consecutive failures.");
+              AdvancedLogger.warn(
+                "[HomeScreen] Auto-switch stopped due to too many consecutive failures.",
+              );
               _configManager.userInitiatedDisconnect = true;
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('اتصال مکرراً قطع شد. سوییچ خودکار متوقف شد.'),
+                    content: Text(
+                      'اتصال مکرراً قطع شد. سوییچ خودکار متوقف شد.',
+                    ),
                     backgroundColor: Colors.orange,
                   ),
                 );
@@ -215,10 +222,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
 
                 Future.delayed(const Duration(seconds: 2), () {
                   if (mounted && !_configManager.userInitiatedDisconnect) {
-                     _skipServer();
+                    _skipServer();
                   }
                 });
-
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('هیچ کانفیگ معتبری یافت نشد')),
@@ -605,7 +611,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
       AdvancedLogger.info('[HomeScreen] Initialized successfully');
 
       // Start app sequence now that preferences are loaded
-      _initAppSequence();
+      await _initAppSequence();
     } catch (e) {
       AdvancedLogger.error('[HomeScreen] Initialization failed: $e');
     }
@@ -613,6 +619,15 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
 
   @override
   Widget build(BuildContext context) {
+    if (!_isInitialized) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF0A0A0A),
+        body: Center(
+          child: CircularProgressIndicator(color: Colors.blueAccent),
+        ),
+      );
+    }
+
     return Scaffold(
       resizeToAvoidBottomInset: false,
       backgroundColor: const Color(0xFF0A0A0A),
@@ -1283,7 +1298,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     final configManager = ConfigManager();
     final isConnected = configManager.isConnected;
     final status = configManager.connectionStatus.toLowerCase();
-    final isConnecting = status.contains('connecting') ||
+    final isConnecting =
+        status.contains('connecting') ||
         status.contains('finding') ||
         status.contains('preparing') ||
         status.contains('testing');
@@ -1342,27 +1358,28 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                           const Color(0xFF38EF7D),
                         ] // Green/Teal
                       : (isConnecting
-                          ? [
-                              const Color(0xFFF2994A),
-                              const Color(0xFFF2C94C),
-                            ] // Orange/Yellow
-                          : [
-                              const Color(0xFF4A5568),
-                              const Color(0xFF2D3748),
-                            ]), // Dark Grey
+                            ? [
+                                const Color(0xFFF2994A),
+                                const Color(0xFFF2C94C),
+                              ] // Orange/Yellow
+                            : [
+                                const Color(0xFF4A5568),
+                                const Color(0xFF2D3748),
+                              ]), // Dark Grey
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: (isConnected
-                            ? const Color(0xFF38EF7D)
-                            : (isConnecting
-                                ? const Color(0xFFF2994A)
-                                : Colors.black))
-                        .withValues(
-                      alpha: isConnected || isConnecting ? 0.5 : 0.3,
-                    ),
+                    color:
+                        (isConnected
+                                ? const Color(0xFF38EF7D)
+                                : (isConnecting
+                                      ? const Color(0xFFF2994A)
+                                      : Colors.black))
+                            .withValues(
+                              alpha: isConnected || isConnecting ? 0.5 : 0.3,
+                            ),
                     blurRadius: isConnected || isConnecting ? 25 : 15,
                     spreadRadius: isConnected || isConnecting ? 8 : 2,
                     offset: const Offset(0, 8),

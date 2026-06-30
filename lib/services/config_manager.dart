@@ -962,8 +962,20 @@ class ConfigManager extends ChangeNotifier {
 
           // Wait for CONNECTED state with strict 15-second timeout
           await nativeService.connectionStatusStream
-              .firstWhere((status) => status == 'CONNECTED')
-              .timeout(const Duration(seconds: 15));
+              .firstWhere(
+                (status) => status == 'CONNECTED' || status.startsWith('ERROR'),
+              )
+              .timeout(
+                const Duration(seconds: 15),
+                onTimeout: () {
+                  throw Exception('Timeout waiting for CONNECTED state');
+                },
+              )
+              .then((status) {
+                if (status.startsWith('ERROR')) {
+                  throw Exception('Native connection failed: $status');
+                }
+              });
 
           AdvancedLogger.info(
             "[ConfigManager] Native Connection Success: ${target.name}",
@@ -1040,8 +1052,20 @@ class ConfigManager extends ChangeNotifier {
 
       // Wait for CONNECTED state with strict 15-second timeout
       await nativeService.connectionStatusStream
-          .firstWhere((status) => status == 'CONNECTED')
-          .timeout(const Duration(seconds: 15));
+          .firstWhere(
+            (status) => status == 'CONNECTED' || status.startsWith('ERROR'),
+          )
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () {
+              throw Exception('Timeout waiting for CONNECTED state');
+            },
+          )
+          .then((status) {
+            if (status.startsWith('ERROR')) {
+              throw Exception('Native connection failed: $status');
+            }
+          });
 
       AdvancedLogger.info(
         '[ConfigManager] Manual Connection Success: ${target.name}',

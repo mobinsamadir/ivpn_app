@@ -40,8 +40,9 @@ class TimeWalletService extends ChangeNotifier {
       final client = HttpClient();
       client.connectionTimeout = const Duration(seconds: 5);
 
-      final request =
-          await client.getUrl(Uri.parse('https://google.com/generate_204'));
+      final request = await client.getUrl(
+        Uri.parse('https://google.com/generate_204'),
+      );
       final response = await request.close();
 
       final dateHeader = response.headers.value('date');
@@ -50,13 +51,15 @@ class TimeWalletService extends ChangeNotifier {
         _sessionStopwatch.reset();
         _sessionStopwatch.start();
         AdvancedLogger.info(
-            "[TimeWallet] Network time synced: \$_networkTimeAtSync");
+          "[TimeWallet] Network time synced: \$_networkTimeAtSync",
+        );
       } else {
         throw Exception("Missing Date header");
       }
     } catch (e) {
       AdvancedLogger.warn(
-          "[TimeWallet] Failed to fetch network time: \$e. Falling back to local clock.");
+        "[TimeWallet] Failed to fetch network time: \$e. Falling back to local clock.",
+      );
       _networkTimeAtSync = DateTime.now().toUtc();
       _sessionStopwatch.reset();
       _sessionStopwatch.start();
@@ -102,7 +105,8 @@ class TimeWalletService extends ChangeNotifier {
     await prefs.setInt(_storageKey, _expireTimestampMs);
 
     AdvancedLogger.info(
-        "[TimeWallet] Time rewarded. New expiry: \${DateTime.fromMillisecondsSinceEpoch(_expireTimestampMs)}");
+      "[TimeWallet] Time rewarded. New expiry: \${DateTime.fromMillisecondsSinceEpoch(_expireTimestampMs)}",
+    );
     notifyListeners();
   }
 

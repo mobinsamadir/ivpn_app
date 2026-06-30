@@ -488,7 +488,7 @@ class SingboxConfigGenerator {
         "padding": true,
         "protocol": "h2mux",
         "max_connections": 4,
-        "min_streams": 2
+        "min_streams": 2,
       };
       proxyOutbound["tcp_fast_open"] = true;
     }

@@ -66,7 +66,8 @@ class NativeVpnService {
           // 2. Smart Filter: Only update UI for valid status changes to prevent UI jank
           // Known statuses: CONNECTED, CONNECTING, DISCONNECTED, RECONNECTING
           // Errors start with ERROR
-          bool isStatus = [
+          bool isStatus =
+              [
                 "CONNECTED",
                 "CONNECTING",
                 "DISCONNECTED",
@@ -118,8 +119,9 @@ class NativeVpnService {
       return -1; // Handled by EphemeralTester directly on Windows
 
     // 1. Diagnostic Log (First 10 chars)
-    final String start =
-        configJson.length > 10 ? configJson.substring(0, 10) : configJson;
+    final String start = configJson.length > 10
+        ? configJson.substring(0, 10)
+        : configJson;
     AdvancedLogger.warn("[DEBUG-INTERNAL] Config start: $start");
 
     // 2. Validate Format
@@ -174,8 +176,9 @@ class NativeVpnService {
       AdvancedLogger.warn("[CORE-INPUT-JSON] $configJson");
 
       // 1. Diagnostic Log (First 10 chars)
-      final String start =
-          configJson.length > 10 ? configJson.substring(0, 10) : configJson;
+      final String start = configJson.length > 10
+          ? configJson.substring(0, 10)
+          : configJson;
       AdvancedLogger.warn("[DEBUG-INTERNAL] Config start: $start");
 
       // 2. Validate Format
@@ -193,20 +196,24 @@ class NativeVpnService {
       //    AdvancedLogger.info("DEBUG_CONFIG: $configJson");
       // }
       await _methodChannel
-          .invokeMethod('startVpn', {'config': configJson}).timeout(
-        const Duration(seconds: 15),
-        onTimeout: () {
-          throw TimeoutException(
-            "Native VPN connection attempt timed out.",
+          .invokeMethod('startVpn', {'config': configJson})
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () {
+              throw TimeoutException(
+                "Native VPN connection attempt timed out.",
+              );
+            },
           );
-        },
-      );
 
-      // Start a fallback timer just in case the OS never sends CONNECTED or ERROR
-      Timer(const Duration(seconds: 20), () {
-        // We cannot reliably check if it's still 'connecting' purely from here without state,
-        // but adding this ensures if the methodChannel returns but eventChannel hangs, we can poke the UI.
-        // Actually, let ConfigManager handle the global timeout as it tracks state.
+      // We will explicitly push an ERROR event if we don't hear back within 15 seconds.
+      Timer(const Duration(seconds: 15), () {
+        if (_lastStatus != "CONNECTED" && !_lastStatus.startsWith("ERROR")) {
+          AdvancedLogger.warn(
+            "Native layer timed out. Injecting synthetic ERROR event.",
+          );
+          _statusController.add("ERROR: NATIVE_TIMEOUT");
+        }
       });
 
       AdvancedLogger.info(
