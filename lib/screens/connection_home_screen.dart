@@ -70,6 +70,17 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   // Connection Control
   // CRITICAL FIX: Debounce Auto-Switch
   bool _isSwitching = false;
+  // Native Operation check
+  bool get _isNativeOperationInProgress {
+    final status = _configManager.connectionStatus.toLowerCase();
+    return status.contains('connecting') ||
+        status.contains('disconnecting') ||
+        status.contains('testing') ||
+        _activeTestIds.isNotEmpty ||
+        _isFetching ||
+        _isSwitching;
+  }
+
   String _lastNativeStatus = "DISCONNECTED";
   bool _isAdmin = true;
 
@@ -1043,73 +1054,89 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   // --- LOGIC METHODS ---
 
   Future<void> _handleConnection() async {
-    if (_configManager.isConnected ||
-        _configManager.connectionStatus.toLowerCase().contains('connecting')) {
-      await _configManager.stopAllOperations();
-      return;
-    }
+    if (_isNativeOperationInProgress) return;
 
-    // Network Check
-    if (!await _connectivityService.hasInternet()) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No internet connection'),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
-      return;
-    }
-
-    // Admin Check removed here as we now show a banner instead.
-    // If the user tries to connect without admin, it might fail (or work partially), but we don't block it.
-
-    _configManager.setConnected(false, status: 'Connecting...');
-
-    // Access Check
-    final access = _timeWalletService;
-    if (!access.hasTime) {
-      await _showAdSequence();
-      if (!access.hasTime) return;
-    }
-
-    if (_configManager.allConfigs.isEmpty) {
-      _showToast("No configurations available. Please refresh.");
-      return;
-    }
-
-    // 1. SMART WAIT LOOP
-    // If we have no valid configs yet, wait for the Funnel
-    if (_configManager.validatedConfigs.isEmpty) {
-      setState(
-        () => _configManager.setConnected(false, status: 'Testing servers...'),
-      );
-
-      // Start Funnel if not running
-      _funnelService.startFunnel(retestDead: false); // Prioritize fresh ones
-
-      int waits = 0;
-      while (_configManager.validatedConfigs.isEmpty &&
-          waits < 15 &&
-          !_configManager.isConnectionCancelled) {
-        await Future.delayed(const Duration(seconds: 1));
-        waits++;
-      }
-
-      if (_configManager.isConnectionCancelled) return;
-
-      if (_configManager.validatedConfigs.isEmpty) {
-        _showToast("No accessible servers found. Please update list.");
-        _configManager.setConnected(false, status: 'Failed');
+    try {
+      if (_configManager.isConnected ||
+          _configManager.connectionStatus
+              .toLowerCase()
+              .contains('connecting')) {
+        await _configManager.stopAllOperations();
         return;
       }
-    }
 
-    // 2. Delegate to Service (Smart Failover)
-    await _configManager.connectWithSmartFailover();
+      // Network Check
+      if (!await _connectivityService.hasInternet()) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No internet connection'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+        return;
+      }
+
+      _configManager.setConnected(false, status: 'Connecting...');
+
+      // Access Check
+      final access = _timeWalletService;
+      if (!access.hasTime) {
+        await _showAdSequence();
+        if (!access.hasTime) {
+          _configManager.setConnected(false, status: 'Disconnected');
+          return;
+        }
+      }
+
+      if (_configManager.allConfigs.isEmpty) {
+        _showToast("No configurations available. Please refresh.");
+        _configManager.setConnected(false, status: 'Disconnected');
+        return;
+      }
+
+      // 1. SMART WAIT LOOP
+      // If we have no valid configs yet, wait for the Funnel
+      if (_configManager.validatedConfigs.isEmpty) {
+        setState(
+          () =>
+              _configManager.setConnected(false, status: 'Testing servers...'),
+        );
+
+        // Start Funnel if not running
+        _funnelService.startFunnel(retestDead: false); // Prioritize fresh ones
+
+        int waits = 0;
+        while (_configManager.validatedConfigs.isEmpty &&
+            waits < 15 &&
+            !_configManager.isConnectionCancelled) {
+          await Future.delayed(const Duration(seconds: 1));
+          waits++;
+        }
+
+        if (_configManager.isConnectionCancelled) {
+          _configManager.setConnected(false, status: 'Disconnected');
+          return;
+        }
+
+        if (_configManager.validatedConfigs.isEmpty) {
+          _showToast("No accessible servers found. Please update list.");
+          _configManager.setConnected(false, status: 'Failed');
+          return;
+        }
+      }
+
+      // 2. Delegate to Service (Smart Failover)
+      await _configManager.connectWithSmartFailover();
+    } catch (e) {
+      AdvancedLogger.error('Connection failed: $e');
+      _configManager.setConnected(false, status: 'Failed');
+      _showToast('Connection failed. Please try again.');
+    }
   }
 
   Future<void> _runSingleTest(VpnConfigWithMetrics config) async {
+    if (_isNativeOperationInProgress) return;
     try {
       if (mounted) setState(() => _activeTestIds.add(config.id));
       _showToast('Testing ${config.name}...');
@@ -1125,6 +1152,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
 
   Future<void> _refreshConfigsManual() async {
     if (!mounted) return;
+    if (_isNativeOperationInProgress) return;
     _showToast('Refreshing configs...');
     setState(() {
       _isFetching = true;
@@ -1146,16 +1174,22 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   }
 
   Future<void> _skipServer() async {
-    if (_configManager.isConnected) {
-      await _nativeVpnService.disconnect();
-      // Short delay to allow native cleanup
-      await Future.delayed(const Duration(milliseconds: 500));
-    }
-    final success = await _configManager.skipToNext(
-      sourceList: _getCurrentList(),
-    );
-    if (!success) {
-      _showToast("No other valid servers available.");
+    if (_isNativeOperationInProgress) return;
+    try {
+      if (_configManager.isConnected) {
+        await _nativeVpnService.disconnect();
+        // Short delay to allow native cleanup
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
+      final success = await _configManager.skipToNext(
+        sourceList: _getCurrentList(),
+      );
+      if (!success) {
+        _showToast("No other valid servers available.");
+      }
+    } catch (e) {
+      AdvancedLogger.error('Skip failed: $e');
+      _configManager.setConnected(false, status: 'Failed');
     }
   }
 
@@ -1297,12 +1331,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   Widget _buildConnectButton() {
     final configManager = ConfigManager();
     final isConnected = configManager.isConnected;
-    final status = configManager.connectionStatus.toLowerCase();
-    final isConnecting =
-        status.contains('connecting') ||
-        status.contains('finding') ||
-        status.contains('preparing') ||
-        status.contains('testing');
+    final isConnecting = _isNativeOperationInProgress;
 
     return Stack(
       alignment: Alignment.center,
@@ -1358,28 +1387,27 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                           const Color(0xFF38EF7D),
                         ] // Green/Teal
                       : (isConnecting
-                            ? [
-                                const Color(0xFFF2994A),
-                                const Color(0xFFF2C94C),
-                              ] // Orange/Yellow
-                            : [
-                                const Color(0xFF4A5568),
-                                const Color(0xFF2D3748),
-                              ]), // Dark Grey
+                          ? [
+                              const Color(0xFFF2994A),
+                              const Color(0xFFF2C94C),
+                            ] // Orange/Yellow
+                          : [
+                              const Color(0xFF4A5568),
+                              const Color(0xFF2D3748),
+                            ]), // Dark Grey
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color:
-                        (isConnected
-                                ? const Color(0xFF38EF7D)
-                                : (isConnecting
-                                      ? const Color(0xFFF2994A)
-                                      : Colors.black))
-                            .withValues(
-                              alpha: isConnected || isConnecting ? 0.5 : 0.3,
-                            ),
+                    color: (isConnected
+                            ? const Color(0xFF38EF7D)
+                            : (isConnecting
+                                ? const Color(0xFFF2994A)
+                                : Colors.black))
+                        .withValues(
+                      alpha: isConnected || isConnecting ? 0.5 : 0.3,
+                    ),
                     blurRadius: isConnected || isConnecting ? 25 : 15,
                     spreadRadius: isConnected || isConnecting ? 8 : 2,
                     offset: const Offset(0, 8),
