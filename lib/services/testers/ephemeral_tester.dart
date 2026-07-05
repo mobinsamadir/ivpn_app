@@ -67,8 +67,8 @@ class EphemeralTester {
   // Limit Windows concurrent processes to prevent UI freeze and port collision
   static final Semaphore _windowsSemaphore = Semaphore(2);
 
-  // Android Concurrency = 3 (Safe for Modern Devices)
-  static final Semaphore _androidSemaphore = Semaphore(3);
+  // Android Concurrency = 1 (Prevents libbox crash due to concurrent native calls)
+  static final Semaphore _androidSemaphore = Semaphore(1);
 
   // Track active processes to kill on exit
   static final List<Process> _activeProcesses = [];
@@ -246,6 +246,9 @@ class EphemeralTester {
         });
 
         // Start Proxy
+        // CRITICAL: Prevent hitting the Go libbox runtime too fast across sequential tests
+        await Future.delayed(const Duration(milliseconds: 500));
+
         try {
           proxyPort = await nativeService.startTestProxy(jsonConfig);
         } catch (e) {
