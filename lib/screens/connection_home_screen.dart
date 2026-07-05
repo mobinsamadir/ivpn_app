@@ -88,7 +88,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   int _consecutiveFailures = 0;
   DateTime? _lastAutoSwitchAttempt;
   
-  // NEW: Auto-switch throttle and limits
+  
 
   // Auto-switch Variables
   int _highPingCounter = 0;
