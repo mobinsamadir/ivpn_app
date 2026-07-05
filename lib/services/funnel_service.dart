@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import '../models/vpn_config_with_metrics.dart';
 import 'config_manager.dart'; // Correct relative import (same folder)
@@ -7,72 +8,18 @@ import 'singbox_config_generator.dart';
 import 'testers/ephemeral_tester.dart';
 import '../utils/advanced_logger.dart';
 
-// Top-level function for priority queue building in isolate
-List<VpnConfigWithMetrics> _buildQueueInIsolate(Map<String, dynamic> args) {
-  final List<VpnConfigWithMetrics> allConfigs =
-      args['configs'] as List<VpnConfigWithMetrics>;
-  final bool retestDead = args['retestDead'] as bool;
-
-  // Priority order: Favorites > Validated (funnelStage > 0) > Fresh/Untested > Soft Fail > Dead
-  final favorites = <VpnConfigWithMetrics>[];
-  final validated = <VpnConfigWithMetrics>[];
-  final fresh = <VpnConfigWithMetrics>[];
-  final softFail = <VpnConfigWithMetrics>[];
-  final dead = <VpnConfigWithMetrics>[];
-
-  final now = DateTime.now();
-
-  for (final c in allConfigs) {
-    // Constraint 1: Time-Bound Smart Caching (TTL Logic)
-    // If we are auto-running (retestDead = false) and the config was tested < 2 hours ago, skip entirely.
-    if (!retestDead && c.lastTestedAt != null) {
-      final hoursSinceTested = now.difference(c.lastTestedAt!).inHours;
-      if (hoursSinceTested < 2) {
-        continue;
-      }
-    }
-
-    if (c.isFavorite) {
-      favorites.add(c);
-    } else if (c.isValidated || c.funnelStage > 0) {
-      validated.add(c);
-    } else if (c.funnelStage == 0 && c.failureCount == 0) {
-      fresh.add(c);
-    } else if (c.failureCount < 3) {
-      softFail.add(c);
-    } else {
-      dead.add(c);
-    }
-  }
-
-  // Sort groups internally by score (best first)
-  int compareScore(VpnConfigWithMetrics a, VpnConfigWithMetrics b) {
-    return b.calculatedScore.compareTo(a.calculatedScore);
-  }
-
-  favorites.sort(compareScore);
-  validated.sort(compareScore);
-
-  final queue = [...favorites, ...validated, ...fresh, ...softFail];
-  if (retestDead) {
-    queue.addAll(dead);
-  }
-
-  return queue;
-}
-
 // Top-level function for batch processing in Isolate
 Map<String, Map<String, dynamic>> batchProcessConfigsInIsolate(
-  List<VpnConfigWithMetrics> configs,
+  List<Map<String, String>> configs,
 ) {
   final Map<String, Map<String, dynamic>> results = {};
   for (final config in configs) {
     try {
       final details = SingboxConfigGenerator.extractServerDetails(
-        config.rawConfig,
+        config['rawConfig']!,
       );
       if (details != null && details['host'] != null) {
-        results[config.id] = details;
+        results[config['id']!] = details;
       }
     } catch (e) {
       // Silently ignore malformed configs to prevent batch crash
@@ -102,11 +49,23 @@ class FunnelService {
   int _activeHttpWorkers = 0;
   int _activeSpeedWorkers = 0;
 
+  static int _getDynamicWorkerCount(int maxAllowed) {
+    try {
+      final cores = Platform.numberOfProcessors;
+      // Use at least 2 workers, but don't exceed maxAllowed or cores
+      return min(max(cores, 2), maxAllowed);
+    } catch (e) {
+      return 2; // Safe fallback
+    }
+  }
+
   // Limits
-  // Limits
-  static final int _maxTcpWorkers = Platform.isWindows ? 2 : 10;
-  static final int _maxHttpWorkers = Platform.isWindows ? 2 : 5;
-  static final int _maxSpeedWorkers = Platform.isWindows ? 1 : 2;
+
+  static int get _maxTcpWorkers =>
+      Platform.isWindows ? 2 : _getDynamicWorkerCount(6);
+  static int get _maxHttpWorkers =>
+      Platform.isWindows ? 2 : _getDynamicWorkerCount(3);
+  static int get _maxSpeedWorkers => 1;
 
   // State
   bool _isRunning = false;
@@ -164,12 +123,44 @@ class FunnelService {
 
     _progressController.add("Initializing Pipeline...");
 
-    // 1. Populate TCP Queue (Initial Feed)
-    // Offload to isolate
-    final all = await compute(_buildQueueInIsolate, {
-      'configs': _configManager.allConfigs,
-      'retestDead': retestDead,
-    });
+    // 1. Populate TCP Queue (Initial Feed) - Run locally to avoid isolate serialization overhead
+    final allConfigs = _configManager.allConfigs;
+    final favorites = <VpnConfigWithMetrics>[];
+    final validated = <VpnConfigWithMetrics>[];
+    final fresh = <VpnConfigWithMetrics>[];
+    final softFail = <VpnConfigWithMetrics>[];
+    final dead = <VpnConfigWithMetrics>[];
+    final now = DateTime.now();
+
+    for (final c in allConfigs) {
+      if (!retestDead && c.lastTestedAt != null) {
+        final hoursSinceTested = now.difference(c.lastTestedAt!).inHours;
+        if (hoursSinceTested < 2) continue;
+      }
+      if (c.isFavorite) {
+        favorites.add(c);
+      } else if (c.isValidated || c.funnelStage > 0) {
+        validated.add(c);
+      } else if (c.funnelStage == 0 && c.failureCount == 0) {
+        fresh.add(c);
+      } else if (c.failureCount < 3) {
+        softFail.add(c);
+      } else {
+        dead.add(c);
+      }
+    }
+
+    int compareScore(VpnConfigWithMetrics a, VpnConfigWithMetrics b) {
+      return b.calculatedScore.compareTo(a.calculatedScore);
+    }
+
+    favorites.sort(compareScore);
+    validated.sort(compareScore);
+
+    final all = [...favorites, ...validated, ...fresh, ...softFail];
+    if (retestDead) {
+      all.addAll(dead);
+    }
 
     _totalConfigs = all.length;
     _tcpQueue.addAll(all);
@@ -179,7 +170,21 @@ class FunnelService {
       AdvancedLogger.info(
         "FunnelService: Pre-processing $_totalConfigs configs in Isolate...",
       );
-      _cachedServerDetails = await compute(batchProcessConfigsInIsolate, all);
+
+      // Map to lightweight representation to avoid Isolate serialization overload
+      final lightweightConfigs = all
+          .map((c) => {'id': c.id, 'rawConfig': c.rawConfig})
+          .toList();
+
+      // Batch the processing to avoid huge object transfers
+      _cachedServerDetails = {};
+      final int batchSize = 200;
+      for (int i = 0; i < lightweightConfigs.length; i += batchSize) {
+        final chunk = lightweightConfigs.skip(i).take(batchSize).toList();
+        final chunkResults = await compute(batchProcessConfigsInIsolate, chunk);
+        _cachedServerDetails.addAll(chunkResults);
+      }
+
       AdvancedLogger.info(
         "FunnelService: Pre-processing complete. Cached ${_cachedServerDetails.length} valid details.",
       );
@@ -254,6 +259,8 @@ class FunnelService {
 
   Future<void> _tcpWorker() async {
     while (_isRunning && !_stopRequested) {
+      // Yield to event loop to prevent ANR/OOM on Android
+      await Future.delayed(const Duration(milliseconds: 50));
       VpnConfigWithMetrics? config;
 
       // Critical Section: Pop
@@ -310,7 +317,7 @@ class FunnelService {
       } catch (e) {
         _totalFailed++;
         debugPrint(
-          "[TELEMETRY] ${config?.name ?? 'Unknown'} | LastPassedStage: 0 | PingDuration: N/A | ExactException: $e",
+          "[TELEMETRY] ${config.name} | LastPassedStage: 0 | PingDuration: N/A | ExactException: $e",
         );
         AdvancedLogger.warn("TCP Worker Error: $e");
       } finally {
@@ -321,6 +328,8 @@ class FunnelService {
 
   Future<void> _httpWorker() async {
     while (_isRunning && !_stopRequested) {
+      // Yield to event loop to prevent ANR/OOM on Android
+      await Future.delayed(const Duration(milliseconds: 50));
       VpnConfigWithMetrics? config;
 
       if (_httpQueue.isNotEmpty) {
@@ -361,7 +370,7 @@ class FunnelService {
       } catch (e) {
         _totalFailed++;
         debugPrint(
-          "[TELEMETRY] ${config?.name ?? 'Unknown'} | LastPassedStage: 1 | PingDuration: N/A | ExactException: $e",
+          "[TELEMETRY] ${config.name} | LastPassedStage: 1 | PingDuration: N/A | ExactException: $e",
         );
         AdvancedLogger.warn("HTTP Worker Error: $e");
       } finally {
@@ -372,6 +381,8 @@ class FunnelService {
 
   Future<void> _speedWorker() async {
     while (_isRunning && !_stopRequested) {
+      // Yield to event loop to prevent ANR/OOM on Android
+      await Future.delayed(const Duration(milliseconds: 50));
       VpnConfigWithMetrics? config;
 
       if (_speedQueue.isNotEmpty) {

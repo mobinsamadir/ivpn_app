@@ -49,9 +49,24 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
         const val ACTION_START = "start"
         const val ACTION_STOP = "stop"
 
-        val isVpnRunning = AtomicBoolean(false)
-        private val isTestRunning = AtomicBoolean(false)
-        private val testMutex = Mutex()
+        var isVpnRunning = false
+        val nativeCallMutex = Mutex()
+        private var testServer: io.nekohasekai.libbox.CommandServer? = null
+
+        private suspend fun closeTestServerUnlocked() {
+            if (testServer != null) {
+                try {
+                    android.util.Log.d("NativeVpnLifecycle", "Closing existing testServer...")
+                    testServer?.close()
+                    testServer = null
+                    android.util.Log.d("NativeVpnLifecycle", "testServer successfully closed.")
+                    delay(100) // Ensure OS cleans up socket/goroutine
+                } catch (e: Exception) {
+                    android.util.Log.e("NativeVpnLifecycle", "Error closing testServer: ${e.message}")
+                    e.printStackTrace()
+                }
+            }
+        }
 
         private fun getValidJsonConfig(input: String): String {
             val trimmed = input.trim()
@@ -78,17 +93,16 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
 
         // --- NEW: Granular Control for Dart-driven Testing ---
         suspend fun startTestProxy(rawInput: String, tempDir: File, result: MethodChannel.Result?) = withContext(Dispatchers.IO) {
-            if (isVpnRunning.get()) {
-                println("❌ [Native] Cannot start Test Proxy: VPN is running")
-                result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
-                return@withContext
-            }
+            nativeCallMutex.withLock {
+                if (isVpnRunning) {
+                    println("❌ [Native] Cannot start Test Proxy: VPN is running")
+                    result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
+                    return@withContext
+                }
 
-            if (!isTestRunning.compareAndSet(false, true)) {
-                 println("❌ [Native] Cannot start Test Proxy: Another test is already running")
-                 result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-2) } }
-                 return@withContext
-            }
+                // Forcefully cancel any ongoing test to prevent queuing and await its termination
+                closeTestServerUnlocked()
+
 
             try {
                 // STRICT VALIDATION
@@ -98,7 +112,7 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
                 } catch (e: Exception) {
                     // Send error to Flutter immediately on the Main Thread
                     result?.let { r -> Handler(Looper.getMainLooper()).post { r.error("CONFIG_ERROR", e.message, null) } }
-                    isTestRunning.set(false)
+                    // isTestRunning.set(false)
                     return@withContext // EXIT the coroutine. DO NOT proceed to Libbox!
                 }
 
@@ -134,7 +148,7 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
                 }
 
                 if (!json.has("outbounds")) {
-                    isTestRunning.set(false)
+                    // isTestRunning.set(false)
                     result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-3) } }
                     return@withContext
                 }
@@ -150,6 +164,11 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
 
                 // SAFE CALL to Libbox - pass JSON content string
                 val server = try {
+                    val options = io.nekohasekai.libbox.SetupOptions()
+                    options.setBasePath(tempDir.absolutePath)
+                    options.setWorkingPath(tempDir.absolutePath)
+                    options.setTempPath(tempDir.absolutePath)
+                    Libbox.setup(options)
                     Libbox.newCommandServer(StubCommandServerHandler(), StubPlatformInterface())
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -158,8 +177,10 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
                 }
 
                 try {
-                    server.startOrReloadService(testConfigStr, null)
+                    server?.startOrReloadService(testConfigStr, null)
+                    testServer = server
                 } catch (e: Exception) {
+                    server?.close()
                     e.printStackTrace()
                     result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
                     return@withContext
@@ -170,33 +191,32 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
 
             } catch (e: Exception) {
                 e.printStackTrace()
-                isTestRunning.set(false)
+                // isTestRunning.set(false)
                 // test server close handled normally
                 result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-4) } }
+            }
             }
         }
 
         suspend fun stopTestProxy() = withContext(Dispatchers.IO) {
-            if (isTestRunning.get()) {
+            nativeCallMutex.withLock {
                 try {
-                    // stop test proxy
+                    closeTestServerUnlocked()
                 } catch (e: Exception) {
                     e.printStackTrace()
-                } finally {
-                    isTestRunning.set(false)
                 }
             }
         }
 
         suspend fun measurePing(rawInput: String, tempDir: File, result: MethodChannel.Result?) = withContext(Dispatchers.IO) {
-            if (isVpnRunning.get()) {
-                result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
-                return@withContext
-            }
-            if (!isTestRunning.compareAndSet(false, true)) {
-                result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
-                return@withContext
-            }
+            nativeCallMutex.withLock {
+                if (isVpnRunning) {
+                    result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
+                    return@withContext
+                }
+                // Forcefully cancel any ongoing test and await its termination
+                closeTestServerUnlocked()
+
 
             try {
                 // STRICT VALIDATION
@@ -206,7 +226,7 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
                 } catch (e: Exception) {
                     // Send error to Flutter immediately on the Main Thread
                     result?.let { r -> Handler(Looper.getMainLooper()).post { r.error("CONFIG_ERROR", e.message, null) } }
-                    isTestRunning.set(false)
+                    // isTestRunning.set(false)
                     return@withContext // EXIT the coroutine. DO NOT proceed to Libbox!
                 }
 
@@ -231,20 +251,33 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
                 val testConfigFile = File(tempDir, "test_${System.currentTimeMillis()}.json")
                 testConfigFile.writeText(json.toString())
 
+                closeTestServerUnlocked()
+
                 // SAFE CALL - pass JSON content string
-                val testServer = try {
+                val newTestServer = try {
+                    val options = io.nekohasekai.libbox.SetupOptions()
+                    options.setBasePath(tempDir.absolutePath)
+                    options.setWorkingPath(tempDir.absolutePath)
+                    options.setTempPath(tempDir.absolutePath)
+                    Libbox.setup(options)
                     Libbox.newCommandServer(StubCommandServerHandler(), StubPlatformInterface())
                 } catch (e: Exception) {
                     e.printStackTrace()
+                    MainActivity.sendVpnStatus("ERROR: TEST_START_FAILED - ${e.message}")
                     result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
+                    // isTestRunning.set(false)
                     return@withContext
                 }
 
                 try {
-                    testServer.startOrReloadService(json.toString(), null)
+                    newTestServer?.startOrReloadService(json.toString(), null)
+                    testServer = newTestServer
                 } catch (e: Exception) {
+                    newTestServer?.close()
                     e.printStackTrace()
+                    MainActivity.sendVpnStatus("ERROR: TEST_START_FAILED - ${e.message}")
                     result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
+                    // isTestRunning.set(false)
                     return@withContext
                 }
                 delay(500)
@@ -277,7 +310,8 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
                 result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
             } finally {
                 // test server close handled normally
-                isTestRunning.set(false)
+                // isTestRunning.set(false)
+            }
             }
         }
     }
@@ -290,37 +324,40 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
         val action = intent?.getStringExtra("action")
         val config = intent?.getStringExtra("config")
 
-        if (action == ACTION_START && config != null) {
-            startVpn(config)
-        } else if (action == ACTION_STOP) {
-            stopVpn()
+        serviceScope.launch {
+            if (action == ACTION_START && config != null) {
+                startVpn(config)
+            } else if (action == ACTION_STOP) {
+                stopVpn()
+            }
         }
 
         return START_NOT_STICKY
     }
 
-    private fun startVpn(rawInput: String) {
-        if (isVpnRunning.get()) return
+    private suspend fun startVpn(rawInput: String) {
+        nativeCallMutex.withLock {
+            if (isVpnRunning) return
 
-        if (isTestRunning.get()) {
-             // test server close handled normally
-             isTestRunning.set(false)
-        }
+            isVpnRunning = true
+            createNotificationChannel()
+            startForeground(VPN_NOTIFICATION_ID, createNotification())
 
-        isVpnRunning.set(true)
-        createNotificationChannel()
-        startForeground(VPN_NOTIFICATION_ID, createNotification())
-
-        serviceScope.launch {
             try {
+                // Wait for any running test to finish closing before starting main VPN
+                closeTestServerUnlocked()
+
                 // STRICT VALIDATION
                 val configJson: String
                 try {
                     configJson = getValidJsonConfig(rawInput)
+                    if (configJson.isNullOrBlank()) {
+                         throw IllegalArgumentException("Config string is null or empty")
+                    }
                 } catch (e: Exception) {
                     MainActivity.sendVpnStatus("ERROR: CONFIG_ERROR - ${e.message}")
-                    stopVpn()
-                    return@launch
+                    stopVpnInternal()
+                    return
                 }
 
                 val builder = Builder()
@@ -334,8 +371,8 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
                 vpnInterface = builder.establish()
 
                 if (vpnInterface == null) {
-                    stopVpn()
-                    return@launch
+                    stopVpnInternal()
+                    return
                 }
 
                 val fd = vpnInterface!!.fd
@@ -357,13 +394,19 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
 
                 // SAFE CALL - pass JSON content string
                 try {
+                    val options = io.nekohasekai.libbox.SetupOptions()
+                    options.setBasePath(configDir.absolutePath)
+                    options.setWorkingPath(configDir.absolutePath)
+                    options.setTempPath(configDir.absolutePath)
+                    Libbox.setup(options)
                     mainServer = Libbox.newCommandServer(StubCommandServerHandler(), this@SingboxVpnService)
                     mainServer?.startOrReloadService(jsonObject.toString(), null)
                 } catch (e: Exception) {
                     e.printStackTrace()
+                    android.util.Log.e("NativeVpnLifecycle", "StartOrReloadService Error: ${e.message}")
                     MainActivity.sendVpnStatus("ERROR: START_FAILED - ${e.message}")
-                    stopVpn()
-                    return@launch
+                    stopVpnInternal()
+                    return
                 }
 
                 // CRITICAL FIX: Broadcast "CONNECTED" State to Dart
@@ -373,14 +416,21 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
                 e.printStackTrace()
                 // CRITICAL FIX: Broadcast "ERROR" State to Dart
                 MainActivity.sendVpnStatus("ERROR")
-                stopVpn()
+                stopVpnInternal()
             }
         }
     }
 
-    private fun stopVpn() {
-        if (!isVpnRunning.get()) return
-        isVpnRunning.set(false)
+    private suspend fun stopVpn() {
+        nativeCallMutex.withLock {
+            stopVpnInternal()
+        }
+    }
+
+    private fun stopVpnInternal() {
+        if (!isVpnRunning) return
+        isVpnRunning = false
+        android.util.Log.d("NativeVpnLifecycle", "stopVpnInternal called")
 
         try {
             mainServer?.close()
@@ -392,8 +442,9 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
 
             // CRITICAL FIX: Broadcast "DISCONNECTED" State to Dart
             MainActivity.sendVpnStatus("DISCONNECTED")
-
+            android.util.Log.d("NativeVpnLifecycle", "stopVpnInternal completed successfully")
         } catch (e: Exception) {
+            android.util.Log.e("NativeVpnLifecycle", "stopVpnInternal error: ${e.message}")
             e.printStackTrace()
         }
     }
@@ -428,7 +479,13 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
 
     override fun onDestroy() {
         super.onDestroy()
-        stopVpn()
+        android.util.Log.d("NativeVpnLifecycle", "onDestroy called")
+        runBlocking {
+            stopVpn()
+            nativeCallMutex.withLock {
+                closeTestServerUnlocked()
+            }
+        }
         serviceScope.cancel()
     }
 }
@@ -453,7 +510,7 @@ class StubPlatformInterface : PlatformInterface {
         return WIFIState("wlan0", "00:00:00:00:00:00") 
     }
     override fun useProcFS(): Boolean = false
-    fun writeLog(message: String?) { }
+    fun writeLog(message: String?) { MainActivity.sendVpnStatus(message ?: "") }
     override fun closeDefaultInterfaceMonitor(listener: InterfaceUpdateListener?) { }
     override fun findConnectionOwner(ipProtocol: Int, sourceAddress: String?, sourcePort: Int, destinationAddress: String?, destinationPort: Int): io.nekohasekai.libbox.ConnectionOwner? = null
     override fun getInterfaces(): NetworkInterfaceIterator { return StubNetworkInterfaceIterator() }
@@ -466,24 +523,12 @@ class StubPlatformInterface : PlatformInterface {
     override fun systemCertificates(): StringIterator { return StubStringIterator() }
     override fun underNetworkExtension(): Boolean = false
 
-    override fun checkPlatformShell() {}
-    override fun closeNeighborMonitor(listener: io.nekohasekai.libbox.NeighborUpdateListener?) {}
-    override fun lookupSFTPServer(): String? = null
-    override fun lookupUser(username: String?): io.nekohasekai.libbox.PlatformUser? = null
-    override fun openShellSession(user: io.nekohasekai.libbox.PlatformUser?, command: String?, environ: StringIterator?, term: String?, rows: Int, cols: Int): io.nekohasekai.libbox.ShellSession? = null
-    override fun readSystemSSHHostKey(): String? = null
-    override fun registerMyInterface(name: String?) {}
-    override fun startNeighborMonitor(listener: io.nekohasekai.libbox.NeighborUpdateListener?) {}
-    override fun tailscaleHostname(): String? = null
-    override fun usePlatformShell(): Boolean = false
 }
 
 class StubCommandServerHandler : io.nekohasekai.libbox.CommandServerHandler {
-    override fun connectSSHAgent(): Int = -1
     override fun getSystemProxyStatus(): io.nekohasekai.libbox.SystemProxyStatus? = null
     override fun serviceReload() {}
     override fun serviceStop() {}
     override fun setSystemProxyEnabled(enabled: Boolean) {}
-    override fun triggerNativeCrash() {}
     override fun writeDebugMessage(message: String?) {}
 }

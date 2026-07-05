@@ -23,8 +23,8 @@ class StabilityMonitor {
     final List<int> samples = [];
     int failureCount = 0;
     final startTime = DateTime.now();
-    final totalSamples =
-        (duration.inMilliseconds / interval.inMilliseconds).round();
+    final totalSamples = (duration.inMilliseconds / interval.inMilliseconds)
+        .round();
 
     onLog?.call(
       "📈 [STABILITY] Starting Stability Monitor (${duration.inSeconds}s, $totalSamples samples)...",
@@ -68,10 +68,12 @@ class StabilityMonitor {
         ? 0.0
         : validSamples.reduce((a, b) => a + b) / validSamples.length;
 
-    final maxLatency =
-        validSamples.isEmpty ? 0 : validSamples.reduce((a, b) => a > b ? a : b);
-    final minLatency =
-        validSamples.isEmpty ? 0 : validSamples.reduce((a, b) => a < b ? a : b);
+    final maxLatency = validSamples.isEmpty
+        ? 0
+        : validSamples.reduce((a, b) => a > b ? a : b);
+    final minLatency = validSamples.isEmpty
+        ? 0
+        : validSamples.reduce((a, b) => a < b ? a : b);
 
     final metrics = StabilityMetrics(
       samples: samples,

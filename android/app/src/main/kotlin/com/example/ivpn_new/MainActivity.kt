@@ -22,6 +22,7 @@ class MainActivity : FlutterActivity() {
     private val EVENT_CHANNEL = "com.example.ivpn/vpn_status"
     private val VPN_REQUEST_CODE = 0x0F
     private var pendingConfig: String? = null
+    private var pendingVpnResult: MethodChannel.Result? = null
 
     // Scope for launching coroutines on the Main thread
     private val scope = CoroutineScope(Dispatchers.Main)
@@ -45,7 +46,7 @@ class MainActivity : FlutterActivity() {
                 override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
                     eventSink = events
                     // Send current state if known (optional, but good practice)
-                    if (SingboxVpnService.isVpnRunning.get()) {
+                    if (SingboxVpnService.isVpnRunning) {
                          events?.success("CONNECTED")
                     } else {
                          events?.success("DISCONNECTED")
@@ -62,12 +63,12 @@ class MainActivity : FlutterActivity() {
             when (call.method) {
                 "startVpn" -> {
                     val config = call.argument<String>("config")
-                    if (config != null) {
+                    if (config != null && config.isNotBlank()) {
                         pendingConfig = config
+                        pendingVpnResult = result
                         prepareVpn()
-                        result.success(null)
                     } else {
-                        result.error("INVALID_ARGUMENT", "Config is null", null)
+                        result.error("INVALID_CONFIG", "Config string is null or empty", null)
                     }
                 }
                 "stopVpn" -> {
@@ -76,28 +77,22 @@ class MainActivity : FlutterActivity() {
                 }
                 "testConfig" -> {
                     val config = call.argument<String>("config")
-                    if (config != null) {
-                        // Launch in IO scope properly via a wrapper or direct call
-                        // Since measurePing is suspend, we need a scope.
-                        // However, setMethodCallHandler runs on Main thread.
-                        // We use the activity scope or create a quick one.
+                    if (config != null && config.isNotBlank()) {
                         CoroutineScope(Dispatchers.IO).launch {
-                            // Pass result directly to SingboxVpnService which handles success/error on Main thread
                             SingboxVpnService.measurePing(config, cacheDir, result)
                         }
                     } else {
-                        result.error("INVALID_ARGUMENT", "Config is null", null)
+                        result.error("INVALID_CONFIG", "Config string is null or empty", null)
                     }
                 }
                 "startTestProxy" -> {
                     val config = call.argument<String>("config")
-                    if (config != null) {
+                    if (config != null && config.isNotBlank()) {
                          CoroutineScope(Dispatchers.IO).launch {
-                             // Pass result directly to SingboxVpnService which handles success/error on Main thread
                              SingboxVpnService.startTestProxy(config, cacheDir, result)
                          }
                     } else {
-                        result.error("INVALID_ARGUMENT", "Config is null", null)
+                        result.error("INVALID_CONFIG", "Config string is null or empty", null)
                     }
                 }
                 "stopTestProxy" -> {
@@ -118,7 +113,22 @@ class MainActivity : FlutterActivity() {
         if (intent != null) {
             startActivityForResult(intent, VPN_REQUEST_CODE)
         } else {
-            onActivityResult(VPN_REQUEST_CODE, Activity.RESULT_OK, null)
+            // Already granted
+            if (pendingConfig != null) {
+                val serviceIntent = Intent(this, SingboxVpnService::class.java).apply {
+                    putExtra("action", SingboxVpnService.ACTION_START)
+                    putExtra("config", pendingConfig)
+                }
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    startForegroundService(serviceIntent)
+                } else {
+                    startService(serviceIntent)
+                }
+                pendingVpnResult?.success(null)
+                pendingConfig = null
+                pendingVpnResult = null
+            }
         }
     }
 
@@ -136,8 +146,13 @@ class MainActivity : FlutterActivity() {
                 } else {
                     startService(serviceIntent)
                 }
+                pendingVpnResult?.success(null)
+            } else {
+                val details = mapOf("permanentlyDenied" to false)
+                pendingVpnResult?.error("VPN_PERMISSION_DENIED", "VPN permission was denied by the user.", details)
             }
             pendingConfig = null
+            pendingVpnResult = null
         }
     }
 

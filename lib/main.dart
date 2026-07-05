@@ -50,8 +50,8 @@ void main() {
       if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
         try {
           await windowManager.ensureInitialized().timeout(
-                const Duration(seconds: 2),
-              );
+            const Duration(seconds: 2),
+          );
         } catch (e) {
           debugPrint("WindowManager init failed or timed out: $e");
         }
