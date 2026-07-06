@@ -73,8 +73,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   // Native Operation check
   bool get _isNativeOperationInProgress {
     final status = _configManager.connectionStatus.toLowerCase();
-    return status.contains('connecting') ||
-        status.contains('disconnecting') ||
+    return status.contains('disconnecting') ||
         status.contains('testing') ||
         _activeTestIds.isNotEmpty ||
         _isFetching ||
@@ -91,11 +90,6 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   
   
   
-
-  // NEW: Auto-switch throttle and limits
-  int _consecutiveFailures = 0;
-  DateTime? _lastAutoSwitchAttempt;
-
   // Auto-switch Variables
   int _highPingCounter = 0;
   static const int _consecutiveHighPingCount =
@@ -1062,16 +1056,23 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   // --- LOGIC METHODS ---
 
   Future<void> _handleConnection() async {
-    if (_isNativeOperationInProgress) return;
+    // Check if user wants to disconnect or cancel connecting
+    final status = _configManager.connectionStatus.toLowerCase();
+    if (_configManager.isConnected || status.contains('connecting')) {
+      await _configManager.stopAllOperations();
+      return;
+    }
+
+    // Now check if other operations are in progress (testing, fetching, switching)
+    if (status.contains('disconnecting') ||
+        status.contains('testing') ||
+        _activeTestIds.isNotEmpty ||
+        _isFetching ||
+        _isSwitching) {
+      return;
+    }
 
     try {
-      if (_configManager.isConnected ||
-          _configManager.connectionStatus
-              .toLowerCase()
-              .contains('connecting')) {
-        await _configManager.stopAllOperations();
-        return;
-      }
 
       // Network Check
       if (!await _connectivityService.hasInternet()) {
