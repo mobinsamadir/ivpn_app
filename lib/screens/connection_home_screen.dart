@@ -92,6 +92,10 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   
   
 
+  // NEW: Auto-switch throttle and limits
+  int _consecutiveFailures = 0;
+  DateTime? _lastAutoSwitchAttempt;
+
   // Auto-switch Variables
   int _highPingCounter = 0;
   static const int _consecutiveHighPingCount =
@@ -185,7 +189,6 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
             _isAdmin = false;
             _configManager.userInitiatedDisconnect =
                 true; // Stop auto-switching
-
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
@@ -205,7 +208,6 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
             final now = DateTime.now();
             if (_lastAutoSwitchAttempt != null &&
                 now.difference(_lastAutoSwitchAttempt!).inSeconds < 3) {
-
               AdvancedLogger.warn("[HomeScreen] Auto-switch throttled.");
               return;
             }
@@ -231,7 +233,6 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
               AdvancedLogger.warn(
                 "[HomeScreen] Unexpected disconnect. Attempting auto-switch (Attempt $_consecutiveFailures)...",
               );
-
               final validConfigs = _configManager.validatedConfigs;
               if (validConfigs.isNotEmpty) {
                 if (_configManager.selectedConfig != null) {
@@ -243,7 +244,6 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                     _skipServer();
                   }
                 });
-
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('هیچ کانفیگ معتبری یافت نشد')),

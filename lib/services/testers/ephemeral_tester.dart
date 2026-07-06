@@ -509,7 +509,6 @@ class EphemeralTester {
           throw Exception(
             "Local Proxy failed to start on port $port after $attempts attempts",
           );
-
         }
 
         // STAGE 2 (HTTP) with Retry for HandshakeException
