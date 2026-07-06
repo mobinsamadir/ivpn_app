@@ -83,6 +83,14 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
 
   String _lastNativeStatus = "DISCONNECTED";
   bool _isAdmin = true;
+  
+  // NEW: Auto-switch throttle and limits
+  int _consecutiveFailures = 0;
+  DateTime? _lastAutoSwitchAttempt;
+  
+  
+  
+  
 
   // NEW: Auto-switch throttle and limits
   int _consecutiveFailures = 0;

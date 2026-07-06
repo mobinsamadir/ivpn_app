@@ -118,6 +118,12 @@ class NativeVpnService {
     if (Platform.isWindows)
       return -1; // Handled by EphemeralTester directly on Windows
 
+    // CRITICAL: Prevent passing null/empty or malformed strings to native layer
+    if (configJson == null || configJson.trim().isEmpty) {
+       AdvancedLogger.error("startTestProxy called with empty configuration");
+       return -1;
+    }
+
     // 1. Diagnostic Log (First 10 chars)
     final String start = configJson.length > 10
         ? configJson.substring(0, 10)
