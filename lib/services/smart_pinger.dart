@@ -108,7 +108,7 @@ class SmartPinger {
     );
   }
 
-  /// Ping with retry capability using a staggered "Happy Eyeballs" concurrency strategy
+  /// Ping with retry capability
   @visibleForTesting
   static Future<PingResult> pingWithRetry(
     String endpoint,
@@ -116,102 +116,42 @@ class SmartPinger {
     int maxRetries = 2,
     required Duration timeout,
   }) async {
-    if (maxRetries <= 0) {
-      return PingResult(
-        endpoint: endpoint,
-        latency: -1,
-        isSuccess: false,
-        error: 'Invalid maxRetries: $maxRetries',
-      );
-    }
-
-    final completer = Completer<PingResult>();
-    int attemptsCompleted = 0;
-    bool isResolved = false;
-    final List<String> errors = [];
-
-    void tryComplete(PingResult result) {
-      if (!isResolved) {
-        isResolved = true;
-        completer.complete(result);
-      }
-    }
-
-    void tryCompleteError(Object error, StackTrace st) {
-      if (!isResolved) {
-        isResolved = true;
-        completer.completeError(error, st);
-      }
-    }
-
     for (int attempt = 1; attempt <= maxRetries; attempt++) {
-      if (isResolved) break;
-      if (cancelToken?.isCancelled == true) {
-        tryCompleteError(
-            OperationCancelledException(
-                cancelToken?.reason?.toString() ?? 'Cancelled'),
-            StackTrace.current);
-        break;
-      }
+      try {
+        final pingResult = await _pingSingle(
+          endpoint,
+          cancelToken,
+          timeout: timeout,
+        );
 
-      // Launch attempt concurrently
-      _pingSingle(
-        endpoint,
-        cancelToken,
-        timeout: timeout,
-      ).then((result) {
-        if (isResolved) return;
-        if (result.isSuccess) {
-          tryComplete(result);
-        } else {
-          attemptsCompleted++;
-          if (result.error != null) {
-            errors.add('Attempt $attempt: ${result.error}');
-          }
-          if (attemptsCompleted == maxRetries) {
-            tryComplete(PingResult(
-              endpoint: endpoint,
-              latency: -1,
-              isSuccess: false,
-              error: 'All retries failed. Errors: ${errors.join(" | ")}',
-            ));
-          }
-        }
-      }).catchError((e, StackTrace st) {
-        if (isResolved) return;
-        if (e is OperationCancelledException) {
-          tryCompleteError(e, st);
-          return;
+        if (pingResult.isSuccess) {
+          return pingResult;
         }
 
-        attemptsCompleted++;
-        errors.add('Attempt $attempt: $e');
-        if (attemptsCompleted == maxRetries) {
-          tryComplete(PingResult(
+        if (attempt < maxRetries) {
+          AdvancedLogger.debug('[SmartPing] Retry $attempt for $endpoint');
+          await Future.delayed(Duration(milliseconds: 200 * attempt));
+        }
+      } on OperationCancelledException {
+        rethrow;
+      } catch (e) {
+        if (attempt == maxRetries) {
+          return PingResult(
             endpoint: endpoint,
             latency: -1,
             isSuccess: false,
-            error: 'All retries failed. Errors: ${errors.join(" | ")}',
-          ));
-        }
-      });
-
-      if (attempt < maxRetries) {
-        // Staggered concurrency delay: Wait 500ms before launching the next attempt
-        // We use Future.any to allow early breakout if the completer is resolved
-        await Future.any([
-          Future.delayed(const Duration(milliseconds: 500)),
-          completer.future
-              .catchError((_) => PingResult(endpoint: endpoint, latency: -1, isSuccess: false)) // Ignore errors to just wake up
-        ]);
-        if (!isResolved) {
-          AdvancedLogger.debug(
-              '[SmartPing] Launching concurrent retry $attempt for $endpoint');
+            error: 'All retries failed: $e',
+          );
         }
       }
     }
 
-    return completer.future;
+    return PingResult(
+      endpoint: endpoint,
+      latency: -1,
+      isSuccess: false,
+      error: 'Max retries ($maxRetries) exceeded',
+    );
   }
 
   /// Single endpoint ping using TCP connection
