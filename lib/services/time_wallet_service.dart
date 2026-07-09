@@ -17,14 +17,16 @@ class TimeWalletService extends ChangeNotifier {
   int _expireTimestampMs = 0; // Epoch milliseconds based on network time
   Timer? _countdownTimer;
 
+  SharedPreferences? _prefs;
+
   bool _isInitialized = false;
   bool get isInitialized => _isInitialized;
 
   Future<void> init() async {
     if (_isInitialized) return;
     try {
-      final prefs = await SharedPreferences.getInstance();
-      _expireTimestampMs = prefs.getInt(_storageKey) ?? 0;
+      _prefs ??= await SharedPreferences.getInstance();
+      _expireTimestampMs = _prefs!.getInt(_storageKey) ?? 0;
 
       await syncNetworkTime();
       _startCountdown();
@@ -101,8 +103,8 @@ class TimeWalletService extends ChangeNotifier {
       _expireTimestampMs += (rewardDurationSeconds * 1000);
     }
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_storageKey, _expireTimestampMs);
+    _prefs ??= await SharedPreferences.getInstance();
+    await _prefs!.setInt(_storageKey, _expireTimestampMs);
 
     AdvancedLogger.info(
       "[TimeWallet] Time rewarded. New expiry: \${DateTime.fromMillisecondsSinceEpoch(_expireTimestampMs)}",
@@ -127,8 +129,8 @@ class TimeWalletService extends ChangeNotifier {
   @visibleForTesting
   Future<void> consumeTime(int seconds) async {
     _expireTimestampMs -= (seconds * 1000);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_storageKey, _expireTimestampMs);
+    _prefs ??= await SharedPreferences.getInstance();
+    await _prefs!.setInt(_storageKey, _expireTimestampMs);
     notifyListeners();
   }
 
