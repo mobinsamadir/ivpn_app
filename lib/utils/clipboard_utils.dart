@@ -18,18 +18,19 @@ class ClipboardUtils {
   /// Detects the format of a config string (vmess/vless/ss/trojan)
   static String detectFormat(String config) {
     config = config.trim();
+    final lowerConfig = config.toLowerCase();
 
-    if (config.startsWith('vmess://')) {
+    if (lowerConfig.startsWith('vmess://')) {
       return 'vmess';
-    } else if (config.startsWith('vless://')) {
+    } else if (lowerConfig.startsWith('vless://')) {
       return 'vless';
-    } else if (config.startsWith('ss://')) {
+    } else if (lowerConfig.startsWith('ss://')) {
       return 'shadowsocks';
-    } else if (config.startsWith('trojan://')) {
+    } else if (lowerConfig.startsWith('trojan://')) {
       return 'trojan';
-    } else if (config.startsWith('https://') || config.startsWith('http://')) {
+    } else if (lowerConfig.startsWith('https://') || lowerConfig.startsWith('http://')) {
       // Check if it's a subscription link
-      if (config.contains('subscribe') || config.contains('sub')) {
+      if (lowerConfig.contains('subscribe') || lowerConfig.contains('sub')) {
         return 'subscription';
       }
       return 'url';
@@ -68,7 +69,8 @@ class ClipboardUtils {
       case 'vmess':
         // Basic vmess validation - should be a valid base64 encoded string after the prefix
         try {
-          final encoded = config.substring(8); // Remove 'vmess://' prefix
+          // Remove 'vmess://' prefix (case-insensitive)
+          final encoded = config.substring(8);
           final decoded = base64Decode(encoded);
           return decoded.isNotEmpty;
         } catch (e) {
@@ -78,8 +80,12 @@ class ClipboardUtils {
       case 'shadowsocks':
       case 'trojan':
         // For these, just check if there's content after the scheme
-        final parts = config.split('://');
-        return parts.length > 1 && parts[1].isNotEmpty;
+        // Case-insensitive split
+        final lowerConfig = config.toLowerCase();
+        final schemeEnd = lowerConfig.indexOf('://');
+        if (schemeEnd == -1) return false;
+        final contentAfterScheme = config.substring(schemeEnd + 3);
+        return contentAfterScheme.isNotEmpty;
       case 'subscription':
       case 'url':
         // Validate as URL
