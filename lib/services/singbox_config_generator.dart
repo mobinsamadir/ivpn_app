@@ -97,7 +97,7 @@ class SingboxConfigGenerator {
     required int socksPort,
     required int httpPort,
     required bool isTest,
-    bool isKillSwitchEnabled = false,
+    required bool isKillSwitchEnabled,
   }) {
     final String decoded = Base64Utils.safeDecode(link.substring(8));
     if (decoded.isEmpty) throw FormatException("Invalid VMess Base64");
@@ -152,7 +152,7 @@ class SingboxConfigGenerator {
     required int socksPort,
     required int httpPort,
     required bool isTest,
-    bool isKillSwitchEnabled = false,
+    required bool isKillSwitchEnabled,
   }) {
     Uri? uri;
     try {
@@ -346,7 +346,7 @@ class SingboxConfigGenerator {
     required int socksPort,
     required int httpPort,
     required bool isTest,
-    bool isKillSwitchEnabled = false,
+    required bool isKillSwitchEnabled,
   }) {
     String content = link.substring(5);
     String method, password, host;

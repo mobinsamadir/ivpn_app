@@ -971,7 +971,8 @@ class ConfigManager extends ChangeNotifier {
         setConnected(false, status: 'Connecting to ${target.name}...');
         try {
           // Initiate native connection
-          await nativeService.connect(target.rawConfig);
+          await nativeService.connect(target.rawConfig,
+              isKillSwitchEnabled: _isKillSwitchEnabled);
 
           // Wait for CONNECTED state with strict 15-second timeout
           await nativeService.connectionStatusStream
@@ -1060,7 +1061,8 @@ class ConfigManager extends ChangeNotifier {
 
     try {
       // Initiate native connection
-      await nativeService.connect(target.rawConfig);
+      await nativeService.connect(target.rawConfig,
+          isKillSwitchEnabled: _isKillSwitchEnabled);
 
       // Wait for CONNECTED state with strict 15-second timeout
       await nativeService.connectionStatusStream

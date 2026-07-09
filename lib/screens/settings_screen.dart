@@ -3,10 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
-import '../providers/theme_provider.dart';
+import '../providers/theme_provider.dart'; // برای دسترسی به ThemeProvider
 import '../services/config_manager.dart';
-import 'split_tunneling_screen.dart';
-import '../services/config_manager.dart'; // برای دسترسی به ThemeProvider
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -18,7 +16,6 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen>
     with WidgetsBindingObserver {
   // متغیر برای کنترل وضعیت‌های جدید
-  bool _killSwitchEnabled = ConfigManager().isKillSwitchEnabled;
   bool _isBatteryOptimizationIgnored = false;
 
   @override
@@ -86,6 +83,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final configManager = Provider.of<ConfigManager>(context);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
@@ -132,16 +130,12 @@ class _SettingsScreenState extends State<SettingsScreen>
           SwitchListTile(
             title: const Text('Kill Switch'),
             subtitle: const Text('Block internet if VPN disconnects'),
-            value: _killSwitchEnabled,
+            value: configManager.isKillSwitchEnabled,
             onChanged: (bool value) {
-              setState(() {
-                _killSwitchEnabled = value;
-              });
-              ConfigManager().isKillSwitchEnabled = value;
+              configManager.isKillSwitchEnabled = value;
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text(
-                      'Kill Switch updated. Reconnect the VPN to apply changes.'),
+                  content: Text('Please reconnect the VPN to apply changes.'),
                 ),
               );
             },
@@ -152,10 +146,10 @@ class _SettingsScreenState extends State<SettingsScreen>
             title: const Text('Split Tunneling'),
             subtitle: const Text('Choose which apps use the VPN'),
             onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const SplitTunnelingScreen(),
+              // TODO: Add navigation to a new screen for app selection
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Split Tunneling feature is coming soon!'),
                 ),
               );
             },
