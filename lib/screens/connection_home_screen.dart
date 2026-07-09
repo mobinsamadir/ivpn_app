@@ -718,7 +718,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                 SliverToBoxAdapter(
                   child: Container(
                     width: double.infinity,
-                    color: Colors.amberAccent.withOpacity(0.2),
+                    color: Colors.amberAccent.withValues(alpha: 0.2),
                     padding: const EdgeInsets.symmetric(
                       vertical: 8,
                       horizontal: 16,
@@ -782,7 +782,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                               ),
                               Switch(
                                 value: _configManager.isAutoSwitchEnabled,
-                                activeColor: Colors.blueAccent,
+                                activeThumbColor: Colors.blueAccent,
                                 onChanged: (val) {
                                   setState(() {
                                     _configManager.isAutoSwitchEnabled = val;
