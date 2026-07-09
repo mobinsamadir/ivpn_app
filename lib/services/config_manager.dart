@@ -69,13 +69,11 @@ Future<Map<String, dynamic>> _processConfigsInIsolate(
   Map<String, dynamic> args,
 ) async {
   final List<String> configStrings = args['configStrings'] as List<String>;
-  final Set<String> blockedHashes = (args['blockedHashes'] as List)
-      .cast<String>()
-      .toSet();
+  final Set<String> blockedHashes =
+      (args['blockedHashes'] as List).cast<String>().toSet();
   final bool checkBlacklist = args['checkBlacklist'] as bool;
-  final Set<String> existingConfigs = (args['existingConfigs'] as List)
-      .cast<String>()
-      .toSet();
+  final Set<String> existingConfigs =
+      (args['existingConfigs'] as List).cast<String>().toSet();
   int addedCount = args['initialAddedCount'] as int;
 
   final List<VpnConfigWithMetrics> newConfigs = [];
@@ -88,17 +86,20 @@ Future<Map<String, dynamic>> _processConfigsInIsolate(
     final trimmedRaw = raw.trim();
     if (trimmedRaw.isEmpty) continue;
 
-    // HASH Check for Blacklist
-    final hash = md5.convert(utf8.encode(trimmedRaw)).toString();
-
-    if (checkBlacklist && blockedHashes.contains(hash)) {
-      // Silently skip blacklisted config
-      continue;
-    }
-
-    // Manual Overwrite: If adding with checkBlacklist=false, we mark hash for removal
-    if (!checkBlacklist && blockedHashes.contains(hash)) {
-      hashesToRemoveFromBlacklist.add(hash);
+    if (checkBlacklist) {
+      if (blockedHashes.isNotEmpty) {
+        final hash = md5.convert(utf8.encode(trimmedRaw)).toString();
+        if (blockedHashes.contains(hash)) {
+          // Silently skip blacklisted config
+          continue;
+        }
+      }
+    } else if (blockedHashes.isNotEmpty) {
+      // Manual Overwrite: If adding with checkBlacklist=false, we mark hash for removal
+      final hash = md5.convert(utf8.encode(trimmedRaw)).toString();
+      if (blockedHashes.contains(hash)) {
+        hashesToRemoveFromBlacklist.add(hash);
+      }
     }
 
     if (existingConfigs.contains(trimmedRaw)) {
@@ -501,8 +502,7 @@ class ConfigManager extends ChangeNotifier {
       if (dead &&
           (c.currentPing == -1 ||
               c.failureCount >= 3 ||
-              (!c.isAlive && c.funnelStage == 0)))
-        return true;
+              (!c.isAlive && c.funnelStage == 0))) return true;
       if (weak && c.currentPing > 1500)
         return true; // threshold for weak config
       if (untestedSpeed && c.funnelStage < 3) return true;
@@ -582,8 +582,7 @@ class ConfigManager extends ChangeNotifier {
     List<VpnConfigWithMetrics>? sourceList,
     bool performConnection = true,
   }) async {
-    final list =
-        sourceList ??
+    final list = sourceList ??
         (validatedConfigs.isNotEmpty ? validatedConfigs : allConfigs);
     if (list.isEmpty) return false;
 
@@ -909,17 +908,15 @@ class ConfigManager extends ChangeNotifier {
     final NativeVpnService nativeService = NativeVpnService();
     final EphemeralTester tester = EphemeralTester();
 
-    while (attempts < maxAttempts &&
-        target != null &&
-        !_isGlobalStopRequested) {
+    while (
+        attempts < maxAttempts && target != null && !_isGlobalStopRequested) {
       try {
         selectConfig(target); // Update UI selection
 
         // 3. Pre-flight Check with FAST LANE logic
         setConnected(false, status: 'Verifying ${target.name}...');
 
-        final bool isFastLane =
-            target.lastTestedAt != null &&
+        final bool isFastLane = target.lastTestedAt != null &&
             DateTime.now().difference(target.lastTestedAt!).inMinutes < 45 &&
             target.funnelStage >= 2 &&
             target.currentPing > 0;
@@ -962,19 +959,18 @@ class ConfigManager extends ChangeNotifier {
           // Wait for CONNECTED state with strict 15-second timeout
           await nativeService.connectionStatusStream
               .firstWhere(
-                (status) => status == 'CONNECTED' || status.startsWith('ERROR'),
-              )
+            (status) => status == 'CONNECTED' || status.startsWith('ERROR'),
+          )
               .timeout(
-                const Duration(seconds: 15),
-                onTimeout: () {
-                  throw Exception('Timeout waiting for CONNECTED state');
-                },
-              )
-              .then((status) {
-                if (status.startsWith('ERROR')) {
-                  throw Exception('Native connection failed: $status');
-                }
-              });
+            const Duration(seconds: 15),
+            onTimeout: () {
+              throw Exception('Timeout waiting for CONNECTED state');
+            },
+          ).then((status) {
+            if (status.startsWith('ERROR')) {
+              throw Exception('Native connection failed: $status');
+            }
+          });
 
           AdvancedLogger.info(
             "[ConfigManager] Native Connection Success: ${target.name}",
@@ -1052,19 +1048,18 @@ class ConfigManager extends ChangeNotifier {
       // Wait for CONNECTED state with strict 15-second timeout
       await nativeService.connectionStatusStream
           .firstWhere(
-            (status) => status == 'CONNECTED' || status.startsWith('ERROR'),
-          )
+        (status) => status == 'CONNECTED' || status.startsWith('ERROR'),
+      )
           .timeout(
-            const Duration(seconds: 15),
-            onTimeout: () {
-              throw Exception('Timeout waiting for CONNECTED state');
-            },
-          )
-          .then((status) {
-            if (status.startsWith('ERROR')) {
-              throw Exception('Native connection failed: $status');
-            }
-          });
+        const Duration(seconds: 15),
+        onTimeout: () {
+          throw Exception('Timeout waiting for CONNECTED state');
+        },
+      ).then((status) {
+        if (status.startsWith('ERROR')) {
+          throw Exception('Native connection failed: $status');
+        }
+      });
 
       AdvancedLogger.info(
         '[ConfigManager] Manual Connection Success: ${target.name}',
