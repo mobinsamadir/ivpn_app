@@ -13,3 +13,4 @@ unique_configs.json
 real_delay_passed.txt
 android/app/libs/*.aar
 packages/
+coverage/
