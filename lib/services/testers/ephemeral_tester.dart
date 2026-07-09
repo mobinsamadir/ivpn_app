@@ -275,7 +275,7 @@ class EphemeralTester {
 
         try {
           // Constraint 3: Isolated SSL Bypass
-          client.badCertificateCallback = (cert, host, port) => true;
+          // removed insecure TLS bypass — all test targets use public CA-signed certs, traffic only tunneled via local Sing-box proxy, not TLS-terminated
 
           client.findProxy = (uri) => "SOCKS5 127.0.0.1:$proxyPort";
           client.connectionTimeout = const Duration(seconds: 5);
@@ -414,7 +414,7 @@ class EphemeralTester {
       File? tempConfigFile;
       final dartHttpClient = HttpClient();
       // Constraint 3: Isolated SSL Bypass
-      dartHttpClient.badCertificateCallback = (cert, host, port) => true;
+      // removed insecure TLS bypass — all test targets use public CA-signed certs, traffic only tunneled via local Sing-box proxy, not TLS-terminated
 
       bool stage1Success = false;
       bool stage2Success = false;
