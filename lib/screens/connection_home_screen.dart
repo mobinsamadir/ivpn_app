@@ -82,14 +82,11 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
 
   String _lastNativeStatus = "DISCONNECTED";
   bool _isAdmin = true;
-  
+
   // NEW: Auto-switch throttle and limits
   int _consecutiveFailures = 0;
   DateTime? _lastAutoSwitchAttempt;
-  
-  
-  
-  
+
   // Auto-switch Variables
   int _highPingCounter = 0;
   static const int _consecutiveHighPingCount =
@@ -1073,7 +1070,6 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     }
 
     try {
-
       // Network Check
       if (!await _connectivityService.hasInternet()) {
         if (!mounted) return;
@@ -1361,11 +1357,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                     size: 32,
                     color: Colors.blueAccent,
                   ),
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Refreshing servers...')),
-                    );
-                  },
+                  onPressed: _refreshConfigsManual,
                   tooltip: 'Refresh Servers',
                 ),
               ),
@@ -1396,27 +1388,28 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                           const Color(0xFF38EF7D),
                         ] // Green/Teal
                       : (isConnecting
-                          ? [
-                              const Color(0xFFF2994A),
-                              const Color(0xFFF2C94C),
-                            ] // Orange/Yellow
-                          : [
-                              const Color(0xFF4A5568),
-                              const Color(0xFF2D3748),
-                            ]), // Dark Grey
+                            ? [
+                                const Color(0xFFF2994A),
+                                const Color(0xFFF2C94C),
+                              ] // Orange/Yellow
+                            : [
+                                const Color(0xFF4A5568),
+                                const Color(0xFF2D3748),
+                              ]), // Dark Grey
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: (isConnected
-                            ? const Color(0xFF38EF7D)
-                            : (isConnecting
-                                ? const Color(0xFFF2994A)
-                                : Colors.black))
-                        .withValues(
-                      alpha: isConnected || isConnecting ? 0.5 : 0.3,
-                    ),
+                    color:
+                        (isConnected
+                                ? const Color(0xFF38EF7D)
+                                : (isConnecting
+                                      ? const Color(0xFFF2994A)
+                                      : Colors.black))
+                            .withValues(
+                              alpha: isConnected || isConnecting ? 0.5 : 0.3,
+                            ),
                     blurRadius: isConnected || isConnecting ? 25 : 15,
                     spreadRadius: isConnected || isConnecting ? 8 : 2,
                     offset: const Offset(0, 8),
@@ -1488,12 +1481,6 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
         ),
       ],
     );
-  }
-
-  void _refreshServers() {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Refreshing servers...')));
   }
 
   Future<void> _showAddServerDialog() async {
