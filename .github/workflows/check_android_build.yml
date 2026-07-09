@@ -1,7 +1,7 @@
 name: Check Android Build
+# Automatic triggers temporarily disabled during high-change period — run manually via workflow_dispatch until re-enabled
 on:
-  pull_request:
-    branches: [ "main" ]
+  workflow_dispatch:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
