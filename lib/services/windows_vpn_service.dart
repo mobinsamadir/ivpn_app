@@ -14,6 +14,7 @@ String _generateConfigWrapper(Map<String, dynamic> args) {
     args['configContent'],
     listenPort: args['listenPort'],
     isTest: args['isTest'],
+    isKillSwitchEnabled: args['isKillSwitchEnabled'] ?? false,
   );
 }
 
@@ -267,7 +268,8 @@ class WindowsVpnService {
     }
   }
 
-  Future<void> startVpn(String configContent) async {
+  Future<void> startVpn(String configContent,
+      {bool isKillSwitchEnabled = false}) async {
     isUserInitiatedDisconnect = false;
     AdvancedLogger.info(
       '[WindowsVpnService] startVpn called with config length: ${configContent.length}',
@@ -352,6 +354,7 @@ class WindowsVpnService {
           'configContent': configContent,
           'listenPort': 2080, // Main port for production
           'isTest': false, // <--- CRITICAL: Enables TUN and Secure DNS
+          'isKillSwitchEnabled': isKillSwitchEnabled,
         });
         AdvancedLogger.info(
           '[WindowsVpnService] Generated JSON config length: ${jsonConfig.length}',
