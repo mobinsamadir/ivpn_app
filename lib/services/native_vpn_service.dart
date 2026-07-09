@@ -125,7 +125,7 @@ class NativeVpnService {
       return -1; // Handled by EphemeralTester directly on Windows
 
     // CRITICAL: Prevent passing null/empty or malformed strings to native layer
-    if (configJson == null || configJson.trim().isEmpty) {
+    if (configJson.trim().isEmpty) {
       AdvancedLogger.error("startTestProxy called with empty configuration");
       return -1;
     }

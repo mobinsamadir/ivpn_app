@@ -478,11 +478,11 @@ class EphemeralTester {
         );
 
         AdvancedLogger.warn(
-          '[TESTER] Native Process Spawned. PID: ${process!.pid}',
+          '[TESTER] Native Process Spawned. PID: ${process.pid}',
         );
 
         onProcess(process); // Register for watchdog
-        registerProcess(process!);
+        registerProcess(process);
         await Future.delayed(const Duration(milliseconds: 500));
 
         AdvancedLogger.warn(
