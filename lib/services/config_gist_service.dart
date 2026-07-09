@@ -47,8 +47,7 @@ class ConfigGistService {
         final latestBuild =
             int.tryParse(data['version_code']?.toString() ?? '0') ?? 0;
         final version = data['version']?.toString() ?? 'Unknown';
-        final notes =
-            data['release_notes']?.toString() ??
+        final notes = data['release_notes']?.toString() ??
             'Bug fixes and performance improvements.';
         // FIX: Handle missing URL gracefully to prevent crash
         final downloadUrl = data['url']?.toString() ?? '';
@@ -162,8 +161,8 @@ class ConfigGistService {
       if (backupJson != null && backupJson.isNotEmpty) {
         try {
           final List<dynamic> rawList = jsonDecode(backupJson);
-          final List<String>
-          backupConfigs = rawList.map((e) => e.toString()).where((c) {
+          final List<String> backupConfigs =
+              rawList.map((e) => e.toString()).where((c) {
             if (c.trim().isEmpty) return false;
             if (!c.trim().startsWith('{')) {
               // If it doesn't start with {, it's likely a raw URL, which addConfigs handles
@@ -214,15 +213,13 @@ class ConfigGistService {
     }
 
     try {
-      final response = await http
-          .get(
-            Uri.parse(targetUrl),
-            headers: {
-              'User-Agent':
-                  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-            },
-          )
-          .timeout(const Duration(seconds: 15)); // strict 15-second timeout
+      final response = await http.get(
+        Uri.parse(targetUrl),
+        headers: {
+          'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+        },
+      ).timeout(const Duration(seconds: 15)); // strict 15-second timeout
 
       if (response.statusCode != 200) return null;
 

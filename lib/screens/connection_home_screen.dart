@@ -1408,28 +1408,27 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                           const Color(0xFF38EF7D),
                         ] // Green/Teal
                       : (isConnecting
-                            ? [
-                                const Color(0xFFF2994A),
-                                const Color(0xFFF2C94C),
-                              ] // Orange/Yellow
-                            : [
-                                const Color(0xFF4A5568),
-                                const Color(0xFF2D3748),
-                              ]), // Dark Grey
+                          ? [
+                              const Color(0xFFF2994A),
+                              const Color(0xFFF2C94C),
+                            ] // Orange/Yellow
+                          : [
+                              const Color(0xFF4A5568),
+                              const Color(0xFF2D3748),
+                            ]), // Dark Grey
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color:
-                        (isConnected
-                                ? const Color(0xFF38EF7D)
-                                : (isConnecting
-                                      ? const Color(0xFFF2994A)
-                                      : Colors.black))
-                            .withValues(
-                              alpha: isConnected || isConnecting ? 0.5 : 0.3,
-                            ),
+                    color: (isConnected
+                            ? const Color(0xFF38EF7D)
+                            : (isConnecting
+                                ? const Color(0xFFF2994A)
+                                : Colors.black))
+                        .withValues(
+                      alpha: isConnected || isConnecting ? 0.5 : 0.3,
+                    ),
                     blurRadius: isConnected || isConnecting ? 25 : 15,
                     spreadRadius: isConnected || isConnecting ? 8 : 2,
                     offset: const Offset(0, 8),

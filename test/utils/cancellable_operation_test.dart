@@ -20,7 +20,8 @@ void main() {
       expect(operation.value, throwsA(equals(exception)));
     });
 
-    test('throws OperationCancelledException when cancelled before completion', () async {
+    test('throws OperationCancelledException when cancelled before completion',
+        () async {
       final completer = Completer<int>();
       final operation = CancellableOperation<int>(completer.future);
 
@@ -33,7 +34,8 @@ void main() {
       completer.complete(42);
     });
 
-    test('throws OperationCancelledException when cancelled before error', () async {
+    test('throws OperationCancelledException when cancelled before error',
+        () async {
       final completer = Completer<int>();
       final operation = CancellableOperation<int>(completer.future);
 
@@ -122,7 +124,8 @@ void main() {
       final token = CancelToken();
       token.cancel();
 
-      expect(() => token.throwIfCancelled(), throwsA(isA<OperationCancelledException>()));
+      expect(() => token.throwIfCancelled(),
+          throwsA(isA<OperationCancelledException>()));
     });
 
     test('throwIfCancelled does nothing when not cancelled', () {
@@ -134,7 +137,8 @@ void main() {
 
     test('OperationCancelledException toString contains message', () {
       final exception = OperationCancelledException('Test message');
-      expect(exception.toString(), equals('OperationCancelledException: Test message'));
+      expect(exception.toString(),
+          equals('OperationCancelledException: Test message'));
     });
   });
 }

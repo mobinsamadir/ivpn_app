@@ -24,9 +24,9 @@ void main() {
       // Force initial value so it resets logic instead of using cache
       SharedPreferences.setMockInitialValues({});
       await service.init();
-      
+
       // Ensure we start from 0 for testing purposes
-      await service.consumeTime(service.remainingSeconds + 100); 
+      await service.consumeTime(service.remainingSeconds + 100);
 
       await service.rewardTime();
       expect(service.hasTime, isTrue);
@@ -37,10 +37,10 @@ void main() {
     test('consumeTime reduces time correctly', () async {
       SharedPreferences.setMockInitialValues({});
       await service.init();
-      
-      await service.consumeTime(service.remainingSeconds + 100); 
+
+      await service.consumeTime(service.remainingSeconds + 100);
       await service.rewardTime();
-      
+
       await service.consumeTime(1800); // consume half an hour
       expect(service.remainingSeconds, inInclusiveRange(1790, 1800));
     });
@@ -48,10 +48,10 @@ void main() {
     test('consumeTime to zero or below triggers expiration', () async {
       SharedPreferences.setMockInitialValues({});
       await service.init();
-      
-      await service.consumeTime(service.remainingSeconds + 100); 
+
+      await service.consumeTime(service.remainingSeconds + 100);
       await service.rewardTime();
-      
+
       await service.consumeTime(4000); // consume more than rewarded
       expect(service.hasTime, isFalse);
       expect(service.remainingSeconds, equals(0));

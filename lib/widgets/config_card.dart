@@ -206,9 +206,8 @@ class _ConfigInfo extends StatelessWidget {
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 14,
-                  fontWeight: config.isFavorite
-                      ? FontWeight.bold
-                      : FontWeight.w600,
+                  fontWeight:
+                      config.isFavorite ? FontWeight.bold : FontWeight.w600,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -256,18 +255,16 @@ class _ConfigInfo extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color:
-                      (config.currentPing == -1
-                              ? Colors.redAccent
-                              : getPingColor(config.currentPing))
-                          .withValues(alpha: 0.1),
+                  color: (config.currentPing == -1
+                          ? Colors.redAccent
+                          : getPingColor(config.currentPing))
+                      .withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
-                    color:
-                        (config.currentPing == -1
-                                ? Colors.redAccent
-                                : getPingColor(config.currentPing))
-                            .withValues(alpha: 0.3),
+                    color: (config.currentPing == -1
+                            ? Colors.redAccent
+                            : getPingColor(config.currentPing))
+                        .withValues(alpha: 0.3),
                   ),
                 ),
                 child: Text(
@@ -336,8 +333,6 @@ class _ConfigInfo extends StatelessWidget {
       ],
     );
   }
-
-
 }
 
 class _ConfigActions extends StatelessWidget {
@@ -425,6 +420,7 @@ class _ConfigActions extends StatelessWidget {
     );
   }
 }
+
 Color getPingColor(int ping) {
   if (ping < 0) return Colors.grey; // Timeout
   if (ping <= 500) return Colors.green[700]!;

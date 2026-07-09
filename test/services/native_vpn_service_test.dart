@@ -98,7 +98,8 @@ void main() {
     service = NativeVpnService();
 
     // Listen to the stream
-    final future = service.connectionStatusStream.firstWhere((e) => e == 'CONNECTED');
+    final future =
+        service.connectionStatusStream.firstWhere((e) => e == 'CONNECTED');
 
     // Simulate Native Event
     const channelName = 'com.example.ivpn/vpn_status';
@@ -118,7 +119,8 @@ void main() {
   test('Error Handling: Native Error Event', () async {
     service = NativeVpnService();
 
-    final future = service.connectionStatusStream.firstWhere((e) => e.contains('ERROR: NATIVE_EVENT'));
+    final future = service.connectionStatusStream
+        .firstWhere((e) => e.contains('ERROR: NATIVE_EVENT'));
 
     // Simulate Native Error
     const channelName = 'com.example.ivpn/vpn_status';
