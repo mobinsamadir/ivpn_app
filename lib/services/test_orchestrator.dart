@@ -17,9 +17,8 @@ class TestOrchestrator {
     String? name,
     bool quick = true,
   }) async {
-    final timeout = quick
-        ? TestTimeouts.quickHealthCheck
-        : TestTimeouts.fullHealthCheck;
+    final timeout =
+        quick ? TestTimeouts.quickHealthCheck : TestTimeouts.fullHealthCheck;
 
     return healthQueue.enqueue(
       task,
@@ -104,8 +103,7 @@ class TestOrchestrator {
       'stabilityQueue': stabilityQueue.queueLength,
       'healthQueue': healthQueue.queueLength,
       'pingQueue': pingQueue.queueLength,
-      'isAnyBusy':
-          speedQueue.isBusy ||
+      'isAnyBusy': speedQueue.isBusy ||
           stabilityQueue.isBusy ||
           healthQueue.isBusy ||
           pingQueue.isBusy,

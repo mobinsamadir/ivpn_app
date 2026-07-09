@@ -7,13 +7,15 @@ import 'package:path_provider/path_provider.dart';
 import '../utils/advanced_logger.dart';
 import '../utils/file_logger.dart';
 import 'singbox_config_generator.dart';
+import 'config_manager.dart';
 
 // Top-level function for compute to prevent UI lag
 String _generateConfigWrapper(Map<String, dynamic> args) {
   return SingboxConfigGenerator.generateConfig(
     args['configContent'],
     listenPort: args['listenPort'],
-    isTest: args['isTest'],
+    isKillSwitchEnabled: args['isKillSwitchEnabled'] ?? false,
+    isTest: args['isTest'] ?? false,
   );
 }
 
@@ -352,6 +354,7 @@ class WindowsVpnService {
           'configContent': configContent,
           'listenPort': 2080, // Main port for production
           'isTest': false, // <--- CRITICAL: Enables TUN and Secure DNS
+          'isKillSwitchEnabled': ConfigManager().isKillSwitchEnabled,
         });
         AdvancedLogger.info(
           '[WindowsVpnService] Generated JSON config length: ${jsonConfig.length}',
