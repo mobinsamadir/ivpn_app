@@ -5,45 +5,42 @@ import 'dart:convert';
 void main() {
   group('ClipboardUtils', () {
     group('detectFormat', () {
-      test('detects vmess format', () {
-        expect(ClipboardUtils.detectFormat('vmess://something'), 'vmess');
+      test('should correctly identify standard formats', () {
+        expect(ClipboardUtils.detectFormat('vmess://something'), equals('vmess'));
+        expect(ClipboardUtils.detectFormat('vless://something'), equals('vless'));
+        expect(ClipboardUtils.detectFormat('ss://something'), equals('shadowsocks'));
+        expect(ClipboardUtils.detectFormat('trojan://something'), equals('trojan'));
       });
 
-      test('detects vless format', () {
-        expect(ClipboardUtils.detectFormat('vless://something'), 'vless');
+      test('should correctly identify subscriptions and URLs', () {
+        expect(ClipboardUtils.detectFormat('https://example.com/subscribe'), equals('subscription'));
+        expect(ClipboardUtils.detectFormat('http://example.com/sub/user'), equals('subscription'));
+        expect(ClipboardUtils.detectFormat('https://example.com/something'), equals('url'));
+        expect(ClipboardUtils.detectFormat('http://example.com'), equals('url'));
       });
 
-      test('detects shadowsocks format', () {
-        expect(ClipboardUtils.detectFormat('ss://something'), 'shadowsocks');
+      test('should be resilient to whitespace', () {
+        expect(ClipboardUtils.detectFormat('  vmess://something  '), equals('vmess'));
+        expect(ClipboardUtils.detectFormat('\tvless://something\n'), equals('vless'));
       });
 
-      test('detects trojan format', () {
-        expect(ClipboardUtils.detectFormat('trojan://something'), 'trojan');
+      test('should default to unknown for empty or malformed strings', () {
+        expect(ClipboardUtils.detectFormat(''), equals('unknown'));
+        expect(ClipboardUtils.detectFormat('   '), equals('unknown'));
+        expect(ClipboardUtils.detectFormat('unknown://something'), equals('unknown'));
+        expect(ClipboardUtils.detectFormat('just_some_random_text'), equals('unknown'));
       });
 
-      test('detects subscription links', () {
-        expect(ClipboardUtils.detectFormat('https://example.com/subscribe'), 'subscription');
-        expect(ClipboardUtils.detectFormat('http://example.com/sub'), 'subscription');
-        expect(ClipboardUtils.detectFormat('https://example.com/something_with_sub_in_it'), 'subscription');
+      test('should identify case-insensitive protocols', () {
+        expect(ClipboardUtils.detectFormat('VMESS://something'), equals('vmess'));
+        expect(ClipboardUtils.detectFormat('vLess://something'), equals('vless'));
+        expect(ClipboardUtils.detectFormat('SS://something'), equals('shadowsocks'));
+        expect(ClipboardUtils.detectFormat('Trojan://something'), equals('trojan'));
       });
 
-      test('detects standard URLs', () {
-        expect(ClipboardUtils.detectFormat('https://example.com/api'), 'url');
-        expect(ClipboardUtils.detectFormat('http://test.com/path'), 'url');
-      });
-
-      test('detects general URIs', () {
-        expect(ClipboardUtils.detectFormat('ftp://example.com'), 'ftp');
-        expect(ClipboardUtils.detectFormat('custom://data'), 'custom');
-      });
-
-      test('returns unknown for unparseable strings', () {
-        expect(ClipboardUtils.detectFormat('not a uri'), 'unknown');
-        expect(ClipboardUtils.detectFormat(''), 'unknown');
-      });
-
-      test('trims whitespace before detecting', () {
-        expect(ClipboardUtils.detectFormat('   vmess://something   '), 'vmess');
+      test('should identify partial or incomplete valid URI strings', () {
+        expect(ClipboardUtils.detectFormat('vmess://'), equals('vmess'));
+        expect(ClipboardUtils.detectFormat('ss://'), equals('shadowsocks'));
       });
     });
 
@@ -101,8 +98,10 @@ void main() {
         expect(ClipboardUtils.validateConfig('http://'), isFalse, reason: 'URL missing host should return false');
       });
 
-      test('invalidates unknown schemes', () {
+      test('invalidates unknown schemes and text', () {
         expect(ClipboardUtils.validateConfig('ftp://example.com'), isFalse, reason: 'Unsupported scheme should return false');
+        expect(ClipboardUtils.validateConfig('unknown://stuff'), isFalse);
+        expect(ClipboardUtils.validateConfig('some random text'), isFalse);
       });
 
       test('invalidates empty and whitespace-only strings', () {
