@@ -93,14 +93,6 @@ class PortAllocator {
     }
   }
 
-  @visibleForTesting
-  void resetForTesting() {
-    _currentPort = _startPort;
-    _activePorts.clear();
-    _isAllocating = false;
-    _allocationQueue.clear();
-  }
-
   Future<bool> _isPortFree(int port) async {
     try {
       // Trying to bind to check availability

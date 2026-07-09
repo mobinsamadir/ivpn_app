@@ -14,3 +14,4 @@ real_delay_passed.txt
 android/app/libs/*.aar
 packages/
 coverage/
+ktlint
