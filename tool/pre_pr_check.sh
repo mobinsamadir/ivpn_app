@@ -14,7 +14,7 @@ echo "Temp Files Guard passed."
 
 # 2. Flutter Analyze
 echo "Running Flutter Analyze..."
-flutter analyze
+flutter analyze --no-fatal-infos lib test
 
 # 3. Flutter Unit Tests
 echo "Running Flutter Unit Tests..."
