@@ -202,7 +202,7 @@ class SmartPinger {
         await Future.any([
           Future.delayed(const Duration(milliseconds: 500)),
           completer.future
-              .catchError((_) => null) // Ignore errors to just wake up
+              .catchError((_) => PingResult(endpoint: endpoint, latency: -1, isSuccess: false)) // Ignore errors to just wake up
         ]);
         if (!isResolved) {
           AdvancedLogger.debug(
