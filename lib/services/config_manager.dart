@@ -163,7 +163,6 @@ class ConfigManager extends ChangeNotifier {
 
   Timer? _sessionTimer;
   Timer? _throttleTimer; // For UI throttling
-  Timer? _heartbeatTimer; // Smart Monitor
   bool _hasPendingUpdates = false; // Flag for buffered updates
 
   // Global Kill Switch
