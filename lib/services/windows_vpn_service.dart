@@ -525,11 +525,28 @@ class WindowsVpnService {
   }
 
   // Helper method to force kill sing-box processes
-  Future<void> _forceKillSingBoxProcesses() async {
+  @visibleForTesting
+  Future<void> forceKillSingBoxProcessesForTesting({
+    Future<ProcessResult> Function(String, List<String>)? processRunner,
+    bool? isWindowsOverride,
+  }) async {
+    return _forceKillSingBoxProcesses(
+      processRunner: processRunner,
+      isWindowsOverride: isWindowsOverride,
+    );
+  }
+
+  Future<void> _forceKillSingBoxProcesses({
+    Future<ProcessResult> Function(String, List<String>)? processRunner,
+    bool? isWindowsOverride,
+  }) async {
+    final runner = processRunner ?? Process.run;
+    final isWin = isWindowsOverride ?? Platform.isWindows;
+
     try {
-      if (Platform.isWindows) {
+      if (isWin) {
         // Force kill any existing sing-box processes to free up ports immediately
-        final result = await Process.run('taskkill', [
+        final result = await runner('taskkill', [
           '/F',
           '/IM',
           'sing-box.exe',
