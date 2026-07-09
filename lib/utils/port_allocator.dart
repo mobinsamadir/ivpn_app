@@ -114,4 +114,17 @@ class PortAllocator {
       return false;
     }
   }
+
+  @visibleForTesting
+  void resetForTesting() {
+    _currentPort = _startPort;
+    _activePorts.clear();
+    _isAllocating = false;
+    for (final completer in _allocationQueue) {
+      if (!completer.isCompleted) {
+        completer.completeError('PortAllocator reset for testing');
+      }
+    }
+    _allocationQueue.clear();
+  }
 }
