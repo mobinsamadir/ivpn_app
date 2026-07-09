@@ -54,9 +54,9 @@ class _SmartConnectButtonState extends State<SmartConnectButton>
         final connectionStatus = configManager.connectionStatus;
         final isConnecting =
             connectionStatus.toLowerCase().contains('connecting') ||
-            connectionStatus.toLowerCase().contains('finding') ||
-            connectionStatus.toLowerCase().contains('preparing') ||
-            connectionStatus.toLowerCase().contains('testing');
+                connectionStatus.toLowerCase().contains('finding') ||
+                connectionStatus.toLowerCase().contains('preparing') ||
+                connectionStatus.toLowerCase().contains('testing');
 
         if (isConnecting || isConnected) {
           _pulseController.repeat(reverse: true);
@@ -65,8 +65,7 @@ class _SmartConnectButtonState extends State<SmartConnectButton>
           _pulseController.value = 0.0;
         }
 
-        final bool hasConfigs =
-            configManager.validatedConfigs.isNotEmpty ||
+        final bool hasConfigs = configManager.validatedConfigs.isNotEmpty ||
             configManager.allConfigs.isNotEmpty;
         final bool isButtonDisabled =
             !hasConfigs && !isConnecting && !isConnected;
@@ -81,7 +80,7 @@ class _SmartConnectButtonState extends State<SmartConnectButton>
               onTap: isButtonDisabled
                   ? null
                   : (widget.onPressed ??
-                        () => _handleConnection(configManager)),
+                      () => _handleConnection(configManager)),
               child: AnimatedBuilder(
                 animation: _pulseAnimation,
                 builder: (context, child) {
