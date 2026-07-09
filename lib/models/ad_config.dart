@@ -52,7 +52,8 @@ class AdUnit {
       isEnabled:
           json['isEnabled'] as bool? ?? json['is_enabled'] as bool? ?? true,
       type: json['type'] as String? ?? 'webview',
-      mediaSource: json['media_source'] as String? ??
+      mediaSource:
+          json['media_source'] as String? ??
           json['media_url'] as String? ??
           json['mediaSource'] as String? ??
           '',

@@ -284,12 +284,6 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     }
   }
 
-  String _formatBytes(int bytes) {
-    if (bytes < 1024) return '$bytes B';
-    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    if (bytes < 1024 * 1024 * 1024)
-      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
   }
 
   @override
@@ -714,99 +708,83 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
             cacheExtent: 1000,
             slivers: [
               // 1. Banner for Admin Warning (Windows only)
-              if (Platform.isWindows && !_isAdmin)
-                SliverToBoxAdapter(
-                  child: Container(
-                    width: double.infinity,
-                    color: Colors.amberAccent.withOpacity(0.2),
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 8,
-                      horizontal: 16,
-                    ),
-                    child: Row(
-                      children: const [
-                        Icon(
-                          Icons.warning_amber_rounded,
-                          color: Colors.amberAccent,
-                          size: 20,
-                        ),
-                        SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            "For better connectivity, please run iVPN as Administrator.",
-                            style: TextStyle(
-                              color: Colors.amberAccent,
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              SliverToBoxAdapter(child: _buildAdBannerSection()),
+              if (Platform.isWindows) _AdminWarningBanner(isAdmin: _isAdmin),
+              const SliverToBoxAdapter(child: _AdBannerSection()),
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                   child: Column(
                     children: [
                       const SizedBox(height: 8),
-                      _buildSubscriptionCard(),
+                      _SubscriptionCard(
+                        hasTime: _timeWalletService.hasTime,
+                        remainingSeconds: _timeWalletService.remainingSeconds,
+                        onAddTime: _showAdSequence,
+                      ),
                       const SizedBox(height: 16),
-                      Container(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16.0,
-                            vertical: 8.0,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.autorenew,
-                                    color: Colors.blueAccent,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  const Text(
-                                    'Auto Switch',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Switch(
-                                value: _configManager.isAutoSwitchEnabled,
-                                activeColor: Colors.blueAccent,
-                                onChanged: (val) {
-                                  setState(() {
-                                    _configManager.isAutoSwitchEnabled = val;
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
+                      _AutoSwitchToggle(
+                        isEnabled: _configManager.isAutoSwitchEnabled,
+                        onChanged: (val) {
+                          setState(() {
+                            _configManager.isAutoSwitchEnabled = val;
+                          });
+                        },
                       ),
                       ListenableBuilder(
                         listenable: _configManager,
                         builder: (context, _) => Column(
                           children: [
-                            _buildConnectionStatus(),
+                            _ConnectionStatus(
+                              isConnected: _configManager.isConnected,
+                              connectionStatus: _configManager.connectionStatus,
+                              rxBytes: _rxBytes,
+                              txBytes: _txBytes,
+                            ),
                             const SizedBox(height: 12),
-                            _buildConnectButton(),
+                            _ConnectButton(
+                              isConnected: _configManager.isConnected,
+                              isConnecting: _isNativeOperationInProgress,
+                              onRefresh: _refreshConfigsManual,
+                              onConnect: _handleConnection,
+                              onSkip: _skipServer,
+                            ),
                           ],
                         ),
                       ),
                       const SizedBox(height: 30),
-                      _buildSelectedConfig(),
+                      _SelectedConfigView(
+                        config: _configManager.selectedConfig,
+                        activeTestIds: _activeTestIds,
+                        onRunSingleTest: _runSingleTest,
+                        onToggleFavorite: (id) async {
+                          await _configManager.toggleFavorite(id);
+                          setState(() {});
+                        },
+                        onDelete: (config) async {
+                          final confirm = await _showDeleteConfirmationDialog(config);
+                          if (confirm && mounted) {
+                            await _configManager.deleteConfig(config.id);
+                            setState(() {});
+                          }
+                        },
+                      ),
                       const SizedBox(height: 25),
-                      _buildAutoTestToggle(),
+                      _AutoTestToggleGroup(
+                        autoTestOnStartup: _autoTestOnStartup,
+                        autoRefreshOnStartup: _autoRefreshOnStartup,
+                        onAutoTestChanged: (val) {
+                          setState(() {
+                            _autoTestOnStartup = val;
+                          });
+                          _savePreferences();
+                        },
+                        onAutoRefreshChanged: (val) {
+                          setState(() {
+                            _autoRefreshOnStartup = val;
+                          });
+                          _savePreferences();
+                        },
+                      ),
                       const SizedBox(height: 30),
                     ],
                   ),
@@ -827,94 +805,21 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                   padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
                   child: Column(
                     children: [
-                      if (_testProgress.isNotEmpty &&
-                          _testProgress != "Completed" &&
-                          _testProgress != "Stopped")
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF1A1A1A),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: Colors.blueAccent.withValues(alpha: 0.3),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  _testProgress,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.stop,
-                                  color: Colors.redAccent,
-                                ),
-                                onPressed: () {
-                                  _funnelService.stop();
-                                  _showToast("Test Stopped");
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
+                      _TestProgressTracker(
+                        testProgress: _testProgress,
+                        onStop: () {
+                          _funnelService.stop();
+                          _showToast("Test Stopped");
+                        },
+                      ),
                     ],
                   ),
                 ),
               ),
               SliverToBoxAdapter(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 8,
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.list,
-                        color: Colors.blueAccent,
-                        size: 22,
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Server Configuration',
-                        style: TextStyle(
-                          color: Colors.grey[100],
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        icon: const Icon(Icons.speed, color: Colors.blueAccent),
-                        onPressed: _runSmartAutoTest,
-                        tooltip: 'Test All Connections (Funnel)',
-                        splashRadius: 20,
-                      ),
-                      IconButton(
-                        icon: const Icon(
-                          Icons.delete_sweep,
-                          color: Colors.redAccent,
-                        ),
-                        onPressed: _showSmartCleanupDialog,
-                        tooltip: 'Cleanup Configs',
-                        splashRadius: 20,
-                      ),
-                    ],
-                  ),
+                child: _ServerConfigHeader(
+                  onTestAll: _runSmartAutoTest,
+                  onCleanup: _showSmartCleanupDialog,
                 ),
               ),
               SliverPersistentHeader(
@@ -1248,259 +1153,15 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     _funnelService.startFunnel();
   }
 
-  Widget _buildAdBannerSection() {
-    return const Padding(
-      padding: EdgeInsets.symmetric(vertical: 8.0),
-      child: UniversalAdWidget(slot: 'home_banner_top'),
-    );
-  }
+
 
   // _buildAppHeader Removed
 
-  Widget _buildSubscriptionCard() {
-    final access = _timeWalletService;
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white10),
-      ),
-      child: ListTile(
-        leading: const Icon(
-          Icons.workspace_premium,
-          color: Colors.amber,
-          size: 32,
-        ),
-        title: const Text(
-          'Free Plan',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        subtitle: Text(
-          access.hasTime
-              ? '${(access.remainingSeconds ~/ 3600)}h ${((access.remainingSeconds % 3600) ~/ 60)}m remaining'
-              : 'No active plan',
-          style: const TextStyle(color: Colors.grey),
-        ),
-        trailing: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.blueAccent,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-          ),
-          onPressed: _showAdSequence,
-          child: const Text('Add Time'),
-        ),
-      ),
-    );
-  }
 
-  Widget _buildConnectionStatus() {
-    Color statusColor;
-    if (_configManager.isConnected) {
-      statusColor = Colors.greenAccent;
-    } else if (_configManager.connectionStatus == 'Failed' ||
-        _configManager.connectionStatus.contains('Error')) {
-      statusColor = Colors.redAccent;
-    } else {
-      statusColor = Colors.grey;
-    }
 
-    return Column(
-      children: [
-        Center(
-          child: Text(
-            _configManager.connectionStatus,
-            style: TextStyle(
-              color: statusColor,
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-        if (_configManager.isConnected)
-          Padding(
-            padding: const EdgeInsets.only(top: 8.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.arrow_downward,
-                  color: Colors.greenAccent,
-                  size: 16,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  _formatBytes(_rxBytes),
-                  style: const TextStyle(color: Colors.white70),
-                ),
-                const SizedBox(width: 16),
-                const Icon(
-                  Icons.arrow_upward,
-                  color: Colors.blueAccent,
-                  size: 16,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  _formatBytes(_txBytes),
-                  style: const TextStyle(color: Colors.white70),
-                ),
-              ],
-            ),
-          ),
-      ],
-    );
-  }
 
-  Widget _buildConnectButton() {
-    final configManager = ConfigManager();
-    final isConnected = configManager.isConnected;
-    final isConnecting = _isNativeOperationInProgress;
 
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        // Refresh Button (Left Side)
-        Positioned(
-          left: 30,
-          child: Column(
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.blueAccent.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: IconButton(
-                  icon: const Icon(
-                    Icons.refresh_rounded,
-                    size: 32,
-                    color: Colors.blueAccent,
-                  ),
-                  onPressed: _refreshConfigsManual,
-                  tooltip: 'Refresh Servers',
-                ),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                "Refresh",
-                style: TextStyle(color: Colors.grey, fontSize: 10),
-              ),
-            ],
-          ),
-        ),
 
-        // Main Connect Button
-        Center(
-          child: GestureDetector(
-            onTap: _handleConnection,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 400),
-              curve: Curves.easeInOut,
-              width: 180,
-              height: 180,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: isConnected
-                      ? [
-                          const Color(0xFF11998E),
-                          const Color(0xFF38EF7D),
-                        ] // Green/Teal
-                      : (isConnecting
-                          ? [
-                              const Color(0xFFF2994A),
-                              const Color(0xFFF2C94C),
-                            ] // Orange/Yellow
-                          : [
-                              const Color(0xFF4A5568),
-                              const Color(0xFF2D3748),
-                            ]), // Dark Grey
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: (isConnected
-                            ? const Color(0xFF38EF7D)
-                            : (isConnecting
-                                ? const Color(0xFFF2994A)
-                                : Colors.black))
-                        .withValues(
-                      alpha: isConnected || isConnecting ? 0.5 : 0.3,
-                    ),
-                    blurRadius: isConnected || isConnecting ? 25 : 15,
-                    spreadRadius: isConnected || isConnecting ? 8 : 2,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  isConnecting
-                      ? const SizedBox(
-                          width: 50,
-                          height: 50,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 3,
-                          ),
-                        )
-                      : Icon(
-                          Icons.power_settings_new,
-                          size: 60,
-                          color: Colors.white,
-                        ),
-                  const SizedBox(height: 12),
-                  Text(
-                    isConnected
-                        ? 'CONNECTED'
-                        : (isConnecting ? 'CONNECTING' : 'CONNECT'),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-
-        // Skip Button (Right Side)
-        Positioned(
-          right: 30,
-          child: Column(
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.blueAccent.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: IconButton(
-                  icon: const Icon(
-                    Icons.skip_next_rounded,
-                    size: 32,
-                    color: Colors.blueAccent,
-                  ),
-                  onPressed: _skipServer,
-                  tooltip: 'Next Server',
-                ),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                "Skip",
-                style: TextStyle(color: Colors.grey, fontSize: 10),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
 
   Future<void> _showAddServerDialog() async {
     final TextEditingController _urlController = TextEditingController();
@@ -1577,33 +1238,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     );
   }
 
-  Widget _buildSelectedConfig() {
-    final config = _configManager.selectedConfig;
-    if (config == null) return const SizedBox.shrink();
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: ConfigCard(
-        config: config,
-        isSelected: true,
-        isTesting: _activeTestIds.contains(config.id),
-        onTap: () {}, // Already selected
-        onTestLatency: () => _runSingleTest(config),
-        onTestSpeed: () => _runSingleTest(config),
-        onToggleFavorite: () async {
-          await _configManager.toggleFavorite(config.id);
-          setState(() {});
-        },
-        onDelete: () async {
-          final confirm = await _showDeleteConfirmationDialog(config);
-          if (confirm && mounted) {
-            await _configManager.deleteConfig(config.id);
-            setState(() {});
-          }
-        },
-      ),
-    );
-  }
 
   Future<void> _savePreferences() async {
     final prefs = await SharedPreferences.getInstance();
@@ -1611,40 +1246,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     await prefs.setBool('autoRefreshOnStartup', _autoRefreshOnStartup);
   }
 
-  Widget _buildAutoTestToggle() {
-    return Column(
-      children: [
-        SwitchListTile(
-          title: const Text(
-            'Auto-Test on Startup',
-            style: TextStyle(color: Colors.white),
-          ),
-          value: _autoTestOnStartup,
-          activeThumbColor: Colors.blueAccent,
-          onChanged: (val) {
-            setState(() {
-              _autoTestOnStartup = val;
-            });
-            _savePreferences();
-          },
-        ),
-        SwitchListTile(
-          title: const Text(
-            'Auto-Refresh on Startup',
-            style: TextStyle(color: Colors.white),
-          ),
-          value: _autoRefreshOnStartup,
-          activeThumbColor: Colors.blueAccent,
-          onChanged: (val) {
-            setState(() {
-              _autoRefreshOnStartup = val;
-            });
-            _savePreferences();
-          },
-        ),
-      ],
-    );
-  }
+
 
   void _showSmartCleanupDialog() {
     showModalBottomSheet(
@@ -1784,5 +1386,590 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
           ),
         ) ??
         false;
+  }
+}
+
+
+
+class _AdminWarningBanner extends StatelessWidget {
+  final bool isAdmin;
+  const _AdminWarningBanner({required this.isAdmin});
+
+  @override
+  Widget build(BuildContext context) {
+    if (isAdmin) return const SliverToBoxAdapter(child: SizedBox.shrink());
+    return SliverToBoxAdapter(
+      child: Container(
+        width: double.infinity,
+        color: Colors.amberAccent.withValues(alpha: 0.2),
+        padding: const EdgeInsets.symmetric(
+          vertical: 8,
+          horizontal: 16,
+        ),
+        child: Row(
+          children: const [
+            Icon(
+              Icons.warning_amber_rounded,
+              color: Colors.amberAccent,
+              size: 20,
+            ),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                "For better connectivity, please run iVPN as Administrator.",
+                style: TextStyle(
+                  color: Colors.amberAccent,
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AdBannerSection extends StatelessWidget {
+  const _AdBannerSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 8.0),
+      child: UniversalAdWidget(slot: 'home_banner_top'),
+    );
+  }
+}
+
+class _SubscriptionCard extends StatelessWidget {
+  final bool hasTime;
+  final int remainingSeconds;
+  final VoidCallback onAddTime;
+
+  const _SubscriptionCard({
+    required this.hasTime,
+    required this.remainingSeconds,
+    required this.onAddTime,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E1E1E),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: ListTile(
+        leading: const Icon(
+          Icons.workspace_premium,
+          color: Colors.amber,
+          size: 32,
+        ),
+        title: const Text(
+          'Free Plan',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        subtitle: Text(
+          hasTime
+              ? '${(remainingSeconds ~/ 3600)}h ${((remainingSeconds % 3600) ~/ 60)}m remaining'
+              : 'No active plan',
+          style: const TextStyle(color: Colors.grey),
+        ),
+        trailing: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blueAccent,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
+          onPressed: onAddTime,
+          child: const Text('Add Time'),
+        ),
+      ),
+    );
+  }
+}
+
+class _AutoSwitchToggle extends StatelessWidget {
+  final bool isEnabled;
+  final ValueChanged<bool> onChanged;
+
+  const _AutoSwitchToggle({
+    required this.isEnabled,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 16.0,
+          vertical: 8.0,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                const Icon(
+                  Icons.autorenew,
+                  color: Colors.blueAccent,
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  'Auto Switch',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            Switch(
+              value: isEnabled,
+              activeColor: Colors.blueAccent,
+              onChanged: onChanged,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ConnectionStatus extends StatelessWidget {
+  final bool isConnected;
+  final String connectionStatus;
+  final int rxBytes;
+  final int txBytes;
+
+  const _ConnectionStatus({
+    required this.isConnected,
+    required this.connectionStatus,
+    required this.rxBytes,
+    required this.txBytes,
+  });
+
+  String _formatBytes(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    if (bytes < 1024 * 1024 * 1024) {
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    }
+    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Color statusColor;
+    if (isConnected) {
+      statusColor = Colors.greenAccent;
+    } else if (connectionStatus == 'Failed' ||
+        connectionStatus.contains('Error')) {
+      statusColor = Colors.redAccent;
+    } else {
+      statusColor = Colors.grey;
+    }
+
+    return Column(
+      children: [
+        Center(
+          child: Text(
+            connectionStatus,
+            style: TextStyle(
+              color: statusColor,
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        if (isConnected)
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.arrow_downward,
+                  color: Colors.greenAccent,
+                  size: 16,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  _formatBytes(rxBytes),
+                  style: const TextStyle(color: Colors.white70),
+                ),
+                const SizedBox(width: 16),
+                const Icon(
+                  Icons.arrow_upward,
+                  color: Colors.blueAccent,
+                  size: 16,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  _formatBytes(txBytes),
+                  style: const TextStyle(color: Colors.white70),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _ConnectButton extends StatelessWidget {
+  final bool isConnected;
+  final bool isConnecting;
+  final VoidCallback onRefresh;
+  final VoidCallback onConnect;
+  final VoidCallback onSkip;
+
+  const _ConnectButton({
+    required this.isConnected,
+    required this.isConnecting,
+    required this.onRefresh,
+    required this.onConnect,
+    required this.onSkip,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        // Refresh Button (Left Side)
+        Positioned(
+          left: 30,
+          child: Column(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.blueAccent.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.refresh_rounded,
+                    size: 32,
+                    color: Colors.blueAccent,
+                  ),
+                  onPressed: onRefresh,
+                  tooltip: 'Refresh Servers',
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                "Refresh",
+                style: TextStyle(color: Colors.grey, fontSize: 10),
+              ),
+            ],
+          ),
+        ),
+
+        // Main Connect Button
+        Center(
+          child: GestureDetector(
+            onTap: onConnect,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 400),
+              curve: Curves.easeInOut,
+              width: 180,
+              height: 180,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: isConnected
+                      ? [
+                          const Color(0xFF11998E),
+                          const Color(0xFF38EF7D),
+                        ] // Green/Teal
+                      : (isConnecting
+                            ? [
+                                const Color(0xFFF2994A),
+                                const Color(0xFFF2C94C),
+                              ] // Orange/Yellow
+                            : [
+                                const Color(0xFF4A5568),
+                                const Color(0xFF2D3748),
+                              ]), // Dark Grey
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color:
+                        (isConnected
+                                ? const Color(0xFF38EF7D)
+                                : (isConnecting
+                                      ? const Color(0xFFF2994A)
+                                      : Colors.black))
+                            .withValues(
+                              alpha: isConnected || isConnecting ? 0.5 : 0.3,
+                            ),
+                    blurRadius: isConnected || isConnecting ? 25 : 15,
+                    spreadRadius: isConnected || isConnecting ? 8 : 2,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  isConnecting
+                      ? const SizedBox(
+                          width: 50,
+                          height: 50,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 3,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.power_settings_new,
+                          size: 60,
+                          color: Colors.white,
+                        ),
+                  const SizedBox(height: 12),
+                  Text(
+                    isConnected
+                        ? 'CONNECTED'
+                        : (isConnecting ? 'CONNECTING' : 'CONNECT'),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+
+        // Skip Button (Right Side)
+        Positioned(
+          right: 30,
+          child: Column(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.blueAccent.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.skip_next_rounded,
+                    size: 32,
+                    color: Colors.blueAccent,
+                  ),
+                  onPressed: onSkip,
+                  tooltip: 'Next Server',
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                "Skip",
+                style: TextStyle(color: Colors.grey, fontSize: 10),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SelectedConfigView extends StatelessWidget {
+  final VpnConfigWithMetrics? config;
+  final Set<String> activeTestIds;
+  final void Function(VpnConfigWithMetrics) onRunSingleTest;
+  final void Function(String) onToggleFavorite;
+  final void Function(VpnConfigWithMetrics) onDelete;
+
+  const _SelectedConfigView({
+    required this.config,
+    required this.activeTestIds,
+    required this.onRunSingleTest,
+    required this.onToggleFavorite,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (config == null) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: ConfigCard(
+        config: config!,
+        isSelected: true,
+        isTesting: activeTestIds.contains(config!.id),
+        onTap: () {}, // Already selected
+        onTestLatency: () => onRunSingleTest(config!),
+        onTestSpeed: () => onRunSingleTest(config!),
+        onToggleFavorite: () => onToggleFavorite(config!.id),
+        onDelete: () => onDelete(config!),
+      ),
+    );
+  }
+}
+
+class _AutoTestToggleGroup extends StatelessWidget {
+  final bool autoTestOnStartup;
+  final bool autoRefreshOnStartup;
+  final ValueChanged<bool> onAutoTestChanged;
+  final ValueChanged<bool> onAutoRefreshChanged;
+
+  const _AutoTestToggleGroup({
+    required this.autoTestOnStartup,
+    required this.autoRefreshOnStartup,
+    required this.onAutoTestChanged,
+    required this.onAutoRefreshChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        SwitchListTile(
+          title: const Text(
+            'Auto-Test on Startup',
+            style: TextStyle(color: Colors.white),
+          ),
+          value: autoTestOnStartup,
+          activeThumbColor: Colors.blueAccent,
+          onChanged: onAutoTestChanged,
+        ),
+        SwitchListTile(
+          title: const Text(
+            'Auto-Refresh on Startup',
+            style: TextStyle(color: Colors.white),
+          ),
+          value: autoRefreshOnStartup,
+          activeThumbColor: Colors.blueAccent,
+          onChanged: onAutoRefreshChanged,
+        ),
+      ],
+    );
+  }
+}
+
+class _TestProgressTracker extends StatelessWidget {
+  final String testProgress;
+  final VoidCallback onStop;
+
+  const _TestProgressTracker({
+    required this.testProgress,
+    required this.onStop,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (testProgress.isEmpty ||
+        testProgress == "Completed" ||
+        testProgress == "Stopped") {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.blueAccent.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
+        children: [
+          const SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              testProgress,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(
+              Icons.stop,
+              color: Colors.redAccent,
+            ),
+            onPressed: onStop,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ServerConfigHeader extends StatelessWidget {
+  final VoidCallback onTestAll;
+  final VoidCallback onCleanup;
+
+  const _ServerConfigHeader({
+    required this.onTestAll,
+    required this.onCleanup,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 20,
+        vertical: 8,
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.list,
+            color: Colors.blueAccent,
+            size: 22,
+          ),
+          const SizedBox(width: 12),
+          Text(
+            'Server Configuration',
+            style: TextStyle(
+              color: Colors.grey[100],
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const Spacer(),
+          IconButton(
+            icon: const Icon(Icons.speed, color: Colors.blueAccent),
+            onPressed: onTestAll,
+            tooltip: 'Test All Connections (Funnel)',
+            splashRadius: 20,
+          ),
+          IconButton(
+            icon: const Icon(
+              Icons.delete_sweep,
+              color: Colors.redAccent,
+            ),
+            onPressed: onCleanup,
+            tooltip: 'Cleanup Configs',
+            splashRadius: 20,
+          ),
+        ],
+      ),
+    );
   }
 }
