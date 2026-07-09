@@ -30,8 +30,28 @@ class Base64Utils {
 
   /// Checks if a string is likely Base64 encoded
   static bool isBase64(String input) {
+    if (input.isEmpty) return false;
+
+    String processed = input.trim().replaceAll(RegExp(r'\s+'), '');
+    processed = processed.replaceAll('-', '+').replaceAll('_', '/');
+
+    // Remove valid padding
+    processed = processed.replaceAll(RegExp(r'=+$'), '');
+
+    // Base64 must have a valid length
+    if (processed.length % 4 == 1) return false;
+
+    // Check for invalid characters using regex
+    final validBase64 = RegExp(r'^[a-zA-Z0-9+/]+$');
+    if (!validBase64.hasMatch(processed)) return false;
+
     try {
-      safeDecode(input);
+      // Fix Padding
+      while (processed.length % 4 != 0) {
+        processed += '=';
+      }
+
+      base64Decode(processed);
       return true;
     } catch (e) {
       return false;

@@ -77,6 +77,10 @@ class MainActivity : FlutterActivity() {
                 }
                 "testConfig" -> {
                     val config = call.argument<String>("config")
+                    if (android.net.VpnService.prepare(this@MainActivity) != null) {
+                        result.error("PERMISSION_DENIED", "VPN Permission not granted yet", null)
+                        return@setMethodCallHandler
+                    }
                     if (config != null && config.isNotBlank()) {
                         CoroutineScope(Dispatchers.IO).launch {
                             SingboxVpnService.measurePing(config, cacheDir, result)
@@ -87,6 +91,10 @@ class MainActivity : FlutterActivity() {
                 }
                 "startTestProxy" -> {
                     val config = call.argument<String>("config")
+                    if (android.net.VpnService.prepare(this@MainActivity) != null) {
+                        result.error("PERMISSION_DENIED", "VPN Permission not granted yet", null)
+                        return@setMethodCallHandler
+                    }
                     if (config != null && config.isNotBlank()) {
                          CoroutineScope(Dispatchers.IO).launch {
                              SingboxVpnService.startTestProxy(config, cacheDir, result)
