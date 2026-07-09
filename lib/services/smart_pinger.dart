@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import '../utils/advanced_logger.dart';
+import 'package:flutter/foundation.dart';
 import '../utils/test_constants.dart';
 import '../utils/cancellable_operation.dart';
 
@@ -56,7 +57,7 @@ class SmartPinger {
     // Create independent futures for each endpoint
     for (final endpoint in endpoints) {
       futures.add(
-        _pingWithRetry(
+        pingWithRetry(
           endpoint,
           cancelToken,
           maxRetries: 2,
@@ -94,7 +95,7 @@ class SmartPinger {
 
     final avg = successful.isNotEmpty
         ? successful.map((r) => r.latency).reduce((a, b) => a + b) /
-            successful.length
+              successful.length
         : -1.0;
 
     return SmartPingResult(
@@ -108,7 +109,8 @@ class SmartPinger {
   }
 
   /// Ping with retry capability
-  static Future<PingResult> _pingWithRetry(
+  @visibleForTesting
+  static Future<PingResult> pingWithRetry(
     String endpoint,
     CancelToken? cancelToken, {
     int maxRetries = 2,
@@ -165,8 +167,9 @@ class SmartPinger {
 
       final uri = Uri.parse(endpoint);
       final host = uri.host;
-      final port =
-          uri.port == 0 ? (uri.scheme == 'https' ? 443 : 80) : uri.port;
+      final port = uri.port == 0
+          ? (uri.scheme == 'https' ? 443 : 80)
+          : uri.port;
 
       // TCP connection test
       final socket = await Socket.connect(host, port, timeout: timeout);
