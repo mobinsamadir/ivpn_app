@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
-import '../../lib/utils/base64_utils.dart';
+import 'package:ivpn_new/utils/base64_utils.dart';
 
 void main() {
   group('Base64Utils', () {
