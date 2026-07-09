@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:meta/meta.dart';
+import 'package:flutter/foundation.dart';
 import 'advanced_logger.dart';
 
 class PortAllocator {
