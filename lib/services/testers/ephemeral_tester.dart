@@ -190,8 +190,9 @@ class EphemeralTester {
           _extractHostPortWrapper,
           config.rawConfig,
         );
-        if (details == null)
+        if (details == null) {
           throw Exception("Could not extract server details");
+        }
 
         final String host = details['host'];
         final int port = details['port'];
@@ -596,8 +597,9 @@ class EphemeralTester {
         );
         newStageResults['TCP'] = TestResult(success: true);
         newStageResults['HTTP'] = TestResult(success: true, latency: latency);
-        if (speedMbps > 0)
+        if (speedMbps > 0) {
           newStageResults['Speed'] = TestResult(success: true, latency: 0);
+        }
 
         return config.copyWith(
           funnelStage: finalStage,
@@ -618,12 +620,13 @@ class EphemeralTester {
       } catch (e) {
         AdvancedLogger.warn("EphemeralTester Error (${config.name}): $e");
         String failedStage = "Init";
-        if (!stage1Success)
+        if (!stage1Success) {
           failedStage = "Stage1_ProxyInit";
-        else if (!stage2Success)
+        } else if (!stage2Success) {
           failedStage = "Stage2_HTTP";
-        else
+        } else {
           failedStage = "Stage3_Speed";
+        }
 
         return config.copyWith(
           funnelStage: 0,

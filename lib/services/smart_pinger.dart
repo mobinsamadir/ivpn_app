@@ -201,8 +201,10 @@ class SmartPinger {
         // We use Future.any to allow early breakout if the completer is resolved
         await Future.any([
           Future.delayed(const Duration(milliseconds: 500)),
-          completer.future
-              .catchError((_) => PingResult(endpoint: endpoint, latency: -1, isSuccess: false)) // Ignore errors to just wake up
+          completer.future.catchError((_) => PingResult(
+              endpoint: endpoint,
+              latency: -1,
+              isSuccess: false)) // Ignore errors to just wake up
         ]);
         if (!isResolved) {
           AdvancedLogger.debug(

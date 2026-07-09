@@ -14,8 +14,7 @@ String _generateConfigWrapper(Map<String, dynamic> args) {
   return SingboxConfigGenerator.generateConfig(
     args['configContent'],
     listenPort: args['listenPort'],
-    isKillSwitchEnabled: args['isKillSwitchEnabled'] ?? false,
-    isTest: args['isTest'] ?? false,
+    isTest: args['isTest'],
   );
 }
 
@@ -368,10 +367,11 @@ class WindowsVpnService {
       AdvancedLogger.info(
         '[WindowsVpnService] Converting config from raw format to JSON (in background isolate)',
       );
+      // Generate PRODUCTION config (isTest: false) in background isolate
       jsonConfig = await compute(_generateConfigWrapper, {
         'configContent': configContent,
-        'listenPort': 2080,
-        'isTest': false,
+        'listenPort': 2080, // Main port for production
+        'isTest': false, // <--- CRITICAL: Enables TUN and Secure DNS
         'isKillSwitchEnabled': ConfigManager().isKillSwitchEnabled,
       });
       AdvancedLogger.info(
@@ -380,16 +380,18 @@ class WindowsVpnService {
     }
 
     final tempDir = await getTemporaryDirectory();
-    final configFile = File(
-      p.join(tempDir.path,
-          'sing-box-config-${DateTime.now().millisecondsSinceEpoch}.json'),
-    );
+    final configFile = File(p.join(tempDir.path, 'config.json'));
     await configFile.writeAsString(jsonConfig);
+    AdvancedLogger.info(
+      '[WindowsVpnService] Config file written to: ${configFile.path}',
+    );
 
     if (!await configFile.exists()) {
       throw Exception(
-          "Configuration file does not exist at path: ${configFile.path}");
+        "Configuration file does not exist at path: ${configFile.path}",
+      );
     }
+
     return configFile;
   }
 
