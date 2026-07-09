@@ -23,11 +23,17 @@ class SingboxConfigGenerator {
   // REMOVED default listenPort=10808 to force dynamic port usage
   static String generateConfig(
     String rawLink, {
-    required int listenPort,
+    int? listenPort,
+    int? socksPort,
+    int? httpPort,
     bool isTest = false,
   }) {
-    final socksPort = listenPort;
-    final httpPort = listenPort + 1;
+    final actualSocksPort = socksPort ?? listenPort;
+    if (actualSocksPort == null) {
+      throw ArgumentError('Either socksPort or listenPort must be provided');
+    }
+    final actualHttpPort = httpPort ?? (actualSocksPort + 1);
+
     final link = rawLink.trim();
     if (kDebugMode) {
       FileLogger.log("--- Parsing Protocol: ${link.split('://').first} ---");
@@ -37,23 +43,23 @@ class SingboxConfigGenerator {
       if (link.toLowerCase().startsWith('vmess://')) {
         return _parseVmess(
           link,
-          socksPort: socksPort,
-          httpPort: httpPort,
+          socksPort: actualSocksPort,
+          httpPort: actualHttpPort,
           isTest: isTest,
         );
       } else if (link.toLowerCase().startsWith('vless://') ||
           link.toLowerCase().startsWith('trojan://')) {
         return _parseUriStandard(
           link,
-          socksPort: socksPort,
-          httpPort: httpPort,
+          socksPort: actualSocksPort,
+          httpPort: actualHttpPort,
           isTest: isTest,
         );
       } else if (link.toLowerCase().startsWith('ss://')) {
         return _parseShadowsocks(
           link,
-          socksPort: socksPort,
-          httpPort: httpPort,
+          socksPort: actualSocksPort,
+          httpPort: actualHttpPort,
           isTest: isTest,
         );
       } else {
@@ -69,9 +75,17 @@ class SingboxConfigGenerator {
   /// Dedicated Ping Config - Minimal structure to avoid conflicts
   static String generatePingConfig({
     required String rawLink,
-    required int listenPort,
+    int? listenPort,
+    int? socksPort,
+    int? httpPort,
   }) {
-    return generateConfig(rawLink, listenPort: listenPort, isTest: true);
+    return generateConfig(
+      rawLink,
+      listenPort: listenPort,
+      socksPort: socksPort,
+      httpPort: httpPort,
+      isTest: true,
+    );
   }
 
   static String _parseVmess(
