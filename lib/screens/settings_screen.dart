@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../providers/theme_provider.dart';
+import '../services/config_manager.dart';
+import 'split_tunneling_screen.dart';
 import '../services/config_manager.dart'; // برای دسترسی به ThemeProvider
 
 class SettingsScreen extends StatefulWidget {
@@ -150,10 +152,10 @@ class _SettingsScreenState extends State<SettingsScreen>
             title: const Text('Split Tunneling'),
             subtitle: const Text('Choose which apps use the VPN'),
             onTap: () {
-              // TODO: Add navigation to a new screen for app selection
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Split Tunneling feature is coming soon!'),
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SplitTunnelingScreen(),
                 ),
               );
             },
