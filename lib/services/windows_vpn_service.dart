@@ -625,9 +625,8 @@ class WindowsVpnService {
       }
     }
 
-    _statusController.add("DISCONNECTED");
     AdvancedLogger.info(
-      '[WindowsVpnService] VPN stopped, status set to DISCONNECTED',
+      '[WindowsVpnService] VPN stop initiated, waiting for process exit to set DISCONNECTED status',
     );
   }
 }
