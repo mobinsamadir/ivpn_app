@@ -94,7 +94,7 @@ class SmartPinger {
 
     final avg = successful.isNotEmpty
         ? successful.map((r) => r.latency).reduce((a, b) => a + b) /
-              successful.length
+            successful.length
         : -1.0;
 
     return SmartPingResult(
@@ -130,6 +130,8 @@ class SmartPinger {
           AdvancedLogger.debug('[SmartPing] Retry $attempt for $endpoint');
           await Future.delayed(Duration(milliseconds: 200 * attempt));
         }
+      } on OperationCancelledException {
+        rethrow;
       } catch (e) {
         if (attempt == maxRetries) {
           return PingResult(
@@ -163,9 +165,8 @@ class SmartPinger {
 
       final uri = Uri.parse(endpoint);
       final host = uri.host;
-      final port = uri.port == 0
-          ? (uri.scheme == 'https' ? 443 : 80)
-          : uri.port;
+      final port =
+          uri.port == 0 ? (uri.scheme == 'https' ? 443 : 80) : uri.port;
 
       // TCP connection test
       final socket = await Socket.connect(host, port, timeout: timeout);
@@ -179,6 +180,9 @@ class SmartPinger {
         isSuccess: true,
         error: null,
       );
+    } on OperationCancelledException {
+      stopwatch.stop();
+      rethrow;
     } on SocketException catch (e) {
       stopwatch.stop();
       return PingResult(
