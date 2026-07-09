@@ -89,6 +89,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
 
   // Auto-switch Variables
   int _highPingCounter = 0;
+  DateTime? _lastAutoSwitchTime;
   static const int _consecutiveHighPingCount =
       2; // consecutive checks before switching
   Timer? _pingMonitorTimer;
@@ -358,6 +359,16 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
       return;
     }
 
+    final now = DateTime.now();
+    if (_lastAutoSwitchTime != null &&
+        now.difference(_lastAutoSwitchTime!).inSeconds < 30) {
+      AdvancedLogger.warn(
+        '[AutoSwitch] Cooldown active. Auto-switch throttled to prevent Ping-Pong effect.',
+      );
+      return;
+    }
+    _lastAutoSwitchTime = now;
+
     _isSwitching = true;
     AdvancedLogger.info(
       '[ConnectionHomeScreen] Initiating auto-switch due to high ping',
@@ -373,6 +384,15 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
       await Future.delayed(
         const Duration(seconds: 2),
       ); // Increased delay for safety
+
+      // Check if user cancelled during the delay
+      if (_configManager.userInitiatedDisconnect ||
+          _configManager.isConnectionCancelled) {
+        AdvancedLogger.warn(
+          '[AutoSwitch] User initiated disconnect or cancelled during switch. Aborting.',
+        );
+        return;
+      }
 
       // Use Smart Failover
       await _configManager.connectWithSmartFailover();
