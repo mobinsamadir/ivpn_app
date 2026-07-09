@@ -279,11 +279,38 @@ class WindowsVpnService {
       '[WindowsVpnService] Previous VPN connection stopped and processes cleaned up',
     );
 
+    try {
+      await _checkRequirements();
+
+      _statusController.add("CONNECTING");
+      AdvancedLogger.info('[WindowsVpnService] Setting status to CONNECTING');
+
+      final exePath = await WindowsVpnService.getExecutablePath();
+      final binDir = p.dirname(exePath);
+
+      await _prepareEnvironment(exePath, binDir);
+
+      final configFile = await _prepareConfig(configContent);
+
+      await _spawnProcess(exePath, binDir, configFile);
+    } catch (e, stackTrace) {
+      _logController.add("❌ Connection Failed: $e");
+      _statusController.add("ERROR");
+      AdvancedLogger.error(
+        '[WindowsVpnService] Connection failed with error: $e',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      FileLogger.log("Connection Error: $e");
+      rethrow;
+    }
+  }
+
+  Future<void> _checkRequirements() async {
     if (Platform.isWindows && !await isAdmin()) {
       _logController.add(
         "❌ ERROR: TUN mode requires Administrator privileges.",
       );
-      _statusController.add("ERROR");
       AdvancedLogger.error(
         '[WindowsVpnService] Administrator privileges required',
       );
@@ -297,194 +324,181 @@ class WindowsVpnService {
       _logController.add(
         "❌ ERROR: Required assets (geoip.db, geosite.db) are missing.",
       );
-      _statusController.add("ERROR");
       AdvancedLogger.error('[WindowsVpnService] Required assets are missing');
       throw Exception(
         "Required assets are missing. Please ensure geoip.db and geosite.db are included in the build.",
       );
     }
+  }
 
-    try {
-      _statusController.add("CONNECTING");
-      AdvancedLogger.info('[WindowsVpnService] Setting status to CONNECTING');
+  Future<void> _prepareEnvironment(String exePath, String binDir) async {
+    debugPrint('Attempting to run Sing-box at path: $exePath');
+    AdvancedLogger.info(
+      '[WindowsVpnService] Sing-box executable path: $exePath',
+    );
 
-      final exePath = await WindowsVpnService.getExecutablePath();
-      debugPrint('Attempting to run Sing-box at path: $exePath');
+    final geoIpPath = await WindowsVpnService.getGeoIpPath();
+    AdvancedLogger.info('[WindowsVpnService] GeoIP database path: $geoIpPath');
+
+    final geoSitePath = await WindowsVpnService.getGeoSitePath();
+    AdvancedLogger.info(
+      '[WindowsVpnService] GeoSite database path: $geoSitePath',
+    );
+
+    final workingDir = p.dirname(exePath);
+    AdvancedLogger.info(
+      '[WindowsVpnService] Working directory: $workingDir, Bin directory: $binDir',
+    );
+
+    // Copy database files to the same directory as sing-box.exe if they're not already there
+    await _ensureDatabaseFiles(binDir, geoIpPath, geoSitePath);
+    AdvancedLogger.info(
+      '[WindowsVpnService] Database files ensured in bin directory',
+    );
+  }
+
+  Future<File> _prepareConfig(String configContent) async {
+    String jsonConfig;
+    if (configContent.trim().startsWith("{")) {
+      jsonConfig = configContent;
+      AdvancedLogger.info('[WindowsVpnService] Config is already JSON format');
+    } else {
       AdvancedLogger.info(
-        '[WindowsVpnService] Sing-box executable path: $exePath',
+        '[WindowsVpnService] Converting config from raw format to JSON (in background isolate)',
       );
-
-      final geoIpPath = await WindowsVpnService.getGeoIpPath();
+      // Generate PRODUCTION config (isTest: false) in background isolate
+      jsonConfig = await compute(_generateConfigWrapper, {
+        'configContent': configContent,
+        'listenPort': 2080, // Main port for production
+        'isTest': false, // <--- CRITICAL: Enables TUN and Secure DNS
+      });
       AdvancedLogger.info(
-        '[WindowsVpnService] GeoIP database path: $geoIpPath',
+        '[WindowsVpnService] Generated JSON config length: ${jsonConfig.length}',
       );
+    }
 
-      final geoSitePath = await WindowsVpnService.getGeoSitePath();
-      AdvancedLogger.info(
-        '[WindowsVpnService] GeoSite database path: $geoSitePath',
+    final tempDir = await getTemporaryDirectory();
+    final configFile = File(p.join(tempDir.path, 'config.json'));
+    await configFile.writeAsString(jsonConfig);
+    AdvancedLogger.info(
+      '[WindowsVpnService] Config file written to: ${configFile.path}',
+    );
+
+    if (!await configFile.exists()) {
+      throw Exception(
+        "Configuration file does not exist at path: ${configFile.path}",
       );
+    }
 
-      final workingDir = p.dirname(exePath);
-      final binDir = p.dirname(exePath);
-      AdvancedLogger.info(
-        '[WindowsVpnService] Working directory: $workingDir, Bin directory: $binDir',
-      );
+    return configFile;
+  }
 
-      // Copy database files to the same directory as sing-box.exe if they're not already there
-      await _ensureDatabaseFiles(binDir, geoIpPath, geoSitePath);
-      AdvancedLogger.info(
-        '[WindowsVpnService] Database files ensured in bin directory',
-      );
+  Future<void> _spawnProcess(
+    String exePath,
+    String binDir,
+    File configFile,
+  ) async {
+    _logController.add("🚀 Starting Sing-box Core...");
+    _logController.add("📂 Executable: $exePath");
+    _logController.add("📂 Config: ${configFile.path}");
+    _logController.add("📂 Database files: geoip.db, geosite.db");
+    AdvancedLogger.info(
+      '[WindowsVpnService] Starting Sing-box process with args: [run, -c, ${configFile.path}, -D, $binDir]',
+    );
 
-      // If the input is not JSON (it's a raw link), convert it first.
-      String jsonConfig;
-      if (configContent.trim().startsWith("{")) {
-        jsonConfig = configContent;
-        AdvancedLogger.info(
-          '[WindowsVpnService] Config is already JSON format',
-        );
-      } else {
-        AdvancedLogger.info(
-          '[WindowsVpnService] Converting config from raw format to JSON (in background isolate)',
-        );
-        // Generate PRODUCTION config (isTest: false) in background isolate
-        jsonConfig = await compute(_generateConfigWrapper, {
-          'configContent': configContent,
-          'listenPort': 2080, // Main port for production
-          'isTest': false, // <--- CRITICAL: Enables TUN and Secure DNS
-        });
-        AdvancedLogger.info(
-          '[WindowsVpnService] Generated JSON config length: ${jsonConfig.length}',
-        );
+    final exeFile = File(exePath);
+    if (!await exeFile.exists()) {
+      throw Exception("Sing-box executable does not exist at path: $exePath");
+    }
+
+    // Print the EXACT command and path being run using AdvancedLogger
+    final commandArgs = ['run', '-c', configFile.path, '-D', binDir];
+    AdvancedLogger.info(
+      '[WindowsVpnService] Executing command: $exePath ${commandArgs.join(' ')}',
+    );
+    AdvancedLogger.info('[WindowsVpnService] Working directory: $binDir');
+    AdvancedLogger.info(
+      '[WindowsVpnService] Environment: {ENABLE_DEPRECATED_SPECIAL_OUTBOUNDS: true}',
+    );
+
+    AdvancedLogger.info('[WindowsVpnService] Starting Sing-box in: $binDir');
+    _process = await Process.start(
+      exePath,
+      ['run', '-c', configFile.path], // REMOVED: '-D', binDir
+      workingDirectory: binDir, // This is enough and handles spaces correctly
+      runInShell: false, // Set to false to avoid CMD parsing issues with spaces
+      environment: {'ENABLE_DEPRECATED_SPECIAL_OUTBOUNDS': 'true'},
+    );
+    AdvancedLogger.info(
+      '[WindowsVpnService] Process started successfully, PID: ${_process?.pid}',
+    );
+
+    // Listen to process.stdout and process.stderr immediately to capture why it fails to start
+    _process!.stdout.transform(utf8.decoder).listen((data) {
+      final trimmedData = data.trim();
+      if (trimmedData.isNotEmpty) {
+        _logController.add(trimmedData);
+        AdvancedLogger.info('[WindowsVpnService] stdout: $trimmedData');
       }
+    });
 
-      final tempDir = await getTemporaryDirectory();
-      final configFile = File(p.join(tempDir.path, 'config.json'));
-      await configFile.writeAsString(jsonConfig);
-      AdvancedLogger.info(
-        '[WindowsVpnService] Config file written to: ${configFile.path}',
-      );
-
-      _logController.add("🚀 Starting Sing-box Core...");
-      _logController.add("📂 Executable: $exePath");
-      _logController.add("📂 Config: ${configFile.path}");
-      _logController.add("📂 Database files: geoip.db, geosite.db");
-      AdvancedLogger.info(
-        '[WindowsVpnService] Starting Sing-box process with args: [run, -c, ${configFile.path}, -D, $binDir]',
-      );
-
-      // Add extra validation before starting the process
-      final exeFile = File(exePath);
-      if (!await exeFile.exists()) {
-        throw Exception("Sing-box executable does not exist at path: $exePath");
-      }
-
-      if (!await configFile.exists()) {
-        throw Exception(
-          "Configuration file does not exist at path: ${configFile.path}",
-        );
-      }
-
-      // Print the EXACT command and path being run using AdvancedLogger
-      final commandArgs = ['run', '-c', configFile.path, '-D', binDir];
-      AdvancedLogger.info(
-        '[WindowsVpnService] Executing command: $exePath ${commandArgs.join(' ')}',
-      );
-      AdvancedLogger.info('[WindowsVpnService] Working directory: $binDir');
-      AdvancedLogger.info(
-        '[WindowsVpnService] Environment: {ENABLE_DEPRECATED_SPECIAL_OUTBOUNDS: true}',
-      );
-
-      AdvancedLogger.info('[WindowsVpnService] Starting Sing-box in: $binDir');
-      _process = await Process.start(
-        exePath,
-        ['run', '-c', configFile.path], // REMOVED: '-D', binDir
-        workingDirectory: binDir, // This is enough and handles spaces correctly
-        runInShell:
-            false, // Set to false to avoid CMD parsing issues with spaces
-        environment: {'ENABLE_DEPRECATED_SPECIAL_OUTBOUNDS': 'true'},
-      );
-      AdvancedLogger.info(
-        '[WindowsVpnService] Process started successfully, PID: ${_process?.pid}',
-      );
-
-      // Listen to process.stdout and process.stderr immediately to capture why it fails to start
-      _process!.stdout.transform(utf8.decoder).listen((data) {
-        final trimmedData = data.trim();
-        if (trimmedData.isNotEmpty) {
-          _logController.add(trimmedData);
-          AdvancedLogger.info('[WindowsVpnService] stdout: $trimmedData');
+    _process!.stderr.transform(utf8.decoder).listen((data) {
+      final trimmedData = data.trim();
+      if (trimmedData.isNotEmpty) {
+        // Sing-box logs mostly to stderr
+        _logController.add(trimmedData);
+        // Log as error if it looks like an error message, otherwise as info
+        if (trimmedData.toLowerCase().contains('error') ||
+            trimmedData.toLowerCase().contains('exception') ||
+            trimmedData.toLowerCase().contains('failed') ||
+            trimmedData.toLowerCase().contains('fatal')) {
+          AdvancedLogger.error('[WindowsVpnService] stderr: $trimmedData');
+        } else {
+          // CRITICAL: Log stderr as WARN so it appears in Release mode (as requested)
+          AdvancedLogger.warn('[WindowsVpnService] stderr: $trimmedData');
         }
-      });
 
-      _process!.stderr.transform(utf8.decoder).listen((data) {
-        final trimmedData = data.trim();
-        if (trimmedData.isNotEmpty) {
-          // Sing-box logs mostly to stderr
-          _logController.add(trimmedData);
-          // Log as error if it looks like an error message, otherwise as info
-          if (trimmedData.toLowerCase().contains('error') ||
-              trimmedData.toLowerCase().contains('exception') ||
-              trimmedData.toLowerCase().contains('failed') ||
-              trimmedData.toLowerCase().contains('fatal')) {
-            AdvancedLogger.error('[WindowsVpnService] stderr: $trimmedData');
-          } else {
-            // CRITICAL: Log stderr as WARN so it appears in Release mode (as requested)
-            AdvancedLogger.warn('[WindowsVpnService] stderr: $trimmedData');
-          }
-
-          if (trimmedData.toLowerCase().contains("started") ||
-              trimmedData.toLowerCase().contains("tun")) {
-            _statusController.add("CONNECTED");
-            _logController.add("✅ VPN Connection Established Successfully");
-            AdvancedLogger.info(
-              '[WindowsVpnService] VPN connection established successfully',
-            );
-          }
+        if (trimmedData.toLowerCase().contains("started") ||
+            trimmedData.toLowerCase().contains("tun")) {
+          _statusController.add("CONNECTED");
+          _logController.add("✅ VPN Connection Established Successfully");
+          AdvancedLogger.info(
+            '[WindowsVpnService] VPN connection established successfully',
+          );
         }
-      });
-
-      _process!.exitCode.then((code) {
-        _logController.add("🛑 Sing-box exited with code: $code");
-        AdvancedLogger.info(
-          '[WindowsVpnService] Sing-box process exited with code: $code',
-        );
-        // Always update status when process exits, regardless of whether it was manually stopped
-        _statusController.add("DISCONNECTED");
-        _process = null;
-      });
-
-      // Wait a bit to ensure the process started successfully
-      await Future.delayed(const Duration(seconds: 2));
-      AdvancedLogger.info(
-        '[WindowsVpnService] Waiting completed, checking process status',
-      );
-
-      // Double-check that the process is still running
-      if (_process != null) {
-        _statusController.add("CONNECTED");
-        _logController.add("✅ VPN Connection Confirmed Stable");
-        AdvancedLogger.info(
-          '[WindowsVpnService] VPN connection confirmed stable',
-        );
-      } else {
-        _statusController.add("ERROR");
-        _logController.add("❌ VPN Process Failed to Start Properly");
-        AdvancedLogger.error(
-          '[WindowsVpnService] VPN process failed to start properly',
-        );
-        throw Exception("VPN process failed to start properly");
       }
-    } catch (e, stackTrace) {
-      _logController.add("❌ Connection Failed: $e");
+    });
+
+    _process!.exitCode.then((code) {
+      _logController.add("🛑 Sing-box exited with code: $code");
+      AdvancedLogger.info(
+        '[WindowsVpnService] Sing-box process exited with code: $code',
+      );
+      // Always update status when process exits, regardless of whether it was manually stopped
+      _statusController.add("DISCONNECTED");
+      _process = null;
+    });
+
+    // Wait a bit to ensure the process started successfully
+    await Future.delayed(const Duration(seconds: 2));
+    AdvancedLogger.info(
+      '[WindowsVpnService] Waiting completed, checking process status',
+    );
+
+    // Double-check that the process is still running
+    if (_process != null) {
+      _statusController.add("CONNECTED");
+      _logController.add("✅ VPN Connection Confirmed Stable");
+      AdvancedLogger.info(
+        '[WindowsVpnService] VPN connection confirmed stable',
+      );
+    } else {
       _statusController.add("ERROR");
+      _logController.add("❌ VPN Process Failed to Start Properly");
       AdvancedLogger.error(
-        '[WindowsVpnService] Connection failed with error: $e',
-        error: e,
-        stackTrace: stackTrace,
+        '[WindowsVpnService] VPN process failed to start properly',
       );
-      FileLogger.log("Connection Error: $e");
-      rethrow;
+      throw Exception("VPN process failed to start properly");
     }
   }
 
