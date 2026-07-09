@@ -6,6 +6,7 @@ import 'package:permission_handler/permission_handler.dart';
 import '../providers/theme_provider.dart';
 import '../services/config_manager.dart';
 import 'split_tunneling_screen.dart';
+import '../services/config_manager.dart'; // برای دسترسی به ThemeProvider
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});

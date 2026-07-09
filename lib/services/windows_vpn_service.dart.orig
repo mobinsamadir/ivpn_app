@@ -14,8 +14,7 @@ String _generateConfigWrapper(Map<String, dynamic> args) {
   return SingboxConfigGenerator.generateConfig(
     args['configContent'],
     listenPort: args['listenPort'],
-    isKillSwitchEnabled: args['isKillSwitchEnabled'] ?? false,
-    isTest: args['isTest'] ?? false,
+    isTest: args['isTest'],
   );
 }
 
@@ -368,37 +367,11 @@ class WindowsVpnService {
       AdvancedLogger.info(
         '[WindowsVpnService] Converting config from raw format to JSON (in background isolate)',
       );
-
-      // If the input is not JSON (it's a raw link), convert it first.
-      String jsonConfig;
-      if (configContent.trim().startsWith("{")) {
-        jsonConfig = configContent;
-        AdvancedLogger.info(
-          '[WindowsVpnService] Config is already JSON format',
-        );
-      } else {
-        AdvancedLogger.info(
-          '[WindowsVpnService] Converting config from raw format to JSON (in background isolate)',
-        );
-        // Generate PRODUCTION config (isTest: false) in background isolate
-        jsonConfig = await compute(_generateConfigWrapper, {
-          'configContent': configContent,
-          'listenPort': 2080, // Main port for production
-          'isTest': false, // <--- CRITICAL: Enables TUN and Secure DNS
-          'isKillSwitchEnabled': ConfigManager().isKillSwitchEnabled,
-        });
-        AdvancedLogger.info(
-          '[WindowsVpnService] Generated JSON config length: ${jsonConfig.length}',
-        );
-      }
-
-      final tempDir = await getTemporaryDirectory();
-      final configFile = File(p.join(tempDir.path, 'config.json'));
-      await configFile.writeAsString(jsonConfig);
+      // Generate PRODUCTION config (isTest: false) in background isolate
       jsonConfig = await compute(_generateConfigWrapper, {
         'configContent': configContent,
-        'listenPort': 2080,
-        'isTest': false,
+        'listenPort': 2080, // Main port for production
+        'isTest': false, // <--- CRITICAL: Enables TUN and Secure DNS
         'isKillSwitchEnabled': ConfigManager().isKillSwitchEnabled,
       });
       AdvancedLogger.info(
@@ -407,16 +380,18 @@ class WindowsVpnService {
     }
 
     final tempDir = await getTemporaryDirectory();
-    final configFile = File(
-      p.join(tempDir.path,
-          'sing-box-config-${DateTime.now().millisecondsSinceEpoch}.json'),
-    );
+    final configFile = File(p.join(tempDir.path, 'config.json'));
     await configFile.writeAsString(jsonConfig);
+    AdvancedLogger.info(
+      '[WindowsVpnService] Config file written to: ${configFile.path}',
+    );
 
     if (!await configFile.exists()) {
       throw Exception(
-          "Configuration file does not exist at path: ${configFile.path}");
+        "Configuration file does not exist at path: ${configFile.path}",
+      );
     }
+
     return configFile;
   }
 
@@ -552,28 +527,11 @@ class WindowsVpnService {
   }
 
   // Helper method to force kill sing-box processes
-  @visibleForTesting
-  Future<void> forceKillSingBoxProcessesForTesting({
-    Future<ProcessResult> Function(String, List<String>)? processRunner,
-    bool? isWindowsOverride,
-  }) async {
-    return _forceKillSingBoxProcesses(
-      processRunner: processRunner,
-      isWindowsOverride: isWindowsOverride,
-    );
-  }
-
-  Future<void> _forceKillSingBoxProcesses({
-    Future<ProcessResult> Function(String, List<String>)? processRunner,
-    bool? isWindowsOverride,
-  }) async {
-    final runner = processRunner ?? Process.run;
-    final isWin = isWindowsOverride ?? Platform.isWindows;
-
+  Future<void> _forceKillSingBoxProcesses() async {
     try {
-      if (isWin) {
+      if (Platform.isWindows) {
         // Force kill any existing sing-box processes to free up ports immediately
-        final result = await runner('taskkill', [
+        final result = await Process.run('taskkill', [
           '/F',
           '/IM',
           'sing-box.exe',
