@@ -28,7 +28,8 @@ class ClipboardUtils {
       return 'shadowsocks';
     } else if (lowerConfig.startsWith('trojan://')) {
       return 'trojan';
-    } else if (lowerConfig.startsWith('https://') || lowerConfig.startsWith('http://')) {
+    } else if (lowerConfig.startsWith('https://') ||
+        lowerConfig.startsWith('http://')) {
       // Check if it's a subscription link
       if (lowerConfig.contains('subscribe') || lowerConfig.contains('sub')) {
         return 'subscription';

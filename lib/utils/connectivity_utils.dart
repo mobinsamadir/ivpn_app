@@ -2,7 +2,8 @@ import 'dart:io';
 
 class ConnectivityUtils {
   static Future<bool> hasInternet({
-    Future<List<InternetAddress>> Function(String) lookup = InternetAddress.lookup,
+    Future<List<InternetAddress>> Function(String) lookup =
+        InternetAddress.lookup,
   }) async {
     try {
       final result = await lookup('google.com').timeout(

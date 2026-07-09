@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:io';
 import '../utils/advanced_logger.dart';
 import 'singbox_config_generator.dart';
+import 'config_manager.dart';
 import 'windows_vpn_service.dart';
 
 // Top-level function for compute to prevent UI lag
@@ -11,6 +12,7 @@ String _generateConfigWrapper(Map<String, dynamic> args) {
   return SingboxConfigGenerator.generateConfig(
     args['rawLink'],
     listenPort: args['listenPort'],
+    isKillSwitchEnabled: args['isKillSwitchEnabled'] ?? false,
   );
 }
 
@@ -189,6 +191,7 @@ class NativeVpnService {
         'rawLink': rawLink,
         'listenPort':
             10808, // Hardcoded for main VPN connection to avoid conflict with random test ports
+        'isKillSwitchEnabled': ConfigManager().isKillSwitchEnabled,
       });
 
       // CONFIG DUMP: Critical Diagnostic

@@ -147,32 +147,30 @@ class EphemeralTester {
       int p,
     ) {} // Not needed here anymore, runTestInternal handles port
 
-    _runTestInternal(config, mode, setProcess, setPort)
-        .then((result) {
-          if (!isCompleted) {
-            isCompleted = true;
-            timer.cancel();
-            if (!completer.isCompleted) completer.complete(result);
-          }
-        })
-        .catchError((e) {
-          if (!isCompleted) {
-            isCompleted = true;
-            timer.cancel();
-            if (!completer.isCompleted) {
-              completer.complete(
-                config.copyWith(
-                  funnelStage: 0,
-                  failureReason: "Test Error: $e",
-                  lastFailedStage: "Error",
-                  failureCount: config.failureCount + 1,
-                  lastTestedAt: DateTime.now(),
-                  ping: -1,
-                ),
-              );
-            }
-          }
-        });
+    _runTestInternal(config, mode, setProcess, setPort).then((result) {
+      if (!isCompleted) {
+        isCompleted = true;
+        timer.cancel();
+        if (!completer.isCompleted) completer.complete(result);
+      }
+    }).catchError((e) {
+      if (!isCompleted) {
+        isCompleted = true;
+        timer.cancel();
+        if (!completer.isCompleted) {
+          completer.complete(
+            config.copyWith(
+              funnelStage: 0,
+              failureReason: "Test Error: $e",
+              lastFailedStage: "Error",
+              failureCount: config.failureCount + 1,
+              lastTestedAt: DateTime.now(),
+              ping: -1,
+            ),
+          );
+        }
+      }
+    });
 
     return completer.future;
   }
@@ -301,8 +299,8 @@ class EphemeralTester {
                 Uri.parse('https://www.google.com/generate_204'),
               );
               final resp = await req.close().timeout(
-                const Duration(seconds: 5),
-              );
+                    const Duration(seconds: 5),
+                  );
               sw.stop();
 
               AdvancedLogger.warn(
