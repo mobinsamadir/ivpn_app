@@ -44,5 +44,13 @@ void main() {
     await tester.tap(find.byType(InkWell).first);
     expect(connectCalled, isTrue);
 
+    // Verify Speed Test
+    await tester.tap(find.byTooltip('Test Speed'));
+    expect(speedTestCalled, isTrue);
+
+    // Verify Toggle Favorite
+    await tester.tap(find.byIcon(Icons.star_outline_rounded));
+    expect(toggleFavoriteCalled, isTrue);
+
   });
 }
