@@ -134,5 +134,37 @@ void main() {
       // Ensure only 1 attempt was made despite maxRetries = 3
       expect(attempts, 1);
     });
+
+    test('Staggered concurrency resolves faster than sequential timeouts',
+        () async {
+      int attempts = 0;
+      final sw = Stopwatch()..start();
+
+      await IOOverrides.runZoned(() async {
+        final result = await SmartPinger.pingWithRetry(
+          'https://google.com',
+          null,
+          maxRetries: 2,
+          timeout: const Duration(seconds: 3),
+        );
+        expect(result.isSuccess, isTrue);
+        // The first attempt blocks/times out after 3s, but the second attempt is launched
+        // after 500ms and completes in 100ms. So total time should be around 600ms,
+        // well under the 3s timeout of the first attempt.
+        expect(sw.elapsedMilliseconds, lessThan(1500));
+      }, socketConnect: (host, port,
+          {sourceAddress, int? sourcePort, timeout}) async {
+        attempts++;
+        if (attempts == 1) {
+          // Simulate a slow connection that times out eventually
+          await Future.delayed(const Duration(seconds: 3));
+          throw TimeoutException('Mocked timeout');
+        } else {
+          // Simulate a fast connection on the second try
+          await Future.delayed(const Duration(milliseconds: 100));
+          return MockSocket();
+        }
+      });
+    });
   });
 }

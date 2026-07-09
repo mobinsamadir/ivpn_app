@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
-import '../../lib/utils/cancellable_operation.dart';
+import 'package:ivpn_new/utils/cancellable_operation.dart';
 
 void main() {
   group('CancellableOperation', () {
