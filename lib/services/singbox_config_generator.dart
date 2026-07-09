@@ -27,6 +27,7 @@ class SingboxConfigGenerator {
     int? socksPort,
     int? httpPort,
     bool isTest = false,
+    List<String>? bypassedPackages,
   }) {
     final actualSocksPort = socksPort ?? listenPort;
     if (actualSocksPort == null) {
@@ -46,6 +47,7 @@ class SingboxConfigGenerator {
           socksPort: actualSocksPort,
           httpPort: actualHttpPort,
           isTest: isTest,
+          bypassedPackages: bypassedPackages,
         );
       } else if (link.toLowerCase().startsWith('vless://') ||
           link.toLowerCase().startsWith('trojan://')) {
@@ -54,6 +56,7 @@ class SingboxConfigGenerator {
           socksPort: actualSocksPort,
           httpPort: actualHttpPort,
           isTest: isTest,
+          bypassedPackages: bypassedPackages,
         );
       } else if (link.toLowerCase().startsWith('ss://')) {
         return _parseShadowsocks(
@@ -61,6 +64,7 @@ class SingboxConfigGenerator {
           socksPort: actualSocksPort,
           httpPort: actualHttpPort,
           isTest: isTest,
+          bypassedPackages: bypassedPackages,
         );
       } else {
         throw Exception("Unsupported protocol: ${link.split('://').first}");
@@ -93,6 +97,7 @@ class SingboxConfigGenerator {
     required int socksPort,
     required int httpPort,
     required bool isTest,
+    List<String>? bypassedPackages,
   }) {
     final String decoded = Base64Utils.safeDecode(link.substring(8));
     if (decoded.isEmpty) throw FormatException("Invalid VMess Base64");
@@ -138,6 +143,7 @@ class SingboxConfigGenerator {
       socksPort: socksPort,
       httpPort: httpPort,
       isTest: isTest,
+      bypassedPackages: bypassedPackages,
     );
   }
 
@@ -146,6 +152,7 @@ class SingboxConfigGenerator {
     required int socksPort,
     required int httpPort,
     required bool isTest,
+    List<String>? bypassedPackages,
   }) {
     Uri? uri;
     try {
@@ -330,6 +337,7 @@ class SingboxConfigGenerator {
       socksPort: socksPort,
       httpPort: httpPort,
       isTest: isTest,
+      bypassedPackages: bypassedPackages,
     );
   }
 
@@ -338,6 +346,7 @@ class SingboxConfigGenerator {
     required int socksPort,
     required int httpPort,
     required bool isTest,
+    List<String>? bypassedPackages,
   }) {
     String content = link.substring(5);
     String method, password, host;
@@ -407,6 +416,7 @@ class SingboxConfigGenerator {
       socksPort: socksPort,
       httpPort: httpPort,
       isTest: isTest,
+      bypassedPackages: bypassedPackages,
     );
   }
 
@@ -494,6 +504,7 @@ class SingboxConfigGenerator {
     required int socksPort,
     required int httpPort,
     bool isTest = false,
+    List<String>? bypassedPackages,
   }) {
     // HYPER-TUNING: Add Multiplexing and TCP Fast Open
     if (!isTest) {
@@ -590,11 +601,19 @@ class SingboxConfigGenerator {
         "strategy": "ipv4_only",
       };
 
+      final List<dynamic> rules = [
+        {"protocol": "dns", "outbound": "dns-out"},
+      ];
+
+      if (bypassedPackages != null && bypassedPackages.isNotEmpty) {
+        rules.add({"package_name": bypassedPackages, "outbound": "direct"});
+      }
+
       // Smart Routing Rules
       config["route"] = {
         "auto_detect_interface": true,
         "rules": [
-          {"protocol": "dns", "outbound": "dns-out"},
+          ...rules,
           // Critical Windows fix: Bypass TUN for local traffic to avoid infinite routing loops
           {"ip_is_private": true, "outbound": "direct"},
           // Route ad domains through proxy to bypass censorship in restricted regions

@@ -5,12 +5,15 @@ import 'dart:io';
 import '../utils/advanced_logger.dart';
 import 'singbox_config_generator.dart';
 import 'windows_vpn_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 // Top-level function for compute to prevent UI lag
 String _generateConfigWrapper(Map<String, dynamic> args) {
   return SingboxConfigGenerator.generateConfig(
     args['rawLink'],
     listenPort: args['listenPort'],
+    bypassedPackages: args['bypassedPackages']?.cast<String>(),
   );
 }
 
@@ -66,7 +69,8 @@ class NativeVpnService {
           // 2. Smart Filter: Only update UI for valid status changes to prevent UI jank
           // Known statuses: CONNECTED, CONNECTING, DISCONNECTED, RECONNECTING
           // Errors start with ERROR
-          bool isStatus = [
+          bool isStatus =
+              [
                 "CONNECTED",
                 "CONNECTING",
                 "DISCONNECTED",
@@ -131,8 +135,9 @@ class NativeVpnService {
     }
 
     // 1. Diagnostic Log (First 10 chars)
-    final String start =
-        configJson.length > 10 ? configJson.substring(0, 10) : configJson;
+    final String start = configJson.length > 10
+        ? configJson.substring(0, 10)
+        : configJson;
     AdvancedLogger.warn("[DEBUG-INTERNAL] Config start: $start");
 
     // 2. Validate Format
@@ -154,7 +159,8 @@ class NativeVpnService {
     } on PlatformException catch (e) {
       if (e.code == 'PERMISSION_DENIED') {
         AdvancedLogger.warn(
-            "VPN Permission not granted. Skipping proxy start.");
+          "VPN Permission not granted. Skipping proxy start.",
+        );
         return -1;
       }
       AdvancedLogger.error("Failed to start test proxy: $e");
@@ -184,19 +190,34 @@ class NativeVpnService {
     }
 
     try {
+      // Independently read from SharedPreferences in case ConfigManager isn't initialized yet in this context
+      List<String> bypassedPackages = [];
+      try {
+        final p = await SharedPreferences.getInstance();
+        final String? data = p.getString('split_tunneling_packages');
+        if (data != null) {
+          final List<dynamic> decoded = jsonDecode(data);
+          bypassedPackages = decoded.cast<String>();
+        }
+      } catch (e) {
+        AdvancedLogger.error('Failed to read bypassed packages in NativeVpnService: $e');
+      }
+
       // Generate Sing-box JSON config from raw link using shared logic in a background isolate
       final String configJson = await compute(_generateConfigWrapper, {
         'rawLink': rawLink,
         'listenPort':
             10808, // Hardcoded for main VPN connection to avoid conflict with random test ports
+        'bypassedPackages': bypassedPackages,
       });
 
       // CONFIG DUMP: Critical Diagnostic
       AdvancedLogger.warn("[CORE-INPUT-JSON] $configJson");
 
       // 1. Diagnostic Log (First 10 chars)
-      final String start =
-          configJson.length > 10 ? configJson.substring(0, 10) : configJson;
+      final String start = configJson.length > 10
+          ? configJson.substring(0, 10)
+          : configJson;
       AdvancedLogger.warn("[DEBUG-INTERNAL] Config start: $start");
 
       // 2. Validate Format
@@ -225,14 +246,16 @@ class NativeVpnService {
 
       timeoutTimer = Timer(const Duration(seconds: 15), () async {
         AdvancedLogger.warn(
-            "Native layer timed out. Forcing stopVpn and injecting ERROR event.");
+          "Native layer timed out. Forcing stopVpn and injecting ERROR event.",
+        );
         await statusSub?.cancel();
 
         try {
           await _methodChannel.invokeMethod('stopVpn');
         } catch (e) {
           AdvancedLogger.error(
-              "Failed to cleanup Native VPN after timeout: $e");
+            "Failed to cleanup Native VPN after timeout: $e",
+          );
         }
 
         if (!_statusController.isClosed) {

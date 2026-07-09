@@ -188,10 +188,14 @@ class ConfigManager extends ChangeNotifier {
     notifyListeners();
   }
 
+  List<String> _splitTunnelingPackages = [];
+  List<String> get splitTunnelingPackages => _splitTunnelingPackages;
+
   // --- CONSTANTS ---
   static const String _configsKey = 'vpn_configs';
   static const String _blacklistKey = 'config_blacklist';
   static const String _autoSwitchKey = 'auto_switch_enabled';
+  static const String _splitTunnelingKey = 'split_tunneling_packages';
 
   // --- INITIALIZATION ---
   Future<void> init() async {
@@ -199,6 +203,7 @@ class ConfigManager extends ChangeNotifier {
     await _initDeviceId();
     await _loadAutoSwitchSetting();
     await _loadBlacklist();
+    await _loadSplitTunnelingPackages();
     await _loadConfigs();
     await _updateLists();
 
@@ -740,6 +745,27 @@ class ConfigManager extends ChangeNotifier {
   Future<void> _saveAutoSwitchSetting() async {
     final p = await SharedPreferences.getInstance();
     await p.setBool(_autoSwitchKey, _isAutoSwitchEnabled);
+  }
+
+  Future<void> _loadSplitTunnelingPackages() async {
+    final p = await SharedPreferences.getInstance();
+    final String? data = p.getString(_splitTunnelingKey);
+    if (data != null) {
+      try {
+        final List<dynamic> decoded = jsonDecode(data);
+        _splitTunnelingPackages = decoded.cast<String>();
+      } catch (e) {
+        AdvancedLogger.error('Failed to decode split tunneling packages: $e');
+        _splitTunnelingPackages = [];
+      }
+    }
+  }
+
+  Future<void> setSplitTunnelingPackages(List<String> packages) async {
+    _splitTunnelingPackages = packages;
+    final p = await SharedPreferences.getInstance();
+    await p.setString(_splitTunnelingKey, jsonEncode(packages));
+    notifyListeners();
   }
 
   Future<void> switchConfig(VpnConfigWithMetrics newConfig) async {
