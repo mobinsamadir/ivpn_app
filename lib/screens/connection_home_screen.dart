@@ -284,6 +284,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     }
   }
 
+    if (bytes < 1024 * 1024 * 1024)
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
   }
 
   @override
@@ -716,19 +719,50 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                   child: Column(
                     children: [
                       const SizedBox(height: 8),
-                      _SubscriptionCard(
+                                            _SubscriptionCard(
                         hasTime: _timeWalletService.hasTime,
                         remainingSeconds: _timeWalletService.remainingSeconds,
                         onAddTime: _showAdSequence,
                       ),
                       const SizedBox(height: 16),
-                      _AutoSwitchToggle(
-                        isEnabled: _configManager.isAutoSwitchEnabled,
-                        onChanged: (val) {
-                          setState(() {
-                            _configManager.isAutoSwitchEnabled = val;
-                          });
-                        },
+                      Container(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16.0,
+                            vertical: 8.0,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.autorenew,
+                                    color: Colors.blueAccent,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    'Auto Switch',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Switch(
+                                value: _configManager.isAutoSwitchEnabled,
+                                activeColor: Colors.blueAccent,
+                                onChanged: (val) {
+                                  setState(() {
+                                    _configManager.isAutoSwitchEnabled = val;
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                       ListenableBuilder(
                         listenable: _configManager,
@@ -805,21 +839,94 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                   padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
                   child: Column(
                     children: [
-                      _TestProgressTracker(
-                        testProgress: _testProgress,
-                        onStop: () {
-                          _funnelService.stop();
-                          _showToast("Test Stopped");
-                        },
-                      ),
+                      if (_testProgress.isNotEmpty &&
+                          _testProgress != "Completed" &&
+                          _testProgress != "Stopped")
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1A1A1A),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.blueAccent.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  _testProgress,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.stop,
+                                  color: Colors.redAccent,
+                                ),
+                                onPressed: () {
+                                  _funnelService.stop();
+                                  _showToast("Test Stopped");
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
                     ],
                   ),
                 ),
               ),
               SliverToBoxAdapter(
-                child: _ServerConfigHeader(
-                  onTestAll: _runSmartAutoTest,
-                  onCleanup: _showSmartCleanupDialog,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 8,
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.list,
+                        color: Colors.blueAccent,
+                        size: 22,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Server Configuration',
+                        style: TextStyle(
+                          color: Colors.grey[100],
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.speed, color: Colors.blueAccent),
+                        onPressed: _runSmartAutoTest,
+                        tooltip: 'Test All Connections (Funnel)',
+                        splashRadius: 20,
+                      ),
+                      IconButton(
+                        icon: const Icon(
+                          Icons.delete_sweep,
+                          color: Colors.redAccent,
+                        ),
+                        onPressed: _showSmartCleanupDialog,
+                        tooltip: 'Cleanup Configs',
+                        splashRadius: 20,
+                      ),
+                    ],
+                  ),
                 ),
               ),
               SliverPersistentHeader(
@@ -1247,7 +1354,6 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   }
 
 
-
   void _showSmartCleanupDialog() {
     showModalBottomSheet(
       context: context,
@@ -1390,7 +1496,6 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
 }
 
 
-
 class _AdminWarningBanner extends StatelessWidget {
   final bool isAdmin;
   const _AdminWarningBanner({required this.isAdmin});
@@ -1431,6 +1536,8 @@ class _AdminWarningBanner extends StatelessWidget {
   }
 }
 
+
+
 class _AdBannerSection extends StatelessWidget {
   const _AdBannerSection();
 
@@ -1442,6 +1549,8 @@ class _AdBannerSection extends StatelessWidget {
     );
   }
 }
+
+
 
 class _SubscriptionCard extends StatelessWidget {
   final bool hasTime;
@@ -1494,54 +1603,7 @@ class _SubscriptionCard extends StatelessWidget {
   }
 }
 
-class _AutoSwitchToggle extends StatelessWidget {
-  final bool isEnabled;
-  final ValueChanged<bool> onChanged;
 
-  const _AutoSwitchToggle({
-    required this.isEnabled,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 16.0,
-          vertical: 8.0,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              children: [
-                const Icon(
-                  Icons.autorenew,
-                  color: Colors.blueAccent,
-                ),
-                const SizedBox(width: 8),
-                const Text(
-                  'Auto Switch',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            Switch(
-              value: isEnabled,
-              activeColor: Colors.blueAccent,
-              onChanged: onChanged,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 class _ConnectionStatus extends StatelessWidget {
   final bool isConnected;
@@ -1556,9 +1618,6 @@ class _ConnectionStatus extends StatelessWidget {
     required this.txBytes,
   });
 
-  String _formatBytes(int bytes) {
-    if (bytes < 1024) return '$bytes B';
-    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
     if (bytes < 1024 * 1024 * 1024) {
       return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
     }
@@ -1623,6 +1682,8 @@ class _ConnectionStatus extends StatelessWidget {
     );
   }
 }
+
+
 
 class _ConnectButton extends StatelessWidget {
   final bool isConnected;
@@ -1787,6 +1848,8 @@ class _ConnectButton extends StatelessWidget {
   }
 }
 
+
+
 class _SelectedConfigView extends StatelessWidget {
   final VpnConfigWithMetrics? config;
   final Set<String> activeTestIds;
@@ -1821,6 +1884,8 @@ class _SelectedConfigView extends StatelessWidget {
     );
   }
 }
+
+
 
 class _AutoTestToggleGroup extends StatelessWidget {
   final bool autoTestOnStartup;
@@ -1858,118 +1923,6 @@ class _AutoTestToggleGroup extends StatelessWidget {
           onChanged: onAutoRefreshChanged,
         ),
       ],
-    );
-  }
-}
-
-class _TestProgressTracker extends StatelessWidget {
-  final String testProgress;
-  final VoidCallback onStop;
-
-  const _TestProgressTracker({
-    required this.testProgress,
-    required this.onStop,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    if (testProgress.isEmpty ||
-        testProgress == "Completed" ||
-        testProgress == "Stopped") {
-      return const SizedBox.shrink();
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Colors.blueAccent.withValues(alpha: 0.3),
-        ),
-      ),
-      child: Row(
-        children: [
-          const SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              testProgress,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 13,
-              ),
-            ),
-          ),
-          IconButton(
-            icon: const Icon(
-              Icons.stop,
-              color: Colors.redAccent,
-            ),
-            onPressed: onStop,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ServerConfigHeader extends StatelessWidget {
-  final VoidCallback onTestAll;
-  final VoidCallback onCleanup;
-
-  const _ServerConfigHeader({
-    required this.onTestAll,
-    required this.onCleanup,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 20,
-        vertical: 8,
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.list,
-            color: Colors.blueAccent,
-            size: 22,
-          ),
-          const SizedBox(width: 12),
-          Text(
-            'Server Configuration',
-            style: TextStyle(
-              color: Colors.grey[100],
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const Spacer(),
-          IconButton(
-            icon: const Icon(Icons.speed, color: Colors.blueAccent),
-            onPressed: onTestAll,
-            tooltip: 'Test All Connections (Funnel)',
-            splashRadius: 20,
-          ),
-          IconButton(
-            icon: const Icon(
-              Icons.delete_sweep,
-              color: Colors.redAccent,
-            ),
-            onPressed: onCleanup,
-            tooltip: 'Cleanup Configs',
-            splashRadius: 20,
-          ),
-        ],
-      ),
     );
   }
 }
