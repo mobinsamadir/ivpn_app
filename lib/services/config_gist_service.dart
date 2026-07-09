@@ -53,6 +53,13 @@ class ConfigGistService {
         // FIX: Handle missing URL gracefully to prevent crash
         final downloadUrl = data['url']?.toString() ?? '';
 
+        if (downloadUrl.isEmpty) {
+          AdvancedLogger.warn(
+            "[UpdateCheck] Update aborted: Download URL is missing.",
+          );
+          return;
+        }
+
         AdvancedLogger.info("[UpdateCheck] Remote Build: $latestBuild");
 
         if (latestBuild > currentBuild) {
@@ -253,8 +260,9 @@ class ConfigGistService {
       final anchors = document.querySelectorAll('a[href*="confirm="]');
       for (var a in anchors) {
         final uri = Uri.parse(a.attributes['href']!);
-        if (uri.queryParameters.containsKey('confirm'))
+        if (uri.queryParameters.containsKey('confirm')) {
           return uri.queryParameters['confirm'];
+        }
       }
     } catch (_) {}
     return null;
