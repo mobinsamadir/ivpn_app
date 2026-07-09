@@ -66,8 +66,7 @@ class NativeVpnService {
           // 2. Smart Filter: Only update UI for valid status changes to prevent UI jank
           // Known statuses: CONNECTED, CONNECTING, DISCONNECTED, RECONNECTING
           // Errors start with ERROR
-          bool isStatus =
-              [
+          bool isStatus = [
                 "CONNECTED",
                 "CONNECTING",
                 "DISCONNECTED",
@@ -104,6 +103,13 @@ class NativeVpnService {
         'config': config,
       });
       return latency <= 0 ? failedPingValue : latency;
+    } on PlatformException catch (e) {
+      if (e.code == 'PERMISSION_DENIED') {
+        AdvancedLogger.warn("VPN Permission not granted. Skipping test.");
+        return failedPingValue;
+      }
+      AdvancedLogger.error("Failed to get latency: $e");
+      return failedPingValue;
     } catch (e) {
       AdvancedLogger.error("Failed to get latency: $e");
       return failedPingValue;
@@ -120,14 +126,13 @@ class NativeVpnService {
 
     // CRITICAL: Prevent passing null/empty or malformed strings to native layer
     if (configJson == null || configJson.trim().isEmpty) {
-       AdvancedLogger.error("startTestProxy called with empty configuration");
-       return -1;
+      AdvancedLogger.error("startTestProxy called with empty configuration");
+      return -1;
     }
 
     // 1. Diagnostic Log (First 10 chars)
-    final String start = configJson.length > 10
-        ? configJson.substring(0, 10)
-        : configJson;
+    final String start =
+        configJson.length > 10 ? configJson.substring(0, 10) : configJson;
     AdvancedLogger.warn("[DEBUG-INTERNAL] Config start: $start");
 
     // 2. Validate Format
@@ -146,6 +151,14 @@ class NativeVpnService {
         'config': configJson,
       });
       return result;
+    } on PlatformException catch (e) {
+      if (e.code == 'PERMISSION_DENIED') {
+        AdvancedLogger.warn(
+            "VPN Permission not granted. Skipping proxy start.");
+        return -1;
+      }
+      AdvancedLogger.error("Failed to start test proxy: $e");
+      return -1;
     } catch (e) {
       AdvancedLogger.error("Failed to start test proxy: $e");
       return -1;
@@ -182,9 +195,8 @@ class NativeVpnService {
       AdvancedLogger.warn("[CORE-INPUT-JSON] $configJson");
 
       // 1. Diagnostic Log (First 10 chars)
-      final String start = configJson.length > 10
-          ? configJson.substring(0, 10)
-          : configJson;
+      final String start =
+          configJson.length > 10 ? configJson.substring(0, 10) : configJson;
       AdvancedLogger.warn("[DEBUG-INTERNAL] Config start: $start");
 
       // 2. Validate Format
@@ -201,26 +213,41 @@ class NativeVpnService {
       // if (kDebugMode) {
       //    AdvancedLogger.info("DEBUG_CONFIG: $configJson");
       // }
-      await _methodChannel
-          .invokeMethod('startVpn', {'config': configJson})
-          .timeout(
-            const Duration(seconds: 15),
-            onTimeout: () {
-              throw TimeoutException(
-                "Native VPN connection attempt timed out.",
-              );
-            },
-          );
-
-      // We will explicitly push an ERROR event if we don't hear back within 15 seconds.
-      Timer(const Duration(seconds: 15), () {
-        AdvancedLogger.warn("Native layer timed out. Injecting synthetic ERROR event.");
-        _statusController.add("ERROR: NATIVE_TIMEOUT");
-      });
+      await _methodChannel.invokeMethod('startVpn', {'config': configJson});
 
       AdvancedLogger.info(
         "✅ [Native] Connect command sent. Waiting for OS confirmation...",
       );
+
+      // Start cancelable timeout logic to listen for state update
+      Timer? timeoutTimer;
+      StreamSubscription<String>? statusSub;
+
+      timeoutTimer = Timer(const Duration(seconds: 15), () async {
+        AdvancedLogger.warn(
+            "Native layer timed out. Forcing stopVpn and injecting ERROR event.");
+        await statusSub?.cancel();
+
+        try {
+          await _methodChannel.invokeMethod('stopVpn');
+        } catch (e) {
+          AdvancedLogger.error(
+              "Failed to cleanup Native VPN after timeout: $e");
+        }
+
+        if (!_statusController.isClosed) {
+          _statusController.add("ERROR: NATIVE_TIMEOUT");
+        }
+      });
+
+      statusSub = connectionStatusStream.listen((status) {
+        if (status == "CONNECTED" ||
+            status.startsWith("ERROR") ||
+            status == "DISCONNECTED") {
+          timeoutTimer?.cancel();
+          statusSub?.cancel();
+        }
+      });
     } catch (e) {
       AdvancedLogger.error("Failed to send connect command: $e");
       _statusController.add("ERROR: START_FAILED: $e");
