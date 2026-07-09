@@ -124,7 +124,7 @@ class AdaptiveSpeedTester {
 
     client.findProxy = (uri) => "PROXY 127.0.0.1:$httpPort;";
     client.connectionTimeout = TestTimeouts.tcpHandshake;
-    client.badCertificateCallback = (cert, host, port) => true;
+    // removed insecure TLS bypass — all test targets use public CA-signed certs, traffic only tunneled via local Sing-box proxy, not TLS-terminated
 
     final stopwatch = Stopwatch();
 
