@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import '../../lib/utils/base64_utils.dart';
 
@@ -37,6 +38,30 @@ void main() {
         // returnOriginalOnFail = true -> returns original input
         expect(Base64Utils.safeDecode(invalidInput, returnOriginalOnFail: true),
             equals(invalidInput));
+      });
+
+      test('handles Base64 strings that decode to invalid UTF-8 gracefully', () {
+        // "//79" decodes to bytes [0xff, 0xfe, 0xfd] which is not valid UTF-8
+        const invalidUtf8Base64 = '//79';
+
+        expect(Base64Utils.safeDecode(invalidUtf8Base64), equals(''));
+        expect(Base64Utils.safeDecode(invalidUtf8Base64, returnOriginalOnFail: true),
+            equals(invalidUtf8Base64));
+      });
+
+      test('handles extremely large strings without crashing', () {
+        // Create a large repeated string and correctly base64 encode it
+        final massiveExpected = 'Hello' * 50000;
+        final massiveBase64 = base64Encode(utf8.encode(massiveExpected));
+
+        expect(Base64Utils.safeDecode(massiveBase64), equals(massiveExpected));
+      });
+
+      test('handles malformed base64 strings gracefully', () {
+        // Odd length strings
+        expect(Base64Utils.safeDecode('SGVsbG8==='), equals(''));
+        // Characters outside base64 alphabet
+        expect(Base64Utils.safeDecode('SGVsbG8^'), equals(''));
       });
     });
 
