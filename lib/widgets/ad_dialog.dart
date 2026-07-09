@@ -111,8 +111,9 @@ class _AdDialogState extends State<AdDialog> {
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed:
-                    _canClose ? () => Navigator.of(context).pop(true) : null,
+                onPressed: _canClose
+                    ? () => Navigator.of(context).pop(true)
+                    : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _canClose ? Colors.green : Colors.grey[800],
                   disabledBackgroundColor: Colors.grey[800],

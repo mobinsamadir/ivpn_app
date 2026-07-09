@@ -172,8 +172,9 @@ class FunnelService {
       );
 
       // Map to lightweight representation to avoid Isolate serialization overload
-      final lightweightConfigs =
-          all.map((c) => {'id': c.id, 'rawConfig': c.rawConfig}).toList();
+      final lightweightConfigs = all
+          .map((c) => {'id': c.id, 'rawConfig': c.rawConfig})
+          .toList();
 
       // Batch the processing to avoid huge object transfers
       _cachedServerDetails = {};

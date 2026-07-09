@@ -27,7 +27,6 @@ class SingboxConfigGenerator {
     int? socksPort,
     int? httpPort,
     bool isTest = false,
-    bool isKillSwitchEnabled = false,
   }) {
     final actualSocksPort = socksPort ?? listenPort;
     if (actualSocksPort == null) {
@@ -47,7 +46,6 @@ class SingboxConfigGenerator {
           socksPort: actualSocksPort,
           httpPort: actualHttpPort,
           isTest: isTest,
-          isKillSwitchEnabled: isKillSwitchEnabled,
         );
       } else if (link.toLowerCase().startsWith('vless://') ||
           link.toLowerCase().startsWith('trojan://')) {
@@ -56,7 +54,6 @@ class SingboxConfigGenerator {
           socksPort: actualSocksPort,
           httpPort: actualHttpPort,
           isTest: isTest,
-          isKillSwitchEnabled: isKillSwitchEnabled,
         );
       } else if (link.toLowerCase().startsWith('ss://')) {
         return _parseShadowsocks(
@@ -64,7 +61,6 @@ class SingboxConfigGenerator {
           socksPort: actualSocksPort,
           httpPort: actualHttpPort,
           isTest: isTest,
-          isKillSwitchEnabled: isKillSwitchEnabled,
         );
       } else {
         throw Exception("Unsupported protocol: ${link.split('://').first}");
@@ -97,7 +93,6 @@ class SingboxConfigGenerator {
     required int socksPort,
     required int httpPort,
     required bool isTest,
-    bool isKillSwitchEnabled = false,
   }) {
     final String decoded = Base64Utils.safeDecode(link.substring(8));
     if (decoded.isEmpty) throw FormatException("Invalid VMess Base64");
@@ -143,7 +138,6 @@ class SingboxConfigGenerator {
       socksPort: socksPort,
       httpPort: httpPort,
       isTest: isTest,
-      isKillSwitchEnabled: isKillSwitchEnabled,
     );
   }
 
@@ -152,7 +146,6 @@ class SingboxConfigGenerator {
     required int socksPort,
     required int httpPort,
     required bool isTest,
-    bool isKillSwitchEnabled = false,
   }) {
     Uri? uri;
     try {
@@ -337,7 +330,6 @@ class SingboxConfigGenerator {
       socksPort: socksPort,
       httpPort: httpPort,
       isTest: isTest,
-      isKillSwitchEnabled: isKillSwitchEnabled,
     );
   }
 
@@ -346,7 +338,6 @@ class SingboxConfigGenerator {
     required int socksPort,
     required int httpPort,
     required bool isTest,
-    bool isKillSwitchEnabled = false,
   }) {
     String content = link.substring(5);
     String method, password, host;
@@ -416,7 +407,6 @@ class SingboxConfigGenerator {
       socksPort: socksPort,
       httpPort: httpPort,
       isTest: isTest,
-      isKillSwitchEnabled: isKillSwitchEnabled,
     );
   }
 
@@ -504,7 +494,6 @@ class SingboxConfigGenerator {
     required int socksPort,
     required int httpPort,
     bool isTest = false,
-    bool isKillSwitchEnabled = false,
   }) {
     // HYPER-TUNING: Add Multiplexing and TCP Fast Open
     if (!isTest) {
@@ -579,7 +568,7 @@ class SingboxConfigGenerator {
           "inet4_address": "172.19.0.1/30",
           "mtu": 1350,
           "auto_route": true,
-          "strict_route": isKillSwitchEnabled,
+          "strict_route": true,
           "stack": "system", // Optimized for Windows
           "sniff": true,
         },
