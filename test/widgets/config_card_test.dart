@@ -49,9 +49,11 @@ void main() {
     await tester.tap(find.byIcon(Icons.network_check));
     expect(latencyTestCalled, isTrue);
 
-    await tester.tap(find.byIcon(Icons.speed));
+    // Verify Speed Test
+    await tester.tap(find.byTooltip('Test Speed'));
     expect(speedTestCalled, isTrue);
 
+    // Verify Toggle Favorite
     await tester.tap(find.byIcon(Icons.star_outline_rounded));
     expect(toggleFavoriteCalled, isTrue);
 
