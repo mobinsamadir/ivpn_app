@@ -16,6 +16,8 @@ void main() {
     bool connectCalled = false;
     bool speedTestCalled = false;
     bool toggleFavoriteCalled = false;
+    bool latencyTestCalled = false;
+    bool deleteCalled = false;
 
     await tester.pumpWidget(
       MaterialApp(
@@ -25,10 +27,10 @@ void main() {
             isSelected: false,
             isTesting: false,
             onTap: () => connectCalled = true,
-            onTestLatency: () {},
+            onTestLatency: () => latencyTestCalled = true,
             onTestSpeed: () => speedTestCalled = true,
             onToggleFavorite: () => toggleFavoriteCalled = true,
-            onDelete: () {},
+            onDelete: () => deleteCalled = true,
           ),
         ),
       ),
@@ -44,5 +46,16 @@ void main() {
     await tester.tap(find.byType(InkWell).first);
     expect(connectCalled, isTrue);
 
+    await tester.tap(find.byIcon(Icons.network_check));
+    expect(latencyTestCalled, isTrue);
+
+    await tester.tap(find.byIcon(Icons.speed));
+    expect(speedTestCalled, isTrue);
+
+    await tester.tap(find.byIcon(Icons.star_outline_rounded));
+    expect(toggleFavoriteCalled, isTrue);
+
+    await tester.tap(find.byIcon(Icons.delete_outline));
+    expect(deleteCalled, isTrue);
   });
 }
