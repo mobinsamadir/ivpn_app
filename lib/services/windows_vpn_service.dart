@@ -368,46 +368,28 @@ class WindowsVpnService {
       AdvancedLogger.info(
         '[WindowsVpnService] Converting config from raw format to JSON (in background isolate)',
       );
-      // Generate PRODUCTION config (isTest: false) in background isolate
       jsonConfig = await compute(_generateConfigWrapper, {
         'configContent': configContent,
-        'listenPort': 2080, // Main port for production
-        'isTest': false, // <--- CRITICAL: Enables TUN and Secure DNS
+        'listenPort': 2080,
+        'isTest': false,
+        'isKillSwitchEnabled': ConfigManager().isKillSwitchEnabled,
       });
       AdvancedLogger.info(
         '[WindowsVpnService] Generated JSON config length: ${jsonConfig.length}',
       );
     }
 
-      // If the input is not JSON (it's a raw link), convert it first.
-      String jsonConfig;
-      if (configContent.trim().startsWith("{")) {
-        jsonConfig = configContent;
-        AdvancedLogger.info(
-          '[WindowsVpnService] Config is already JSON format',
-        );
-      } else {
-        AdvancedLogger.info(
-          '[WindowsVpnService] Converting config from raw format to JSON (in background isolate)',
-        );
-        // Generate PRODUCTION config (isTest: false) in background isolate
-        jsonConfig = await compute(_generateConfigWrapper, {
-          'configContent': configContent,
-          'listenPort': 2080, // Main port for production
-          'isTest': false, // <--- CRITICAL: Enables TUN and Secure DNS
-          'isKillSwitchEnabled': ConfigManager().isKillSwitchEnabled,
-        });
-        AdvancedLogger.info(
-          '[WindowsVpnService] Generated JSON config length: ${jsonConfig.length}',
-        );
-      }
+    final tempDir = await getTemporaryDirectory();
+    final configFile = File(
+      p.join(tempDir.path,
+          'sing-box-config-${DateTime.now().millisecondsSinceEpoch}.json'),
+    );
+    await configFile.writeAsString(jsonConfig);
 
     if (!await configFile.exists()) {
       throw Exception(
-        "Configuration file does not exist at path: ${configFile.path}",
-      );
+          "Configuration file does not exist at path: ${configFile.path}");
     }
-
     return configFile;
   }
 

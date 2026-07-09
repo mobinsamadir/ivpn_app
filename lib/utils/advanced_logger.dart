@@ -81,8 +81,9 @@ class AdvancedLogger {
   }) {
     final combinedMetadata = metadata ?? {};
     if (error != null) combinedMetadata['error'] = error.toString();
-    if (stackTrace != null)
+    if (stackTrace != null) {
       combinedMetadata['stackTrace'] = stackTrace.toString();
+    }
     _log(LogLevel.error, message, metadata: combinedMetadata);
   }
 
