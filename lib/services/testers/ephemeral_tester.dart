@@ -21,6 +21,8 @@ String _generateConfigWrapper(Map<String, dynamic> args) {
   return SingboxConfigGenerator.generateConfig(
     args['rawConfig'],
     listenPort: args['listenPort'],
+    socksPort: args['socksPort'],
+    httpPort: args['httpPort'],
     isTest: args['isTest'],
   );
 }
@@ -237,6 +239,7 @@ class EphemeralTester {
         if (listenPort <= 0) {
           throw Exception("Port Allocator returned invalid port: $listenPort");
         }
+        final httpPort = listenPort + 1;
         AdvancedLogger.warn('[TESTER] Initializing on Port: $listenPort');
         onPort(listenPort); // Register for watchdog
 
@@ -244,13 +247,15 @@ class EphemeralTester {
         final jsonConfig = await compute(_generateConfigWrapper, {
           'rawConfig': config.rawConfig,
           'listenPort': listenPort,
+          'socksPort': listenPort,
+          'httpPort': httpPort,
           'isTest': true,
         });
 
         // Start Proxy
         // CRITICAL: Prevent hitting the Go libbox runtime too fast across sequential tests
         await Future.delayed(const Duration(milliseconds: 500));
-        
+
         try {
           proxyPort = await nativeService.startTestProxy(jsonConfig);
         } catch (e) {
@@ -423,6 +428,7 @@ class EphemeralTester {
 
       try {
         port = await PortAllocator().allocate();
+        final httpPort = port + 1;
         AdvancedLogger.warn('[TESTER] Initializing on Port: $port');
         onPort(port); // Register for watchdog
 
@@ -437,6 +443,8 @@ class EphemeralTester {
         final jsonConfig = await compute(_generateConfigWrapper, {
           'rawConfig': config.rawConfig,
           'listenPort': port,
+          'socksPort': port,
+          'httpPort': httpPort,
           'isTest': true,
         });
 
@@ -482,9 +490,7 @@ class EphemeralTester {
         );
 
         // Setup Client
-        // FIX: SingboxConfigGenerator sets HTTP port to listenPort + 1
-        // Use port + 1 for HTTP request
-        dartHttpClient.findProxy = (uri) => "PROXY 127.0.0.1:${port + 1}";
+        dartHttpClient.findProxy = (uri) => "PROXY 127.0.0.1:$httpPort";
         dartHttpClient.connectionTimeout = const Duration(seconds: 5);
 
         // STAGE 1 (TCP)
