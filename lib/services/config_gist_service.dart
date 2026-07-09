@@ -13,6 +13,8 @@ import 'config_parser.dart';
 
 class ConfigGistService {
   static final ConfigGistService _instance = ConfigGistService._internal();
+
+  static final _spiderXRegex = RegExp(r'"spider_x":\s*("[^"]*"|[^,{}]+),?');
   factory ConfigGistService() => _instance;
   ConfigGistService._internal();
 
@@ -113,10 +115,7 @@ class ConfigGistService {
             if (configs.isNotEmpty) {
               // Sanitize
               final cleaned = configs.map((c) {
-                return c.replaceAll(
-                  RegExp(r'"spider_x":\s*("[^"]*"|[^,{}]+),?'),
-                  '',
-                );
+                return c.replaceAll(_spiderXRegex, '');
               }).toList();
 
               // Add to Manager
