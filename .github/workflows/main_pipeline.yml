@@ -1,8 +1,7 @@
 name: iVPN Final Build
 
+# Automatic triggers temporarily disabled during high-change period — run manually via workflow_dispatch until re-enabled
 on:
-  push:
-    branches: [ "main" ]
   workflow_dispatch:
 
 concurrency:
