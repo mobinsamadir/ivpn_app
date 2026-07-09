@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:meta/meta.dart';
 import 'advanced_logger.dart';
 
 class PortAllocator {
@@ -90,6 +91,14 @@ class PortAllocator {
         "PortAllocator: Released port block $port-${port + 1}",
       );
     }
+  }
+
+  @visibleForTesting
+  void resetForTesting() {
+    _currentPort = _startPort;
+    _activePorts.clear();
+    _isAllocating = false;
+    _allocationQueue.clear();
   }
 
   Future<bool> _isPortFree(int port) async {
