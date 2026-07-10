@@ -86,17 +86,20 @@ Future<Map<String, dynamic>> _processConfigsInIsolate(
     final trimmedRaw = raw.trim();
     if (trimmedRaw.isEmpty) continue;
 
-    // HASH Check for Blacklist
-    final hash = md5.convert(utf8.encode(trimmedRaw)).toString();
-
-    if (checkBlacklist && blockedHashes.contains(hash)) {
-      // Silently skip blacklisted config
-      continue;
-    }
-
-    // Manual Overwrite: If adding with checkBlacklist=false, we mark hash for removal
-    if (!checkBlacklist && blockedHashes.contains(hash)) {
-      hashesToRemoveFromBlacklist.add(hash);
+    if (checkBlacklist) {
+      if (blockedHashes.isNotEmpty) {
+        final hash = md5.convert(utf8.encode(trimmedRaw)).toString();
+        if (blockedHashes.contains(hash)) {
+          // Silently skip blacklisted config
+          continue;
+        }
+      }
+    } else if (blockedHashes.isNotEmpty) {
+      // Manual Overwrite: If adding with checkBlacklist=false, we mark hash for removal
+      final hash = md5.convert(utf8.encode(trimmedRaw)).toString();
+      if (blockedHashes.contains(hash)) {
+        hashesToRemoveFromBlacklist.add(hash);
+      }
     }
 
     if (existingConfigs.contains(trimmedRaw)) {

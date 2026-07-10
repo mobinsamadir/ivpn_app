@@ -339,7 +339,7 @@ class WindowsVpnService {
       );
 
       // If the input is not JSON (it's a raw link), convert it first.
-      String jsonConfig;
+      String? jsonConfig;
       if (configContent.trim().startsWith("{")) {
         jsonConfig = configContent;
         AdvancedLogger.info(
@@ -357,8 +357,12 @@ class WindowsVpnService {
           'isKillSwitchEnabled': isKillSwitchEnabled,
         });
         AdvancedLogger.info(
-          '[WindowsVpnService] Generated JSON config length: ${jsonConfig.length}',
+          '[WindowsVpnService] Generated JSON config length: ${jsonConfig?.length ?? 0}',
         );
+      }
+
+      if (jsonConfig == null) {
+        throw Exception("Failed to generate configuration JSON");
       }
 
       final tempDir = await getTemporaryDirectory();
