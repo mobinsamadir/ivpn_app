@@ -3,7 +3,7 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'storage_interface.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:http/http.dart' as http;
 import 'package:connectivity_plus/connectivity_plus.dart'; // Event-Driven
@@ -141,7 +141,37 @@ class ConfigManager extends ChangeNotifier {
   bool isConnectionCancelled = false;
   static final ConfigManager _instance = ConfigManager._internal();
   factory ConfigManager() => _instance;
+
+  StorageInterface storage = SharedPreferencesStorage();
+
+  // Caching layer
+  final Map<String, dynamic> _memoryCache = {};
+  final Map<String, DateTime> _cacheTtl = {};
+  static const Duration _defaultTtl = Duration(minutes: 5);
+
   ConfigManager._internal();
+
+  @visibleForTesting
+  void setStorage(StorageInterface storageInterface) {
+    storage = storageInterface;
+  }
+
+  void _setCache(String key, dynamic value) {
+    _memoryCache[key] = value;
+    _cacheTtl[key] = DateTime.now().add(_defaultTtl);
+  }
+
+  dynamic _getCache(String key) {
+    if (_memoryCache.containsKey(key) && _cacheTtl.containsKey(key)) {
+      if (DateTime.now().isBefore(_cacheTtl[key]!)) {
+        return _memoryCache[key];
+      } else {
+        _memoryCache.remove(key);
+        _cacheTtl.remove(key);
+      }
+    }
+    return null;
+  }
 
   // --- STATE VARIABLES ---
   List<VpnConfigWithMetrics> allConfigs = [];
@@ -671,8 +701,7 @@ class ConfigManager extends ChangeNotifier {
 
   Future<void> _loadConfigs() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final str = prefs.getString(_configsKey);
+      final str = await storage.getString(_configsKey);
       if (str != null) {
         final list = jsonDecode(str) as List;
         allConfigs = [];
@@ -699,8 +728,7 @@ class ConfigManager extends ChangeNotifier {
 
   Future<void> _saveAllConfigs() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(
+      await storage.setString(
         _configsKey,
         jsonEncode(allConfigs.map((e) => e.toJson()).toList()),
       );
@@ -738,9 +766,13 @@ class ConfigManager extends ChangeNotifier {
 
   Future<void> _loadBlacklist() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final list = prefs.getStringList(_blacklistKey) ?? [];
-      _blockedConfigs = list.toSet();
+      final str = await storage.getString(_blacklistKey);
+      if (str != null) {
+        final list = jsonDecode(str) as List;
+        _blockedConfigs = list.cast<String>().toSet();
+      } else {
+        _blockedConfigs = <String>{};
+      }
     } catch (e) {
       AdvancedLogger.warn('[ConfigManager] Failed to load blacklist: $e');
     }
@@ -748,54 +780,56 @@ class ConfigManager extends ChangeNotifier {
 
   Future<void> _saveBlacklist() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setStringList(_blacklistKey, _blockedConfigs.toList());
+      await storage.setString(_blacklistKey, jsonEncode(_blockedConfigs.toList()));
     } catch (e) {
       AdvancedLogger.warn('[ConfigManager] Failed to save blacklist: $e');
     }
   }
 
   Future<void> _loadAutoSwitchSetting() async {
-    final p = await SharedPreferences.getInstance();
-    _isAutoSwitchEnabled = p.getBool(_autoSwitchKey) ?? true;
+    _isAutoSwitchEnabled = await storage.getBool(_autoSwitchKey) ?? true;
   }
 
   Future<void> _saveAutoSwitchSetting() async {
-    final p = await SharedPreferences.getInstance();
-    await p.setBool(_autoSwitchKey, _isAutoSwitchEnabled);
+    await storage.setBool(_autoSwitchKey, _isAutoSwitchEnabled);
   }
 
   Future<void> _loadKillSwitchSetting() async {
-    final p = await SharedPreferences.getInstance();
-    _isKillSwitchEnabled = p.getBool(_killSwitchKey) ?? false;
+    _isKillSwitchEnabled = await storage.getBool(_killSwitchKey) ?? false;
   }
 
   Future<void> _saveKillSwitchSetting() async {
-    final p = await SharedPreferences.getInstance();
-    await p.setBool(_killSwitchKey, _isKillSwitchEnabled);
+    await storage.setBool(_killSwitchKey, _isKillSwitchEnabled);
   }
 
   Future<void> _loadSplitTunnelingPackages() async {
-    final p = await SharedPreferences.getInstance();
-    final jsonStr = p.getString(_splitTunnelingKey);
+    final cached = _getCache(_splitTunnelingKey);
+    if (cached != null) {
+      _splitTunnelingPackages = cached;
+      return;
+    }
+    final jsonStr = await storage.getString(_splitTunnelingKey);
     if (jsonStr != null) {
       try {
         final List<dynamic> decoded = jsonDecode(jsonStr);
         _splitTunnelingPackages = decoded.cast<String>();
+        _setCache(_splitTunnelingKey, _splitTunnelingPackages);
       } catch (e) {
         AdvancedLogger.error(
           '[ConfigManager] Failed to load split tunneling packages: $e',
         );
         _splitTunnelingPackages = [];
+        _setCache(_splitTunnelingKey, _splitTunnelingPackages);
       }
     } else {
       _splitTunnelingPackages = [];
+      _setCache(_splitTunnelingKey, _splitTunnelingPackages);
     }
   }
 
   Future<void> _saveSplitTunnelingPackages() async {
-    final p = await SharedPreferences.getInstance();
-    await p.setString(_splitTunnelingKey, jsonEncode(_splitTunnelingPackages));
+    _setCache(_splitTunnelingKey, _splitTunnelingPackages);
+    await storage.setString(_splitTunnelingKey, jsonEncode(_splitTunnelingPackages));
   }
 
   Future<void> switchConfig(VpnConfigWithMetrics newConfig) async {
@@ -928,10 +962,11 @@ class ConfigManager extends ChangeNotifier {
   }
 
   Future<void> clearAllData() async {
-    final p = await SharedPreferences.getInstance();
-    await p.remove(_configsKey);
+    await storage.remove(_configsKey);
     _selectedConfig = null;
     allConfigs.clear();
+    _memoryCache.clear();
+    _cacheTtl.clear();
     await _updateLists();
     notifyListeners();
   }

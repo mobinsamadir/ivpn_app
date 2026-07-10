@@ -1,9 +1,9 @@
-import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ivpn_new/utils/connectivity_utils.dart';
+import 'package:fake_async/fake_async.dart';
 
 // Create a Fake InternetAddress for testing
 class FakeInternetAddress extends Fake implements InternetAddress {
@@ -55,16 +55,20 @@ void main() {
       expect(result, isFalse);
     });
 
-    test('returns false when lookup times out', () async {
-      // Simulate a delay longer than the 3-second timeout
-      final result = await ConnectivityUtils.hasInternet(
-        lookup: (host) async {
-          await Future.delayed(const Duration(seconds: 4));
-          return [FakeInternetAddress('8.8.8.8')];
-        },
-      );
+    test('returns false when lookup times out', () {
+      fakeAsync((async) {
+        bool? result;
+        ConnectivityUtils.hasInternet(
+          lookup: (host) async {
+            await Future.delayed(const Duration(seconds: 4));
+            return [FakeInternetAddress('8.8.8.8')];
+          },
+        ).then((v) => result = v);
 
-      expect(result, isFalse);
+        // Advance past the 3-second timeout
+        async.elapse(const Duration(seconds: 4));
+        expect(result, isFalse);
+      });
     });
   });
 }

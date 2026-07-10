@@ -32,12 +32,12 @@ void main() {
       final token = CancelToken();
 
       // Trigger cancel shortly after the ping starts
-      Future.delayed(const Duration(milliseconds: 10), () {
+      Timer(const Duration(milliseconds: 10), () {
         token.cancel();
       });
 
-      expect(
-        () => SmartPinger.pingMultiple(
+      await expectLater(
+        SmartPinger.pingMultiple(
           endpoints: ['https://192.0.2.1'],
           cancelToken: token,
           timeoutPerPing: const Duration(seconds: 2),
