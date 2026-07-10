@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:ivpn_new/services/testers/ephemeral_tester.dart';
@@ -20,7 +19,7 @@ void main() {
           semaphore.release();
         }
 
-        final tasks = List.generate(10, (_) => task(50));
+        List.generate(10, (_) => task(50));
 
         async.elapse(const Duration(milliseconds: 500));
 

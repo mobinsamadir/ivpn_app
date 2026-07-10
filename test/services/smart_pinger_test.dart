@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:fake_async/fake_async.dart';
 import 'package:ivpn_new/services/smart_pinger.dart';
 import 'package:ivpn_new/utils/cancellable_operation.dart';
 
