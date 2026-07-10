@@ -28,11 +28,8 @@ void main() {
         isAlive: true,
       );
 
-      // Inject manually via public API (addConfig triggers isolate, but in test env compute runs in same isolate usually or we wait)
+      // Inject manually via public API (addConfig triggers isolate compute which is real async)
       await configManager.addConfig(config.rawConfig, config.name);
-
-      // Wait for async add
-      await Future.delayed(const Duration(milliseconds: 100));
 
       // Retrieve the added config (ID generation in addConfigs is dynamic, so we find by name/raw)
       var added = configManager.allConfigs.firstWhere(
