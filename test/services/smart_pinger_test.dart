@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:ivpn_new/services/smart_pinger.dart';
 import 'package:ivpn_new/utils/cancellable_operation.dart';
 
@@ -28,22 +29,28 @@ void main() {
       );
     });
 
-    test('Mid-flight cancellation aborts the operation and throws', () async {
-      final token = CancelToken();
+    test('Mid-flight cancellation aborts the operation and throws', () {
+      fakeAsync((async) {
+        final token = CancelToken();
 
-      // Trigger cancel shortly after the ping starts
-      Future.delayed(const Duration(milliseconds: 10), () {
-        token.cancel();
-      });
+        // Trigger cancel shortly after the ping starts
+        Timer(const Duration(milliseconds: 10), () {
+          token.cancel();
+        });
 
-      expect(
-        () => SmartPinger.pingMultiple(
+        final future = SmartPinger.pingMultiple(
           endpoints: ['https://192.0.2.1'],
           cancelToken: token,
           timeoutPerPing: const Duration(seconds: 2),
-        ),
-        throwsA(isA<OperationCancelledException>()),
-      );
+        );
+
+        async.elapse(const Duration(milliseconds: 10));
+
+        expect(
+          () async => await future,
+          throwsA(isA<OperationCancelledException>()),
+        );
+      });
     });
   });
 
