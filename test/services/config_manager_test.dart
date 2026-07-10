@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ivpn_new/services/config_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:ivpn_new/services/storage_interface.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -104,6 +105,7 @@ void main() {
         final packages = ['com.example.app', 'com.example.game'];
         manager.splitTunnelingPackages = packages;
 
+        await Future.delayed(const Duration(milliseconds: 50));
         final prefs = await SharedPreferences.getInstance();
         final savedJson = prefs.getString('split_tunneling_packages');
         expect(savedJson, '["com.example.app","com.example.game"]');
@@ -124,22 +126,25 @@ void main() {
       });
 
       test('init() correctly parses valid JSON', () async {
+        final manager = ConfigManager();
+        await manager.clearAllData();
+        manager.setStorage(SharedPreferencesStorage());
         SharedPreferences.setMockInitialValues({
           'split_tunneling_packages': '["com.app1","com.app2"]',
         });
 
-        final manager = ConfigManager();
         await manager.init();
 
         expect(manager.splitTunnelingPackages, ['com.app1', 'com.app2']);
       });
 
       test('init() handles corrupted JSON gracefully', () async {
+        final manager = ConfigManager();
+        await manager.clearAllData();
+        manager.setStorage(SharedPreferencesStorage());
         SharedPreferences.setMockInitialValues({
           'split_tunneling_packages': 'invalid_json',
         });
-
-        final manager = ConfigManager();
 
         // This should not throw an exception
         await manager.init();
@@ -151,6 +156,9 @@ void main() {
     group('Kill Switch Settings Persistence', () {
       test('Default value is false', () async {
         final manager = ConfigManager();
+        await manager.clearAllData();
+        manager.setStorage(SharedPreferencesStorage());
+        SharedPreferences.setMockInitialValues({});
         await manager.init();
 
         expect(manager.isKillSwitchEnabled, isFalse);
@@ -158,9 +166,14 @@ void main() {
 
       test('Setting value updates SharedPreferences correctly', () async {
         final manager = ConfigManager();
+        await manager.clearAllData();
+        manager.setStorage(SharedPreferencesStorage());
+        SharedPreferences.setMockInitialValues({});
         await manager.init();
 
         manager.isKillSwitchEnabled = true;
+
+        await Future.delayed(const Duration(milliseconds: 50));
 
         final prefs = await SharedPreferences.getInstance();
         final savedValue = prefs.getBool('kill_switch_enabled');

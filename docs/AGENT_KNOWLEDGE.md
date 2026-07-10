@@ -15,3 +15,8 @@ Never assume a test is "passed" just because of a superficial check. Integration
 
 **Rule 4: State Preservation**
 Future agents **must** check this document first before starting any refactoring task. Understand past mistakes and adhere strictly to these architectural guidelines.
+
+## Testing Pitfalls
+
+**Avoid fake_async for Async Boundaries**
+Avoid `fake_async` for tests involving Sockets, raw Network I/O, or `Isolate.compute()` operations, as they bypass the fake clock and will cause the test suite to hang indefinitely. Use real `Future.delayed` or timeouts in these specific scenarios to allow native event loops to process.

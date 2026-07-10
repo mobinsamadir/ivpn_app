@@ -29,28 +29,22 @@ void main() {
       );
     });
 
-    test('Mid-flight cancellation aborts the operation and throws', () {
-      fakeAsync((async) {
-        final token = CancelToken();
+    test('Mid-flight cancellation aborts the operation and throws', () async {
+      final token = CancelToken();
 
-        // Trigger cancel shortly after the ping starts
-        Timer(const Duration(milliseconds: 10), () {
-          token.cancel();
-        });
+      // Trigger cancel shortly after the ping starts
+      Timer(const Duration(milliseconds: 10), () {
+        token.cancel();
+      });
 
-        final future = SmartPinger.pingMultiple(
+      await expectLater(
+        SmartPinger.pingMultiple(
           endpoints: ['https://192.0.2.1'],
           cancelToken: token,
           timeoutPerPing: const Duration(seconds: 2),
-        );
-
-        async.elapse(const Duration(milliseconds: 10));
-
-        expect(
-          () async => await future,
-          throwsA(isA<OperationCancelledException>()),
-        );
-      });
+        ),
+        throwsA(isA<OperationCancelledException>()),
+      );
     });
   });
 
