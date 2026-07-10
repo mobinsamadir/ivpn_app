@@ -115,43 +115,76 @@ class SmartPinger {
     CancelToken? cancelToken, {
     int maxRetries = 2,
     required Duration timeout,
+    Future<PingResult> Function(String, CancelToken?, {required Duration timeout})? pingSingleInjector,
   }) async {
-    for (int attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        final pingResult = await _pingSingle(
-          endpoint,
-          cancelToken,
-          timeout: timeout,
-        );
+    final pingFunc = pingSingleInjector ?? _pingSingle;
+    final completer = Completer<PingResult>();
+    int failedAttempts = 0;
+    String? lastError;
 
-        if (pingResult.isSuccess) {
-          return pingResult;
-        }
-
-        if (attempt < maxRetries) {
-          AdvancedLogger.debug('[SmartPing] Retry $attempt for $endpoint');
-          await Future.delayed(Duration(milliseconds: 200 * attempt));
-        }
-      } on OperationCancelledException {
-        rethrow;
-      } catch (e) {
-        if (attempt == maxRetries) {
-          return PingResult(
+    void handleResult(PingResult result) {
+      if (completer.isCompleted) return;
+      if (result.isSuccess) {
+        completer.complete(result);
+      } else {
+        failedAttempts++;
+        lastError = result.error;
+        if (failedAttempts == maxRetries) {
+          completer.complete(PingResult(
             endpoint: endpoint,
             latency: -1,
             isSuccess: false,
-            error: 'All retries failed: $e',
-          );
+            error: 'All retries failed: $lastError',
+          ));
         }
       }
     }
 
-    return PingResult(
-      endpoint: endpoint,
-      latency: -1,
-      isSuccess: false,
-      error: 'Max retries ($maxRetries) exceeded',
-    );
+    void handleError(Object e, StackTrace st) {
+      if (completer.isCompleted) return;
+      if (e is OperationCancelledException) {
+        completer.completeError(e, st);
+      } else {
+        failedAttempts++;
+        lastError = e.toString();
+        if (failedAttempts == maxRetries) {
+          completer.complete(PingResult(
+            endpoint: endpoint,
+            latency: -1,
+            isSuccess: false,
+            error: 'All retries failed: $lastError',
+          ));
+        }
+      }
+    }
+
+    for (int attempt = 1; attempt <= maxRetries; attempt++) {
+      if (cancelToken?.isCancelled ?? false) {
+        if (!completer.isCompleted) {
+          completer.completeError(OperationCancelledException(cancelToken?.reason?.toString() ?? 'Cancelled'));
+        }
+        break;
+      }
+
+      if (completer.isCompleted) break;
+
+      pingFunc(endpoint, cancelToken, timeout: timeout)
+          .then(handleResult)
+          .catchError(handleError);
+
+      if (attempt < maxRetries && !completer.isCompleted) {
+        try {
+          await Future.any([
+            Future.delayed(const Duration(milliseconds: 500)),
+            completer.future,
+          ]);
+        } catch (_) {
+          // Exception from completer.future will be handled by the caller awaiting it
+        }
+      }
+    }
+
+    return completer.future;
   }
 
   /// Single endpoint ping using TCP connection
