@@ -252,7 +252,8 @@ class _ConfigInfo extends StatelessWidget {
                 ],
               )
             else if (config.currentPing > 0 || config.currentPing == -1)
-              Container(
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: (config.currentPing == -1
@@ -286,7 +287,8 @@ class _ConfigInfo extends StatelessWidget {
               const SizedBox(width: 6),
 
             if (!isTesting && config.currentSpeed > 0)
-              Container(
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: Colors.greenAccent.withValues(alpha: 0.1),
@@ -307,7 +309,8 @@ class _ConfigInfo extends StatelessWidget {
 
             // Tier indicator
             if (!isTesting)
-              Container(
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
                 width: 8,
                 height: 8,
                 margin: const EdgeInsets.only(left: 8, right: 8),

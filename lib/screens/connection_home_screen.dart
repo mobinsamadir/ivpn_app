@@ -47,6 +47,56 @@ class ConnectionHomeScreen extends StatefulWidget {
   State<ConnectionHomeScreen> createState() => _ConnectionHomeScreenState();
 }
 
+class _ScaleOnTap extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onTap;
+
+  const _ScaleOnTap({required this.child, required this.onTap});
+
+  @override
+  State<_ScaleOnTap> createState() => _ScaleOnTapState();
+}
+
+class _ScaleOnTapState extends State<_ScaleOnTap>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 150),
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _controller.forward(),
+      onTapUp: (_) {
+        _controller.reverse();
+        widget.onTap();
+      },
+      onTapCancel: () => _controller.reverse(),
+      child: ScaleTransition(
+        scale: _scaleAnimation,
+        child: widget.child,
+      ),
+    );
+  }
+}
+
 class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   // 1. Services
@@ -1310,12 +1360,16 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     return Column(
       children: [
         Center(
-          child: Text(
-            _configManager.connectionStatus,
-            style: TextStyle(
-              color: statusColor,
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            child: Text(
+              _configManager.connectionStatus,
+              key: ValueKey<String>(_configManager.connectionStatus),
+              style: TextStyle(
+                color: statusColor,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ),
@@ -1392,7 +1446,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
 
         // Main Connect Button
         Center(
-          child: GestureDetector(
+          child: _ScaleOnTap(
             onTap: _handleConnection,
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 400),
@@ -1438,30 +1492,41 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  isConnecting
-                      ? const SizedBox(
-                          width: 50,
-                          height: 50,
-                          child: CircularProgressIndicator(
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    child: isConnecting
+                        ? const SizedBox(
+                            key: ValueKey('connecting_indicator'),
+                            width: 50,
+                            height: 50,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 3,
+                            ),
+                          )
+                        : const Icon(
+                            Icons.power_settings_new,
+                            key: ValueKey('connect_icon'),
+                            size: 60,
                             color: Colors.white,
-                            strokeWidth: 3,
                           ),
-                        )
-                      : Icon(
-                          Icons.power_settings_new,
-                          size: 60,
-                          color: Colors.white,
-                        ),
+                  ),
                   const SizedBox(height: 12),
-                  Text(
-                    isConnected
-                        ? 'CONNECTED'
-                        : (isConnecting ? 'CONNECTING' : 'CONNECT'),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    child: Text(
+                      isConnected
+                          ? 'CONNECTED'
+                          : (isConnecting ? 'CONNECTING' : 'CONNECT'),
+                      key: ValueKey<String>(isConnected
+                          ? 'CONNECTED'
+                          : (isConnecting ? 'CONNECTING' : 'CONNECT')),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.2,
+                      ),
                     ),
                   ),
                 ],
