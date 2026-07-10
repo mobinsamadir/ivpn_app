@@ -28,6 +28,7 @@ class SingboxConfigGenerator {
     int? httpPort,
     bool isTest = false,
     bool isKillSwitchEnabled = false,
+    List<String> splitTunnelingPackages = const [],
   }) {
     final actualSocksPort = socksPort ?? listenPort;
     if (actualSocksPort == null) {
@@ -48,6 +49,7 @@ class SingboxConfigGenerator {
           httpPort: actualHttpPort,
           isTest: isTest,
           isKillSwitchEnabled: isKillSwitchEnabled,
+          splitTunnelingPackages: splitTunnelingPackages,
         );
       } else if (link.toLowerCase().startsWith('vless://') ||
           link.toLowerCase().startsWith('trojan://')) {
@@ -57,6 +59,7 @@ class SingboxConfigGenerator {
           httpPort: actualHttpPort,
           isTest: isTest,
           isKillSwitchEnabled: isKillSwitchEnabled,
+          splitTunnelingPackages: splitTunnelingPackages,
         );
       } else if (link.toLowerCase().startsWith('ss://')) {
         return _parseShadowsocks(
@@ -65,6 +68,7 @@ class SingboxConfigGenerator {
           httpPort: actualHttpPort,
           isTest: isTest,
           isKillSwitchEnabled: isKillSwitchEnabled,
+          splitTunnelingPackages: splitTunnelingPackages,
         );
       } else {
         throw Exception("Unsupported protocol: ${link.split('://').first}");
@@ -98,6 +102,7 @@ class SingboxConfigGenerator {
     required int httpPort,
     required bool isTest,
     required bool isKillSwitchEnabled,
+    List<String> splitTunnelingPackages = const [],
   }) {
     final String decoded = Base64Utils.safeDecode(link.substring(8));
     if (decoded.isEmpty) throw FormatException("Invalid VMess Base64");
@@ -144,6 +149,7 @@ class SingboxConfigGenerator {
       httpPort: httpPort,
       isTest: isTest,
       isKillSwitchEnabled: isKillSwitchEnabled,
+      splitTunnelingPackages: splitTunnelingPackages,
     );
   }
 
@@ -153,6 +159,7 @@ class SingboxConfigGenerator {
     required int httpPort,
     required bool isTest,
     required bool isKillSwitchEnabled,
+    List<String> splitTunnelingPackages = const [],
   }) {
     Uri? uri;
     try {
@@ -338,6 +345,7 @@ class SingboxConfigGenerator {
       httpPort: httpPort,
       isTest: isTest,
       isKillSwitchEnabled: isKillSwitchEnabled,
+      splitTunnelingPackages: splitTunnelingPackages,
     );
   }
 
@@ -347,6 +355,7 @@ class SingboxConfigGenerator {
     required int httpPort,
     required bool isTest,
     required bool isKillSwitchEnabled,
+    List<String> splitTunnelingPackages = const [],
   }) {
     String content = link.substring(5);
     String method, password, host;
@@ -417,6 +426,7 @@ class SingboxConfigGenerator {
       httpPort: httpPort,
       isTest: isTest,
       isKillSwitchEnabled: isKillSwitchEnabled,
+      splitTunnelingPackages: splitTunnelingPackages,
     );
   }
 
@@ -505,6 +515,7 @@ class SingboxConfigGenerator {
     required int httpPort,
     bool isTest = false,
     bool isKillSwitchEnabled = false,
+    List<String> splitTunnelingPackages = const [],
   }) {
     // HYPER-TUNING: Add Multiplexing and TCP Fast Open
     if (!isTest) {
@@ -608,6 +619,8 @@ class SingboxConfigGenerator {
           {"protocol": "dns", "outbound": "dns-out"},
           // Critical Windows fix: Bypass TUN for local traffic to avoid infinite routing loops
           {"ip_is_private": true, "outbound": "direct"},
+          if (splitTunnelingPackages.isNotEmpty)
+            {"package_name": splitTunnelingPackages, "outbound": "direct"},
           // Route ad domains through proxy to bypass censorship in restricted regions
           {
             "domain_suffix": [
