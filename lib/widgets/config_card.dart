@@ -310,6 +310,7 @@ class _ConfigInfo extends StatelessWidget {
               Container(
                 width: 8,
                 height: 8,
+                margin: const EdgeInsets.only(left: 8, right: 8),
                 decoration: BoxDecoration(
                   color: getTierColor(config.tier),
                   shape: BoxShape.circle,
@@ -318,7 +319,6 @@ class _ConfigInfo extends StatelessWidget {
                     width: 1,
                   ),
                 ),
-                margin: const EdgeInsets.only(left: 8, right: 8),
               ),
 
             const Spacer(),

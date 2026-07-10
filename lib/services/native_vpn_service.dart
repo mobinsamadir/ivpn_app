@@ -11,6 +11,7 @@ String _generateConfigWrapper(Map<String, dynamic> args) {
   return SingboxConfigGenerator.generateConfig(
     args['rawLink'],
     listenPort: args['listenPort'],
+    isKillSwitchEnabled: args['isKillSwitchEnabled'] ?? false,
   );
 }
 
@@ -186,9 +187,11 @@ class NativeVpnService {
     }
   }
 
-  Future<void> connect(String rawLink) async {
+  Future<void> connect(String rawLink,
+      {bool isKillSwitchEnabled = false}) async {
     if (Platform.isWindows) {
-      await _windowsVpnService.startVpn(rawLink);
+      await _windowsVpnService.startVpn(rawLink,
+          isKillSwitchEnabled: isKillSwitchEnabled);
       // Windows service handles its own stream updates
       return;
     }
@@ -199,6 +202,7 @@ class NativeVpnService {
         'rawLink': rawLink,
         'listenPort':
             10808, // Hardcoded for main VPN connection to avoid conflict with random test ports
+        'isKillSwitchEnabled': isKillSwitchEnabled,
       });
 
       // CONFIG DUMP: Critical Diagnostic

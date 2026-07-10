@@ -86,17 +86,20 @@ Future<Map<String, dynamic>> _processConfigsInIsolate(
     final trimmedRaw = raw.trim();
     if (trimmedRaw.isEmpty) continue;
 
-    // HASH Check for Blacklist
-    final hash = md5.convert(utf8.encode(trimmedRaw)).toString();
-
-    if (checkBlacklist && blockedHashes.contains(hash)) {
-      // Silently skip blacklisted config
-      continue;
-    }
-
-    // Manual Overwrite: If adding with checkBlacklist=false, we mark hash for removal
-    if (!checkBlacklist && blockedHashes.contains(hash)) {
-      hashesToRemoveFromBlacklist.add(hash);
+    if (checkBlacklist) {
+      if (blockedHashes.isNotEmpty) {
+        final hash = md5.convert(utf8.encode(trimmedRaw)).toString();
+        if (blockedHashes.contains(hash)) {
+          // Silently skip blacklisted config
+          continue;
+        }
+      }
+    } else if (blockedHashes.isNotEmpty) {
+      // Manual Overwrite: If adding with checkBlacklist=false, we mark hash for removal
+      final hash = md5.convert(utf8.encode(trimmedRaw)).toString();
+      if (blockedHashes.contains(hash)) {
+        hashesToRemoveFromBlacklist.add(hash);
+      }
     }
 
     if (existingConfigs.contains(trimmedRaw)) {
@@ -186,16 +189,26 @@ class ConfigManager extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool _isKillSwitchEnabled = false;
+  bool get isKillSwitchEnabled => _isKillSwitchEnabled;
+  set isKillSwitchEnabled(bool value) {
+    _isKillSwitchEnabled = value;
+    _saveKillSwitchSetting();
+    notifyListeners();
+  }
+
   // --- CONSTANTS ---
   static const String _configsKey = 'vpn_configs';
   static const String _blacklistKey = 'config_blacklist';
   static const String _autoSwitchKey = 'auto_switch_enabled';
+  static const String _killSwitchKey = 'kill_switch_enabled';
 
   // --- INITIALIZATION ---
   Future<void> init() async {
     AdvancedLogger.info('[ConfigManager] Initializing...');
     await _initDeviceId();
     await _loadAutoSwitchSetting();
+    await _loadKillSwitchSetting();
     await _loadBlacklist();
     await _loadConfigs();
     await _updateLists();
@@ -738,6 +751,16 @@ class ConfigManager extends ChangeNotifier {
     await p.setBool(_autoSwitchKey, _isAutoSwitchEnabled);
   }
 
+  Future<void> _loadKillSwitchSetting() async {
+    final p = await SharedPreferences.getInstance();
+    _isKillSwitchEnabled = p.getBool(_killSwitchKey) ?? false;
+  }
+
+  Future<void> _saveKillSwitchSetting() async {
+    final p = await SharedPreferences.getInstance();
+    await p.setBool(_killSwitchKey, _isKillSwitchEnabled);
+  }
+
   Future<void> switchConfig(VpnConfigWithMetrics newConfig) async {
     AdvancedLogger.info('[ConfigManager] Switching configuration safely...');
     userInitiatedDisconnect = true;
@@ -951,7 +974,8 @@ class ConfigManager extends ChangeNotifier {
         setConnected(false, status: 'Connecting to ${target.name}...');
         try {
           // Initiate native connection
-          await nativeService.connect(target.rawConfig);
+          await nativeService.connect(target.rawConfig,
+              isKillSwitchEnabled: _isKillSwitchEnabled);
 
           // Wait for CONNECTED state with strict 15-second timeout
           await nativeService.connectionStatusStream
@@ -1040,7 +1064,8 @@ class ConfigManager extends ChangeNotifier {
 
     try {
       // Initiate native connection
-      await nativeService.connect(target.rawConfig);
+      await nativeService.connect(target.rawConfig,
+          isKillSwitchEnabled: _isKillSwitchEnabled);
 
       // Wait for CONNECTED state with strict 15-second timeout
       await nativeService.connectionStatusStream
