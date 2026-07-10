@@ -5,8 +5,10 @@ import 'package:ivpn_new/services/singbox_config_generator.dart';
 void main() {
   group('SingboxConfigGenerator Tests', () {
     test('Correctly parses Reality config with "pbk" parameter', () {
-      const rawLink = 'vless://uuid@example.com:443?security=reality&pbk=test_public_key&sid=test_sid&type=tcp&sni=example.com#RealityServer';
-      final configJson = SingboxConfigGenerator.generateConfig(rawLink, listenPort: 10808);
+      const rawLink =
+          'vless://uuid@example.com:443?security=reality&pbk=test_public_key&sid=test_sid&type=tcp&sni=example.com#RealityServer';
+      final configJson =
+          SingboxConfigGenerator.generateConfig(rawLink, listenPort: 10808);
       final config = jsonDecode(configJson);
 
       final outbounds = config['outbounds'] as List;
@@ -20,8 +22,10 @@ void main() {
     });
 
     test('Correctly parses Reality config with "public_key" parameter', () {
-      const rawLink = 'vless://uuid@example.com:443?security=reality&public_key=test_public_key_alt&sid=test_sid&type=tcp&sni=example.com#RealityServer';
-      final configJson = SingboxConfigGenerator.generateConfig(rawLink, listenPort: 10808);
+      const rawLink =
+          'vless://uuid@example.com:443?security=reality&public_key=test_public_key_alt&sid=test_sid&type=tcp&sni=example.com#RealityServer';
+      final configJson =
+          SingboxConfigGenerator.generateConfig(rawLink, listenPort: 10808);
       final config = jsonDecode(configJson);
 
       final outbounds = config['outbounds'] as List;
@@ -33,10 +37,14 @@ void main() {
       expect(reality['public_key'], 'test_public_key_alt');
     });
 
-    test('Falls back to standard TLS if both "pbk" and "public_key" are missing for Reality', () {
-      const rawLink = 'vless://uuid@example.com:443?security=reality&sid=test_sid&type=tcp&sni=example.com#RealityServer';
+    test(
+        'Falls back to standard TLS if both "pbk" and "public_key" are missing for Reality',
+        () {
+      const rawLink =
+          'vless://uuid@example.com:443?security=reality&sid=test_sid&type=tcp&sni=example.com#RealityServer';
 
-      final configJson = SingboxConfigGenerator.generateConfig(rawLink, listenPort: 10808);
+      final configJson =
+          SingboxConfigGenerator.generateConfig(rawLink, listenPort: 10808);
       final config = jsonDecode(configJson);
 
       final outbounds = config['outbounds'] as List;

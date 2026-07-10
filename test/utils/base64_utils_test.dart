@@ -40,12 +40,15 @@ void main() {
             equals(invalidInput));
       });
 
-      test('handles Base64 strings that decode to invalid UTF-8 gracefully', () {
+      test('handles Base64 strings that decode to invalid UTF-8 gracefully',
+          () {
         // "//79" decodes to bytes [0xff, 0xfe, 0xfd] which is not valid UTF-8
         const invalidUtf8Base64 = '//79';
 
         expect(Base64Utils.safeDecode(invalidUtf8Base64), equals(''));
-        expect(Base64Utils.safeDecode(invalidUtf8Base64, returnOriginalOnFail: true),
+        expect(
+            Base64Utils.safeDecode(invalidUtf8Base64,
+                returnOriginalOnFail: true),
             equals(invalidUtf8Base64));
       });
 

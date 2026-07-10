@@ -49,8 +49,16 @@ class NativeVpnService {
     });
   }
 
-  final StreamController<String> _statusController =
-      StreamController<String>.broadcast();
+  String? _lastKnownState;
+
+  late final StreamController<String> _statusController =
+      StreamController<String>.broadcast(
+    onListen: () {
+      if (_lastKnownState != null && !_statusController.isClosed) {
+        _statusController.add(_lastKnownState!);
+      }
+    },
+  );
 
   // Initialization logic moved here
   void _init() {
@@ -77,11 +85,13 @@ class NativeVpnService {
               message.startsWith("ERROR");
 
           if (isStatus) {
+            _lastKnownState = message;
             _statusController.add(message);
           }
         },
         onError: (error) {
           AdvancedLogger.error("❌ [Native Event] Error: $error");
+          _lastKnownState = "ERROR: NATIVE_EVENT: $error";
           _statusController.add("ERROR: NATIVE_EVENT: $error");
         },
       );
@@ -240,6 +250,7 @@ class NativeVpnService {
         }
 
         if (!_statusController.isClosed) {
+          _lastKnownState = "ERROR: NATIVE_TIMEOUT";
           _statusController.add("ERROR: NATIVE_TIMEOUT");
         }
       });
@@ -254,6 +265,7 @@ class NativeVpnService {
       });
     } catch (e) {
       AdvancedLogger.error("Failed to send connect command: $e");
+      _lastKnownState = "ERROR: START_FAILED: $e";
       _statusController.add("ERROR: START_FAILED: $e");
       rethrow;
     }
@@ -281,6 +293,11 @@ class NativeVpnService {
       return _windowsVpnService.statusStream;
     }
     return _statusController.stream;
+  }
+
+  @visibleForTesting
+  void resetForTesting() {
+    _lastKnownState = null;
   }
 
   void dispose() {

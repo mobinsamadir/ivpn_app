@@ -22,11 +22,12 @@ void main() {
       await manager.init();
 
       // Use proper URI format
-      await manager.addConfig('vless://uuid@127.0.0.1:443?query=1#Test%20Config', 'Ignored Name');
+      await manager.addConfig(
+          'vless://uuid@127.0.0.1:443?query=1#Test%20Config', 'Ignored Name');
 
       expect(manager.allConfigs.length, 1);
       expect(manager.allConfigs.first.name, 'Test Config');
-      
+
       // Verify persistence
       final prefs = await SharedPreferences.getInstance();
       final savedString = prefs.getString('vpn_configs');
@@ -39,46 +40,51 @@ void main() {
       await manager.init();
       // clearAllData handled in setUp
 
-      await manager.addConfig('vless://uuid@127.0.0.1:443?query=1#Config%201', 'Config 1');
-      await manager.addConfig('vless://uuid@127.0.0.1:443?query=1#Config%202', 'Config 2');
+      await manager.addConfig(
+          'vless://uuid@127.0.0.1:443?query=1#Config%201', 'Config 1');
+      await manager.addConfig(
+          'vless://uuid@127.0.0.1:443?query=1#Config%202', 'Config 2');
 
       // Find Config 1 by name to ensure we delete the correct one regardless of sort order
-      final config1 = manager.allConfigs.firstWhere((c) => c.name == 'Config 1');
+      final config1 =
+          manager.allConfigs.firstWhere((c) => c.name == 'Config 1');
       final result = await manager.deleteConfig(config1.id);
 
       expect(result, isTrue);
       expect(manager.allConfigs.length, 1);
       expect(manager.allConfigs.first.name, 'Config 2');
     });
-    
+
     test('toggleFavorite updates list and storage', () async {
       final manager = ConfigManager();
       await manager.init();
       // clearAllData handled in setUp
-      
-      await manager.addConfig('vless://uuid@127.0.0.1:443?query=1#Fav%20Config', 'Fav Config');
+
+      await manager.addConfig(
+          'vless://uuid@127.0.0.1:443?query=1#Fav%20Config', 'Fav Config');
       final config = manager.allConfigs.first;
-      
+
       expect(config.isFavorite, isFalse);
-      
+
       await manager.toggleFavorite(config.id);
       expect(manager.allConfigs.first.isFavorite, isTrue);
       expect(manager.favoriteConfigs.length, 1);
-      
+
       await manager.toggleFavorite(config.id);
       expect(manager.allConfigs.first.isFavorite, isFalse);
       expect(manager.favoriteConfigs.isEmpty, isTrue);
     });
-    
+
     test('getBestConfig returns valid config or null', () async {
       final manager = ConfigManager();
       await manager.init();
       // clearAllData handled in setUp
-      
+
       var best = await manager.getBestConfig();
       expect(best, isNull);
-      
-      await manager.addConfig('vless://uuid@127.0.0.1:443?query=1#Best%20Config', 'Best Config');
+
+      await manager.addConfig(
+          'vless://uuid@127.0.0.1:443?query=1#Best%20Config', 'Best Config');
       best = await manager.getBestConfig();
       expect(best, isNotNull);
     });

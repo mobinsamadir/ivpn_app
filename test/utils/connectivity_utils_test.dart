@@ -44,7 +44,8 @@ void main() {
       expect(result, isFalse);
     });
 
-    test('returns false when lookup returns list with empty rawAddress', () async {
+    test('returns false when lookup returns list with empty rawAddress',
+        () async {
       final addresses = [FakeInternetAddress('')];
 
       final result = await ConnectivityUtils.hasInternet(

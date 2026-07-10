@@ -257,13 +257,13 @@ class _ConfigInfo extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: (config.currentPing == -1
                           ? Colors.redAccent
-                          : _getPingColor(config.currentPing))
+                          : getPingColor(config.currentPing))
                       .withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
                     color: (config.currentPing == -1
                             ? Colors.redAccent
-                            : _getPingColor(config.currentPing))
+                            : getPingColor(config.currentPing))
                         .withValues(alpha: 0.3),
                   ),
                 ),
@@ -274,7 +274,7 @@ class _ConfigInfo extends StatelessWidget {
                   style: TextStyle(
                     color: config.currentPing == -1
                         ? Colors.redAccent
-                        : _getPingColor(config.currentPing),
+                        : getPingColor(config.currentPing),
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                   ),
@@ -312,10 +312,10 @@ class _ConfigInfo extends StatelessWidget {
                 height: 8,
                 margin: const EdgeInsets.only(left: 8, right: 8),
                 decoration: BoxDecoration(
-                  color: _getTierColor(config.tier),
+                  color: getTierColor(config.tier),
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: _getTierBorderColor(config.tier),
+                    color: getTierBorderColor(config.tier),
                     width: 1,
                   ),
                 ),
@@ -332,40 +332,6 @@ class _ConfigInfo extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  Color _getPingColor(int ping) {
-    if (ping < 0) return Colors.grey; // Timeout
-    if (ping <= 500) return Colors.green[700]!;
-    if (ping <= 1000) return Colors.lightGreen; // Good
-    if (ping <= 2000) return Colors.orange; // Fair
-    return Colors.red; // Poor
-  }
-
-  Color _getTierColor(int tier) {
-    switch (tier) {
-      case 3:
-        return Colors.green;
-      case 2:
-        return Colors.yellow;
-      case 1:
-        return Colors.grey;
-      default:
-        return Colors.red;
-    }
-  }
-
-  Color _getTierBorderColor(int tier) {
-    switch (tier) {
-      case 3:
-        return Colors.green.shade700;
-      case 2:
-        return Colors.yellow.shade700;
-      case 1:
-        return Colors.grey.shade700;
-      default:
-        return Colors.red.shade700;
-    }
   }
 }
 
@@ -452,5 +418,39 @@ class _ConfigActions extends StatelessWidget {
           ),
       ],
     );
+  }
+}
+
+Color getPingColor(int ping) {
+  if (ping < 0) return Colors.grey; // Timeout
+  if (ping <= 500) return Colors.green[700]!;
+  if (ping <= 1000) return Colors.lightGreen; // Good
+  if (ping <= 2000) return Colors.orange; // Fair
+  return Colors.red; // Poor
+}
+
+Color getTierColor(int tier) {
+  switch (tier) {
+    case 3:
+      return Colors.green;
+    case 2:
+      return Colors.yellow;
+    case 1:
+      return Colors.grey;
+    default:
+      return Colors.red;
+  }
+}
+
+Color getTierBorderColor(int tier) {
+  switch (tier) {
+    case 3:
+      return Colors.green.shade700;
+    case 2:
+      return Colors.yellow.shade700;
+    case 1:
+      return Colors.grey.shade700;
+    default:
+      return Colors.red.shade700;
   }
 }

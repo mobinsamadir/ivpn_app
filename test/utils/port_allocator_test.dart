@@ -47,7 +47,8 @@ void main() {
       final nextPort = 11000;
       ServerSocket? blockingSocket;
       try {
-        blockingSocket = await ServerSocket.bind(InternetAddress.loopbackIPv4, nextPort);
+        blockingSocket =
+            await ServerSocket.bind(InternetAddress.loopbackIPv4, nextPort);
 
         final allocatedPort = await portAllocator.allocate();
         expect(allocatedPort, equals(11002));
@@ -56,7 +57,8 @@ void main() {
       }
     });
 
-    test('allocates unique ports concurrently without race conditions', () async {
+    test('allocates unique ports concurrently without race conditions',
+        () async {
       // Launch 50 concurrent allocate requests
       final futures = List.generate(50, (_) => portAllocator.allocate());
       final ports = await Future.wait(futures);
@@ -68,7 +70,7 @@ void main() {
       // Verify they are sequential, incrementing by 2
       final sortedPorts = ports.toList()..sort();
       for (int i = 1; i < sortedPorts.length; i++) {
-        expect(sortedPorts[i], equals(sortedPorts[i-1] + 2));
+        expect(sortedPorts[i], equals(sortedPorts[i - 1] + 2));
       }
     });
 
@@ -82,12 +84,14 @@ void main() {
               isA<Exception>().having(
                 (e) => e.toString(),
                 'message',
-                contains('PortAllocator: Failed to find a free port block after 1000 attempts'),
+                contains(
+                    'PortAllocator: Failed to find a free port block after 1000 attempts'),
               ),
             ),
           );
         },
-        serverSocketBind: (address, port, {backlog = 0, shared = false, v6Only = false}) {
+        serverSocketBind: (address, port,
+            {backlog = 0, shared = false, v6Only = false}) {
           throw const SocketException('Mock connection refused');
         },
       );

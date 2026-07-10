@@ -4,7 +4,8 @@ import 'package:ivpn_new/models/vpn_config_with_metrics.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // Needed for mocking prefs
 
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized(); // Initialize binding for SharedPreferences
+  TestWidgetsFlutterBinding
+      .ensureInitialized(); // Initialize binding for SharedPreferences
 
   group('ConfigManager Smart Logic', () {
     late ConfigManager configManager;
@@ -15,7 +16,8 @@ void main() {
       await configManager.init(); // Properly init
     });
 
-    test('markInvalid should set failureCount to 99 and kill isAlive', () async {
+    test('markInvalid should set failureCount to 99 and kill isAlive',
+        () async {
       // 1. Setup config
       const testId = "test_invalid_1";
       final config = VpnConfigWithMetrics(
