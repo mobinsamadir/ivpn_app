@@ -89,6 +89,110 @@ void main() {
       expect(best, isNotNull);
     });
 
+    group('Split Tunneling Packages Persistence', () {
+      test('Default value is an empty list', () async {
+        final manager = ConfigManager();
+        await manager.init();
+
+        expect(manager.splitTunnelingPackages, isEmpty);
+      });
+
+      test('Setting value updates SharedPreferences with JSON', () async {
+        final manager = ConfigManager();
+        await manager.init();
+
+        final packages = ['com.example.app', 'com.example.game'];
+        manager.splitTunnelingPackages = packages;
+
+        final prefs = await SharedPreferences.getInstance();
+        final savedJson = prefs.getString('split_tunneling_packages');
+        expect(savedJson, '["com.example.app","com.example.game"]');
+      });
+
+      test('Setting value calls notifyListeners', () async {
+        final manager = ConfigManager();
+        await manager.init();
+
+        bool wasNotified = false;
+        manager.addListener(() {
+          wasNotified = true;
+        });
+
+        manager.splitTunnelingPackages = ['com.example.app'];
+
+        expect(wasNotified, isTrue);
+      });
+
+      test('init() correctly parses valid JSON', () async {
+        SharedPreferences.setMockInitialValues({
+          'split_tunneling_packages': '["com.app1","com.app2"]',
+        });
+
+        final manager = ConfigManager();
+        await manager.init();
+
+        expect(manager.splitTunnelingPackages, ['com.app1', 'com.app2']);
+      });
+
+      test('init() handles corrupted JSON gracefully', () async {
+        SharedPreferences.setMockInitialValues({
+          'split_tunneling_packages': 'invalid_json',
+        });
+
+        final manager = ConfigManager();
+
+        // This should not throw an exception
+        await manager.init();
+
+        expect(manager.splitTunnelingPackages, isEmpty);
+      });
+    });
+
+    group('Kill Switch Settings Persistence', () {
+      test('Default value is false', () async {
+        final manager = ConfigManager();
+        await manager.init();
+
+        expect(manager.isKillSwitchEnabled, isFalse);
+      });
+
+      test('Setting value updates SharedPreferences correctly', () async {
+        final manager = ConfigManager();
+        await manager.init();
+
+        manager.isKillSwitchEnabled = true;
+
+        final prefs = await SharedPreferences.getInstance();
+        final savedValue = prefs.getBool('kill_switch_enabled');
+        expect(savedValue, isTrue);
+      });
+
+      test('Setting value calls notifyListeners', () async {
+        final manager = ConfigManager();
+        await manager.init();
+
+        bool wasNotified = false;
+        manager.addListener(() {
+          wasNotified = true;
+        });
+
+        manager.isKillSwitchEnabled = true;
+
+        expect(wasNotified, isTrue);
+      });
+
+      test('init() loads the saved state', () async {
+        SharedPreferences.setMockInitialValues({
+          'kill_switch_enabled': true,
+        });
+
+        final manager = ConfigManager();
+        await manager.init();
+
+        expect(manager.isKillSwitchEnabled, isTrue);
+      });
+    });
+
     test('Stress Test: Add 500+ configs', () async {
       final manager = ConfigManager();
       await manager.init();

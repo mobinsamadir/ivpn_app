@@ -69,11 +69,13 @@ Future<Map<String, dynamic>> _processConfigsInIsolate(
   Map<String, dynamic> args,
 ) async {
   final List<String> configStrings = args['configStrings'] as List<String>;
-  final Set<String> blockedHashes =
-      (args['blockedHashes'] as List).cast<String>().toSet();
+  final Set<String> blockedHashes = (args['blockedHashes'] as List)
+      .cast<String>()
+      .toSet();
   final bool checkBlacklist = args['checkBlacklist'] as bool;
-  final Set<String> existingConfigs =
-      (args['existingConfigs'] as List).cast<String>().toSet();
+  final Set<String> existingConfigs = (args['existingConfigs'] as List)
+      .cast<String>()
+      .toSet();
   int addedCount = args['initialAddedCount'] as int;
 
   final List<VpnConfigWithMetrics> newConfigs = [];
@@ -197,11 +199,20 @@ class ConfigManager extends ChangeNotifier {
     notifyListeners();
   }
 
+  List<String> _splitTunnelingPackages = [];
+  List<String> get splitTunnelingPackages => _splitTunnelingPackages;
+  set splitTunnelingPackages(List<String> value) {
+    _splitTunnelingPackages = value;
+    _saveSplitTunnelingPackages();
+    notifyListeners();
+  }
+
   // --- CONSTANTS ---
   static const String _configsKey = 'vpn_configs';
   static const String _blacklistKey = 'config_blacklist';
   static const String _autoSwitchKey = 'auto_switch_enabled';
   static const String _killSwitchKey = 'kill_switch_enabled';
+  static const String _splitTunnelingKey = 'split_tunneling_packages';
 
   // --- INITIALIZATION ---
   Future<void> init() async {
@@ -209,6 +220,7 @@ class ConfigManager extends ChangeNotifier {
     await _initDeviceId();
     await _loadAutoSwitchSetting();
     await _loadKillSwitchSetting();
+    await _loadSplitTunnelingPackages();
     await _loadBlacklist();
     await _loadConfigs();
     await _updateLists();
@@ -512,7 +524,8 @@ class ConfigManager extends ChangeNotifier {
       if (dead &&
           (c.currentPing == -1 ||
               c.failureCount >= 3 ||
-              (!c.isAlive && c.funnelStage == 0))) return true;
+              (!c.isAlive && c.funnelStage == 0)))
+        return true;
       if (weak && c.currentPing > 1500)
         return true; // threshold for weak config
       if (untestedSpeed && c.funnelStage < 3) return true;
@@ -592,7 +605,8 @@ class ConfigManager extends ChangeNotifier {
     List<VpnConfigWithMetrics>? sourceList,
     bool performConnection = true,
   }) async {
-    final list = sourceList ??
+    final list =
+        sourceList ??
         (validatedConfigs.isNotEmpty ? validatedConfigs : allConfigs);
     if (list.isEmpty) return false;
 
@@ -759,6 +773,29 @@ class ConfigManager extends ChangeNotifier {
   Future<void> _saveKillSwitchSetting() async {
     final p = await SharedPreferences.getInstance();
     await p.setBool(_killSwitchKey, _isKillSwitchEnabled);
+  }
+
+  Future<void> _loadSplitTunnelingPackages() async {
+    final p = await SharedPreferences.getInstance();
+    final jsonStr = p.getString(_splitTunnelingKey);
+    if (jsonStr != null) {
+      try {
+        final List<dynamic> decoded = jsonDecode(jsonStr);
+        _splitTunnelingPackages = decoded.cast<String>();
+      } catch (e) {
+        AdvancedLogger.error(
+          '[ConfigManager] Failed to load split tunneling packages: $e',
+        );
+        _splitTunnelingPackages = [];
+      }
+    } else {
+      _splitTunnelingPackages = [];
+    }
+  }
+
+  Future<void> _saveSplitTunnelingPackages() async {
+    final p = await SharedPreferences.getInstance();
+    await p.setString(_splitTunnelingKey, jsonEncode(_splitTunnelingPackages));
   }
 
   Future<void> switchConfig(VpnConfigWithMetrics newConfig) async {
@@ -928,15 +965,17 @@ class ConfigManager extends ChangeNotifier {
     final NativeVpnService nativeService = NativeVpnService();
     final EphemeralTester tester = EphemeralTester();
 
-    while (
-        attempts < maxAttempts && target != null && !_isGlobalStopRequested) {
+    while (attempts < maxAttempts &&
+        target != null &&
+        !_isGlobalStopRequested) {
       try {
         selectConfig(target); // Update UI selection
 
         // 3. Pre-flight Check with FAST LANE logic
         setConnected(false, status: 'Verifying ${target.name}...');
 
-        final bool isFastLane = target.lastTestedAt != null &&
+        final bool isFastLane =
+            target.lastTestedAt != null &&
             DateTime.now().difference(target.lastTestedAt!).inMinutes < 45 &&
             target.funnelStage >= 2 &&
             target.currentPing > 0;
@@ -974,24 +1013,27 @@ class ConfigManager extends ChangeNotifier {
         setConnected(false, status: 'Connecting to ${target.name}...');
         try {
           // Initiate native connection
-          await nativeService.connect(target.rawConfig,
-              isKillSwitchEnabled: _isKillSwitchEnabled);
+          await nativeService.connect(
+            target.rawConfig,
+            isKillSwitchEnabled: _isKillSwitchEnabled,
+          );
 
           // Wait for CONNECTED state with strict 15-second timeout
           await nativeService.connectionStatusStream
               .firstWhere(
-            (status) => status == 'CONNECTED' || status.startsWith('ERROR'),
-          )
+                (status) => status == 'CONNECTED' || status.startsWith('ERROR'),
+              )
               .timeout(
-            const Duration(seconds: 15),
-            onTimeout: () {
-              throw Exception('Timeout waiting for CONNECTED state');
-            },
-          ).then((status) {
-            if (status.startsWith('ERROR')) {
-              throw Exception('Native connection failed: $status');
-            }
-          });
+                const Duration(seconds: 15),
+                onTimeout: () {
+                  throw Exception('Timeout waiting for CONNECTED state');
+                },
+              )
+              .then((status) {
+                if (status.startsWith('ERROR')) {
+                  throw Exception('Native connection failed: $status');
+                }
+              });
 
           AdvancedLogger.info(
             "[ConfigManager] Native Connection Success: ${target.name}",
@@ -1064,24 +1106,27 @@ class ConfigManager extends ChangeNotifier {
 
     try {
       // Initiate native connection
-      await nativeService.connect(target.rawConfig,
-          isKillSwitchEnabled: _isKillSwitchEnabled);
+      await nativeService.connect(
+        target.rawConfig,
+        isKillSwitchEnabled: _isKillSwitchEnabled,
+      );
 
       // Wait for CONNECTED state with strict 15-second timeout
       await nativeService.connectionStatusStream
           .firstWhere(
-        (status) => status == 'CONNECTED' || status.startsWith('ERROR'),
-      )
+            (status) => status == 'CONNECTED' || status.startsWith('ERROR'),
+          )
           .timeout(
-        const Duration(seconds: 15),
-        onTimeout: () {
-          throw Exception('Timeout waiting for CONNECTED state');
-        },
-      ).then((status) {
-        if (status.startsWith('ERROR')) {
-          throw Exception('Native connection failed: $status');
-        }
-      });
+            const Duration(seconds: 15),
+            onTimeout: () {
+              throw Exception('Timeout waiting for CONNECTED state');
+            },
+          )
+          .then((status) {
+            if (status.startsWith('ERROR')) {
+              throw Exception('Native connection failed: $status');
+            }
+          });
 
       AdvancedLogger.info(
         '[ConfigManager] Manual Connection Success: ${target.name}',
