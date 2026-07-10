@@ -14,6 +14,7 @@ String _generateConfigWrapper(Map<String, dynamic> args) {
     args['configContent'],
     listenPort: args['listenPort'],
     isTest: args['isTest'],
+    isKillSwitchEnabled: args['isKillSwitchEnabled'] ?? false,
   );
 }
 
@@ -267,7 +268,8 @@ class WindowsVpnService {
     }
   }
 
-  Future<void> startVpn(String configContent) async {
+  Future<void> startVpn(String configContent,
+      {bool isKillSwitchEnabled = false}) async {
     isUserInitiatedDisconnect = false;
     AdvancedLogger.info(
       '[WindowsVpnService] startVpn called with config length: ${configContent.length}',
@@ -337,7 +339,7 @@ class WindowsVpnService {
       );
 
       // If the input is not JSON (it's a raw link), convert it first.
-      String jsonConfig;
+      String? jsonConfig;
       if (configContent.trim().startsWith("{")) {
         jsonConfig = configContent;
         AdvancedLogger.info(
@@ -352,10 +354,15 @@ class WindowsVpnService {
           'configContent': configContent,
           'listenPort': 2080, // Main port for production
           'isTest': false, // <--- CRITICAL: Enables TUN and Secure DNS
+          'isKillSwitchEnabled': isKillSwitchEnabled,
         });
         AdvancedLogger.info(
-          '[WindowsVpnService] Generated JSON config length: ${jsonConfig.length}',
+          '[WindowsVpnService] Generated JSON config length: ${jsonConfig?.length ?? 0}',
         );
+      }
+
+      if (jsonConfig == null) {
+        throw Exception("Failed to generate configuration JSON");
       }
 
       final tempDir = await getTemporaryDirectory();

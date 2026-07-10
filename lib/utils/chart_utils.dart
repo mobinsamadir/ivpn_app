@@ -24,7 +24,7 @@ class ChartUtils {
     double mean = validSamples.reduce((a, b) => a + b) / validSamples.length;
     double variance =
         validSamples.map((x) => pow(x - mean, 2)).reduce((a, b) => a + b) /
-        validSamples.length;
+            validSamples.length;
 
     return sqrt(variance);
   }

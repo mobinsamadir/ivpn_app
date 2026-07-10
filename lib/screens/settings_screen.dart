@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../providers/theme_provider.dart'; // برای دسترسی به ThemeProvider
+import '../services/config_manager.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -15,7 +16,6 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen>
     with WidgetsBindingObserver {
   // متغیر برای کنترل وضعیت‌های جدید
-  bool _killSwitchEnabled = false;
   bool _isBatteryOptimizationIgnored = false;
 
   @override
@@ -83,6 +83,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final configManager = Provider.of<ConfigManager>(context);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
@@ -104,9 +105,8 @@ class _SettingsScreenState extends State<SettingsScreen>
               _isBatteryOptimizationIgnored
                   ? Icons.shield
                   : Icons.battery_alert,
-              color: _isBatteryOptimizationIgnored
-                  ? Colors.green
-                  : Colors.orange,
+              color:
+                  _isBatteryOptimizationIgnored ? Colors.green : Colors.orange,
             ),
             title: const Text('Keep VPN Alive'),
             subtitle: Text(
@@ -130,15 +130,12 @@ class _SettingsScreenState extends State<SettingsScreen>
           SwitchListTile(
             title: const Text('Kill Switch'),
             subtitle: const Text('Block internet if VPN disconnects'),
-            value: _killSwitchEnabled,
+            value: configManager.isKillSwitchEnabled,
             onChanged: (bool value) {
-              setState(() {
-                _killSwitchEnabled = value;
-              });
-              // TODO: Add logic to handle Kill Switch
+              configManager.isKillSwitchEnabled = value;
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Kill Switch logic is not implemented yet.'),
+                  content: Text('Please reconnect the VPN to apply changes.'),
                 ),
               );
             },

@@ -284,11 +284,6 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     }
   }
 
-    if (bytes < 1024 * 1024 * 1024)
-      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
-  }
-
   @override
   void dispose() {
     _funnelSubscription?.cancel();
@@ -719,7 +714,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                   child: Column(
                     children: [
                       const SizedBox(height: 8),
-                                            _SubscriptionCard(
+                      _SubscriptionCard(
                         hasTime: _timeWalletService.hasTime,
                         remainingSeconds: _timeWalletService.remainingSeconds,
                         onAddTime: _showAdSequence,
@@ -795,7 +790,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                           setState(() {});
                         },
                         onDelete: (config) async {
-                          final confirm = await _showDeleteConfirmationDialog(config);
+                          final confirm =
+                              await _showDeleteConfirmationDialog(config);
                           if (confirm && mounted) {
                             await _configManager.deleteConfig(config.id);
                             setState(() {});
@@ -1260,15 +1256,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     _funnelService.startFunnel();
   }
 
-
-
   // _buildAppHeader Removed
-
-
-
-
-
-
 
   Future<void> _showAddServerDialog() async {
     final TextEditingController _urlController = TextEditingController();
@@ -1345,14 +1333,11 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     );
   }
 
-
-
   Future<void> _savePreferences() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('autoTestOnStartup', _autoTestOnStartup);
     await prefs.setBool('autoRefreshOnStartup', _autoRefreshOnStartup);
   }
-
 
   void _showSmartCleanupDialog() {
     showModalBottomSheet(
@@ -1495,7 +1480,6 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   }
 }
 
-
 class _AdminWarningBanner extends StatelessWidget {
   final bool isAdmin;
   const _AdminWarningBanner({required this.isAdmin});
@@ -1536,8 +1520,6 @@ class _AdminWarningBanner extends StatelessWidget {
   }
 }
 
-
-
 class _AdBannerSection extends StatelessWidget {
   const _AdBannerSection();
 
@@ -1549,8 +1531,6 @@ class _AdBannerSection extends StatelessWidget {
     );
   }
 }
-
-
 
 class _SubscriptionCard extends StatelessWidget {
   final bool hasTime;
@@ -1603,8 +1583,6 @@ class _SubscriptionCard extends StatelessWidget {
   }
 }
 
-
-
 class _ConnectionStatus extends StatelessWidget {
   final bool isConnected;
   final String connectionStatus;
@@ -1618,6 +1596,9 @@ class _ConnectionStatus extends StatelessWidget {
     required this.txBytes,
   });
 
+  String _formatBytes(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
     if (bytes < 1024 * 1024 * 1024) {
       return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
     }
@@ -1682,8 +1663,6 @@ class _ConnectionStatus extends StatelessWidget {
     );
   }
 }
-
-
 
 class _ConnectButton extends StatelessWidget {
   final bool isConnected;
@@ -1752,28 +1731,27 @@ class _ConnectButton extends StatelessWidget {
                           const Color(0xFF38EF7D),
                         ] // Green/Teal
                       : (isConnecting
-                            ? [
-                                const Color(0xFFF2994A),
-                                const Color(0xFFF2C94C),
-                              ] // Orange/Yellow
-                            : [
-                                const Color(0xFF4A5568),
-                                const Color(0xFF2D3748),
-                              ]), // Dark Grey
+                          ? [
+                              const Color(0xFFF2994A),
+                              const Color(0xFFF2C94C),
+                            ] // Orange/Yellow
+                          : [
+                              const Color(0xFF4A5568),
+                              const Color(0xFF2D3748),
+                            ]), // Dark Grey
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color:
-                        (isConnected
-                                ? const Color(0xFF38EF7D)
-                                : (isConnecting
-                                      ? const Color(0xFFF2994A)
-                                      : Colors.black))
-                            .withValues(
-                              alpha: isConnected || isConnecting ? 0.5 : 0.3,
-                            ),
+                    color: (isConnected
+                            ? const Color(0xFF38EF7D)
+                            : (isConnecting
+                                ? const Color(0xFFF2994A)
+                                : Colors.black))
+                        .withValues(
+                      alpha: isConnected || isConnecting ? 0.5 : 0.3,
+                    ),
                     blurRadius: isConnected || isConnecting ? 25 : 15,
                     spreadRadius: isConnected || isConnecting ? 8 : 2,
                     offset: const Offset(0, 8),
@@ -1848,8 +1826,6 @@ class _ConnectButton extends StatelessWidget {
   }
 }
 
-
-
 class _SelectedConfigView extends StatelessWidget {
   final VpnConfigWithMetrics? config;
   final Set<String> activeTestIds;
@@ -1884,8 +1860,6 @@ class _SelectedConfigView extends StatelessWidget {
     );
   }
 }
-
-
 
 class _AutoTestToggleGroup extends StatelessWidget {
   final bool autoTestOnStartup;
