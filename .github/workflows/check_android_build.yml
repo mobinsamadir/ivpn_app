@@ -9,14 +9,14 @@ jobs:
   build-check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.0
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5.5.0
         with:
           distribution: 'temurin'
           java-version: '17'
       - name: Setup Gradle Cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6.1.0
         with:
           path: |
             ~/.gradle/caches
@@ -25,7 +25,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
       - name: Cache Pub Dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v6.1.0
         with:
           path: ~/.pub-cache
           key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
@@ -37,23 +37,48 @@ jobs:
           cache: true
       - name: Download dependencies
         run: flutter pub get
+      - name: Validate Core Tag
+        run: |
+          TAG=$(cat tool/core_version.txt | xargs)
+          echo "Using tag: $TAG"
+          if [[ "$TAG" == *"-test"* ]]; then
+            echo "ERROR: Refusing to build PR with a test core tag ($TAG)."
+            bash -c 'exit 1'
+          fi
+          echo "CORE_RELEASE_TAG=$TAG" >> $GITHUB_ENV
+
       - name: Cache AARs
         id: aar-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6.1.0
         with:
           path: android/app/libs
-          key: ${{ runner.os }}-aar-v2-${{ hashFiles('android/app/build.gradle.kts') }}
-      - name: Download all local dependencies
+          key: ${{ runner.os }}-aar-internal-${{ hashFiles('tool/core_version.txt') }}
+
+      - name: Download Secure AARs
         if: steps.aar-cache.outputs.cache-hit != 'true'
         run: |
           mkdir -p android/app/libs
-          echo "Downloading Libbox..."
-          curl -L -o android/app/libs/libbox.aar "https://raw.githubusercontent.com/singbox-android/libbox/refs/heads/main/libbox.aar"
+
+          echo "Downloading Core AARs from Internal Release..."
+          curl -L -O "https://github.com/mobinsamadir/ivpn_app/releases/download/${{ env.CORE_RELEASE_TAG }}/libbox.aar"
+          curl -L -O "https://github.com/mobinsamadir/ivpn_app/releases/download/${{ env.CORE_RELEASE_TAG }}/libbox-legacy.aar"
+          curl -L -O "https://github.com/mobinsamadir/ivpn_app/releases/download/${{ env.CORE_RELEASE_TAG }}/aar_checksums.txt"
+
+          mv libbox.aar android/app/libs/
+          mv libbox-legacy.aar android/app/libs/ || true
+          mv aar_checksums.txt tool/
+
           echo "Downloading Terminal View..."
           curl -L -A "Mozilla/5.0" -o android/app/libs/terminal-view.aar "https://jitpack.io/com/github/termux/termux-app/terminal-view/v0.118.3/terminal-view-v0.118.3.aar"
           echo "Downloading Terminal Emulator..."
           curl -L -A "Mozilla/5.0" -o android/app/libs/terminal-emulator.aar "https://jitpack.io/com/github/termux/termux-app/terminal-emulator/v0.118.3/terminal-emulator-v0.118.3.aar"
-          ls -lh android/app/libs/
+
+      - name: Verify AAR Checksums
+        if: steps.aar-cache.outputs.cache-hit != 'true'
+        run: |
+          echo "Verifying SHA256 hashes against trusted anchor..."
+          cd android/app/libs
+          sha256sum --strict --check ../../../tool/aar_checksums.txt
       - name: Check Kotlin Build
         run: |
 
