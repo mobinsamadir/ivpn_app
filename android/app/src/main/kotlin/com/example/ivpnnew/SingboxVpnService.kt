@@ -23,7 +23,12 @@ import io.nekohasekai.libbox.PlatformInterface
 import io.nekohasekai.libbox.StringIterator
 import io.nekohasekai.libbox.TunOptions
 import io.nekohasekai.libbox.WIFIState
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import okhttp3.OkHttpClient
@@ -353,7 +358,7 @@ class SingboxVpnService :
             try {
                 val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
                 wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "iVPN::VpnBackgroundWakeLock")
-                wakeLock?.acquire(24 * 60 * 60 * 1000L /*24 hours*/)
+                wakeLock?.acquire(24 * 60 * 60 * 1000L) // 24 hours
             } catch (e: Exception) {
                 android.util.Log.e("NativeVpnLifecycle", "Failed to acquire wake lock: ${e.message}")
             }

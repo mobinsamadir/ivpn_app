@@ -1,4 +1,4 @@
-package com.example.ivpn_new
+package com.example.ivpnnew
 
 import android.app.Activity
 import android.content.Intent
@@ -17,9 +17,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class MainActivity : FlutterActivity() {
-    private val CHANNEL = "com.example.ivpn/vpn"
-    private val EVENT_CHANNEL = "com.example.ivpn/vpn_status"
-    private val VPN_REQUEST_CODE = 0x0F
+    private val channel = "com.example.ivpn/vpn"
+    private val eventChannel = "com.example.ivpn/vpn_status"
+    private val vpnRequestCode = 0x0F
     private var pendingConfig: String? = null
     private var pendingVpnResult: MethodChannel.Result? = null
 
@@ -42,7 +42,7 @@ class MainActivity : FlutterActivity() {
         super.configureFlutterEngine(flutterEngine)
 
         // Setup EventChannel for VPN Status Updates
-        EventChannel(flutterEngine.dartExecutor.binaryMessenger, EVENT_CHANNEL).setStreamHandler(
+        EventChannel(flutterEngine.dartExecutor.binaryMessenger, eventChannel).setStreamHandler(
             object : EventChannel.StreamHandler {
                 override fun onListen(
                     arguments: Any?,
@@ -63,7 +63,7 @@ class MainActivity : FlutterActivity() {
             },
         )
 
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channel).setMethodCallHandler { call, result ->
             CoroutineScope(Dispatchers.IO).launch {
                 try {
                     when (call.method) {
@@ -141,7 +141,7 @@ class MainActivity : FlutterActivity() {
     private fun prepareVpn() {
         val intent = VpnService.prepare(this)
         if (intent != null) {
-            startActivityForResult(intent, VPN_REQUEST_CODE)
+            startActivityForResult(intent, vpnRequestCode)
         } else {
             // Already granted
             if (pendingConfig != null) {
@@ -169,7 +169,7 @@ class MainActivity : FlutterActivity() {
         data: Intent?,
     ) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == VPN_REQUEST_CODE) {
+        if (requestCode == vpnRequestCode) {
             if (resultCode == Activity.RESULT_OK && pendingConfig != null) {
                 val serviceIntent =
                     Intent(this, SingboxVpnService::class.java).apply {
