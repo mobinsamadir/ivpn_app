@@ -20,6 +20,133 @@ class SingboxConfigGenerator {
   ];
   static final Random _rng = Random();
 
+  static const List<String> _privateIps = [
+    "10.0.0.0/8",
+    "172.16.0.0/12",
+    "192.168.0.0/16",
+    "127.0.0.0/8",
+  ];
+
+  static const List<String> _adDomains = [
+    "adsterra.com",
+    "google.com",
+    "doubleclick.net",
+    "googlesyndication.com",
+    "googletagmanager.com",
+    "facebook.com",
+    "fbcdn.net",
+    "twitter.com",
+    "youtube.com",
+    "ytimg.com",
+    "googleadservices.com",
+    "googletagservices.com",
+    "google-analytics.com",
+    "analytics.google.com",
+    "googleapis.com",
+    "gstatic.com",
+    "gvt1.com",
+    "gvt2.com",
+    "2mdn.net",
+    "googlesyndication.com",
+    "doubleclickbygoogle.com",
+    "googleoptimize.com",
+    "googledomains.com",
+    "googletraveladservices.com",
+    "googlevads.com",
+    "googleusercontent.com",
+    "googlevideo.com",
+    "googleweblight.com",
+    "googlezip.net",
+    "g.co",
+    "goo.gl",
+    "youtube-nocookie.com",
+    "youtubeeducation.com",
+    "youtubekids.com",
+    "yt.be",
+    "googlemail.com",
+    "gmail.com",
+    "google-analytics.com",
+    "googleadservices.com",
+    "googlecommerce.com",
+    "googlecode.com",
+    "googlebot.com",
+    "blogspot.com",
+    "blogspot.ae",
+    "blogspot.al",
+    "blogspot.am",
+    "blogspot.ba",
+    "blogspot.be",
+    "blogspot.bg",
+    "blogspot.bj",
+    "blogspot.ca",
+    "blogspot.cf",
+    "blogspot.ch",
+    "blogspot.cl",
+    "blogspot.co.at",
+    "blogspot.co.id",
+    "blogspot.co.il",
+    "blogspot.co.ke",
+    "blogspot.co.nz",
+    "blogspot.co.uk",
+    "blogspot.co.za",
+    "blogspot.com",
+    "blogspot.com.ar",
+    "blogspot.com.au",
+    "blogspot.com.br",
+    "blogspot.com.by",
+    "blogspot.com.co",
+    "blogspot.com.cy",
+    "blogspot.com.ee",
+    "blogspot.com.eg",
+    "blogspot.com.es",
+    "blogspot.com.mt",
+    "blogspot.com.ng",
+    "blogspot.com.tr",
+    "blogspot.com.uy",
+    "blogspot.cv",
+    "blogspot.cz",
+    "blogspot.de",
+    "blogspot.dk",
+    "blogspot.fi",
+    "blogspot.fr",
+    "blogspot.gr",
+    "blogspot.hk",
+    "blogspot.hr",
+    "blogspot.hu",
+    "blogspot.ie",
+    "blogspot.in",
+    "blogspot.is",
+    "blogspot.it",
+    "blogspot.jp",
+    "blogspot.kr",
+    "blogspot.li",
+    "blogspot.lt",
+    "blogspot.lu",
+    "blogspot.lv",
+    "blogspot.md",
+    "blogspot.mk",
+    "blogspot.mx",
+    "blogspot.my",
+    "blogspot.nl",
+    "blogspot.no",
+    "blogspot.pe",
+    "blogspot.pt",
+    "blogspot.qa",
+    "blogspot.re",
+    "blogspot.ro",
+    "blogspot.rs",
+    "blogspot.ru",
+    "blogspot.se",
+    "blogspot.sg",
+    "blogspot.si",
+    "blogspot.sk",
+    "blogspot.sn",
+    "blogspot.td",
+    "blogspot.tw",
+    "blogspot.ug",
+    "blogspot.vn",
+  ];
+
   // REMOVED default listenPort=10808 to force dynamic port usage
   static String generateConfig(
     String rawLink, {
@@ -539,226 +666,121 @@ class SingboxConfigGenerator {
       "outbounds": [
         proxyOutbound,
         {"type": "direct", "tag": "direct"},
+        {"type": "block", "tag": "block"},
         {"type": "dns", "tag": "dns-out"},
       ],
     };
 
     // 2. Mode-Specific Configuration
     if (isTest) {
-      // TEST MODE: SOCKS/HTTP Inbounds (No interference with system)
-      config["inbounds"] = [
-        {
-          "type": "socks",
-          "tag": "socks-test",
-          "listen": "127.0.0.1",
-          "listen_port": socksPort,
-        },
-        {
-          "type": "http",
-          "tag": "http-test",
-          "listen": "127.0.0.1",
-          "listen_port": httpPort,
-        },
-      ];
-
-      // Lightweight Routing for Tests
-      config["route"] = {
-        "rules": [
-          {
-            "outbound": "proxy",
-            "network": ["tcp", "udp"],
-          },
-        ],
-        "auto_detect_interface": true,
-        "final": "proxy",
-      };
-
-      // Simple DNS for Tests
-      config["dns"] = {
-        "servers": [
-          {"tag": "remote", "address": "8.8.8.8", "detour": "proxy"},
-        ],
-        "rules": [],
-        "final": "remote",
-      };
+      config["inbounds"] = _buildTestInbounds(socksPort, httpPort);
+      config["route"] = _buildTestRoute();
+      config["dns"] = _buildTestDns();
     } else {
-      // PRODUCTION MODE: TUN Inbound (Full VPN)
-      config["inbounds"] = [
-        {
-          "type": "tun",
-          "tag": "tun-in",
-          "inet4_address": "172.19.0.1/30",
-          "mtu": 1350,
-          "auto_route": true,
-          "strict_route": isKillSwitchEnabled,
-          "stack": "system", // Optimized for Windows
-          "sniff": true,
-        },
-      ];
-
-      // Robust DNS (Encrypted Remote, Direct Local)
-      config["dns"] = {
-        "servers": [
-          {"tag": "google", "address": "8.8.8.8", "detour": "proxy"},
-          {"tag": "local", "address": "local", "detour": "direct"},
-        ],
-        "rules": [
-          {
-            "outbound": ["any"],
-            "server": "local",
-          },
-        ],
-        "final": "google",
-        "strategy": "ipv4_only",
-      };
-
-      // Smart Routing Rules
-      config["route"] = {
-        "auto_detect_interface": true,
-        "rules": [
-          {"protocol": "dns", "outbound": "dns-out"},
-          // Critical Windows fix: Bypass TUN for local traffic to avoid infinite routing loops
-          {"ip_is_private": true, "outbound": "direct"},
-          if (splitTunnelingPackages.isNotEmpty)
-            {"package_name": splitTunnelingPackages, "outbound": "direct"},
-          // Route ad domains through proxy to bypass censorship in restricted regions
-          {
-            "domain_suffix": [
-              "adsterra.com",
-              "google.com",
-              "doubleclick.net",
-              "googlesyndication.com",
-              "googletagmanager.com",
-              "facebook.com",
-              "fbcdn.net",
-              "twitter.com",
-              "youtube.com",
-              "ytimg.com",
-              "googleadservices.com",
-              "googletagservices.com",
-              "google-analytics.com",
-              "analytics.google.com",
-              "googleapis.com",
-              "gstatic.com",
-              "gvt1.com",
-              "gvt2.com",
-              "2mdn.net",
-              "googlesyndication.com",
-              "doubleclickbygoogle.com",
-              "googleoptimize.com",
-              "googledomains.com",
-              "googletraveladservices.com",
-              "googlevads.com",
-              "googleusercontent.com",
-              "googlevideo.com",
-              "googleweblight.com",
-              "googlezip.net",
-              "g.co",
-              "goo.gl",
-              "youtube-nocookie.com",
-              "youtubeeducation.com",
-              "youtubekids.com",
-              "yt.be",
-              "googlemail.com",
-              "gmail.com",
-              "google-analytics.com",
-              "googleadservices.com",
-              "googlecommerce.com",
-              "googlecode.com",
-              "googlebot.com",
-              "blogspot.com",
-              "blogspot.ae",
-              "blogspot.al",
-              "blogspot.am",
-              "blogspot.ba",
-              "blogspot.be",
-              "blogspot.bg",
-              "blogspot.bj",
-              "blogspot.ca",
-              "blogspot.cf",
-              "blogspot.ch",
-              "blogspot.cl",
-              "blogspot.co.at",
-              "blogspot.co.id",
-              "blogspot.co.il",
-              "blogspot.co.ke",
-              "blogspot.co.nz",
-              "blogspot.co.uk",
-              "blogspot.co.za",
-              "blogspot.com",
-              "blogspot.com.ar",
-              "blogspot.com.au",
-              "blogspot.com.br",
-              "blogspot.com.by",
-              "blogspot.com.co",
-              "blogspot.com.cy",
-              "blogspot.com.ee",
-              "blogspot.com.eg",
-              "blogspot.com.es",
-              "blogspot.com.mt",
-              "blogspot.com.ng",
-              "blogspot.com.tr",
-              "blogspot.com.uy",
-              "blogspot.cv",
-              "blogspot.cz",
-              "blogspot.de",
-              "blogspot.dk",
-              "blogspot.fi",
-              "blogspot.fr",
-              "blogspot.gr",
-              "blogspot.hk",
-              "blogspot.hr",
-              "blogspot.hu",
-              "blogspot.ie",
-              "blogspot.in",
-              "blogspot.is",
-              "blogspot.it",
-              "blogspot.jp",
-              "blogspot.kr",
-              "blogspot.li",
-              "blogspot.lt",
-              "blogspot.lu",
-              "blogspot.lv",
-              "blogspot.md",
-              "blogspot.mk",
-              "blogspot.mx",
-              "blogspot.my",
-              "blogspot.nl",
-              "blogspot.no",
-              "blogspot.pe",
-              "blogspot.pt",
-              "blogspot.qa",
-              "blogspot.re",
-              "blogspot.ro",
-              "blogspot.rs",
-              "blogspot.ru",
-              "blogspot.se",
-              "blogspot.sg",
-              "blogspot.si",
-              "blogspot.sk",
-              "blogspot.sn",
-              "blogspot.td",
-              "blogspot.tw",
-              "blogspot.ug",
-              "blogspot.vn",
-            ],
-            "outbound": "proxy",
-          },
-          // Use IP ranges instead of geoip for Iran and private networks to avoid DB issues
-          {
-            "ip_cidr": [
-              "10.0.0.0/8",
-              "172.16.0.0/12",
-              "192.168.0.0/16",
-              "127.0.0.0/8",
-            ],
-            "outbound": "direct",
-          },
-        ],
-        "final": "proxy",
-      };
+      config["inbounds"] = _buildProductionInbounds(isKillSwitchEnabled);
+      config["dns"] = _buildProductionDns();
+      config["route"] = _buildProductionRoute(splitTunnelingPackages);
     }
 
     return jsonEncode(config);
+  }
+
+  static List<Map<String, dynamic>> _buildTestInbounds(
+    int socksPort,
+    int httpPort,
+  ) {
+    return [
+      {
+        "type": "socks",
+        "tag": "socks-test",
+        "listen": "127.0.0.1",
+        "listen_port": socksPort,
+      },
+      {
+        "type": "http",
+        "tag": "http-test",
+        "listen": "127.0.0.1",
+        "listen_port": httpPort,
+      },
+    ];
+  }
+
+  static Map<String, dynamic> _buildTestRoute() {
+    return {
+      "rules": [
+        {
+          "outbound": "proxy",
+          "network": ["tcp", "udp"],
+        },
+      ],
+      "auto_detect_interface": true,
+      "final": "proxy",
+    };
+  }
+
+  static Map<String, dynamic> _buildTestDns() {
+    return {
+      "servers": [
+        {"tag": "remote", "address": "8.8.8.8", "detour": "proxy"},
+      ],
+      "rules": [],
+      "final": "remote",
+    };
+  }
+
+  static List<Map<String, dynamic>> _buildProductionInbounds(
+    bool isKillSwitchEnabled,
+  ) {
+    return [
+      {
+        "type": "tun",
+        "tag": "tun-in",
+        "inet4_address": "172.19.0.1/30",
+        "mtu": 1350,
+        "auto_route": true,
+        "strict_route": isKillSwitchEnabled,
+        "stack": "system", // Optimized for Windows
+        "sniff": true,
+      },
+    ];
+  }
+
+  static Map<String, dynamic> _buildProductionDns() {
+    return {
+      "servers": [
+        {"tag": "google", "address": "8.8.8.8", "detour": "proxy"},
+        {"tag": "local", "address": "local", "detour": "direct"},
+        {"tag": "block", "address": "rcode://success"},
+      ],
+      "rules": [
+        {
+          "outbound": ["any"],
+          "server": "local",
+        },
+        {"domain_suffix": _adDomains, "server": "block"},
+      ],
+      "final": "google",
+      "strategy": "ipv4_only",
+    };
+  }
+
+  static Map<String, dynamic> _buildProductionRoute(
+    List<String> splitTunnelingPackages,
+  ) {
+    return {
+      "auto_detect_interface": true,
+      "rules": [
+        {"protocol": "dns", "outbound": "dns-out"},
+        // Critical Windows fix: Bypass TUN for local traffic to avoid infinite routing loops
+        {"ip_is_private": true, "outbound": "direct"},
+        if (splitTunnelingPackages.isNotEmpty)
+          {"package_name": splitTunnelingPackages, "outbound": "direct"},
+        // Route ad domains through block outbound to act as dynamic ad blocker
+        {"domain_suffix": _adDomains, "outbound": "block"},
+        // Use IP ranges instead of geoip for Iran and private networks to avoid DB issues
+        {"ip_cidr": _privateIps, "outbound": "direct"},
+      ],
+      "final": "proxy",
+    };
   }
 }
