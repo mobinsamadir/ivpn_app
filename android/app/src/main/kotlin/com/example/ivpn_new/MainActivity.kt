@@ -10,9 +10,7 @@ import androidx.annotation.NonNull
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
-import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
-import io.flutter.plugins.GeneratedPluginRegistrant
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -38,26 +36,31 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
+    override fun configureFlutterEngine(
+        @NonNull flutterEngine: FlutterEngine,
+    ) {
         super.configureFlutterEngine(flutterEngine)
 
         // Setup EventChannel for VPN Status Updates
         EventChannel(flutterEngine.dartExecutor.binaryMessenger, EVENT_CHANNEL).setStreamHandler(
             object : EventChannel.StreamHandler {
-                override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
+                override fun onListen(
+                    arguments: Any?,
+                    events: EventChannel.EventSink?,
+                ) {
                     eventSink = events
                     // Send current state if known (optional, but good practice)
                     if (SingboxVpnService.isVpnRunning) {
-                         events?.success("CONNECTED")
+                        events?.success("CONNECTED")
                     } else {
-                         events?.success("DISCONNECTED")
+                        events?.success("DISCONNECTED")
                     }
                 }
 
                 override fun onCancel(arguments: Any?) {
                     eventSink = null
                 }
-            }
+            },
         )
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
@@ -142,10 +145,11 @@ class MainActivity : FlutterActivity() {
         } else {
             // Already granted
             if (pendingConfig != null) {
-                val serviceIntent = Intent(this, SingboxVpnService::class.java).apply {
-                    putExtra("action", SingboxVpnService.ACTION_START)
-                    putExtra("config", pendingConfig)
-                }
+                val serviceIntent =
+                    Intent(this, SingboxVpnService::class.java).apply {
+                        putExtra("action", SingboxVpnService.ACTION_START)
+                        putExtra("config", pendingConfig)
+                    }
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     startForegroundService(serviceIntent)
@@ -159,14 +163,19 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+    override fun onActivityResult(
+        requestCode: Int,
+        resultCode: Int,
+        data: Intent?,
+    ) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == VPN_REQUEST_CODE) {
             if (resultCode == Activity.RESULT_OK && pendingConfig != null) {
-                val serviceIntent = Intent(this, SingboxVpnService::class.java).apply {
-                    putExtra("action", SingboxVpnService.ACTION_START)
-                    putExtra("config", pendingConfig)
-                }
+                val serviceIntent =
+                    Intent(this, SingboxVpnService::class.java).apply {
+                        putExtra("action", SingboxVpnService.ACTION_START)
+                        putExtra("config", pendingConfig)
+                    }
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     startForegroundService(serviceIntent)
@@ -184,9 +193,10 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun stopVpnService() {
-        val serviceIntent = Intent(this, SingboxVpnService::class.java).apply {
-            putExtra("action", SingboxVpnService.ACTION_STOP)
-        }
+        val serviceIntent =
+            Intent(this, SingboxVpnService::class.java).apply {
+                putExtra("action", SingboxVpnService.ACTION_STOP)
+            }
         startService(serviceIntent)
     }
 }
