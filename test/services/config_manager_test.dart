@@ -30,6 +30,11 @@ void main() {
       expect(manager.allConfigs.first.name, 'Test Config');
 
       // Verify persistence
+      // Note: Because saving is now a fire-and-forget compute task,
+      // we need to wait briefly for it to complete in the background
+      // before asserting on SharedPreferences.
+      await Future.delayed(const Duration(milliseconds: 2000));
+
       final prefs = await SharedPreferences.getInstance();
       final savedString = prefs.getString('vpn_configs');
       expect(savedString, isNotNull);
@@ -575,8 +580,16 @@ void main() {
       expect(manager.allConfigs.any((c) => c.name == 'Config_499'), isTrue);
 
       // Verify persistence
+      // Since it's a true isolate compute, it takes time.
       final prefs = await SharedPreferences.getInstance();
-      final savedString = prefs.getString('vpn_configs');
+      String? savedString;
+      for (int i = 0; i < 200; i++) {
+        await Future.delayed(const Duration(milliseconds: 100));
+        await prefs.reload();
+        savedString = prefs.getString('vpn_configs');
+        if (savedString != null && savedString.length > 10000) break;
+      }
+
       expect(savedString, isNotNull);
       expect(savedString!.length, greaterThan(10000));
     });
