@@ -190,7 +190,8 @@ void main() {
       expect(attempts, 2);
     });
 
-    test('CancelToken properly aborts all in-flight pings in staggered mode', () async {
+    test('CancelToken properly aborts all in-flight pings in staggered mode',
+        () async {
       int attemptsLaunched = 0;
       final token = CancelToken();
 
