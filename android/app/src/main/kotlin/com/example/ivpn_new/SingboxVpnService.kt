@@ -1,7 +1,13 @@
 package com.example.ivpn_new
 
+import android.os.PowerManager
+import android.content.Context
 import android.app.Notification
+import android.os.PowerManager
+import android.content.Context
 import android.app.NotificationChannel
+import android.os.PowerManager
+import android.content.Context
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Intent
@@ -41,6 +47,7 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
 
     private var vpnInterface: ParcelFileDescriptor? = null
     private var mainServer: io.nekohasekai.libbox.CommandServer? = null
+    private var wakeLock: PowerManager.WakeLock? = null
     private val serviceScope = CoroutineScope(Dispatchers.IO + Job())
 
     companion object {
@@ -340,6 +347,15 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
             if (isVpnRunning) return
 
             isVpnRunning = true
+
+            try {
+                val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+                wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "iVPN::VpnBackgroundWakeLock")
+                wakeLock?.acquire(24 * 60 * 60 * 1000L /*24 hours*/)
+            } catch (e: Exception) {
+                android.util.Log.e("NativeVpnLifecycle", "Failed to acquire wake lock: ${e.message}")
+            }
+
             createNotificationChannel()
             startForeground(VPN_NOTIFICATION_ID, createNotification())
 
@@ -437,6 +453,18 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
             mainServer = null
             vpnInterface?.close()
             vpnInterface = null
+
+            wakeLock?.let {
+                if (it.isHeld) {
+                    try {
+                        it.release()
+                    } catch (e: Exception) {
+                        android.util.Log.e("NativeVpnLifecycle", "Failed to release wake lock: ${e.message}")
+                    }
+                }
+            }
+            wakeLock = null
+
             stopForeground(true)
             stopSelf()
 
@@ -475,6 +503,13 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .build()
+    }
+
+
+    override fun onRevoke() {
+        super.onRevoke()
+        android.util.Log.d("NativeVpnLifecycle", "onRevoke called by OS")
+        stopVpnInternal()
     }
 
     override fun onDestroy() {
