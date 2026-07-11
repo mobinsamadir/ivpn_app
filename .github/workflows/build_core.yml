@@ -24,15 +24,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Target Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: 'SagerNet/sing-box'
           ref: ${{ github.event.inputs.singbox_tag }}
+          fetch-depth: 0
+          submodules: 'recursive'
 
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: '~1.25.10'
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -44,13 +46,12 @@ jobs:
         uses: nttld/setup-ndk@v1
         id: setup-ndk
         with:
-          ndk-version: r26b # 26.1.10909125
+          ndk-version: r28
 
       - name: Install gomobile
         run: |
-          go install -v github.com/sagernet/gomobile/cmd/gomobile@v0.1.13
-          go install -v github.com/sagernet/gomobile/cmd/gobind@v0.1.13
-          gomobile init
+          go install -v github.com/sagernet/gomobile/cmd/gomobile@v0.1.12
+          go install -v github.com/sagernet/gomobile/cmd/gobind@v0.1.12
 
       - name: Generate Build Name
         id: build-name
@@ -70,10 +71,14 @@ jobs:
       - name: Build Core (all ABIs)
         if: ${{ github.event.inputs.build_scope == 'all' }}
         run: go run ./cmd/internal/build_libbox -target android
+        env:
+          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
 
       - name: Build Core (arm64-only)
         if: ${{ github.event.inputs.build_scope == 'arm64-only' }}
         run: go run ./cmd/internal/build_libbox -target android -platform=android/arm64
+        env:
+          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
 
       - name: Generate Checksums
         run: |
