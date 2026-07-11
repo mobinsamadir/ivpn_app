@@ -26,7 +26,6 @@ import java.net.ServerSocket
 import java.util.concurrent.TimeUnit
 import okhttp3.OkHttpClient
 import okhttp3.Request
-
 import io.nekohasekai.libbox.Libbox
 import io.nekohasekai.libbox.PlatformInterface
 import io.nekohasekai.libbox.TunOptions
