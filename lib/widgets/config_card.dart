@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/vpn_config_with_metrics.dart';
+import 'scale_on_tap.dart';
 
 class ConfigCard extends StatelessWidget {
   final VpnConfigWithMetrics config;
@@ -27,7 +28,7 @@ class ConfigCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return RepaintBoundary(
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: const Color(0xFF1E1E1E),
           borderRadius: BorderRadius.circular(16),
@@ -49,12 +50,10 @@ class ConfigCard extends StatelessWidget {
         ),
         child: Material(
           color: Colors.transparent,
-          child: InkWell(
+          child: ScaleOnTap(
             onTap: onTap,
-            borderRadius: BorderRadius.circular(16),
-            splashColor: Colors.blueAccent.withValues(alpha: 0.1),
             child: Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               child: Row(
                 children: [
                   _CountryFlag(countryCode: config.countryCode),
