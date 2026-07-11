@@ -4,7 +4,8 @@ import 'package:ivpn_new/screens/connection_home_screen.dart';
 
 void main() {
   group('_ConnectButton Widget Tests', () {
-    testWidgets('displays CONNECT text when disconnected', (WidgetTester tester) async {
+    testWidgets('displays CONNECT text when disconnected',
+        (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -24,7 +25,9 @@ void main() {
       expect(find.byType(CircularProgressIndicator), findsNothing);
     });
 
-    testWidgets('displays CONNECTING text and CircularProgressIndicator when connecting', (WidgetTester tester) async {
+    testWidgets(
+        'displays CONNECTING text and CircularProgressIndicator when connecting',
+        (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -44,7 +47,8 @@ void main() {
       expect(find.byIcon(Icons.power_settings_new), findsNothing);
     });
 
-    testWidgets('displays CONNECTED text when connected', (WidgetTester tester) async {
+    testWidgets('displays CONNECTED text when connected',
+        (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -99,7 +103,8 @@ void main() {
   });
 
   group('_ConnectionStatus Widget Tests', () {
-    testWidgets('displays CONNECTED text with correct color and RX/TX bytes', (WidgetTester tester) async {
+    testWidgets('displays CONNECTED text with correct color and RX/TX bytes',
+        (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -127,7 +132,8 @@ void main() {
       expect(find.byIcon(Icons.arrow_upward), findsOneWidget);
     });
 
-    testWidgets('displays error text in red and hides RX/TX bytes when failed', (WidgetTester tester) async {
+    testWidgets('displays error text in red and hides RX/TX bytes when failed',
+        (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -151,7 +157,9 @@ void main() {
       expect(find.byIcon(Icons.arrow_upward), findsNothing);
     });
 
-    testWidgets('displays neutral text in grey and hides RX/TX bytes when disconnected', (WidgetTester tester) async {
+    testWidgets(
+        'displays neutral text in grey and hides RX/TX bytes when disconnected',
+        (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(

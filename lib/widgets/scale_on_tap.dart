@@ -38,10 +38,12 @@ class _ScaleOnTapState extends State<ScaleOnTap>
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTapDown: widget.onTap != null ? (_) => _controller.forward() : null,
-      onTapUp: widget.onTap != null ? (_) {
-        _controller.reverse();
-        widget.onTap!();
-      } : null,
+      onTapUp: widget.onTap != null
+          ? (_) {
+              _controller.reverse();
+              widget.onTap!();
+            }
+          : null,
       onTapCancel: widget.onTap != null ? () => _controller.reverse() : null,
       child: ScaleTransition(
         scale: _scaleAnimation,

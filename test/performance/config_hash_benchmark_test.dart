@@ -8,7 +8,8 @@ import 'package:crypto/crypto.dart';
 // taken to process a large number of configs with the current logic.
 
 // Original logic
-void _originalLogic(List<String> configStrings, bool checkBlacklist, Set<String> blockedHashes) {
+void _originalLogic(List<String> configStrings, bool checkBlacklist,
+    Set<String> blockedHashes) {
   final List<String> hashesToRemoveFromBlacklist = [];
   final Set<String> batchConfigs = {};
 
@@ -38,7 +39,8 @@ void _originalLogic(List<String> configStrings, bool checkBlacklist, Set<String>
 }
 
 // Optimized logic (will be implemented in actual code later)
-void _optimizedLogic(List<String> configStrings, bool checkBlacklist, Set<String> blockedHashes) {
+void _optimizedLogic(List<String> configStrings, bool checkBlacklist,
+    Set<String> blockedHashes) {
   final List<String> hashesToRemoveFromBlacklist = [];
   final Set<String> batchConfigs = {};
 
@@ -51,11 +53,12 @@ void _optimizedLogic(List<String> configStrings, bool checkBlacklist, Set<String
       if (blockedHashes.contains(hash)) {
         continue;
       }
-    } else if (blockedHashes.isNotEmpty) { // In original, if checkBlacklist is false and hash in blocked, remove
-       final hash = md5.convert(utf8.encode(trimmedRaw)).toString();
-       if (blockedHashes.contains(hash)) {
-         hashesToRemoveFromBlacklist.add(hash);
-       }
+    } else if (blockedHashes.isNotEmpty) {
+      // In original, if checkBlacklist is false and hash in blocked, remove
+      final hash = md5.convert(utf8.encode(trimmedRaw)).toString();
+      if (blockedHashes.contains(hash)) {
+        hashesToRemoveFromBlacklist.add(hash);
+      }
     }
 
     if (batchConfigs.contains(trimmedRaw)) {
@@ -70,7 +73,8 @@ void main() {
     const int numConfigs = 20000;
     final List<String> configs = List.generate(
       numConfigs,
-      (i) => 'vless://uuid-uuid-uuid-uuid-uuid@server$i.com:443?encryption=none&security=tls&sni=server$i.com&type=tcp#Server-$i',
+      (i) =>
+          'vless://uuid-uuid-uuid-uuid-uuid@server$i.com:443?encryption=none&security=tls&sni=server$i.com&type=tcp#Server-$i',
     );
 
     // For the test, we'll run with checkBlacklist = false, and no blocked hashes
@@ -90,8 +94,10 @@ void main() {
     _optimizedLogic(configs, checkBlacklist, blockedHashes);
     stopwatchOptimized.stop();
 
-    print('Original (checkBlacklist=false): ${stopwatchOriginal.elapsedMilliseconds} ms');
-    print('Optimized (checkBlacklist=false): ${stopwatchOptimized.elapsedMilliseconds} ms');
+    print(
+        'Original (checkBlacklist=false): ${stopwatchOriginal.elapsedMilliseconds} ms');
+    print(
+        'Optimized (checkBlacklist=false): ${stopwatchOptimized.elapsedMilliseconds} ms');
 
     // The optimized logic should be significantly faster because it skips hashing entirely
     // when checkBlacklist=false and blockedHashes is empty.

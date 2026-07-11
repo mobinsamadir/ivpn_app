@@ -723,7 +723,8 @@ class ConfigManager extends ChangeNotifier {
   }
 
   // Isolate entry point for encoding configs to JSON
-  static Future<String> _encodeConfigsInIsolate(List<Map<String, dynamic>> configsJson) async {
+  static Future<String> _encodeConfigsInIsolate(
+      List<Map<String, dynamic>> configsJson) async {
     return jsonEncode(configsJson);
   }
 

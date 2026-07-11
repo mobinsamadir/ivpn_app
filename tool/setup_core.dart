@@ -15,7 +15,7 @@ const geositeUrl =
 
 // Thresholds
 const int minExeSize = 5 * 1024 * 1024; // 5MB
-const int minDbSize = 2 * 1024 * 1024;  // 2MB
+const int minDbSize = 2 * 1024 * 1024; // 2MB
 
 void main() async {
   stdout.writeln('Starting robust setup_core...');
@@ -37,7 +37,8 @@ void main() async {
 
   // --- 1. WINDOWS BINARY (Crucial) ---
   final windowsBinary = File(p.join(windowsDir.path, 'sing-box.exe'));
-  bool validExe = await _validateFile(windowsBinary, minExeSize, 'Windows Sing-box');
+  bool validExe =
+      await _validateFile(windowsBinary, minExeSize, 'Windows Sing-box');
 
   if (validExe) {
     // Perform Execution Check (The "Gold Standard")
@@ -46,15 +47,20 @@ void main() async {
 
   if (!validExe) {
     if (Platform.isWindows && await windowsBinary.exists()) {
-       stdout.writeln('Ensuring no zombie processes are locking the file...');
-       try {
-         await Process.run('taskkill', ['/F', '/IM', 'sing-box.exe']);
-       } catch (_) {}
+      stdout.writeln('Ensuring no zombie processes are locking the file...');
+      try {
+        await Process.run('taskkill', ['/F', '/IM', 'sing-box.exe']);
+      } catch (_) {}
     }
 
     if (await windowsBinary.exists()) {
-       stdout.writeln('Corrupt/Invalid binary detected. Deleting to force re-download...');
-       try { await windowsBinary.delete(); } catch(e) { stdout.writeln('Error deleting binary: $e'); }
+      stdout.writeln(
+          'Corrupt/Invalid binary detected. Deleting to force re-download...');
+      try {
+        await windowsBinary.delete();
+      } catch (e) {
+        stdout.writeln('Error deleting binary: $e');
+      }
     }
 
     stdout.writeln('Downloading Windows Sing-box ($windowsUrl)...');
@@ -72,15 +78,17 @@ void main() async {
       }
 
       if (singboxFile != null) {
-        await File(windowsBinary.path).writeAsBytes(singboxFile.content as List<int>);
+        await File(windowsBinary.path)
+            .writeAsBytes(singboxFile.content as List<int>);
         stdout.writeln('Saved to ${windowsBinary.path}');
 
         // Final Validation
         if (!await _checkBinaryExecution(windowsBinary)) {
-           throw Exception("Newly downloaded binary failed execution check.");
+          throw Exception("Newly downloaded binary failed execution check.");
         }
       } else {
-        stdout.writeln('Critical Error: sing-box.exe not found in Windows archive.');
+        stdout.writeln(
+            'Critical Error: sing-box.exe not found in Windows archive.');
         exit(1);
       }
     } catch (e) {
@@ -103,7 +111,7 @@ void main() async {
       await geoipFile.writeAsBytes(bytes);
       stdout.writeln('Saved to ${geoipFile.path}');
       if (!await _validateFile(geoipFile, minDbSize, 'GeoIP (Post-Download)')) {
-         throw Exception("Downloaded GeoIP is too small/corrupt.");
+        throw Exception("Downloaded GeoIP is too small/corrupt.");
       }
     } catch (e) {
       stdout.writeln('Critical Error downloading GeoIP: $e');
@@ -124,8 +132,9 @@ void main() async {
       final bytes = await downloadFile(geositeUrl);
       await geositeFile.writeAsBytes(bytes);
       stdout.writeln('Saved to ${geositeFile.path}');
-      if (!await _validateFile(geositeFile, minDbSize, 'Geosite (Post-Download)')) {
-         throw Exception("Downloaded Geosite is too small/corrupt.");
+      if (!await _validateFile(
+          geositeFile, minDbSize, 'Geosite (Post-Download)')) {
+        throw Exception("Downloaded Geosite is too small/corrupt.");
       }
     } catch (e) {
       stdout.writeln('Critical Error downloading Geosite: $e');
@@ -137,11 +146,11 @@ void main() async {
 
   // --- 4. COPY ASSETS TO WINDOWS DIR ---
   try {
-     await geoipFile.copy(p.join(windowsDir.path, 'geoip.db'));
-     await geositeFile.copy(p.join(windowsDir.path, 'geosite.db'));
-     stdout.writeln('Copied geo assets to windows executable folder.');
+    await geoipFile.copy(p.join(windowsDir.path, 'geoip.db'));
+    await geositeFile.copy(p.join(windowsDir.path, 'geosite.db'));
+    stdout.writeln('Copied geo assets to windows executable folder.');
   } catch (e) {
-     stdout.writeln('Warning: Could not copy geo assets to windows folder: $e');
+    stdout.writeln('Warning: Could not copy geo assets to windows folder: $e');
   }
 
   stdout.writeln('Setup complete.');
@@ -151,7 +160,8 @@ Future<bool> _validateFile(File file, int minSize, String label) async {
   if (!await file.exists()) return false;
   final size = await file.length();
   if (size < minSize) {
-    stdout.writeln('[Validation Fail] $label is too small (${(size / 1024 / 1024).toStringAsFixed(2)}MB < ${(minSize / 1024 / 1024).toStringAsFixed(2)}MB). Treating as corrupt.');
+    stdout.writeln(
+        '[Validation Fail] $label is too small (${(size / 1024 / 1024).toStringAsFixed(2)}MB < ${(minSize / 1024 / 1024).toStringAsFixed(2)}MB). Treating as corrupt.');
     return false;
   }
   return true;
@@ -159,8 +169,8 @@ Future<bool> _validateFile(File file, int minSize, String label) async {
 
 Future<bool> _checkBinaryExecution(File binary) async {
   if (!Platform.isWindows) {
-      stdout.writeln('[Skip] Execution check skipped (Not on Windows).');
-      return true; // Assume valid on non-Windows build envs
+    stdout.writeln('[Skip] Execution check skipped (Not on Windows).');
+    return true; // Assume valid on non-Windows build envs
   }
 
   final absolutePath = binary.absolute.path;
@@ -171,20 +181,23 @@ Future<bool> _checkBinaryExecution(File binary) async {
       ['version'],
       runInShell: false,
     ).timeout(const Duration(seconds: 30), onTimeout: () {
-       throw TimeoutException("Execution timed out");
+      throw TimeoutException("Execution timed out");
     });
 
     if (result.exitCode == 0) {
-       stdout.writeln('Execution check passed: ${result.stdout.toString().trim()}');
-       return true;
+      stdout.writeln(
+          'Execution check passed: ${result.stdout.toString().trim()}');
+      return true;
     } else {
-       stdout.writeln('Execution check failed (Exit Code ${result.exitCode}): ${result.stderr}');
-       return false;
+      stdout.writeln(
+          'Execution check failed (Exit Code ${result.exitCode}): ${result.stderr}');
+      return false;
     }
   } catch (e) {
     stdout.writeln('Execution check failed/crashed: $e');
     if (e is TimeoutException) {
-       stdout.writeln('FATAL: Binary hung during version check. Treating as corrupt.');
+      stdout.writeln(
+          'FATAL: Binary hung during version check. Treating as corrupt.');
     }
     return false;
   }

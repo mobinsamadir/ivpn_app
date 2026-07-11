@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.ivpn_new"
+    namespace = "com.example.ivpnnew"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -20,7 +20,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.ivpn_new"
+        applicationId = "com.example.ivpnnew"
         minSdk = flutter.minSdkVersion
         targetSdk = 34
         versionCode = flutter.versionCode

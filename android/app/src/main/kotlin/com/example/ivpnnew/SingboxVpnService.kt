@@ -1,4 +1,4 @@
-package com.example.ivpn_new
+package com.example.ivpnnew
 
 import android.os.PowerManager
 import android.content.Context
@@ -10,12 +10,14 @@ import android.os.PowerManager
 import android.content.Context
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
 import android.net.VpnService
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.ParcelFileDescriptor
+import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import io.flutter.plugin.common.MethodChannel
 import kotlinx.coroutines.*
@@ -28,10 +30,8 @@ import java.net.InetSocketAddress
 import java.net.Proxy
 import java.net.ServerSocket
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicBoolean
 import okhttp3.OkHttpClient
 import okhttp3.Request
-
 import io.nekohasekai.libbox.Libbox
 import io.nekohasekai.libbox.PlatformInterface
 import io.nekohasekai.libbox.TunOptions
@@ -110,98 +110,93 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
                 // Forcefully cancel any ongoing test to prevent queuing and await its termination
                 closeTestServerUnlocked()
 
-
-            try {
-                // STRICT VALIDATION
-                val configJson: String
                 try {
-                    configJson = getValidJsonConfig(rawInput)
-                } catch (e: Exception) {
-                    // Send error to Flutter immediately on the Main Thread
-                    result?.let { r -> Handler(Looper.getMainLooper()).post { r.error("CONFIG_ERROR", e.message, null) } }
-                    // isTestRunning.set(false)
-                    return@withContext // EXIT the coroutine. DO NOT proceed to Libbox!
-                }
+                    // STRICT VALIDATION
+                    val configJson: String
+                    try {
+                        configJson = getValidJsonConfig(rawInput)
+                    } catch (e: Exception) {
+                        // Send error to Flutter immediately on the Main Thread
+                        result?.let { r -> Handler(Looper.getMainLooper()).post { r.error("CONFIG_ERROR", e.message, null) } }
+                        return@withContext // EXIT the coroutine. DO NOT proceed to Libbox!
+                    }
 
-                val json = JSONObject(configJson)
-                var socksPort = 0
+                    val json = JSONObject(configJson)
+                    var socksPort = 0
 
-                // 1. Try to use Port from Dart (Priority)
-                if (json.has("inbounds")) {
-                     val existingInbounds = json.getJSONArray("inbounds")
-                     for (i in 0 until existingInbounds.length()) {
-                         val inbound = existingInbounds.getJSONObject(i)
-                         if (inbound.optString("type") == "socks" && inbound.has("listen_port")) {
-                             socksPort = inbound.getInt("listen_port")
-                             break
-                         }
-                     }
-                }
+                    // 1. Try to use Port from Dart (Priority)
+                    if (json.has("inbounds")) {
+                        val existingInbounds = json.getJSONArray("inbounds")
+                        for (i in 0 until existingInbounds.length()) {
+                            val inbound = existingInbounds.getJSONObject(i)
+                            if (inbound.optString("type") == "socks" && inbound.has("listen_port")) {
+                                socksPort = inbound.getInt("listen_port")
+                                break
+                            }
+                        }
+                    }
 
-                // 2. Fallback to Random Allocation
-                if (socksPort <= 0) {
-                    val socket = ServerSocket(0)
-                    socksPort = socket.localPort
-                    socket.close()
+                    // 2. Fallback to Random Allocation
+                    if (socksPort <= 0) {
+                        val socket = ServerSocket(0)
+                        socksPort = socket.localPort
+                        socket.close()
 
-                    val inbounds = JSONArray()
-                    val socksInbound = JSONObject()
-                    socksInbound.put("type", "socks")
-                    socksInbound.put("tag", "socks-in")
-                    socksInbound.put("listen", "127.0.0.1")
-                    socksInbound.put("listen_port", socksPort)
-                    inbounds.put(socksInbound)
-                    json.put("inbounds", inbounds)
-                }
+                        val inbounds = JSONArray()
+                        val socksInbound = JSONObject()
+                        socksInbound.put("type", "socks")
+                        socksInbound.put("tag", "socks-in")
+                        socksInbound.put("listen", "127.0.0.1")
+                        socksInbound.put("listen_port", socksPort)
+                        inbounds.put(socksInbound)
+                        json.put("inbounds", inbounds)
+                    }
 
-                if (!json.has("outbounds")) {
-                    // isTestRunning.set(false)
-                    result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-3) } }
-                    return@withContext
-                }
+                    if (!json.has("outbounds")) {
+                        result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-3) } }
+                        return@withContext
+                    }
 
-                if (json.has("log")) {
-                     val logObj = json.getJSONObject("log")
-                     logObj.put("level", "error")
-                }
+                    if (json.has("log")) {
+                        val logObj = json.getJSONObject("log")
+                        logObj.put("level", "error")
+                    }
 
-                val testConfigStr = json.toString()
-                val testConfigFile = File(tempDir, "test_proxy_${System.currentTimeMillis()}.json")
-                testConfigFile.writeText(testConfigStr)
+                    val testConfigStr = json.toString()
+                    val testConfigFile = File(tempDir, "test_proxy_${System.currentTimeMillis()}.json")
+                    testConfigFile.writeText(testConfigStr)
 
-                // SAFE CALL to Libbox - pass JSON content string
-                val server = try {
-                    val options = io.nekohasekai.libbox.SetupOptions()
-                    options.setBasePath(tempDir.absolutePath)
-                    options.setWorkingPath(tempDir.absolutePath)
-                    options.setTempPath(tempDir.absolutePath)
-                    Libbox.setup(options)
-                    Libbox.newCommandServer(StubCommandServerHandler(), StubPlatformInterface())
+                    // SAFE CALL to Libbox - pass JSON content string
+                    val server = try {
+                        val options = io.nekohasekai.libbox.SetupOptions()
+                        options.setBasePath(tempDir.absolutePath)
+                        options.setWorkingPath(tempDir.absolutePath)
+                        options.setTempPath(tempDir.absolutePath)
+                        Libbox.setup(options)
+                        Libbox.newCommandServer(StubCommandServerHandler(), StubPlatformInterface())
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
+                        return@withContext
+                    }
+
+                    try {
+                        server?.startOrReloadService(testConfigStr, null)
+                        testServer = server
+                    } catch (e: Exception) {
+                        server?.close()
+                        e.printStackTrace()
+                        result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
+                        return@withContext
+                    }
+                    delay(200)
+
+                    result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(socksPort) } }
+
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
-                    return@withContext
+                    result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-4) } }
                 }
-
-                try {
-                    server?.startOrReloadService(testConfigStr, null)
-                    testServer = server
-                } catch (e: Exception) {
-                    server?.close()
-                    e.printStackTrace()
-                    result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
-                    return@withContext
-                }
-                delay(200)
-
-                result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(socksPort) } }
-
-            } catch (e: Exception) {
-                e.printStackTrace()
-                // isTestRunning.set(false)
-                // test server close handled normally
-                result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-4) } }
-            }
             }
         }
 
@@ -224,101 +219,96 @@ class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterfa
                 // Forcefully cancel any ongoing test and await its termination
                 closeTestServerUnlocked()
 
-
-            try {
-                // STRICT VALIDATION
-                val configJson: String
                 try {
-                    configJson = getValidJsonConfig(rawInput)
+                    // STRICT VALIDATION
+                    val configJson: String
+                    try {
+                        configJson = getValidJsonConfig(rawInput)
+                    } catch (e: Exception) {
+                        // Send error to Flutter immediately on the Main Thread
+                        result?.let { r -> Handler(Looper.getMainLooper()).post { r.error("CONFIG_ERROR", e.message, null) } }
+                        return@withContext // EXIT the coroutine. DO NOT proceed to Libbox!
+                    }
+
+                    val socket = ServerSocket(0)
+                    val socksPort = socket.localPort
+                    socket.close()
+
+                    val json = JSONObject(configJson)
+                    val inbounds = JSONArray()
+                    val socksInbound = JSONObject()
+                    socksInbound.put("type", "socks")
+                    socksInbound.put("tag", "socks-in")
+                    socksInbound.put("listen", "127.0.0.1")
+                    socksInbound.put("listen_port", socksPort)
+                    inbounds.put(socksInbound)
+                    json.put("inbounds", inbounds)
+                    if (!json.has("outbounds")) {
+                        result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
+                        return@withContext
+                    }
+
+                    val testConfigFile = File(tempDir, "test_${System.currentTimeMillis()}.json")
+                    testConfigFile.writeText(json.toString())
+
+                    closeTestServerUnlocked()
+
+                    // SAFE CALL - pass JSON content string
+                    val newTestServer = try {
+                        val options = io.nekohasekai.libbox.SetupOptions()
+                        options.setBasePath(tempDir.absolutePath)
+                        options.setWorkingPath(tempDir.absolutePath)
+                        options.setTempPath(tempDir.absolutePath)
+                        Libbox.setup(options)
+                        Libbox.newCommandServer(StubCommandServerHandler(), StubPlatformInterface())
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        MainActivity.sendVpnStatus("ERROR: TEST_START_FAILED - ${e.message}")
+                        result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
+                        return@withContext
+                    }
+
+                    try {
+                        newTestServer?.startOrReloadService(json.toString(), null)
+                        testServer = newTestServer
+                    } catch (e: Exception) {
+                        newTestServer?.close()
+                        e.printStackTrace()
+                        MainActivity.sendVpnStatus("ERROR: TEST_START_FAILED - ${e.message}")
+                        result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
+                        return@withContext
+                    }
+                    delay(500)
+
+                    val client = OkHttpClient.Builder()
+                        .connectTimeout(3, TimeUnit.SECONDS)
+                        .readTimeout(3, TimeUnit.SECONDS)
+                        .proxy(Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", socksPort)))
+                        .build()
+
+                    val request = Request.Builder()
+                        .url("https://www.google.com/generate_204")
+                        .head()
+                        .build()
+
+                    val startTime = System.currentTimeMillis()
+                    val response = client.newCall(request).execute()
+                    val endTime = System.currentTimeMillis()
+
+                    response.close()
+
+                    if (response.isSuccessful || response.code == 204) {
+                        val ping = (endTime - startTime).toInt()
+                        result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(ping) } }
+                    } else {
+                        result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
+                    }
+
                 } catch (e: Exception) {
-                    // Send error to Flutter immediately on the Main Thread
-                    result?.let { r -> Handler(Looper.getMainLooper()).post { r.error("CONFIG_ERROR", e.message, null) } }
-                    // isTestRunning.set(false)
-                    return@withContext // EXIT the coroutine. DO NOT proceed to Libbox!
-                }
-
-                val socket = ServerSocket(0)
-                val socksPort = socket.localPort
-                socket.close()
-
-                val json = JSONObject(configJson)
-                val inbounds = JSONArray()
-                val socksInbound = JSONObject()
-                socksInbound.put("type", "socks")
-                socksInbound.put("tag", "socks-in")
-                socksInbound.put("listen", "127.0.0.1")
-                socksInbound.put("listen_port", socksPort)
-                inbounds.put(socksInbound)
-                json.put("inbounds", inbounds)
-                if (!json.has("outbounds")) {
                     result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
-                    return@withContext
+                } finally {
+                    // test server close handled normally
                 }
-
-                val testConfigFile = File(tempDir, "test_${System.currentTimeMillis()}.json")
-                testConfigFile.writeText(json.toString())
-
-                closeTestServerUnlocked()
-
-                // SAFE CALL - pass JSON content string
-                val newTestServer = try {
-                    val options = io.nekohasekai.libbox.SetupOptions()
-                    options.setBasePath(tempDir.absolutePath)
-                    options.setWorkingPath(tempDir.absolutePath)
-                    options.setTempPath(tempDir.absolutePath)
-                    Libbox.setup(options)
-                    Libbox.newCommandServer(StubCommandServerHandler(), StubPlatformInterface())
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    MainActivity.sendVpnStatus("ERROR: TEST_START_FAILED - ${e.message}")
-                    result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
-                    // isTestRunning.set(false)
-                    return@withContext
-                }
-
-                try {
-                    newTestServer?.startOrReloadService(json.toString(), null)
-                    testServer = newTestServer
-                } catch (e: Exception) {
-                    newTestServer?.close()
-                    e.printStackTrace()
-                    MainActivity.sendVpnStatus("ERROR: TEST_START_FAILED - ${e.message}")
-                    result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
-                    // isTestRunning.set(false)
-                    return@withContext
-                }
-                delay(500)
-
-                val client = OkHttpClient.Builder()
-                    .connectTimeout(3, TimeUnit.SECONDS)
-                    .readTimeout(3, TimeUnit.SECONDS)
-                    .proxy(Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", socksPort)))
-                    .build()
-
-                val request = Request.Builder()
-                    .url("https://www.google.com/generate_204")
-                    .head()
-                    .build()
-
-                val startTime = System.currentTimeMillis()
-                val response = client.newCall(request).execute()
-                val endTime = System.currentTimeMillis()
-
-                response.close()
-
-                if (response.isSuccessful || response.code == 204) {
-                    val ping = (endTime - startTime).toInt()
-                    result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(ping) } }
-                } else {
-                    result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
-                }
-
-            } catch (e: Exception) {
-                result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
-            } finally {
-                // test server close handled normally
-                // isTestRunning.set(false)
-            }
             }
         }
     }

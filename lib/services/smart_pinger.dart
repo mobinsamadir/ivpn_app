@@ -217,7 +217,8 @@ class SmartPinger {
 }
 
 /// Top-level Isolate entry point for ping testing
-Future<Map<String, dynamic>> _isolatePingSingle(Map<String, dynamic> args) async {
+Future<Map<String, dynamic>> _isolatePingSingle(
+    Map<String, dynamic> args) async {
   final endpoint = args['endpoint'] as String;
   final timeoutInMilliseconds = args['timeoutInMilliseconds'] as int;
   final timeout = Duration(milliseconds: timeoutInMilliseconds);
