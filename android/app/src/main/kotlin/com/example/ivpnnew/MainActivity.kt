@@ -14,6 +14,7 @@ import io.flutter.plugin.common.MethodChannel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : FlutterActivity() {
     private val channel = "com.example.ivpn/vpn"
@@ -63,58 +64,76 @@ class MainActivity : FlutterActivity() {
         )
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channel).setMethodCallHandler { call, result ->
-            when (call.method) {
-                "startVpn" -> {
-                    val config = call.argument<String>("config")
-                    if (config != null && config.isNotBlank()) {
-                        pendingConfig = config
-                        pendingVpnResult = result
-                        prepareVpn()
-                    } else {
-                        result.error("INVALID_CONFIG", "Config string is null or empty", null)
-                    }
-                }
-                "stopVpn" -> {
-                    stopVpnService()
-                    result.success(null)
-                }
-                "testConfig" -> {
-                    val config = call.argument<String>("config")
-                    if (android.net.VpnService.prepare(this@MainActivity) != null) {
-                        result.error("PERMISSION_DENIED", "VPN Permission not granted yet", null)
-                        return@setMethodCallHandler
-                    }
-                    if (config != null && config.isNotBlank()) {
-                        CoroutineScope(Dispatchers.IO).launch {
-                            SingboxVpnService.measurePing(config, cacheDir, result)
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    when (call.method) {
+                        "startVpn" -> {
+                            val config = call.argument<String>("config")
+                            withContext(Dispatchers.Main) {
+                                if (config != null && config.isNotBlank()) {
+                                    pendingConfig = config
+                                    pendingVpnResult = result
+                                    prepareVpn()
+                                } else {
+                                    result.error("INVALID_CONFIG", "Config string is null or empty", null)
+                                }
+                            }
                         }
-                    } else {
-                        result.error("INVALID_CONFIG", "Config string is null or empty", null)
-                    }
-                }
-                "startTestProxy" -> {
-                    val config = call.argument<String>("config")
-                    if (android.net.VpnService.prepare(this@MainActivity) != null) {
-                        result.error("PERMISSION_DENIED", "VPN Permission not granted yet", null)
-                        return@setMethodCallHandler
-                    }
-                    if (config != null && config.isNotBlank()) {
-                        CoroutineScope(Dispatchers.IO).launch {
-                            SingboxVpnService.startTestProxy(config, cacheDir, result)
+                        "stopVpn" -> {
+                            withContext(Dispatchers.Main) {
+                                stopVpnService()
+                                result.success(null)
+                            }
                         }
-                    } else {
-                        result.error("INVALID_CONFIG", "Config string is null or empty", null)
-                    }
-                }
-                "stopTestProxy" -> {
-                    CoroutineScope(Dispatchers.IO).launch {
-                        SingboxVpnService.stopTestProxy()
-                        Handler(Looper.getMainLooper()).post {
-                            result.success(null)
+                        "testConfig" -> {
+                            val config = call.argument<String>("config")
+                            withContext(Dispatchers.Main) {
+                                if (android.net.VpnService.prepare(this@MainActivity) != null) {
+                                    result.error("PERMISSION_DENIED", "VPN Permission not granted yet", null)
+                                    return@withContext
+                                }
+                            }
+                            if (config != null && config.isNotBlank()) {
+                                SingboxVpnService.measurePing(config, cacheDir, result)
+                            } else {
+                                withContext(Dispatchers.Main) {
+                                    result.error("INVALID_CONFIG", "Config string is null or empty", null)
+                                }
+                            }
+                        }
+                        "startTestProxy" -> {
+                            val config = call.argument<String>("config")
+                            withContext(Dispatchers.Main) {
+                                if (android.net.VpnService.prepare(this@MainActivity) != null) {
+                                    result.error("PERMISSION_DENIED", "VPN Permission not granted yet", null)
+                                    return@withContext
+                                }
+                            }
+                            if (config != null && config.isNotBlank()) {
+                                SingboxVpnService.startTestProxy(config, cacheDir, result)
+                            } else {
+                                withContext(Dispatchers.Main) {
+                                    result.error("INVALID_CONFIG", "Config string is null or empty", null)
+                                }
+                            }
+                        }
+                        "stopTestProxy" -> {
+                            SingboxVpnService.stopTestProxy()
+                            withContext(Dispatchers.Main) {
+                                result.success(null)
+                            }
+                        }
+                        else -> {
+                            withContext(Dispatchers.Main) {
+                                result.notImplemented()
+                            }
                         }
                     }
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        result.error("METHOD_ERROR", "Exception during method call: ${e.message}", null)
+                    }
                 }
-                else -> result.notImplemented()
             }
         }
     }
@@ -143,6 +162,7 @@ class MainActivity : FlutterActivity() {
             }
         }
     }
+
     override fun onActivityResult(
         requestCode: Int,
         resultCode: Int,
