@@ -115,7 +115,9 @@ class SmartPinger {
     CancelToken? cancelToken, {
     int maxRetries = 2,
     required Duration timeout,
-    Future<PingResult> Function(String, CancelToken?, {required Duration timeout})? pingSingleInjector,
+    Future<PingResult> Function(String, CancelToken?,
+            {required Duration timeout})?
+        pingSingleInjector,
   }) async {
     final pingFunc = pingSingleInjector ?? _pingSingle;
     final completer = Completer<PingResult>();
@@ -161,7 +163,8 @@ class SmartPinger {
     for (int attempt = 1; attempt <= maxRetries; attempt++) {
       if (cancelToken?.isCancelled ?? false) {
         if (!completer.isCompleted) {
-          completer.completeError(OperationCancelledException(cancelToken?.reason?.toString() ?? 'Cancelled'));
+          completer.completeError(OperationCancelledException(
+              cancelToken?.reason?.toString() ?? 'Cancelled'));
         }
         break;
       }
