@@ -370,6 +370,193 @@ void main() {
       });
     });
 
+    group(
+        'Further Methods Coverage (disconnectVpn, clearAllData, removeConfigs flags)',
+        () {
+      test('disconnectVpn sets states and disconnects', () async {
+        final manager = ConfigManager();
+        await manager.clearAllData();
+
+        manager.setConnected(true, status: 'Connected');
+        await manager.disconnectVpn();
+
+        expect(manager.userInitiatedDisconnect, isTrue);
+        expect(manager.isConnectionCancelled, isTrue);
+        expect(manager.isConnected, isFalse);
+        expect(manager.connectionStatus, 'Disconnected');
+      });
+
+      test('clearAllData wipes all configs, caches, and selections', () async {
+        final manager = ConfigManager();
+        await manager.clearAllData();
+
+        await manager.addConfig(
+            'vless://uuid@127.0.0.1:443?query=1#Data1', 'Data1');
+        manager.selectConfig(manager.allConfigs.first);
+
+        expect(manager.allConfigs.length, 1);
+        expect(manager.selectedConfig, isNotNull);
+
+        await manager.clearAllData();
+
+        expect(manager.allConfigs.length, 0);
+        expect(manager.selectedConfig, isNull);
+      });
+
+      test('removeConfigs with weak=true removes high ping configs', () async {
+        final manager = ConfigManager();
+        await manager.clearAllData();
+
+        await manager.addConfig(
+            'vless://uuid@127.0.0.1:443?query=1#Normal', 'Normal');
+        await manager.addConfig(
+            'vless://uuid@127.0.0.1:443?query=1#Weak', 'Weak');
+
+        final weakId =
+            manager.allConfigs.firstWhere((c) => c.name == 'Weak').id;
+        await manager.updateConfigMetrics(weakId,
+            ping: 1600); // > 1500 threshold
+
+        final normalId =
+            manager.allConfigs.firstWhere((c) => c.name == 'Normal').id;
+        await manager.updateConfigMetrics(normalId, ping: 100);
+
+        expect(manager.allConfigs.length, 2);
+
+        await manager.removeConfigs(weak: true);
+
+        expect(manager.allConfigs.length, 1);
+        expect(manager.allConfigs.first.name, 'Normal');
+      });
+
+      test('removeConfigs with failedTcp=true removes funnelStage 0 failures',
+          () async {
+        final manager = ConfigManager();
+        await manager.clearAllData();
+
+        await manager.addConfig(
+            'vless://uuid@127.0.0.1:443?query=1#Fail', 'Fail');
+        final failId = manager.allConfigs.first.id;
+
+        // funnelStage is 0 by default. Set failure count.
+        await manager.markFailure(failId);
+
+        await manager.addConfig(
+            'vless://uuid@127.0.0.1:443?query=1#Pass', 'Pass');
+        final passId =
+            manager.allConfigs.firstWhere((c) => c.name == 'Pass').id;
+
+        // A config with failure, but funnelStage > 0 shouldn't be deleted by failedTcp
+        await manager.markFailure(passId);
+        final passConfig = manager.allConfigs
+            .firstWhere((c) => c.name == 'Pass')
+            .copyWith(funnelStage: 1);
+        await manager.updateConfigDirectly(passConfig);
+
+        expect(manager.allConfigs.length, 2);
+
+        await manager.removeConfigs(failedTcp: true);
+
+        expect(manager.allConfigs.length, 1);
+        expect(manager.allConfigs.first.name, 'Pass');
+      });
+
+      test('removeConfigs with untestedSpeed=true removes funnelStage < 3',
+          () async {
+        final manager = ConfigManager();
+        await manager.clearAllData();
+
+        await manager.addConfig('vless://uuid@127.0.0.1:443?query=1#Untested',
+            'Untested'); // stage 0
+        await manager.addConfig(
+            'vless://uuid@127.0.0.1:443?query=1#Tested', 'Tested');
+
+        final testedId =
+            manager.allConfigs.firstWhere((c) => c.name == 'Tested').id;
+        final testedConfig = manager.allConfigs
+            .firstWhere((c) => c.name == 'Tested')
+            .copyWith(funnelStage: 3);
+        await manager.updateConfigDirectly(testedConfig);
+
+        await manager.removeConfigs(untestedSpeed: true);
+
+        expect(manager.allConfigs.length, 1);
+        expect(manager.allConfigs.first.name, 'Tested');
+      });
+    });
+
+    group('evaluateAutoSwitch thresholds', () {
+      test('evaluateAutoSwitch triggers on high ping when better options exist',
+          () async {
+        final manager = ConfigManager();
+        await manager.clearAllData();
+        manager.isAutoSwitchEnabled = true;
+        manager.setConnected(true, status: 'Connected');
+
+        await manager.addConfig(
+            'vless://uuid@127.0.0.1:443?query=1#Good', 'Good');
+        await manager.addConfig(
+            'vless://uuid@127.0.0.1:443?query=1#Bad', 'Bad');
+
+        final goodId =
+            manager.allConfigs.firstWhere((c) => c.name == 'Good').id;
+        final goodConfig = manager.allConfigs
+            .firstWhere((c) => c.name == 'Good')
+            .copyWith(funnelStage: 3);
+        await manager.updateConfigDirectly(goodConfig);
+        await manager.updateConfigMetrics(goodId, ping: 100);
+        await manager.markSuccess(goodId); // To ensure it is validated
+
+        final badConfig = manager.allConfigs.firstWhere((c) => c.name == 'Bad');
+        manager.selectConfig(badConfig); // Initially on bad config
+
+        // Wait for sorting/throttling to finish
+        await Future.delayed(const Duration(milliseconds: 600));
+
+        bool autoSwitchTriggered = false;
+        manager.onAutoSwitch = (c) {
+          autoSwitchTriggered = true;
+        };
+
+        // currentPing > 400 (panicThreshold), and (currentPing - bestPing) > 150 (improvementThreshold)
+        // 500 - 100 = 400 > 150.
+        await manager.evaluateAutoSwitch(500);
+
+        expect(autoSwitchTriggered, isTrue);
+        expect(manager.selectedConfig?.name, 'Good');
+      });
+
+      test(
+          'evaluateAutoSwitch ignores switch if AutoSwitch is disabled or disconnected',
+          () async {
+        final manager = ConfigManager();
+        await manager.clearAllData();
+
+        await manager.addConfig(
+            'vless://uuid@127.0.0.1:443?query=1#Good', 'Good');
+        final goodId = manager.allConfigs.first.id;
+        await manager.markSuccess(goodId);
+        await manager.updateConfigMetrics(goodId, ping: 100);
+
+        bool autoSwitchTriggered = false;
+        manager.onAutoSwitch = (c) {
+          autoSwitchTriggered = true;
+        };
+
+        // Case 1: AutoSwitch disabled
+        manager.isAutoSwitchEnabled = false;
+        manager.setConnected(true, status: 'Connected');
+        await manager.evaluateAutoSwitch(500);
+        expect(autoSwitchTriggered, isFalse);
+
+        // Case 2: AutoSwitch enabled but disconnected
+        manager.isAutoSwitchEnabled = true;
+        manager.setConnected(false, status: 'Disconnected');
+        await manager.evaluateAutoSwitch(500);
+        expect(autoSwitchTriggered, isFalse);
+      });
+    });
+
     test('Stress Test: Add 500+ configs', () async {
       final manager = ConfigManager();
       await manager.init();
