@@ -196,55 +196,74 @@ class SmartPinger {
     CancelToken? cancelToken, {
     required Duration timeout,
   }) async {
-    final stopwatch = Stopwatch()..start();
+    cancelToken?.throwIfCancelled();
 
-    try {
-      cancelToken?.throwIfCancelled();
+    final args = {
+      'endpoint': endpoint,
+      'timeoutInMilliseconds': timeout.inMilliseconds,
+    };
 
-      final uri = Uri.parse(endpoint);
-      final host = uri.host;
-      final port =
-          uri.port == 0 ? (uri.scheme == 'https' ? 443 : 80) : uri.port;
+    final resultData = await compute(_isolatePingSingle, args);
 
-      // TCP connection test
-      final socket = await Socket.connect(host, port, timeout: timeout);
+    cancelToken?.throwIfCancelled();
 
-      socket.destroy();
-      stopwatch.stop();
+    return PingResult(
+      endpoint: resultData['endpoint'] as String,
+      latency: resultData['latency'] as int,
+      isSuccess: resultData['isSuccess'] as bool,
+      error: resultData['error'] as String?,
+    );
+  }
+}
 
-      return PingResult(
-        endpoint: endpoint,
-        latency: stopwatch.elapsedMilliseconds,
-        isSuccess: true,
-        error: null,
-      );
-    } on OperationCancelledException {
-      stopwatch.stop();
-      rethrow;
-    } on SocketException catch (e) {
-      stopwatch.stop();
-      return PingResult(
-        endpoint: endpoint,
-        latency: -1,
-        isSuccess: false,
-        error: 'Socket error: ${e.message}',
-      );
-    } on TimeoutException {
-      stopwatch.stop();
-      return PingResult(
-        endpoint: endpoint,
-        latency: -1,
-        isSuccess: false,
-        error: 'Timeout after ${stopwatch.elapsedMilliseconds}ms',
-      );
-    } catch (e) {
-      stopwatch.stop();
-      return PingResult(
-        endpoint: endpoint,
-        latency: -1,
-        isSuccess: false,
-        error: 'Unexpected error: $e',
-      );
-    }
+/// Top-level Isolate entry point for ping testing
+Future<Map<String, dynamic>> _isolatePingSingle(Map<String, dynamic> args) async {
+  final endpoint = args['endpoint'] as String;
+  final timeoutInMilliseconds = args['timeoutInMilliseconds'] as int;
+  final timeout = Duration(milliseconds: timeoutInMilliseconds);
+
+  final stopwatch = Stopwatch()..start();
+
+  try {
+    final uri = Uri.parse(endpoint);
+    final host = uri.host;
+    final port = uri.port == 0 ? (uri.scheme == 'https' ? 443 : 80) : uri.port;
+
+    // TCP connection test inside isolate
+    final socket = await Socket.connect(host, port, timeout: timeout);
+
+    socket.destroy();
+    stopwatch.stop();
+
+    return {
+      'endpoint': endpoint,
+      'latency': stopwatch.elapsedMilliseconds,
+      'isSuccess': true,
+      'error': null,
+    };
+  } on SocketException catch (e) {
+    stopwatch.stop();
+    return {
+      'endpoint': endpoint,
+      'latency': -1,
+      'isSuccess': false,
+      'error': 'Socket error: ${e.message}',
+    };
+  } on TimeoutException {
+    stopwatch.stop();
+    return {
+      'endpoint': endpoint,
+      'latency': -1,
+      'isSuccess': false,
+      'error': 'Timeout after ${stopwatch.elapsedMilliseconds}ms',
+    };
+  } catch (e) {
+    stopwatch.stop();
+    return {
+      'endpoint': endpoint,
+      'latency': -1,
+      'isSuccess': false,
+      'error': 'Unexpected error: $e',
+    };
   }
 }

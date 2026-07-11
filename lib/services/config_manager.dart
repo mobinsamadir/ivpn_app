@@ -216,7 +216,7 @@ class ConfigManager extends ChangeNotifier {
   set isAutoSwitchEnabled(bool value) {
     _isAutoSwitchEnabled = value;
     _saveAutoSwitchSetting();
-    notifyListeners();
+    _safeNotifyListeners();
   }
 
   bool _isKillSwitchEnabled = false;
@@ -224,7 +224,7 @@ class ConfigManager extends ChangeNotifier {
   set isKillSwitchEnabled(bool value) {
     _isKillSwitchEnabled = value;
     _saveKillSwitchSetting();
-    notifyListeners();
+    _safeNotifyListeners();
   }
 
   List<String> _splitTunnelingPackages = [];
@@ -232,7 +232,7 @@ class ConfigManager extends ChangeNotifier {
   set splitTunnelingPackages(List<String> value) {
     _splitTunnelingPackages = value;
     _saveSplitTunnelingPackages();
-    notifyListeners();
+    _safeNotifyListeners();
   }
 
   // --- CONSTANTS ---
@@ -349,7 +349,7 @@ class ConfigManager extends ChangeNotifier {
       await stopVpnCallback!();
     }
     setConnected(false, status: 'Disconnected');
-    notifyListeners();
+    _safeNotifyListeners();
   }
 
   // --- CORE: FETCH & PARSE ---
@@ -481,7 +481,7 @@ class ConfigManager extends ChangeNotifier {
       );
       await _updateLists();
       await _saveAllConfigs();
-      notifyListeners();
+      _safeNotifyListeners();
     }
   }
 
@@ -494,7 +494,7 @@ class ConfigManager extends ChangeNotifier {
       );
       await _updateLists();
       await _saveAllConfigs();
-      notifyListeners();
+      _safeNotifyListeners();
     }
   }
 
@@ -512,7 +512,7 @@ class ConfigManager extends ChangeNotifier {
       );
       await _updateLists();
       await _saveAllConfigs();
-      notifyListeners();
+      _safeNotifyListeners();
     }
   }
 
@@ -533,7 +533,7 @@ class ConfigManager extends ChangeNotifier {
       if (_selectedConfig?.id == id) _selectedConfig = null;
       await _updateLists();
       await _saveAllConfigs();
-      notifyListeners();
+      _safeNotifyListeners();
       return true;
     }
     return false;
@@ -565,7 +565,7 @@ class ConfigManager extends ChangeNotifier {
       }
       await _updateLists();
       await _saveAllConfigs();
-      notifyListeners();
+      _safeNotifyListeners();
     }
     return initialCount - allConfigs.length;
   }
@@ -578,13 +578,13 @@ class ConfigManager extends ChangeNotifier {
       );
       await _updateLists();
       await _saveAllConfigs();
-      notifyListeners();
+      _safeNotifyListeners();
     }
   }
 
   void selectConfig(VpnConfigWithMetrics? c) {
     _selectedConfig = c;
-    notifyListeners();
+    _safeNotifyListeners();
   }
 
   // --- ACTIVE CONNECTION PING & NAVIGATION ---
@@ -722,14 +722,28 @@ class ConfigManager extends ChangeNotifier {
     }
   }
 
+  // Isolate entry point for encoding configs to JSON
+  static Future<String> _encodeConfigsInIsolate(List<Map<String, dynamic>> configsJson) async {
+    return jsonEncode(configsJson);
+  }
+
   Future<void> _saveAllConfigs() async {
     try {
-      await storage.setString(
-        _configsKey,
-        jsonEncode(allConfigs.map((e) => e.toJson()).toList()),
-      );
+      // Deep copy to prevent concurrent modification exceptions during isolate execution
+      final configsSnapshot = allConfigs.map((e) => e.toJson()).toList();
+
+      // Compute JSON encoding in a background isolate to prevent UI thread blockage
+      compute(_encodeConfigsInIsolate, configsSnapshot).then((jsonString) {
+        // Fire-and-forget saving
+        storage.setString(_configsKey, jsonString).catchError((e) {
+          AdvancedLogger.error('[ConfigManager] Save error: $e');
+          return false;
+        });
+      }).catchError((e) {
+        AdvancedLogger.error('[ConfigManager] Save compute error: $e');
+      });
     } catch (e) {
-      AdvancedLogger.error('[ConfigManager] Save error: $e');
+      AdvancedLogger.error('[ConfigManager] Save setup error: $e');
     }
   }
 
@@ -872,7 +886,7 @@ class ConfigManager extends ChangeNotifier {
     } else {
       stopSmartMonitor();
     }
-    notifyListeners();
+    _safeNotifyListeners();
   }
 
   void stopSession() {
@@ -938,7 +952,7 @@ class ConfigManager extends ChangeNotifier {
         '[Smart Monitor] Switching to config: ${nextBest.name}',
       );
       _selectedConfig = nextBest;
-      notifyListeners();
+      _safeNotifyListeners();
       onAutoSwitch?.call(nextBest);
     } else {
       AdvancedLogger.info(
@@ -966,7 +980,7 @@ class ConfigManager extends ChangeNotifier {
     _memoryCache.clear();
     _cacheTtl.clear();
     await _updateLists();
-    notifyListeners();
+    _safeNotifyListeners();
   }
 
   // --- SMART FAILOVER CONNECTION ---
