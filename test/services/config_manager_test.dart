@@ -471,8 +471,6 @@ void main() {
         await manager.addConfig(
             'vless://uuid@127.0.0.1:443?query=1#Tested', 'Tested');
 
-        final testedId =
-            manager.allConfigs.firstWhere((c) => c.name == 'Tested').id;
         final testedConfig = manager.allConfigs
             .firstWhere((c) => c.name == 'Tested')
             .copyWith(funnelStage: 3);
