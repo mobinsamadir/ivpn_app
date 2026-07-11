@@ -1,51 +1,48 @@
-package com.example.ivpnnew
+package com.example.ivpn_new
 
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
 import android.net.VpnService
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.ParcelFileDescriptor
+import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import io.flutter.plugin.common.MethodChannel
-import io.nekohasekai.libbox.CommandServer
-import io.nekohasekai.libbox.InterfaceUpdateListener
-import io.nekohasekai.libbox.Libbox
-import io.nekohasekai.libbox.LibboxNotification
-import io.nekohasekai.libbox.LocalDNSTransport
-import io.nekohasekai.libbox.NetworkInterface
-import io.nekohasekai.libbox.NetworkInterfaceIterator
-import io.nekohasekai.libbox.PlatformInterface
-import io.nekohasekai.libbox.StringIterator
-import io.nekohasekai.libbox.TunOptions
-import io.nekohasekai.libbox.WIFIState
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import org.json.JSONArray
 import org.json.JSONObject
+import org.json.JSONArray
 import java.io.File
 import java.net.InetSocketAddress
 import java.net.Proxy
 import java.net.ServerSocket
 import java.util.concurrent.TimeUnit
+import okhttp3.OkHttpClient
+import okhttp3.Request
 
-class SingboxVpnService :
-    VpnService(),
-    PlatformInterface by StubPlatformInterface() {
+import io.nekohasekai.libbox.Libbox
+import io.nekohasekai.libbox.PlatformInterface
+import io.nekohasekai.libbox.TunOptions
+import io.nekohasekai.libbox.StringIterator
+import io.nekohasekai.libbox.NetworkInterfaceIterator
+import io.nekohasekai.libbox.WIFIState
+import io.nekohasekai.libbox.InterfaceUpdateListener
+import io.nekohasekai.libbox.LocalDNSTransport
+import io.nekohasekai.libbox.NetworkInterface
+import io.nekohasekai.libbox.Notification as LibboxNotification
+
+class SingboxVpnService : VpnService(), PlatformInterface by StubPlatformInterface() {
+
     private var vpnInterface: ParcelFileDescriptor? = null
     private var mainServer: io.nekohasekai.libbox.CommandServer? = null
+    private var wakeLock: PowerManager.WakeLock? = null
     private val serviceScope = CoroutineScope(Dispatchers.IO + Job())
 
     companion object {
@@ -97,11 +94,7 @@ class SingboxVpnService :
         }
 
         // --- NEW: Granular Control for Dart-driven Testing ---
-        suspend fun startTestProxy(
-            rawInput: String,
-            tempDir: File,
-            result: MethodChannel.Result?,
-        ) = withContext(Dispatchers.IO) {
+        suspend fun startTestProxy(rawInput: String, tempDir: File, result: MethodChannel.Result?) = withContext(Dispatchers.IO) {
             nativeCallMutex.withLock {
                 if (isVpnRunning) {
                     println("❌ [Native] Cannot start Test Proxy: VPN is running")
@@ -120,7 +113,6 @@ class SingboxVpnService :
                     } catch (e: Exception) {
                         // Send error to Flutter immediately on the Main Thread
                         result?.let { r -> Handler(Looper.getMainLooper()).post { r.error("CONFIG_ERROR", e.message, null) } }
-                        // isTestRunning.set(false)
                         return@withContext // EXIT the coroutine. DO NOT proceed to Libbox!
                     }
 
@@ -156,7 +148,6 @@ class SingboxVpnService :
                     }
 
                     if (!json.has("outbounds")) {
-                        // isTestRunning.set(false)
                         result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-3) } }
                         return@withContext
                     }
@@ -171,19 +162,18 @@ class SingboxVpnService :
                     testConfigFile.writeText(testConfigStr)
 
                     // SAFE CALL to Libbox - pass JSON content string
-                    val server =
-                        try {
-                            val options = io.nekohasekai.libbox.SetupOptions()
-                            options.setBasePath(tempDir.absolutePath)
-                            options.setWorkingPath(tempDir.absolutePath)
-                            options.setTempPath(tempDir.absolutePath)
-                            Libbox.setup(options)
-                            Libbox.newCommandServer(StubCommandServerHandler(), StubPlatformInterface())
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                            result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
-                            return@withContext
-                        }
+                    val server = try {
+                        val options = io.nekohasekai.libbox.SetupOptions()
+                        options.setBasePath(tempDir.absolutePath)
+                        options.setWorkingPath(tempDir.absolutePath)
+                        options.setTempPath(tempDir.absolutePath)
+                        Libbox.setup(options)
+                        Libbox.newCommandServer(StubCommandServerHandler(), StubPlatformInterface())
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
+                        return@withContext
+                    }
 
                     try {
                         server?.startOrReloadService(testConfigStr, null)
@@ -197,31 +187,25 @@ class SingboxVpnService :
                     delay(200)
 
                     result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(socksPort) } }
+
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    // isTestRunning.set(false)
-                    // test server close handled normally
                     result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-4) } }
                 }
             }
         }
 
-        suspend fun stopTestProxy() =
-            withContext(Dispatchers.IO) {
-                nativeCallMutex.withLock {
-                    try {
-                        closeTestServerUnlocked()
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
+        suspend fun stopTestProxy() = withContext(Dispatchers.IO) {
+            nativeCallMutex.withLock {
+                try {
+                    closeTestServerUnlocked()
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
             }
+        }
 
-        suspend fun measurePing(
-            rawInput: String,
-            tempDir: File,
-            result: MethodChannel.Result?,
-        ) = withContext(Dispatchers.IO) {
+        suspend fun measurePing(rawInput: String, tempDir: File, result: MethodChannel.Result?) = withContext(Dispatchers.IO) {
             nativeCallMutex.withLock {
                 if (isVpnRunning) {
                     result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
@@ -238,7 +222,6 @@ class SingboxVpnService :
                     } catch (e: Exception) {
                         // Send error to Flutter immediately on the Main Thread
                         result?.let { r -> Handler(Looper.getMainLooper()).post { r.error("CONFIG_ERROR", e.message, null) } }
-                        // isTestRunning.set(false)
                         return@withContext // EXIT the coroutine. DO NOT proceed to Libbox!
                     }
 
@@ -266,21 +249,19 @@ class SingboxVpnService :
                     closeTestServerUnlocked()
 
                     // SAFE CALL - pass JSON content string
-                    val newTestServer =
-                        try {
-                            val options = io.nekohasekai.libbox.SetupOptions()
-                            options.setBasePath(tempDir.absolutePath)
-                            options.setWorkingPath(tempDir.absolutePath)
-                            options.setTempPath(tempDir.absolutePath)
-                            Libbox.setup(options)
-                            Libbox.newCommandServer(StubCommandServerHandler(), StubPlatformInterface())
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                            MainActivity.sendVpnStatus("ERROR: TEST_START_FAILED - ${e.message}")
-                            result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
-                            // isTestRunning.set(false)
-                            return@withContext
-                        }
+                    val newTestServer = try {
+                        val options = io.nekohasekai.libbox.SetupOptions()
+                        options.setBasePath(tempDir.absolutePath)
+                        options.setWorkingPath(tempDir.absolutePath)
+                        options.setTempPath(tempDir.absolutePath)
+                        Libbox.setup(options)
+                        Libbox.newCommandServer(StubCommandServerHandler(), StubPlatformInterface())
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        MainActivity.sendVpnStatus("ERROR: TEST_START_FAILED - ${e.message}")
+                        result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
+                        return@withContext
+                    }
 
                     try {
                         newTestServer?.startOrReloadService(json.toString(), null)
@@ -290,25 +271,20 @@ class SingboxVpnService :
                         e.printStackTrace()
                         MainActivity.sendVpnStatus("ERROR: TEST_START_FAILED - ${e.message}")
                         result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
-                        // isTestRunning.set(false)
                         return@withContext
                     }
                     delay(500)
 
-                    val client =
-                        OkHttpClient
-                            .Builder()
-                            .connectTimeout(3, TimeUnit.SECONDS)
-                            .readTimeout(3, TimeUnit.SECONDS)
-                            .proxy(Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", socksPort)))
-                            .build()
+                    val client = OkHttpClient.Builder()
+                        .connectTimeout(3, TimeUnit.SECONDS)
+                        .readTimeout(3, TimeUnit.SECONDS)
+                        .proxy(Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", socksPort)))
+                        .build()
 
-                    val request =
-                        Request
-                            .Builder()
-                            .url("https://www.google.com/generate_204")
-                            .head()
-                            .build()
+                    val request = Request.Builder()
+                        .url("https://www.google.com/generate_204")
+                        .head()
+                        .build()
 
                     val startTime = System.currentTimeMillis()
                     val response = client.newCall(request).execute()
@@ -322,11 +298,11 @@ class SingboxVpnService :
                     } else {
                         result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
                     }
+
                 } catch (e: Exception) {
                     result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
                 } finally {
                     // test server close handled normally
-                    // isTestRunning.set(false)
                 }
             }
         }
@@ -336,11 +312,7 @@ class SingboxVpnService :
         this.protect(fd)
     }
 
-    override fun onStartCommand(
-        intent: Intent?,
-        flags: Int,
-        startId: Int,
-    ): Int {
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val action = intent?.getStringExtra("action")
         val config = intent?.getStringExtra("config")
 
@@ -360,6 +332,15 @@ class SingboxVpnService :
             if (isVpnRunning) return
 
             isVpnRunning = true
+
+            try {
+                val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+                wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "iVPN::VpnBackgroundWakeLock")
+                wakeLock?.acquire(24 * 60 * 60 * 1000L /*24 hours*/)
+            } catch (e: Exception) {
+                android.util.Log.e("NativeVpnLifecycle", "Failed to acquire wake lock: ${e.message}")
+            }
+
             createNotificationChannel()
             startForeground(VPN_NOTIFICATION_ID, createNotification())
 
@@ -372,7 +353,7 @@ class SingboxVpnService :
                 try {
                     configJson = getValidJsonConfig(rawInput)
                     if (configJson.isNullOrBlank()) {
-                        throw IllegalArgumentException("Config string is null or empty")
+                         throw IllegalArgumentException("Config string is null or empty")
                     }
                 } catch (e: Exception) {
                     MainActivity.sendVpnStatus("ERROR: CONFIG_ERROR - ${e.message}")
@@ -431,6 +412,7 @@ class SingboxVpnService :
 
                 // CRITICAL FIX: Broadcast "CONNECTED" State to Dart
                 MainActivity.sendVpnStatus("CONNECTED")
+
             } catch (e: Exception) {
                 e.printStackTrace()
                 // CRITICAL FIX: Broadcast "ERROR" State to Dart
@@ -456,6 +438,18 @@ class SingboxVpnService :
             mainServer = null
             vpnInterface?.close()
             vpnInterface = null
+
+            wakeLock?.let {
+                if (it.isHeld) {
+                    try {
+                        it.release()
+                    } catch (e: Exception) {
+                        android.util.Log.e("NativeVpnLifecycle", "Failed to release wake lock: ${e.message}")
+                    }
+                }
+            }
+            wakeLock = null
+
             stopForeground(true)
             stopSelf()
 
@@ -470,12 +464,11 @@ class SingboxVpnService :
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val serviceChannel =
-                NotificationChannel(
-                    VPN_NOTIFICATION_CHANNEL_ID,
-                    "iVPN Connection Status",
-                    NotificationManager.IMPORTANCE_LOW,
-                )
+            val serviceChannel = NotificationChannel(
+                VPN_NOTIFICATION_CHANNEL_ID,
+                "iVPN Connection Status",
+                NotificationManager.IMPORTANCE_LOW
+            )
             val manager = getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(serviceChannel)
         }
@@ -483,22 +476,25 @@ class SingboxVpnService :
 
     private fun createNotification(): Notification {
         val notificationIntent = Intent(this, MainActivity::class.java)
-        val pendingIntent =
-            PendingIntent.getActivity(
-                this,
-                0,
-                notificationIntent,
-                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-            )
+        val pendingIntent = PendingIntent.getActivity(
+            this, 0, notificationIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
 
-        return NotificationCompat
-            .Builder(this, VPN_NOTIFICATION_CHANNEL_ID)
+        return NotificationCompat.Builder(this, VPN_NOTIFICATION_CHANNEL_ID)
             .setContentTitle("iVPN is Connected")
             .setContentText("Your traffic is secure")
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .build()
+    }
+
+
+    override fun onRevoke() {
+        super.onRevoke()
+        android.util.Log.d("NativeVpnLifecycle", "onRevoke called by OS")
+        stopVpnInternal()
     }
 
     override fun onDestroy() {
@@ -516,72 +512,43 @@ class SingboxVpnService :
 
 class StubStringIterator : StringIterator {
     override fun next(): String = ""
-
     override fun hasNext(): Boolean = false
-
-    override fun len(): Int = 0
+    override fun len(): Int = 0 
 }
 
 class StubNetworkInterfaceIterator : NetworkInterfaceIterator {
     override fun next(): NetworkInterface? = null
-
     override fun hasNext(): Boolean = false
 }
 
 class StubPlatformInterface : PlatformInterface {
     override fun autoDetectInterfaceControl(fd: Int) { }
-
     override fun openTun(options: TunOptions): Int = -1
-
     override fun usePlatformAutoDetectInterfaceControl(): Boolean = true
-
     override fun clearDNSCache() {}
-
-    override fun readWIFIState(): WIFIState = WIFIState("wlan0", "00:00:00:00:00:00")
-
-    override fun useProcFS(): Boolean = false
-
-    fun writeLog(message: String?) {
-        MainActivity.sendVpnStatus(message ?: "")
+    override fun readWIFIState(): WIFIState { 
+        return WIFIState("wlan0", "00:00:00:00:00:00") 
     }
-
+    override fun useProcFS(): Boolean = false
+    fun writeLog(message: String?) { MainActivity.sendVpnStatus(message ?: "") }
     override fun closeDefaultInterfaceMonitor(listener: InterfaceUpdateListener?) { }
-
-    override fun findConnectionOwner(
-        ipProtocol: Int,
-        sourceAddress: String?,
-        sourcePort: Int,
-        destinationAddress: String?,
-        destinationPort: Int,
-    ): io.nekohasekai.libbox.ConnectionOwner? = null
-
-    override fun getInterfaces(): NetworkInterfaceIterator = StubNetworkInterfaceIterator()
-
+    override fun findConnectionOwner(ipProtocol: Int, sourceAddress: String?, sourcePort: Int, destinationAddress: String?, destinationPort: Int): io.nekohasekai.libbox.ConnectionOwner? = null
+    override fun getInterfaces(): NetworkInterfaceIterator { return StubNetworkInterfaceIterator() }
     override fun includeAllNetworks(): Boolean = false
-
     override fun localDNSTransport(): LocalDNSTransport? = null
-
     fun packageNameByUid(uid: Int): String = "unknown"
-
     fun uidByPackageName(packageName: String?): Int = 0
-
-    override fun sendNotification(notification: LibboxNotification?) { }
-
+    override fun sendNotification(notification: LibboxNotification?) { } 
     override fun startDefaultInterfaceMonitor(listener: InterfaceUpdateListener?) { }
-
-    override fun systemCertificates(): StringIterator = StubStringIterator()
-
+    override fun systemCertificates(): StringIterator { return StubStringIterator() }
     override fun underNetworkExtension(): Boolean = false
+
 }
 
 class StubCommandServerHandler : io.nekohasekai.libbox.CommandServerHandler {
     override fun getSystemProxyStatus(): io.nekohasekai.libbox.SystemProxyStatus? = null
-
     override fun serviceReload() {}
-
     override fun serviceStop() {}
-
     override fun setSystemProxyEnabled(enabled: Boolean) {}
-
     override fun writeDebugMessage(message: String?) {}
 }
