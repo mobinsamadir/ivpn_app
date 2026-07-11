@@ -35,6 +35,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '~1.25.10'
+          cache: true
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -47,8 +48,17 @@ jobs:
         id: setup-ndk
         with:
           ndk-version: r28
+          local-cache: true
+
+      - name: Cache gomobile
+        id: cache-gomobile
+        uses: actions/cache@v4
+        with:
+          path: ~/go/bin
+          key: gomobile-${{ runner.os }}-v0.1.12
 
       - name: Install gomobile
+        if: steps.cache-gomobile.outputs.cache-hit != 'true'
         run: |
           go install -v github.com/sagernet/gomobile/cmd/gomobile@v0.1.12
           go install -v github.com/sagernet/gomobile/cmd/gobind@v0.1.12
