@@ -4,6 +4,7 @@ import '../models/vpn_config_with_metrics.dart';
 import '../utils/advanced_logger.dart';
 import '../services/time_wallet_service.dart';
 import '../services/native_vpn_service.dart';
+import 'scale_on_tap.dart';
 
 class SmartConnectButton extends StatefulWidget {
   final double buttonSize;
@@ -76,7 +77,7 @@ class _SmartConnectButtonState extends State<SmartConnectButton>
             if (widget.showStatus)
               _buildStatusIndicator(isConnected, connectionStatus),
             const SizedBox(height: 20),
-            GestureDetector(
+            ScaleOnTap(
               onTap: isButtonDisabled
                   ? null
                   : (widget.onPressed ??
@@ -114,40 +115,53 @@ class _SmartConnectButtonState extends State<SmartConnectButton>
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          isConnecting
-                              ? SizedBox(
-                                  width: widget.buttonSize * 0.3,
-                                  height: widget.buttonSize * 0.3,
-                                  child: const CircularProgressIndicator(
-                                    color: Colors.white,
-                                    strokeWidth: 3,
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 300),
+                            child: isConnecting
+                                ? SizedBox(
+                                    key: const ValueKey('connecting'),
+                                    width: widget.buttonSize * 0.3,
+                                    height: widget.buttonSize * 0.3,
+                                    child: const CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 3,
+                                    ),
+                                  )
+                                : Icon(
+                                    key: const ValueKey('icon'),
+                                    _getButtonIcon(
+                                      isConnected,
+                                      isConnecting,
+                                      isButtonDisabled,
+                                    ),
+                                    size: widget.buttonSize * 0.35,
+                                    color: isButtonDisabled
+                                        ? Colors.white54
+                                        : Colors.white,
                                   ),
-                                )
-                              : Icon(
-                                  _getButtonIcon(
-                                    isConnected,
-                                    isConnecting,
-                                    isButtonDisabled,
-                                  ),
-                                  size: widget.buttonSize * 0.35,
-                                  color: isButtonDisabled
-                                      ? Colors.white54
-                                      : Colors.white,
-                                ),
+                          ),
                           const SizedBox(height: 12),
-                          Text(
-                            _getButtonText(
-                              isConnected,
-                              isConnecting,
-                              isButtonDisabled,
-                            ),
-                            style: TextStyle(
-                              color: isButtonDisabled
-                                  ? Colors.white54
-                                  : Colors.white,
-                              fontSize: widget.buttonSize * 0.1,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1.2,
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 300),
+                            child: Text(
+                              _getButtonText(
+                                isConnected,
+                                isConnecting,
+                                isButtonDisabled,
+                              ),
+                              key: ValueKey(_getButtonText(
+                                isConnected,
+                                isConnecting,
+                                isButtonDisabled,
+                              )),
+                              style: TextStyle(
+                                color: isButtonDisabled
+                                    ? Colors.white54
+                                    : Colors.white,
+                                fontSize: widget.buttonSize * 0.1,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 1.5,
+                              ),
                             ),
                           ),
                         ],

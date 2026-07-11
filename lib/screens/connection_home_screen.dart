@@ -19,6 +19,7 @@ import '../services/connectivity_service.dart';
 import '../widgets/ad_explanation_dialog.dart';
 import '../widgets/shimmer_config_card.dart';
 import '../widgets/sliver_tab_bar_delegate.dart';
+import '../widgets/scale_on_tap.dart';
 import 'settings_screen.dart';
 import 'log_viewer_screen.dart';
 
@@ -45,56 +46,6 @@ class ConnectionHomeScreen extends StatefulWidget {
 
   @override
   State<ConnectionHomeScreen> createState() => _ConnectionHomeScreenState();
-}
-
-class _ScaleOnTap extends StatefulWidget {
-  final Widget child;
-  final VoidCallback onTap;
-
-  const _ScaleOnTap({required this.child, required this.onTap});
-
-  @override
-  State<_ScaleOnTap> createState() => _ScaleOnTapState();
-}
-
-class _ScaleOnTapState extends State<_ScaleOnTap>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scaleAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 150),
-    );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => _controller.forward(),
-      onTapUp: (_) {
-        _controller.reverse();
-        widget.onTap();
-      },
-      onTapCancel: () => _controller.reverse(),
-      child: ScaleTransition(
-        scale: _scaleAnimation,
-        child: widget.child,
-      ),
-    );
-  }
 }
 
 class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
@@ -1702,12 +1653,17 @@ class _ConnectionStatus extends StatelessWidget {
     return Column(
       children: [
         Center(
-          child: Text(
-            connectionStatus,
-            style: TextStyle(
-              color: statusColor,
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            child: Text(
+              connectionStatus,
+              key: ValueKey<String>(connectionStatus),
+              style: TextStyle(
+                color: statusColor,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 1.2,
+              ),
             ),
           ),
         ),
@@ -1797,7 +1753,7 @@ class _ConnectButton extends StatelessWidget {
 
         // Main Connect Button
         Center(
-          child: GestureDetector(
+          child: ScaleOnTap(
             onTap: onConnect,
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 400),
@@ -1865,8 +1821,8 @@ class _ConnectButton extends StatelessWidget {
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1.5,
                     ),
                   ),
                 ],

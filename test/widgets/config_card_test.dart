@@ -44,7 +44,7 @@ void main() {
     expect(find.text('120ms'), findsOneWidget);
 
     // Verify Interactions
-    await tester.tap(find.byType(InkWell).first);
+    await tester.tap(find.byType(GestureDetector).first);
     expect(connectCalled, isTrue);
 
     await tester.tap(find.byIcon(Icons.network_check));
