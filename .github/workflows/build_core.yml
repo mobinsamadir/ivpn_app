@@ -1,0 +1,95 @@
+name: Build VPN Core
+
+on:
+  workflow_dispatch:
+    inputs:
+      singbox_tag:
+        description: 'Sing-box release tag to build from (e.g., v1.13.14)'
+        required: true
+        default: 'v1.13.14'
+      build_scope:
+        description: 'Build scope'
+        required: true
+        type: choice
+        options:
+          - all
+          - arm64-only
+        default: 'all'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Target Repo
+        uses: actions/checkout@v4
+        with:
+          repository: 'SagerNet/sing-box'
+          ref: ${{ github.event.inputs.singbox_tag }}
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r26b # 26.1.10909125
+
+      - name: Install gomobile
+        run: |
+          go install -v github.com/sagernet/gomobile/cmd/gomobile@v0.1.13
+          go install -v github.com/sagernet/gomobile/cmd/gobind@v0.1.13
+          gomobile init
+
+      - name: Generate Build Name
+        id: build-name
+        run: |
+          BUILD_NUM=${{ github.run_number }}
+          TAG_CLEAN=$(echo "${{ github.event.inputs.singbox_tag }}" | sed 's/ /_/g')
+
+          if [ "${{ github.event.inputs.build_scope }}" == "all" ]; then
+            RELEASE_TAG="core-${TAG_CLEAN}-b${BUILD_NUM}"
+          else
+            RELEASE_TAG="core-${TAG_CLEAN}-arm64-test"
+          fi
+
+          echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_ENV
+          echo "Release tag will be: $RELEASE_TAG" >> $GITHUB_STEP_SUMMARY
+
+      - name: Build Core (all ABIs)
+        if: ${{ github.event.inputs.build_scope == 'all' }}
+        run: go run ./cmd/internal/build_libbox -target android
+
+      - name: Build Core (arm64-only)
+        if: ${{ github.event.inputs.build_scope == 'arm64-only' }}
+        run: go run ./cmd/internal/build_libbox -target android -platform=android/arm64
+
+      - name: Generate Checksums
+        run: |
+          # build_libbox creates the .aar file(s) in the root of the clone dir
+          sha256sum *.aar > aar_checksums.txt
+          cat aar_checksums.txt >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload Artifacts to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: ${{ env.RELEASE_TAG }}
+          files: |
+            *.aar
+            aar_checksums.txt
+          draft: false
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
