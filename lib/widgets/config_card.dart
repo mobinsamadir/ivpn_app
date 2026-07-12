@@ -261,7 +261,8 @@ class _ConfigInfo extends StatelessWidget {
                         if (config.currentPing > 0 || config.currentPing == -1)
                           AnimatedContainer(
                             duration: const Duration(milliseconds: 300),
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
                               color: (config.currentPing == -1
                                       ? Colors.redAccent
@@ -293,12 +294,14 @@ class _ConfigInfo extends StatelessWidget {
                         if (config.currentSpeed > 0)
                           AnimatedContainer(
                             duration: const Duration(milliseconds: 300),
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
                               color: Colors.greenAccent.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(6),
                               border: Border.all(
-                                color: Colors.greenAccent.withValues(alpha: 0.3),
+                                color:
+                                    Colors.greenAccent.withValues(alpha: 0.3),
                               ),
                             ),
                             child: Text(
@@ -429,7 +432,8 @@ class _ConfigActions extends StatelessWidget {
                     ],
                   ),
                 )
-              : const SizedBox(key: ValueKey('unselected'), width: 8, height: 8),
+              : const SizedBox(
+                  key: ValueKey('unselected'), width: 8, height: 8),
         ),
       ],
     );
