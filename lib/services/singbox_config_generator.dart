@@ -211,10 +211,19 @@ class SingboxConfigGenerator {
               if (json['scy'] != null) params['security'] = json['scy'];
               if (json['net'] != null) params['type'] = json['net'];
               if (json['type'] != null) {
-                params['type'] = json['type']; // Sometimes 'type'
+                {
+                  {
+                    params['type'] = json['type']; // Sometimes 'type'
+                  }
+                }
               }
               if (json['tls'] != null && json['tls'] != "none") {
-                params['security'] = json['tls']; }
+                {
+                  {
+                    params['security'] = json['tls'];
+                  }
+                }
+              }
 
               if (json['sni'] != null) params['sni'] = json['sni'];
               if (json['host'] != null) params['host'] = json['host'];
