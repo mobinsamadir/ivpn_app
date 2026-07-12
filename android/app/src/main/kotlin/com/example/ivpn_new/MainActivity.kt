@@ -15,6 +15,35 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.concurrent.atomic.AtomicBoolean
+
+class SafeResult(private val result: MethodChannel.Result) : MethodChannel.Result {
+    private val isReplied = AtomicBoolean(false)
+
+    override fun success(res: Any?) {
+        if (isReplied.compareAndSet(false, true)) {
+            Handler(Looper.getMainLooper()).post {
+                result.success(res)
+            }
+        }
+    }
+
+    override fun error(errorCode: String, errorMessage: String?, errorDetails: Any?) {
+        if (isReplied.compareAndSet(false, true)) {
+            Handler(Looper.getMainLooper()).post {
+                result.error(errorCode, errorMessage, errorDetails)
+            }
+        }
+    }
+
+    override fun notImplemented() {
+        if (isReplied.compareAndSet(false, true)) {
+            Handler(Looper.getMainLooper()).post {
+                result.notImplemented()
+            }
+        }
+    }
+}
 
 class MainActivity : FlutterActivity() {
     private val channel = "com.example.ivpn/vpn"
@@ -63,7 +92,8 @@ class MainActivity : FlutterActivity() {
             },
         )
 
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channel).setMethodCallHandler { call, result ->
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channel).setMethodCallHandler { call, rawResult ->
+            val result = SafeResult(rawResult)
             CoroutineScope(Dispatchers.IO).launch {
                 try {
                     when (call.method) {
@@ -96,9 +126,7 @@ class MainActivity : FlutterActivity() {
                             if (config != null && config.isNotBlank()) {
                                 SingboxVpnService.measurePing(config, cacheDir, result)
                             } else {
-                                withContext(Dispatchers.Main) {
-                                    result.error("INVALID_CONFIG", "Config string is null or empty", null)
-                                }
+                                result.error("INVALID_CONFIG", "Config string is null or empty", null)
                             }
                         }
                         "startTestProxy" -> {
@@ -112,27 +140,19 @@ class MainActivity : FlutterActivity() {
                             if (config != null && config.isNotBlank()) {
                                 SingboxVpnService.startTestProxy(config, cacheDir, result)
                             } else {
-                                withContext(Dispatchers.Main) {
-                                    result.error("INVALID_CONFIG", "Config string is null or empty", null)
-                                }
+                                result.error("INVALID_CONFIG", "Config string is null or empty", null)
                             }
                         }
                         "stopTestProxy" -> {
                             SingboxVpnService.stopTestProxy()
-                            withContext(Dispatchers.Main) {
-                                result.success(null)
-                            }
+                            result.success(null)
                         }
                         else -> {
-                            withContext(Dispatchers.Main) {
-                                result.notImplemented()
-                            }
+                            result.notImplemented()
                         }
                     }
                 } catch (e: Exception) {
-                    withContext(Dispatchers.Main) {
-                        result.error("METHOD_ERROR", "Exception during method call: ${e.message}", null)
-                    }
+                    result.error("METHOD_ERROR", "Exception during method call: ${e.message}", null)
                 }
             }
         }

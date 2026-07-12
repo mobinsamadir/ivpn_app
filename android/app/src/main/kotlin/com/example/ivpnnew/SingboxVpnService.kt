@@ -49,7 +49,6 @@ class SingboxVpnService :
     PlatformInterface by StubPlatformInterface() {
     private var vpnInterface: ParcelFileDescriptor? = null
     private var mainServer: io.nekohasekai.libbox.CommandServer? = null
-    private var wakeLock: PowerManager.WakeLock? = null
     private val serviceScope = CoroutineScope(Dispatchers.IO + Job())
 
     companion object {
@@ -77,7 +76,7 @@ class SingboxVpnService :
             }
         }
 
-        private fun getValidJsonConfig(input: String): String {
+        private fun getValidJsonConfig(input: String, deleteAfterRead: Boolean = false): String {
             val trimmed = input.trim()
             if (trimmed.startsWith("{")) {
                 return trimmed // Already a valid JSON string
@@ -90,6 +89,13 @@ class SingboxVpnService :
             }
 
             val content = file.readText().trim()
+            if (deleteAfterRead) {
+                try {
+                    file.delete()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
             if (content.isEmpty()) {
                 throw IllegalArgumentException("File is empty: $trimmed")
             }
@@ -120,7 +126,7 @@ class SingboxVpnService :
                     // STRICT VALIDATION
                     val configJson: String
                     try {
-                        configJson = getValidJsonConfig(rawInput)
+                        configJson = getValidJsonConfig(rawInput, true)
                     } catch (e: Exception) {
                         // Send error to Flutter immediately on the Main Thread
                         result?.let { r -> Handler(Looper.getMainLooper()).post { r.error("CONFIG_ERROR", e.message, null) } }
@@ -181,7 +187,7 @@ class SingboxVpnService :
                             options.setTempPath(tempDir.absolutePath)
                             Libbox.setup(options)
                             Libbox.newCommandServer(StubCommandServerHandler(), StubPlatformInterface())
-                        } catch (e: Exception) {
+                        } catch (e: Throwable) {
                             e.printStackTrace()
                             result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
                             return@withContext
@@ -190,7 +196,7 @@ class SingboxVpnService :
                     try {
                         server?.startOrReloadService(testConfigStr, null)
                         testServer = server
-                    } catch (e: Exception) {
+                    } catch (e: Throwable) {
                         server?.close()
                         e.printStackTrace()
                         result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
@@ -234,7 +240,7 @@ class SingboxVpnService :
                     // STRICT VALIDATION
                     val configJson: String
                     try {
-                        configJson = getValidJsonConfig(rawInput)
+                        configJson = getValidJsonConfig(rawInput, true)
                     } catch (e: Exception) {
                         // Send error to Flutter immediately on the Main Thread
                         result?.let { r -> Handler(Looper.getMainLooper()).post { r.error("CONFIG_ERROR", e.message, null) } }
@@ -273,7 +279,7 @@ class SingboxVpnService :
                             options.setTempPath(tempDir.absolutePath)
                             Libbox.setup(options)
                             Libbox.newCommandServer(StubCommandServerHandler(), StubPlatformInterface())
-                        } catch (e: Exception) {
+                        } catch (e: Throwable) {
                             e.printStackTrace()
                             MainActivity.sendVpnStatus("ERROR: TEST_START_FAILED - ${e.message}")
                             result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
@@ -283,7 +289,7 @@ class SingboxVpnService :
                     try {
                         newTestServer?.startOrReloadService(json.toString(), null)
                         testServer = newTestServer
-                    } catch (e: Exception) {
+                    } catch (e: Throwable) {
                         newTestServer?.close()
                         e.printStackTrace()
                         MainActivity.sendVpnStatus("ERROR: TEST_START_FAILED - ${e.message}")
@@ -357,14 +363,6 @@ class SingboxVpnService :
 
             isVpnRunning = true
 
-            try {
-                val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
-                wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "iVPN::VpnBackgroundWakeLock")
-                wakeLock?.acquire(24 * 60 * 60 * 1000L) // 24 hours
-            } catch (e: Exception) {
-                android.util.Log.e("NativeVpnLifecycle", "Failed to acquire wake lock: ${e.message}")
-            }
-
             createNotificationChannel()
             startForeground(VPN_NOTIFICATION_ID, createNotification())
 
@@ -375,7 +373,7 @@ class SingboxVpnService :
                 // STRICT VALIDATION
                 val configJson: String
                 try {
-                    configJson = getValidJsonConfig(rawInput)
+                    configJson = getValidJsonConfig(rawInput, true)
                     if (configJson.isNullOrBlank()) {
                         throw IllegalArgumentException("Config string is null or empty")
                     }
@@ -426,7 +424,7 @@ class SingboxVpnService :
                     Libbox.setup(options)
                     mainServer = Libbox.newCommandServer(StubCommandServerHandler(), this@SingboxVpnService)
                     mainServer?.startOrReloadService(jsonObject.toString(), null)
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     e.printStackTrace()
                     android.util.Log.e("NativeVpnLifecycle", "StartOrReloadService Error: ${e.message}")
                     MainActivity.sendVpnStatus("ERROR: START_FAILED - ${e.message}")
@@ -436,7 +434,7 @@ class SingboxVpnService :
 
                 // CRITICAL FIX: Broadcast "CONNECTED" State to Dart
                 MainActivity.sendVpnStatus("CONNECTED")
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 e.printStackTrace()
                 // CRITICAL FIX: Broadcast "ERROR" State to Dart
                 MainActivity.sendVpnStatus("ERROR")
@@ -461,17 +459,6 @@ class SingboxVpnService :
             mainServer = null
             vpnInterface?.close()
             vpnInterface = null
-
-            wakeLock?.let {
-                if (it.isHeld) {
-                    try {
-                        it.release()
-                    } catch (e: Exception) {
-                        android.util.Log.e("NativeVpnLifecycle", "Failed to release wake lock: ${e.message}")
-                    }
-                }
-            }
-            wakeLock = null
 
             stopForeground(true)
             stopSelf()
@@ -521,6 +508,7 @@ class SingboxVpnService :
     override fun onRevoke() {
         super.onRevoke()
         android.util.Log.d("NativeVpnLifecycle", "onRevoke called by OS")
+        MainActivity.sendVpnStatus("ERROR: REVOKED")
         stopVpnInternal()
     }
 
