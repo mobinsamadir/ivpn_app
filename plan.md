@@ -1,22 +1,24 @@
 1. **Analyze the CI Failure:**
-   The GitHub Actions logs show that the `flutter-checks` job failed.
+   The GitHub Actions logs show that the `flutter-checks` job failed due to `flutter analyze` failing.
    ```
-   2026-07-12T02:55:28.0215700Z ##[group]Run dart format --set-exit-if-changed .
-   ...
-   2026-07-12T02:55:28.1264240Z Formatted lib/services/config_manager.dart
-   2026-07-12T02:55:28.1436545Z Formatted lib/services/smart_pinger.dart
-   ...
-   2026-07-12T02:55:28.2867834Z Formatted 110 files (2 changed) in 0.24 seconds.
-   2026-07-12T02:55:28.2937321Z ##[error]Process completed with exit code 1.
+   37 issues found. (ran in 13.7s)
    ```
-   The failure is caused by `dart format --set-exit-if-changed .` failing because `lib/services/config_manager.dart` and `lib/services/smart_pinger.dart` were not correctly formatted.
-   The project has a memory rule: "Use `dart format` to format Dart code in this repository. If `dart format .` fails globally due to unresolved pub-cache dependencies, scope the formatting command specifically to the modified files or directories (e.g., `dart format test/services/config_manager_test.dart`)."
+   The issues include:
+   - `info • Statements in an if should be enclosed in a block.` (multiple lines in `lib/screens/connection_home_screen.dart`, `lib/services/config_manager.dart`, `lib/services/native_vpn_service.dart`, `lib/services/singbox_config_generator.dart`, `lib/services/testers/*.dart`, `lib/utils/advanced_logger.dart`)
+   - `warning • The value of the local variable 'failedAttempts' isn't used. Try removing the variable or using it • lib/services/smart_pinger.dart:288:11 • unused_local_variable`
+   - `info • The private field _isRefreshing could be 'final'. Try making the field 'final' • lib/services/config_manager.dart:211:8 • prefer_final_fields`
 
-2. **Fix the formatting issue:**
-   Run `dart format lib/services/config_manager.dart` and `dart format lib/services/smart_pinger.dart` to fix the formatting in the files that were touched.
+   However, my changes were limited to `lib/services/config_manager.dart` and `lib/services/smart_pinger.dart` due to the "Anti-Conflict Rule: STRICTLY limit your changes to `lib/services/config_manager.dart` and `lib/services/smart_pinger.dart`. Do NOT touch UI screens or Singbox generators."
 
-3. **Verify:**
-   Check if the files are formatted properly.
+   I will fix the issues strictly inside `lib/services/config_manager.dart` and `lib/services/smart_pinger.dart`.
 
-4. **Submit:**
-   Call `submit` to push the formatted code.
+   Specifically:
+   - `lib/services/config_manager.dart`:
+     - Add curly braces for `if` statements around lines 465, 467, 475, 477, 495, 497, 505, 507, 597, 599, 732, 734, 936.
+     - Make `_isRefreshing` final.
+   - `lib/services/smart_pinger.dart`:
+     - Remove the unused `failedAttempts` variable around line 288.
+
+2. **Fix `config_manager.dart`**: Add block braces and fix `final`.
+3. **Fix `smart_pinger.dart`**: Remove unused variables.
+4. **Submit**.

@@ -208,7 +208,7 @@ class ConfigManager extends ChangeNotifier {
   Function(VpnConfigWithMetrics)? onAutoSwitch;
   Future<void> Function()? stopVpnCallback;
 
-  bool _isRefreshing = false;
+  final bool _isRefreshing = false;
   bool get isRefreshing => _isRefreshing;
 
   bool _isAutoSwitchEnabled = true;
@@ -461,22 +461,28 @@ class ConfigManager extends ChangeNotifier {
       // Localized update for other lists to avoid recreation and maintain invariants
       final valIndex = validatedConfigs.indexWhere((c) => c.id == id);
       if (updated.isValidated) {
-        if (valIndex != -1)
+        if (valIndex != -1) {
           validatedConfigs[valIndex] = updated;
-        else
+        } else {
           validatedConfigs.add(updated);
+        }
       } else {
-        if (valIndex != -1) validatedConfigs.removeAt(valIndex);
+        if (valIndex != -1) {
+          validatedConfigs.removeAt(valIndex);
+        }
       }
 
       final favIndex = favoriteConfigs.indexWhere((c) => c.id == id);
       if (updated.isFavorite) {
-        if (favIndex != -1)
+        if (favIndex != -1) {
           favoriteConfigs[favIndex] = updated;
-        else
+        } else {
           favoriteConfigs.add(updated);
+        }
       } else {
-        if (favIndex != -1) favoriteConfigs.removeAt(favIndex);
+        if (favIndex != -1) {
+          favoriteConfigs.removeAt(favIndex);
+        }
       }
 
       // Don't sort immediately, use throttling
@@ -491,22 +497,28 @@ class ConfigManager extends ChangeNotifier {
 
       final valIndex = validatedConfigs.indexWhere((c) => c.id == config.id);
       if (config.isValidated) {
-        if (valIndex != -1)
+        if (valIndex != -1) {
           validatedConfigs[valIndex] = config;
-        else
+        } else {
           validatedConfigs.add(config);
+        }
       } else {
-        if (valIndex != -1) validatedConfigs.removeAt(valIndex);
+        if (valIndex != -1) {
+          validatedConfigs.removeAt(valIndex);
+        }
       }
 
       final favIndex = favoriteConfigs.indexWhere((c) => c.id == config.id);
       if (config.isFavorite) {
-        if (favIndex != -1)
+        if (favIndex != -1) {
           favoriteConfigs[favIndex] = config;
-        else
+        } else {
           favoriteConfigs.add(config);
+        }
       } else {
-        if (favIndex != -1) favoriteConfigs.removeAt(favIndex);
+        if (favIndex != -1) {
+          favoriteConfigs.removeAt(favIndex);
+        }
       }
     }
     // Don't sort immediately, use throttling
@@ -590,14 +602,21 @@ class ConfigManager extends ChangeNotifier {
   }) async {
     final initialCount = allConfigs.length;
     allConfigs.removeWhere((c) {
-      if (failedTcp && c.funnelStage == 0 && c.failureCount > 0) return true;
+      if (failedTcp && c.funnelStage == 0 && c.failureCount > 0) {
+        return true;
+      }
       if (dead &&
           (c.currentPing == -1 ||
               c.failureCount >= 3 ||
-              (!c.isAlive && c.funnelStage == 0))) return true;
-      if (weak && c.currentPing > 1500)
+              (!c.isAlive && c.funnelStage == 0))) {
+        return true;
+      }
+      if (weak && c.currentPing > 1500) {
         return true; // threshold for weak config
-      if (untestedSpeed && c.funnelStage < 3) return true;
+      }
+      if (untestedSpeed && c.funnelStage < 3) {
+        return true;
+      }
       return false;
     });
 
@@ -728,10 +747,11 @@ class ConfigManager extends ChangeNotifier {
     try {
       if (Platform.isAndroid) {
         _currentDeviceId = 'android_${(await info.androidInfo).id}';
-      } else if (Platform.isWindows)
+      } else if (Platform.isWindows) {
         _currentDeviceId = 'windows_${(await info.windowsInfo).deviceId}';
-      else if (Platform.isIOS)
+      } else if (Platform.isIOS) {
         _currentDeviceId = 'ios_${(await info.iosInfo).identifierForVendor}';
+      }
     } catch (e) {
       _currentDeviceId = 'unknown';
     }
@@ -932,11 +952,18 @@ class ConfigManager extends ChangeNotifier {
 
   // --- UI & LEGACY COMPATIBILITY METHODS ---
   Future<VpnConfigWithMetrics?> getBestConfig() async {
-    if (_selectedConfig != null && _selectedConfig!.isValidated)
+    if (_selectedConfig != null && _selectedConfig!.isValidated) {
       return _selectedConfig;
-    if (favoriteConfigs.isNotEmpty) return favoriteConfigs.first;
-    if (validatedConfigs.isNotEmpty) return validatedConfigs.first;
-    if (allConfigs.isNotEmpty) return allConfigs.first;
+    }
+    if (favoriteConfigs.isNotEmpty) {
+      return favoriteConfigs.first;
+    }
+    if (validatedConfigs.isNotEmpty) {
+      return validatedConfigs.first;
+    }
+    if (allConfigs.isNotEmpty) {
+      return allConfigs.first;
+    }
     return null;
   }
 

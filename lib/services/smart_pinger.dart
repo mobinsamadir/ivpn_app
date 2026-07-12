@@ -285,7 +285,6 @@ Future<List<Map<String, dynamic>>> _isolatePingBatch(
 
   for (final endpoint in endpoints) {
     futures.add(() async {
-      int failedAttempts = 0;
       String? lastError;
 
       for (int attempt = 1; attempt <= maxRetries; attempt++) {
@@ -308,7 +307,6 @@ Future<List<Map<String, dynamic>>> _isolatePingBatch(
           };
         } catch (e) {
           stopwatch.stop();
-          failedAttempts++;
           lastError = e.toString();
         } finally {
           try {
