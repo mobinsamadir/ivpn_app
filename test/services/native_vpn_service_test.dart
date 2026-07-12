@@ -74,7 +74,7 @@ void main() {
     expect(methodCalls.first.method, 'startVpn');
     // Verify the generated Singbox config contains expected structure
     final args = methodCalls.first.arguments as Map;
-    expect(args, containsPair('config', contains('outbounds')));
+    expect(args, containsPair('config', contains('.json')));
   });
 
   test('Disconnect calls stopVpn', () async {

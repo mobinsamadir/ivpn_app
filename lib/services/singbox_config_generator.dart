@@ -511,44 +511,136 @@ class SingboxConfigGenerator {
     return null;
   }
 
-  static String _assembleFinalConfig(
-    Map<String, dynamic> proxyOutbound, {
-    required int socksPort,
-    required int httpPort,
-    bool isTest = false,
-    bool isKillSwitchEnabled = false,
-    List<String> splitTunnelingPackages = const [],
-  }) {
-    // HYPER-TUNING: Add Multiplexing and TCP Fast Open
-    if (!isTest) {
-      proxyOutbound["multiplex"] = {
-        "enabled": true,
-        "padding": true,
-        "protocol": "h2mux",
-        "max_connections": 4,
-        "min_streams": 2,
-      };
-      proxyOutbound["tcp_fast_open"] = true;
-    }
+  static const List<String> _adDomains = [
+    "adsterra.com",
+    "doubleclick.net",
+    "googlesyndication.com",
+    "googletagmanager.com",
+    "googleadservices.com",
+    "googletagservices.com",
+    "google-analytics.com",
+    "analytics.google.com",
+    "2mdn.net",
+    "doubleclickbygoogle.com",
+    "googleoptimize.com",
+    "googletraveladservices.com",
+    "googlevads.com",
+  ];
 
-    // 1. Base Structure (Common)
-    final Map<String, dynamic> config = {
-      "log": {
-        "level": "trace",
-        "output": isTest ? "stderr" : "box.log", // Explicit stderr for capture
-        "timestamp": true,
-      },
-      "outbounds": [
-        proxyOutbound,
-        {"type": "direct", "tag": "direct"},
-        {"type": "dns", "tag": "dns-out"},
-      ],
-    };
+  static const List<String> _proxyDomains = [
+    "google.com",
+    "facebook.com",
+    "fbcdn.net",
+    "twitter.com",
+    "youtube.com",
+    "ytimg.com",
+    "googleapis.com",
+    "gstatic.com",
+    "gvt1.com",
+    "gvt2.com",
+    "googledomains.com",
+    "googleusercontent.com",
+    "googlevideo.com",
+    "googleweblight.com",
+    "googlezip.net",
+    "g.co",
+    "goo.gl",
+    "youtube-nocookie.com",
+    "youtubeeducation.com",
+    "youtubekids.com",
+    "yt.be",
+    "googlemail.com",
+    "gmail.com",
+    "googlecommerce.com",
+    "googlecode.com",
+    "googlebot.com",
+    "blogspot.com",
+    "blogspot.ae",
+    "blogspot.al",
+    "blogspot.am",
+    "blogspot.ba",
+    "blogspot.be",
+    "blogspot.bg",
+    "blogspot.bj",
+    "blogspot.ca",
+    "blogspot.cf",
+    "blogspot.ch",
+    "blogspot.cl",
+    "blogspot.co.at",
+    "blogspot.co.id",
+    "blogspot.co.il",
+    "blogspot.co.ke",
+    "blogspot.co.nz",
+    "blogspot.co.uk",
+    "blogspot.co.za",
+    "blogspot.com.ar",
+    "blogspot.com.au",
+    "blogspot.com.br",
+    "blogspot.com.by",
+    "blogspot.com.co",
+    "blogspot.com.cy",
+    "blogspot.com.ee",
+    "blogspot.com.eg",
+    "blogspot.com.es",
+    "blogspot.com.mt",
+    "blogspot.com.ng",
+    "blogspot.com.tr",
+    "blogspot.com.uy",
+    "blogspot.cv",
+    "blogspot.cz",
+    "blogspot.de",
+    "blogspot.dk",
+    "blogspot.fi",
+    "blogspot.fr",
+    "blogspot.gr",
+    "blogspot.hk",
+    "blogspot.hr",
+    "blogspot.hu",
+    "blogspot.ie",
+    "blogspot.in",
+    "blogspot.is",
+    "blogspot.it",
+    "blogspot.jp",
+    "blogspot.kr",
+    "blogspot.li",
+    "blogspot.lt",
+    "blogspot.lu",
+    "blogspot.lv",
+    "blogspot.md",
+    "blogspot.mk",
+    "blogspot.mx",
+    "blogspot.my",
+    "blogspot.nl",
+    "blogspot.no",
+    "blogspot.pe",
+    "blogspot.pt",
+    "blogspot.qa",
+    "blogspot.re",
+    "blogspot.ro",
+    "blogspot.rs",
+    "blogspot.ru",
+    "blogspot.se",
+    "blogspot.sg",
+    "blogspot.si",
+    "blogspot.sk",
+    "blogspot.sn",
+    "blogspot.td",
+    "blogspot.tw",
+    "blogspot.ug",
+    "blogspot.vn",
+  ];
 
-    // 2. Mode-Specific Configuration
+  static const List<String> _privateIpCidr = [
+    "10.0.0.0/8",
+    "172.16.0.0/12",
+    "192.168.0.0/16",
+    "127.0.0.0/8",
+  ];
+
+  static List<Map<String, dynamic>> _buildInbounds(
+      bool isTest, int socksPort, int httpPort, bool isKillSwitchEnabled) {
     if (isTest) {
-      // TEST MODE: SOCKS/HTTP Inbounds (No interference with system)
-      config["inbounds"] = [
+      return [
         {
           "type": "socks",
           "tag": "socks-test",
@@ -562,9 +654,68 @@ class SingboxConfigGenerator {
           "listen_port": httpPort,
         },
       ];
+    } else {
+      return [
+        {
+          "type": "tun",
+          "tag": "tun-in",
+          "inet4_address": "172.19.0.1/30",
+          "mtu": 1350,
+          "auto_route": true,
+          "strict_route": isKillSwitchEnabled,
+          "stack": "system",
+          "sniff": true,
+        },
+      ];
+    }
+  }
 
-      // Lightweight Routing for Tests
-      config["route"] = {
+  static List<Map<String, dynamic>> _buildOutbounds(
+      Map<String, dynamic> proxyOutbound) {
+    return [
+      proxyOutbound,
+      {"type": "direct", "tag": "direct"},
+      {"type": "dns", "tag": "dns-out"},
+      {"type": "block", "tag": "block"},
+    ];
+  }
+
+  static Map<String, dynamic> _buildDns(bool isTest) {
+    if (isTest) {
+      return {
+        "servers": [
+          {"tag": "remote", "address": "8.8.8.8", "detour": "proxy"},
+        ],
+        "rules": [],
+        "final": "remote",
+      };
+    } else {
+      return {
+        "servers": [
+          {"tag": "google", "address": "8.8.8.8", "detour": "proxy"},
+          {"tag": "local", "address": "local", "detour": "direct"},
+          {"tag": "block-dns", "address": "rcode://success"},
+        ],
+        "rules": [
+          {
+            "domain_suffix": _adDomains,
+            "server": "block-dns",
+          },
+          {
+            "outbound": ["any"],
+            "server": "local",
+          },
+        ],
+        "final": "google",
+        "strategy": "ipv4_only",
+      };
+    }
+  }
+
+  static Map<String, dynamic> _buildRoute(
+      bool isTest, List<String> splitTunnelingPackages) {
+    if (isTest) {
+      return {
         "rules": [
           {
             "outbound": "proxy",
@@ -574,192 +725,63 @@ class SingboxConfigGenerator {
         "auto_detect_interface": true,
         "final": "proxy",
       };
-
-      // Simple DNS for Tests
-      config["dns"] = {
-        "servers": [
-          {"tag": "remote", "address": "8.8.8.8", "detour": "proxy"},
-        ],
-        "rules": [],
-        "final": "remote",
-      };
     } else {
-      // PRODUCTION MODE: TUN Inbound (Full VPN)
-      config["inbounds"] = [
-        {
-          "type": "tun",
-          "tag": "tun-in",
-          "inet4_address": "172.19.0.1/30",
-          "mtu": 1350,
-          "auto_route": true,
-          "strict_route": isKillSwitchEnabled,
-          "stack": "system", // Optimized for Windows
-          "sniff": true,
-        },
-      ];
-
-      // Robust DNS (Encrypted Remote, Direct Local)
-      config["dns"] = {
-        "servers": [
-          {"tag": "google", "address": "8.8.8.8", "detour": "proxy"},
-          {"tag": "local", "address": "local", "detour": "direct"},
-        ],
-        "rules": [
-          {
-            "outbound": ["any"],
-            "server": "local",
-          },
-        ],
-        "final": "google",
-        "strategy": "ipv4_only",
-      };
-
-      // Smart Routing Rules
-      config["route"] = {
+      return {
         "auto_detect_interface": true,
         "rules": [
           {"protocol": "dns", "outbound": "dns-out"},
-          // Critical Windows fix: Bypass TUN for local traffic to avoid infinite routing loops
           {"ip_is_private": true, "outbound": "direct"},
           if (splitTunnelingPackages.isNotEmpty)
             {"package_name": splitTunnelingPackages, "outbound": "direct"},
-          // Route ad domains through proxy to bypass censorship in restricted regions
           {
-            "domain_suffix": [
-              "adsterra.com",
-              "google.com",
-              "doubleclick.net",
-              "googlesyndication.com",
-              "googletagmanager.com",
-              "facebook.com",
-              "fbcdn.net",
-              "twitter.com",
-              "youtube.com",
-              "ytimg.com",
-              "googleadservices.com",
-              "googletagservices.com",
-              "google-analytics.com",
-              "analytics.google.com",
-              "googleapis.com",
-              "gstatic.com",
-              "gvt1.com",
-              "gvt2.com",
-              "2mdn.net",
-              "googlesyndication.com",
-              "doubleclickbygoogle.com",
-              "googleoptimize.com",
-              "googledomains.com",
-              "googletraveladservices.com",
-              "googlevads.com",
-              "googleusercontent.com",
-              "googlevideo.com",
-              "googleweblight.com",
-              "googlezip.net",
-              "g.co",
-              "goo.gl",
-              "youtube-nocookie.com",
-              "youtubeeducation.com",
-              "youtubekids.com",
-              "yt.be",
-              "googlemail.com",
-              "gmail.com",
-              "google-analytics.com",
-              "googleadservices.com",
-              "googlecommerce.com",
-              "googlecode.com",
-              "googlebot.com",
-              "blogspot.com",
-              "blogspot.ae",
-              "blogspot.al",
-              "blogspot.am",
-              "blogspot.ba",
-              "blogspot.be",
-              "blogspot.bg",
-              "blogspot.bj",
-              "blogspot.ca",
-              "blogspot.cf",
-              "blogspot.ch",
-              "blogspot.cl",
-              "blogspot.co.at",
-              "blogspot.co.id",
-              "blogspot.co.il",
-              "blogspot.co.ke",
-              "blogspot.co.nz",
-              "blogspot.co.uk",
-              "blogspot.co.za",
-              "blogspot.com",
-              "blogspot.com.ar",
-              "blogspot.com.au",
-              "blogspot.com.br",
-              "blogspot.com.by",
-              "blogspot.com.co",
-              "blogspot.com.cy",
-              "blogspot.com.ee",
-              "blogspot.com.eg",
-              "blogspot.com.es",
-              "blogspot.com.mt",
-              "blogspot.com.ng",
-              "blogspot.com.tr",
-              "blogspot.com.uy",
-              "blogspot.cv",
-              "blogspot.cz",
-              "blogspot.de",
-              "blogspot.dk",
-              "blogspot.fi",
-              "blogspot.fr",
-              "blogspot.gr",
-              "blogspot.hk",
-              "blogspot.hr",
-              "blogspot.hu",
-              "blogspot.ie",
-              "blogspot.in",
-              "blogspot.is",
-              "blogspot.it",
-              "blogspot.jp",
-              "blogspot.kr",
-              "blogspot.li",
-              "blogspot.lt",
-              "blogspot.lu",
-              "blogspot.lv",
-              "blogspot.md",
-              "blogspot.mk",
-              "blogspot.mx",
-              "blogspot.my",
-              "blogspot.nl",
-              "blogspot.no",
-              "blogspot.pe",
-              "blogspot.pt",
-              "blogspot.qa",
-              "blogspot.re",
-              "blogspot.ro",
-              "blogspot.rs",
-              "blogspot.ru",
-              "blogspot.se",
-              "blogspot.sg",
-              "blogspot.si",
-              "blogspot.sk",
-              "blogspot.sn",
-              "blogspot.td",
-              "blogspot.tw",
-              "blogspot.ug",
-              "blogspot.vn",
-            ],
+            "domain_suffix": _adDomains,
+            "outbound": "block",
+          },
+          {
+            "domain_suffix": _proxyDomains,
             "outbound": "proxy",
           },
-          // Use IP ranges instead of geoip for Iran and private networks to avoid DB issues
           {
-            "ip_cidr": [
-              "10.0.0.0/8",
-              "172.16.0.0/12",
-              "192.168.0.0/16",
-              "127.0.0.0/8",
-            ],
+            "ip_cidr": _privateIpCidr,
             "outbound": "direct",
           },
         ],
         "final": "proxy",
       };
     }
+  }
+
+  static String _assembleFinalConfig(
+    Map<String, dynamic> proxyOutbound, {
+    required int socksPort,
+    required int httpPort,
+    bool isTest = false,
+    bool isKillSwitchEnabled = false,
+    List<String> splitTunnelingPackages = const [],
+  }) {
+    if (!isTest) {
+      proxyOutbound["multiplex"] = {
+        "enabled": true,
+        "padding": true,
+        "protocol": "h2mux",
+        "max_connections": 4,
+        "min_streams": 2,
+      };
+      proxyOutbound["tcp_fast_open"] = true;
+    }
+
+    final Map<String, dynamic> config = {
+      "log": {
+        "level": "trace",
+        "output": isTest ? "stderr" : "box.log",
+        "timestamp": true,
+      },
+      "inbounds":
+          _buildInbounds(isTest, socksPort, httpPort, isKillSwitchEnabled),
+      "outbounds": _buildOutbounds(proxyOutbound),
+      "route": _buildRoute(isTest, splitTunnelingPackages),
+      "dns": _buildDns(isTest),
+    };
 
     return jsonEncode(config);
   }

@@ -1656,8 +1656,8 @@ class _ConnectionStatus extends StatelessWidget {
               style: TextStyle(
                 color: statusColor,
                 fontSize: 16,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 1.2,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.5,
               ),
             ),
           ),
@@ -1722,19 +1722,22 @@ class _ConnectButton extends StatelessWidget {
           left: 30,
           child: Column(
             children: [
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.blueAccent.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: IconButton(
-                  icon: const Icon(
-                    Icons.refresh_rounded,
-                    size: 32,
-                    color: Colors.blueAccent,
+              Tooltip(
+                message: 'Refresh Servers',
+                child: ScaleOnTap(
+                  onTap: onRefresh,
+                  child: Container(
+                    padding: const EdgeInsets.all(8.0),
+                    decoration: BoxDecoration(
+                      color: Colors.blueAccent.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.refresh_rounded,
+                      size: 32,
+                      color: Colors.blueAccent,
+                    ),
                   ),
-                  onPressed: onRefresh,
-                  tooltip: 'Refresh Servers',
                 ),
               ),
               const SizedBox(height: 4),
@@ -1794,30 +1797,43 @@ class _ConnectButton extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  isConnecting
-                      ? const SizedBox(
-                          width: 50,
-                          height: 50,
-                          child: CircularProgressIndicator(
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    child: isConnecting
+                        ? const SizedBox(
+                            key: ValueKey('connecting_spinner'),
+                            width: 50,
+                            height: 50,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 3,
+                            ),
+                          )
+                        : const Icon(
+                            Icons.power_settings_new,
+                            key: ValueKey('connect_icon'),
+                            size: 60,
                             color: Colors.white,
-                            strokeWidth: 3,
                           ),
-                        )
-                      : const Icon(
-                          Icons.power_settings_new,
-                          size: 60,
-                          color: Colors.white,
-                        ),
+                  ),
                   const SizedBox(height: 12),
-                  Text(
-                    isConnected
-                        ? 'CONNECTED'
-                        : (isConnecting ? 'CONNECTING' : 'CONNECT'),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 1.5,
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    child: Text(
+                      isConnected
+                          ? 'CONNECTED'
+                          : (isConnecting ? 'CONNECTING' : 'CONNECT'),
+                      key: ValueKey(
+                        isConnected
+                            ? 'CONNECTED'
+                            : (isConnecting ? 'CONNECTING' : 'CONNECT'),
+                      ),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1.5,
+                      ),
                     ),
                   ),
                 ],
@@ -1831,19 +1847,22 @@ class _ConnectButton extends StatelessWidget {
           right: 30,
           child: Column(
             children: [
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.blueAccent.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: IconButton(
-                  icon: const Icon(
-                    Icons.skip_next_rounded,
-                    size: 32,
-                    color: Colors.blueAccent,
+              Tooltip(
+                message: 'Next Server',
+                child: ScaleOnTap(
+                  onTap: onSkip,
+                  child: Container(
+                    padding: const EdgeInsets.all(8.0),
+                    decoration: BoxDecoration(
+                      color: Colors.blueAccent.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.skip_next_rounded,
+                      size: 32,
+                      color: Colors.blueAccent,
+                    ),
                   ),
-                  onPressed: onSkip,
-                  tooltip: 'Next Server',
                 ),
               ),
               const SizedBox(height: 4),
