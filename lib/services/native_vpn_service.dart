@@ -110,8 +110,14 @@ class NativeVpnService {
     if (Platform.isWindows) return failedPingValue;
 
     try {
+      // IPC Optimization: Write config to temp file and pass path
+      final tempDir = Directory.systemTemp;
+      final tempFile = File(
+          '${tempDir.path}/ping_config_${DateTime.now().millisecondsSinceEpoch}.json');
+      await tempFile.writeAsString(config);
+
       final int latency = await _methodChannel.invokeMethod('testConfig', {
-        'config': config,
+        'config': tempFile.path,
       });
       return latency <= 0 ? failedPingValue : latency;
     } on PlatformException catch (e) {
@@ -158,8 +164,14 @@ class NativeVpnService {
       if (kDebugMode) {
         AdvancedLogger.info("DEBUG_CONFIG: $configJson");
       }
+      // IPC Optimization: Write config to temp file and pass path
+      final tempDir = Directory.systemTemp;
+      final tempFile = File(
+          '${tempDir.path}/test_proxy_${DateTime.now().millisecondsSinceEpoch}.json');
+      await tempFile.writeAsString(configJson);
+
       final int result = await _methodChannel.invokeMethod('startTestProxy', {
-        'config': configJson,
+        'config': tempFile.path,
       });
       return result;
     } on PlatformException catch (e) {
@@ -227,7 +239,13 @@ class NativeVpnService {
       // if (kDebugMode) {
       //    AdvancedLogger.info("DEBUG_CONFIG: $configJson");
       // }
-      await _methodChannel.invokeMethod('startVpn', {'config': configJson});
+      // IPC Optimization: Write config to temp file and pass path
+      final tempDir = Directory.systemTemp;
+      final tempFile = File(
+          '${tempDir.path}/vpn_config_${DateTime.now().millisecondsSinceEpoch}.json');
+      await tempFile.writeAsString(configJson);
+
+      await _methodChannel.invokeMethod('startVpn', {'config': tempFile.path});
 
       AdvancedLogger.info(
         "✅ [Native] Connect command sent. Waiting for OS confirmation...",
