@@ -45,31 +45,31 @@ class SmartPinger {
     int requiredSuccesses = 2,
     Duration? timeoutPerPing,
   }) async {
-    final List<PingResult> allResults = [];
-    final List<Future<PingResult>> futures = [];
-
     AdvancedLogger.info(
-      '[SmartPing] Starting multi-endpoint ping test (Endpoints: ${endpoints.length})',
+      '[SmartPing] Starting batched multi-endpoint ping test (Endpoints: ${endpoints.length})',
     );
 
     final effectiveTimeout = timeoutPerPing ?? TestTimeouts.pingCheck;
 
-    // Create independent futures for each endpoint
-    for (final endpoint in endpoints) {
-      futures.add(
-        pingWithRetry(
-          endpoint,
-          cancelToken,
-          maxRetries: 2,
-          timeout: effectiveTimeout,
-        ),
-      );
-    }
+    // Process all endpoints in a single isolate to prevent memory leaks/spikes
+    final args = {
+      'endpoints': endpoints,
+      'timeoutInMilliseconds': effectiveTimeout.inMilliseconds,
+      'maxRetries': 2,
+    };
 
-    // Run concurrently and collect results
-    // We use Future.wait with eagerError: false to ensure we get all results even if some fail
-    final results = await Future.wait(futures, eagerError: false);
-    allResults.addAll(results);
+    cancelToken?.throwIfCancelled();
+
+    final resultDataList = await compute(_isolatePingBatch, args);
+
+    cancelToken?.throwIfCancelled();
+
+    final List<PingResult> allResults = resultDataList.map((data) => PingResult(
+      endpoint: data['endpoint'] as String,
+      latency: data['latency'] as int,
+      isSuccess: data['isSuccess'] as bool,
+      error: data['error'] as String?,
+    )).toList();
 
     // Analyze results
     final successful = allResults.where((r) => r.isSuccess).toList();
@@ -224,16 +224,14 @@ Future<Map<String, dynamic>> _isolatePingSingle(
   final timeout = Duration(milliseconds: timeoutInMilliseconds);
 
   final stopwatch = Stopwatch()..start();
+  Socket? socket;
 
   try {
     final uri = Uri.parse(endpoint);
     final host = uri.host;
     final port = uri.port == 0 ? (uri.scheme == 'https' ? 443 : 80) : uri.port;
 
-    // TCP connection test inside isolate
-    final socket = await Socket.connect(host, port, timeout: timeout);
-
-    socket.destroy();
+    socket = await Socket.connect(host, port, timeout: timeout);
     stopwatch.stop();
 
     return {
@@ -266,5 +264,68 @@ Future<Map<String, dynamic>> _isolatePingSingle(
       'isSuccess': false,
       'error': 'Unexpected error: $e',
     };
+  } finally {
+    try {
+      socket?.destroy();
+    } catch (_) {}
   }
+}
+
+/// Helper method to run batched pings inside an isolate WITH retries
+Future<List<Map<String, dynamic>>> _isolatePingBatch(Map<String, dynamic> args) async {
+  final endpoints = (args['endpoints'] as List).cast<String>();
+  final timeoutInMilliseconds = args['timeoutInMilliseconds'] as int;
+  final maxRetries = args['maxRetries'] as int? ?? 2;
+  final timeout = Duration(milliseconds: timeoutInMilliseconds);
+
+  final List<Future<Map<String, dynamic>>> futures = [];
+
+  for (final endpoint in endpoints) {
+    futures.add(() async {
+      int failedAttempts = 0;
+      String? lastError;
+
+      for (int attempt = 1; attempt <= maxRetries; attempt++) {
+        final stopwatch = Stopwatch()..start();
+        Socket? socket;
+        try {
+          final uri = Uri.parse(endpoint);
+          final host = uri.host;
+          final port = uri.port == 0 ? (uri.scheme == 'https' ? 443 : 80) : uri.port;
+
+          socket = await Socket.connect(host, port, timeout: timeout);
+          stopwatch.stop();
+
+          return {
+            'endpoint': endpoint,
+            'latency': stopwatch.elapsedMilliseconds,
+            'isSuccess': true,
+            'error': null,
+          };
+        } catch (e) {
+          stopwatch.stop();
+          failedAttempts++;
+          lastError = e.toString();
+        } finally {
+          try {
+            socket?.destroy();
+          } catch (_) {}
+        }
+
+        // Wait before next retry if not last attempt
+        if (attempt < maxRetries) {
+          await Future.delayed(const Duration(milliseconds: 500));
+        }
+      }
+
+      return {
+        'endpoint': endpoint,
+        'latency': -1,
+        'isSuccess': false,
+        'error': 'All retries failed: $lastError',
+      };
+    }());
+  }
+
+  return await Future.wait(futures);
 }

@@ -450,13 +450,31 @@ class ConfigManager extends ChangeNotifier {
   }) async {
     final index = allConfigs.indexWhere((c) => c.id == id);
     if (index != -1) {
-      // Update in-place
-      allConfigs[index] = allConfigs[index].updateMetrics(
+      final updated = allConfigs[index].updateMetrics(
         deviceId: _currentDeviceId,
         ping: ping,
         speed: speed,
         connectionSuccess: connectionSuccess ?? false,
       );
+      allConfigs[index] = updated;
+
+      // Localized update for other lists to avoid recreation and maintain invariants
+      final valIndex = validatedConfigs.indexWhere((c) => c.id == id);
+      if (updated.isValidated) {
+        if (valIndex != -1) validatedConfigs[valIndex] = updated;
+        else validatedConfigs.add(updated);
+      } else {
+        if (valIndex != -1) validatedConfigs.removeAt(valIndex);
+      }
+
+      final favIndex = favoriteConfigs.indexWhere((c) => c.id == id);
+      if (updated.isFavorite) {
+        if (favIndex != -1) favoriteConfigs[favIndex] = updated;
+        else favoriteConfigs.add(updated);
+      } else {
+        if (favIndex != -1) favoriteConfigs.removeAt(favIndex);
+      }
+
       // Don't sort immediately, use throttling
       notifyListenersThrottled();
     }
@@ -466,6 +484,22 @@ class ConfigManager extends ChangeNotifier {
     final index = allConfigs.indexWhere((c) => c.id == config.id);
     if (index != -1) {
       allConfigs[index] = config;
+
+      final valIndex = validatedConfigs.indexWhere((c) => c.id == config.id);
+      if (config.isValidated) {
+        if (valIndex != -1) validatedConfigs[valIndex] = config;
+        else validatedConfigs.add(config);
+      } else {
+        if (valIndex != -1) validatedConfigs.removeAt(valIndex);
+      }
+
+      final favIndex = favoriteConfigs.indexWhere((c) => c.id == config.id);
+      if (config.isFavorite) {
+        if (favIndex != -1) favoriteConfigs[favIndex] = config;
+        else favoriteConfigs.add(config);
+      } else {
+        if (favIndex != -1) favoriteConfigs.removeAt(favIndex);
+      }
     }
     // Don't sort immediately, use throttling
     notifyListenersThrottled();
@@ -695,29 +729,42 @@ class ConfigManager extends ChangeNotifier {
     }
   }
 
+  static Future<List<VpnConfigWithMetrics>> _decodeConfigsInIsolate(String jsonStr) async {
+    final List<VpnConfigWithMetrics> configs = [];
+    final list = jsonDecode(jsonStr) as List;
+    for (var e in list) {
+      try {
+        configs.add(VpnConfigWithMetrics.fromJson(e));
+      } catch (innerError) {
+        AdvancedLogger.warn(
+          '[ConfigManager] Skipped corrupted config during load: $innerError',
+        );
+      }
+    }
+    return configs;
+  }
+
   Future<void> _loadConfigs() async {
     try {
+      final cached = _getCache(_configsKey);
+      if (cached != null) {
+        allConfigs = cached as List<VpnConfigWithMetrics>;
+        AdvancedLogger.info(
+          '[ConfigManager] Loaded ${allConfigs.length} configs from memory cache',
+        );
+        return;
+      }
+
       final str = await storage.getString(_configsKey);
       if (str != null) {
-        final list = jsonDecode(str) as List;
-        allConfigs = [];
-        for (var e in list) {
-          try {
-            // Defensively parse each config so one bad entry doesn't kill the whole list
-            allConfigs.add(VpnConfigWithMetrics.fromJson(e));
-          } catch (innerError) {
-            AdvancedLogger.warn(
-              '[ConfigManager] Skipped corrupted config during load: $innerError',
-            );
-          }
-        }
+        allConfigs = await compute(_decodeConfigsInIsolate, str);
+        _setCache(_configsKey, allConfigs);
         AdvancedLogger.info(
-          '[ConfigManager] Loaded ${allConfigs.length} from storage',
+          '[ConfigManager] Loaded ${allConfigs.length} configs from storage via Isolate',
         );
       }
     } catch (e) {
       AdvancedLogger.error('[ConfigManager] Load error: $e');
-      // If critical failure (e.g. JSON decode), fallback to empty list but keep app running
       if (allConfigs.isEmpty) allConfigs = [];
     }
   }
@@ -757,8 +804,13 @@ class ConfigManager extends ChangeNotifier {
       }
 
       allConfigs.sort(compareScore);
-      validatedConfigs = allConfigs.where((c) => c.isValidated).toList();
-      favoriteConfigs = allConfigs.where((c) => c.isFavorite).toList();
+
+      validatedConfigs.clear();
+      favoriteConfigs.clear();
+      for (final c in allConfigs) {
+        if (c.isValidated) validatedConfigs.add(c);
+        if (c.isFavorite) favoriteConfigs.add(c);
+      }
     } catch (e) {
       AdvancedLogger.error("[ConfigManager] Sorting failed: $e");
     }
