@@ -27,7 +27,8 @@ class ConfigCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return RepaintBoundary(
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: const Color(0xFF1E1E1E),
@@ -225,111 +226,118 @@ class _ConfigInfo extends StatelessWidget {
         // Metrics
         Row(
           children: [
-            if (isTesting)
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: const [
-                  SizedBox(
-                    width: 12,
-                    height: 12,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        Colors.orangeAccent,
-                      ),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: isTesting
+                  ? Row(
+                      key: const ValueKey('testing'),
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        SizedBox(
+                          width: 12,
+                          height: 12,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.orangeAccent,
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          'Testing...',
+                          style: TextStyle(
+                            color: Colors.orangeAccent,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      key: const ValueKey('metrics'),
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (config.currentPing > 0 || config.currentPing == -1)
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: (config.currentPing == -1
+                                      ? Colors.redAccent
+                                      : getPingColor(config.currentPing))
+                                  .withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: (config.currentPing == -1
+                                        ? Colors.redAccent
+                                        : getPingColor(config.currentPing))
+                                    .withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Text(
+                              config.currentPing == -1
+                                  ? 'Timeout'
+                                  : '${config.currentPing}ms',
+                              style: TextStyle(
+                                color: config.currentPing == -1
+                                    ? Colors.redAccent
+                                    : getPingColor(config.currentPing),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        if (config.currentPing > 0 || config.currentPing == -1)
+                          const SizedBox(width: 6),
+                        if (config.currentSpeed > 0)
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.greenAccent.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: Colors.greenAccent.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Text(
+                              '${config.currentSpeed.toStringAsFixed(1)}Mbps',
+                              style: const TextStyle(
+                                color: Colors.greenAccent,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          width: 8,
+                          height: 8,
+                          margin: const EdgeInsets.only(left: 8, right: 8),
+                          decoration: BoxDecoration(
+                            color: getTierColor(config.tier),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: getTierBorderColor(config.tier),
+                              width: 1,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  SizedBox(width: 8),
-                  Text(
-                    'Testing...',
-                    style: TextStyle(
-                      color: Colors.orangeAccent,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              )
-            else if (config.currentPing > 0 || config.currentPing == -1)
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: (config.currentPing == -1
-                          ? Colors.redAccent
-                          : getPingColor(config.currentPing))
-                      .withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: (config.currentPing == -1
-                            ? Colors.redAccent
-                            : getPingColor(config.currentPing))
-                        .withValues(alpha: 0.3),
-                  ),
-                ),
-                child: Text(
-                  config.currentPing == -1
-                      ? 'Timeout'
-                      : '${config.currentPing}ms',
-                  style: TextStyle(
-                    color: config.currentPing == -1
-                        ? Colors.redAccent
-                        : getPingColor(config.currentPing),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-
-            if (!isTesting &&
-                (config.currentPing > 0 || config.currentPing == -1))
-              const SizedBox(width: 6),
-
-            if (!isTesting && config.currentSpeed > 0)
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.greenAccent.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: Colors.greenAccent.withValues(alpha: 0.3),
-                  ),
-                ),
-                child: Text(
-                  '${config.currentSpeed.toStringAsFixed(1)}Mbps',
-                  style: const TextStyle(
-                    color: Colors.greenAccent,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-
-            // Tier indicator
-            if (!isTesting)
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                width: 8,
-                height: 8,
-                margin: const EdgeInsets.only(left: 8, right: 8),
-                decoration: BoxDecoration(
-                  color: getTierColor(config.tier),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: getTierBorderColor(config.tier),
-                    width: 1,
-                  ),
-                ),
-              ),
-
+            ),
             const Spacer(),
-
-            if (!isTesting)
-              Text(
-                'Score: ${config.calculatedScore.toStringAsFixed(1)}',
-                style: TextStyle(fontSize: 11, color: Colors.grey[500]),
-              ),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: isTesting
+                  ? const SizedBox.shrink(key: ValueKey('empty_score'))
+                  : Text(
+                      'Score: ${config.calculatedScore.toStringAsFixed(1)}',
+                      key: const ValueKey('score'),
+                      style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                    ),
+            ),
           ],
         ),
       ],
@@ -402,22 +410,27 @@ class _ConfigActions extends StatelessWidget {
         ),
 
         // Selection indicator
-        if (isSelected)
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: Colors.blueAccent,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.blueAccent.withValues(alpha: 0.5),
-                  blurRadius: 4,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-          ),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 300),
+          child: isSelected
+              ? Container(
+                  key: const ValueKey('selected'),
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: Colors.blueAccent,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.blueAccent.withValues(alpha: 0.5),
+                        blurRadius: 4,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                )
+              : const SizedBox(key: ValueKey('unselected'), width: 8, height: 8),
+        ),
       ],
     );
   }
