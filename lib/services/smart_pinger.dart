@@ -64,12 +64,14 @@ class SmartPinger {
 
     cancelToken?.throwIfCancelled();
 
-    final List<PingResult> allResults = resultDataList.map((data) => PingResult(
-      endpoint: data['endpoint'] as String,
-      latency: data['latency'] as int,
-      isSuccess: data['isSuccess'] as bool,
-      error: data['error'] as String?,
-    )).toList();
+    final List<PingResult> allResults = resultDataList
+        .map((data) => PingResult(
+              endpoint: data['endpoint'] as String,
+              latency: data['latency'] as int,
+              isSuccess: data['isSuccess'] as bool,
+              error: data['error'] as String?,
+            ))
+        .toList();
 
     // Analyze results
     final successful = allResults.where((r) => r.isSuccess).toList();
@@ -272,7 +274,8 @@ Future<Map<String, dynamic>> _isolatePingSingle(
 }
 
 /// Helper method to run batched pings inside an isolate WITH retries
-Future<List<Map<String, dynamic>>> _isolatePingBatch(Map<String, dynamic> args) async {
+Future<List<Map<String, dynamic>>> _isolatePingBatch(
+    Map<String, dynamic> args) async {
   final endpoints = (args['endpoints'] as List).cast<String>();
   final timeoutInMilliseconds = args['timeoutInMilliseconds'] as int;
   final maxRetries = args['maxRetries'] as int? ?? 2;
@@ -291,7 +294,8 @@ Future<List<Map<String, dynamic>>> _isolatePingBatch(Map<String, dynamic> args) 
         try {
           final uri = Uri.parse(endpoint);
           final host = uri.host;
-          final port = uri.port == 0 ? (uri.scheme == 'https' ? 443 : 80) : uri.port;
+          final port =
+              uri.port == 0 ? (uri.scheme == 'https' ? 443 : 80) : uri.port;
 
           socket = await Socket.connect(host, port, timeout: timeout);
           stopwatch.stop();

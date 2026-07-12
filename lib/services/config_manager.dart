@@ -461,16 +461,20 @@ class ConfigManager extends ChangeNotifier {
       // Localized update for other lists to avoid recreation and maintain invariants
       final valIndex = validatedConfigs.indexWhere((c) => c.id == id);
       if (updated.isValidated) {
-        if (valIndex != -1) validatedConfigs[valIndex] = updated;
-        else validatedConfigs.add(updated);
+        if (valIndex != -1)
+          validatedConfigs[valIndex] = updated;
+        else
+          validatedConfigs.add(updated);
       } else {
         if (valIndex != -1) validatedConfigs.removeAt(valIndex);
       }
 
       final favIndex = favoriteConfigs.indexWhere((c) => c.id == id);
       if (updated.isFavorite) {
-        if (favIndex != -1) favoriteConfigs[favIndex] = updated;
-        else favoriteConfigs.add(updated);
+        if (favIndex != -1)
+          favoriteConfigs[favIndex] = updated;
+        else
+          favoriteConfigs.add(updated);
       } else {
         if (favIndex != -1) favoriteConfigs.removeAt(favIndex);
       }
@@ -487,16 +491,20 @@ class ConfigManager extends ChangeNotifier {
 
       final valIndex = validatedConfigs.indexWhere((c) => c.id == config.id);
       if (config.isValidated) {
-        if (valIndex != -1) validatedConfigs[valIndex] = config;
-        else validatedConfigs.add(config);
+        if (valIndex != -1)
+          validatedConfigs[valIndex] = config;
+        else
+          validatedConfigs.add(config);
       } else {
         if (valIndex != -1) validatedConfigs.removeAt(valIndex);
       }
 
       final favIndex = favoriteConfigs.indexWhere((c) => c.id == config.id);
       if (config.isFavorite) {
-        if (favIndex != -1) favoriteConfigs[favIndex] = config;
-        else favoriteConfigs.add(config);
+        if (favIndex != -1)
+          favoriteConfigs[favIndex] = config;
+        else
+          favoriteConfigs.add(config);
       } else {
         if (favIndex != -1) favoriteConfigs.removeAt(favIndex);
       }
@@ -729,7 +737,8 @@ class ConfigManager extends ChangeNotifier {
     }
   }
 
-  static Future<List<VpnConfigWithMetrics>> _decodeConfigsInIsolate(String jsonStr) async {
+  static Future<List<VpnConfigWithMetrics>> _decodeConfigsInIsolate(
+      String jsonStr) async {
     final List<VpnConfigWithMetrics> configs = [];
     final list = jsonDecode(jsonStr) as List;
     for (var e in list) {
