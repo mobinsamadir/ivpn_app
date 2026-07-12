@@ -208,7 +208,7 @@ class ConfigManager extends ChangeNotifier {
   Function(VpnConfigWithMetrics)? onAutoSwitch;
   Future<void> Function()? stopVpnCallback;
 
-  bool _isRefreshing = false;
+  final bool _isRefreshing = false;
   bool get isRefreshing => _isRefreshing;
 
   bool _isAutoSwitchEnabled = true;
@@ -552,9 +552,12 @@ class ConfigManager extends ChangeNotifier {
       if (dead &&
           (c.currentPing == -1 ||
               c.failureCount >= 3 ||
-              (!c.isAlive && c.funnelStage == 0))) return true;
-      if (weak && c.currentPing > 1500)
+              (!c.isAlive && c.funnelStage == 0))) {
+        return true;
+      }
+      if (weak && c.currentPing > 1500) {
         return true; // threshold for weak config
+      }
       if (untestedSpeed && c.funnelStage < 3) return true;
       return false;
     });
@@ -686,10 +689,11 @@ class ConfigManager extends ChangeNotifier {
     try {
       if (Platform.isAndroid) {
         _currentDeviceId = 'android_${(await info.androidInfo).id}';
-      } else if (Platform.isWindows)
+      } else if (Platform.isWindows) {
         _currentDeviceId = 'windows_${(await info.windowsInfo).deviceId}';
-      else if (Platform.isIOS)
+      } else if (Platform.isIOS) {
         _currentDeviceId = 'ios_${(await info.iosInfo).identifierForVendor}';
+      }
     } catch (e) {
       _currentDeviceId = 'unknown';
     }
@@ -724,7 +728,8 @@ class ConfigManager extends ChangeNotifier {
 
   // Isolate entry point for encoding configs to JSON
   static Future<String> _encodeConfigsInIsolate(
-      List<Map<String, dynamic>> configsJson) async {
+    List<Map<String, dynamic>> configsJson,
+  ) async {
     return jsonEncode(configsJson);
   }
 
@@ -792,7 +797,9 @@ class ConfigManager extends ChangeNotifier {
   Future<void> _saveBlacklist() async {
     try {
       await storage.setString(
-          _blacklistKey, jsonEncode(_blockedConfigs.toList()));
+        _blacklistKey,
+        jsonEncode(_blockedConfigs.toList()),
+      );
     } catch (e) {
       AdvancedLogger.warn('[ConfigManager] Failed to save blacklist: $e');
     }
@@ -842,7 +849,9 @@ class ConfigManager extends ChangeNotifier {
   Future<void> _saveSplitTunnelingPackages() async {
     _setCache(_splitTunnelingKey, _splitTunnelingPackages);
     await storage.setString(
-        _splitTunnelingKey, jsonEncode(_splitTunnelingPackages));
+      _splitTunnelingKey,
+      jsonEncode(_splitTunnelingPackages),
+    );
   }
 
   Future<void> switchConfig(VpnConfigWithMetrics newConfig) async {
@@ -871,8 +880,9 @@ class ConfigManager extends ChangeNotifier {
 
   // --- UI & LEGACY COMPATIBILITY METHODS ---
   Future<VpnConfigWithMetrics?> getBestConfig() async {
-    if (_selectedConfig != null && _selectedConfig!.isValidated)
+    if (_selectedConfig != null && _selectedConfig!.isValidated) {
       return _selectedConfig;
+    }
     if (favoriteConfigs.isNotEmpty) return favoriteConfigs.first;
     if (validatedConfigs.isNotEmpty) return validatedConfigs.first;
     if (allConfigs.isNotEmpty) return allConfigs.first;

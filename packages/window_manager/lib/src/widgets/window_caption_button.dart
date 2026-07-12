@@ -267,10 +267,7 @@ class WindowCaptionButtonIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: createPainter(color),
-      size: const Size(16, 16),
-    );
+    return CustomPaint(painter: createPainter(color), size: const Size(16, 16));
   }
 }
 
@@ -412,9 +409,7 @@ class _WindowCaptionButtonState extends State<WindowCaptionButton> {
         onTap: widget.onPressed,
         child: Container(
           constraints: const BoxConstraints(minWidth: 46, minHeight: 32),
-          decoration: BoxDecoration(
-            color: bgColor,
-          ),
+          decoration: BoxDecoration(color: bgColor),
           child: Center(
             child: WindowCaptionButtonIcon(
               color: iconColor,

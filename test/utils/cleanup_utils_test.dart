@@ -44,43 +44,47 @@ void main() {
       expect(token.isCancelled, isTrue);
     });
 
-    test('cleanupJobResources handles multiple resource types correctly',
-        () async {
-      final token = CancelToken();
-      CleanupUtils.registerJob('multi-resource-job', token);
+    test(
+      'cleanupJobResources handles multiple resource types correctly',
+      () async {
+        final token = CancelToken();
+        CleanupUtils.registerJob('multi-resource-job', token);
 
-      final process = MockProcess();
-      when(() => process.kill(any())).thenReturn(true);
-      when(() => process.pid).thenReturn(12345);
+        final process = MockProcess();
+        when(() => process.kill(any())).thenReturn(true);
+        when(() => process.pid).thenReturn(12345);
 
-      final httpClient = MockHttpClient();
-      when(() => httpClient.close(force: true)).thenReturn(null);
+        final httpClient = MockHttpClient();
+        when(() => httpClient.close(force: true)).thenReturn(null);
 
-      final subscription = MockStreamSubscription();
-      when(() => subscription.cancel()).thenAnswer((_) => Future.value());
+        final subscription = MockStreamSubscription();
+        when(() => subscription.cancel()).thenAnswer((_) => Future.value());
 
-      final timer = MockTimer();
-      when(() => timer.cancel()).thenReturn(null);
+        final timer = MockTimer();
+        when(() => timer.cancel()).thenReturn(null);
 
-      CleanupUtils.registerResource('multi-resource-job', process);
-      CleanupUtils.registerResource('multi-resource-job', httpClient);
-      CleanupUtils.registerResource('multi-resource-job', subscription);
-      CleanupUtils.registerResource('multi-resource-job', timer);
+        CleanupUtils.registerResource('multi-resource-job', process);
+        CleanupUtils.registerResource('multi-resource-job', httpClient);
+        CleanupUtils.registerResource('multi-resource-job', subscription);
+        CleanupUtils.registerResource('multi-resource-job', timer);
 
-      await CleanupUtils.cleanupJobResources('multi-resource-job');
+        await CleanupUtils.cleanupJobResources('multi-resource-job');
 
-      verify(() => process.kill(ProcessSignal.sigkill)).called(1);
-      verify(() => httpClient.close(force: true)).called(1);
-      verify(() => subscription.cancel()).called(1);
-      verify(() => timer.cancel()).called(1);
+        verify(() => process.kill(ProcessSignal.sigkill)).called(1);
+        verify(() => httpClient.close(force: true)).called(1);
+        verify(() => subscription.cancel()).called(1);
+        verify(() => timer.cancel()).called(1);
 
-      expect(token.isCancelled, isTrue);
-    });
+        expect(token.isCancelled, isTrue);
+      },
+    );
 
     test('cleanupJobResources silently handles unregistered job', () async {
       // Should not throw
       await expectLater(
-          CleanupUtils.cleanupJobResources('unknown-job'), completes);
+        CleanupUtils.cleanupJobResources('unknown-job'),
+        completes,
+      );
     });
 
     test('emergencyCleanup cleans all registered jobs', () async {
@@ -127,8 +131,9 @@ void main() {
 
       final process = MockProcess();
       // Simulate an exception when killing the process
-      when(() => process.kill(any()))
-          .thenThrow(Exception('Failed to kill process'));
+      when(
+        () => process.kill(any()),
+      ).thenThrow(Exception('Failed to kill process'));
       when(() => process.pid).thenReturn(555);
 
       final httpClient = MockHttpClient();
@@ -139,11 +144,14 @@ void main() {
 
       // Should complete normally without throwing, and still process the httpClient
       await expectLater(
-          CleanupUtils.cleanupJobResources('exception-job'), completes);
+        CleanupUtils.cleanupJobResources('exception-job'),
+        completes,
+      );
 
       verify(() => process.kill(ProcessSignal.sigkill)).called(1);
-      verify(() => httpClient.close(force: true))
-          .called(1); // Next resource still processed
+      verify(
+        () => httpClient.close(force: true),
+      ).called(1); // Next resource still processed
       expect(token.isCancelled, isTrue);
     });
   });

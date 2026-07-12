@@ -8,8 +8,11 @@ import 'package:crypto/crypto.dart';
 // taken to process a large number of configs with the current logic.
 
 // Original logic
-void _originalLogic(List<String> configStrings, bool checkBlacklist,
-    Set<String> blockedHashes) {
+void _originalLogic(
+  List<String> configStrings,
+  bool checkBlacklist,
+  Set<String> blockedHashes,
+) {
   final List<String> hashesToRemoveFromBlacklist = [];
   final Set<String> batchConfigs = {};
 
@@ -39,8 +42,11 @@ void _originalLogic(List<String> configStrings, bool checkBlacklist,
 }
 
 // Optimized logic (will be implemented in actual code later)
-void _optimizedLogic(List<String> configStrings, bool checkBlacklist,
-    Set<String> blockedHashes) {
+void _optimizedLogic(
+  List<String> configStrings,
+  bool checkBlacklist,
+  Set<String> blockedHashes,
+) {
   final List<String> hashesToRemoveFromBlacklist = [];
   final Set<String> batchConfigs = {};
 
@@ -95,9 +101,11 @@ void main() {
     stopwatchOptimized.stop();
 
     print(
-        'Original (checkBlacklist=false): ${stopwatchOriginal.elapsedMilliseconds} ms');
+      'Original (checkBlacklist=false): ${stopwatchOriginal.elapsedMilliseconds} ms',
+    );
     print(
-        'Optimized (checkBlacklist=false): ${stopwatchOptimized.elapsedMilliseconds} ms');
+      'Optimized (checkBlacklist=false): ${stopwatchOptimized.elapsedMilliseconds} ms',
+    );
 
     // The optimized logic should be significantly faster because it skips hashing entirely
     // when checkBlacklist=false and blockedHashes is empty.

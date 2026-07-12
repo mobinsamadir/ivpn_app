@@ -115,9 +115,11 @@ class SmartPinger {
     CancelToken? cancelToken, {
     int maxRetries = 2,
     required Duration timeout,
-    Future<PingResult> Function(String, CancelToken?,
-            {required Duration timeout})?
-        pingSingleInjector,
+    Future<PingResult> Function(
+      String,
+      CancelToken?, {
+      required Duration timeout,
+    })? pingSingleInjector,
   }) async {
     final pingFunc = pingSingleInjector ?? _pingSingle;
     final completer = Completer<PingResult>();
@@ -132,12 +134,14 @@ class SmartPinger {
         failedAttempts++;
         lastError = result.error;
         if (failedAttempts == maxRetries) {
-          completer.complete(PingResult(
-            endpoint: endpoint,
-            latency: -1,
-            isSuccess: false,
-            error: 'All retries failed: $lastError',
-          ));
+          completer.complete(
+            PingResult(
+              endpoint: endpoint,
+              latency: -1,
+              isSuccess: false,
+              error: 'All retries failed: $lastError',
+            ),
+          );
         }
       }
     }
@@ -150,12 +154,14 @@ class SmartPinger {
         failedAttempts++;
         lastError = e.toString();
         if (failedAttempts == maxRetries) {
-          completer.complete(PingResult(
-            endpoint: endpoint,
-            latency: -1,
-            isSuccess: false,
-            error: 'All retries failed: $lastError',
-          ));
+          completer.complete(
+            PingResult(
+              endpoint: endpoint,
+              latency: -1,
+              isSuccess: false,
+              error: 'All retries failed: $lastError',
+            ),
+          );
         }
       }
     }
@@ -163,17 +169,22 @@ class SmartPinger {
     for (int attempt = 1; attempt <= maxRetries; attempt++) {
       if (cancelToken?.isCancelled ?? false) {
         if (!completer.isCompleted) {
-          completer.completeError(OperationCancelledException(
-              cancelToken?.reason?.toString() ?? 'Cancelled'));
+          completer.completeError(
+            OperationCancelledException(
+              cancelToken?.reason?.toString() ?? 'Cancelled',
+            ),
+          );
         }
         break;
       }
 
       if (completer.isCompleted) break;
 
-      pingFunc(endpoint, cancelToken, timeout: timeout)
-          .then(handleResult)
-          .catchError(handleError);
+      pingFunc(
+        endpoint,
+        cancelToken,
+        timeout: timeout,
+      ).then(handleResult).catchError(handleError);
 
       if (attempt < maxRetries && !completer.isCompleted) {
         try {
@@ -218,7 +229,8 @@ class SmartPinger {
 
 /// Top-level Isolate entry point for ping testing
 Future<Map<String, dynamic>> _isolatePingSingle(
-    Map<String, dynamic> args) async {
+  Map<String, dynamic> args,
+) async {
   final endpoint = args['endpoint'] as String;
   final timeoutInMilliseconds = args['timeoutInMilliseconds'] as int;
   final timeout = Duration(milliseconds: timeoutInMilliseconds);

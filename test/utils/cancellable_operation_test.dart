@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
-import '../../lib/utils/cancellable_operation.dart';
+import 'package:ivpn_new/utils/cancellable_operation.dart';
 
 void main() {
   group('CancellableOperation', () {
@@ -20,33 +20,37 @@ void main() {
       expect(operation.value, throwsA(equals(exception)));
     });
 
-    test('throws OperationCancelledException when cancelled before completion',
-        () async {
-      final completer = Completer<int>();
-      final operation = CancellableOperation<int>(completer.future);
+    test(
+      'throws OperationCancelledException when cancelled before completion',
+      () async {
+        final completer = Completer<int>();
+        final operation = CancellableOperation<int>(completer.future);
 
-      operation.cancel();
+        operation.cancel();
 
-      expect(operation.isCancelled, isTrue);
-      expect(operation.value, throwsA(isA<OperationCancelledException>()));
+        expect(operation.isCancelled, isTrue);
+        expect(operation.value, throwsA(isA<OperationCancelledException>()));
 
-      // Complete the underlying future later to ensure it doesn't cause uncaught errors
-      completer.complete(42);
-    });
+        // Complete the underlying future later to ensure it doesn't cause uncaught errors
+        completer.complete(42);
+      },
+    );
 
-    test('throws OperationCancelledException when cancelled before error',
-        () async {
-      final completer = Completer<int>();
-      final operation = CancellableOperation<int>(completer.future);
+    test(
+      'throws OperationCancelledException when cancelled before error',
+      () async {
+        final completer = Completer<int>();
+        final operation = CancellableOperation<int>(completer.future);
 
-      operation.cancel();
+        operation.cancel();
 
-      expect(operation.isCancelled, isTrue);
-      expect(operation.value, throwsA(isA<OperationCancelledException>()));
+        expect(operation.isCancelled, isTrue);
+        expect(operation.value, throwsA(isA<OperationCancelledException>()));
 
-      // Complete the underlying future with error later to ensure it doesn't cause uncaught errors
-      completer.completeError(Exception('Late error'));
-    });
+        // Complete the underlying future with error later to ensure it doesn't cause uncaught errors
+        completer.completeError(Exception('Late error'));
+      },
+    );
 
     test('does nothing when cancelled after completion', () async {
       final completer = Completer<int>();
@@ -124,8 +128,10 @@ void main() {
       final token = CancelToken();
       token.cancel();
 
-      expect(() => token.throwIfCancelled(),
-          throwsA(isA<OperationCancelledException>()));
+      expect(
+        () => token.throwIfCancelled(),
+        throwsA(isA<OperationCancelledException>()),
+      );
     });
 
     test('throwIfCancelled does nothing when not cancelled', () {
@@ -137,8 +143,10 @@ void main() {
 
     test('OperationCancelledException toString contains message', () {
       final exception = OperationCancelledException('Test message');
-      expect(exception.toString(),
-          equals('OperationCancelledException: Test message'));
+      expect(
+        exception.toString(),
+        equals('OperationCancelledException: Test message'),
+      );
     });
   });
 }

@@ -210,10 +210,12 @@ class SingboxConfigGenerator {
               // Map JSON fields to params expected by logic below
               if (json['scy'] != null) params['security'] = json['scy'];
               if (json['net'] != null) params['type'] = json['net'];
-              if (json['type'] != null)
+              if (json['type'] != null) {
                 params['type'] = json['type']; // Sometimes 'type'
-              if (json['tls'] != null && json['tls'] != "none")
+              }
+              if (json['tls'] != null && json['tls'] != "none") {
                 params['security'] = json['tls'];
+              }
 
               if (json['sni'] != null) params['sni'] = json['sni'];
               if (json['host'] != null) params['host'] = json['host'];
