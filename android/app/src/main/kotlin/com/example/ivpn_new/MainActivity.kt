@@ -17,7 +17,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicBoolean
 
-class SafeResult(private val result: MethodChannel.Result) : MethodChannel.Result {
+class SafeResult(
+    private val result: MethodChannel.Result,
+) : MethodChannel.Result {
     private val isReplied = AtomicBoolean(false)
 
     override fun success(res: Any?) {
@@ -28,7 +30,11 @@ class SafeResult(private val result: MethodChannel.Result) : MethodChannel.Resul
         }
     }
 
-    override fun error(errorCode: String, errorMessage: String?, errorDetails: Any?) {
+    override fun error(
+        errorCode: String,
+        errorMessage: String?,
+        errorDetails: Any?,
+    ) {
         if (isReplied.compareAndSet(false, true)) {
             Handler(Looper.getMainLooper()).post {
                 result.error(errorCode, errorMessage, errorDetails)

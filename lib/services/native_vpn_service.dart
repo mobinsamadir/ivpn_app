@@ -112,7 +112,8 @@ class NativeVpnService {
     try {
       // IPC Optimization: Write config to temp file and pass path
       final tempDir = Directory.systemTemp;
-      final tempFile = File('${tempDir.path}/ping_config_${DateTime.now().millisecondsSinceEpoch}.json');
+      final tempFile = File(
+          '${tempDir.path}/ping_config_${DateTime.now().millisecondsSinceEpoch}.json');
       await tempFile.writeAsString(config);
 
       final int latency = await _methodChannel.invokeMethod('testConfig', {
@@ -165,7 +166,8 @@ class NativeVpnService {
       }
       // IPC Optimization: Write config to temp file and pass path
       final tempDir = Directory.systemTemp;
-      final tempFile = File('${tempDir.path}/test_proxy_${DateTime.now().millisecondsSinceEpoch}.json');
+      final tempFile = File(
+          '${tempDir.path}/test_proxy_${DateTime.now().millisecondsSinceEpoch}.json');
       await tempFile.writeAsString(configJson);
 
       final int result = await _methodChannel.invokeMethod('startTestProxy', {
@@ -239,7 +241,8 @@ class NativeVpnService {
       // }
       // IPC Optimization: Write config to temp file and pass path
       final tempDir = Directory.systemTemp;
-      final tempFile = File('${tempDir.path}/vpn_config_${DateTime.now().millisecondsSinceEpoch}.json');
+      final tempFile = File(
+          '${tempDir.path}/vpn_config_${DateTime.now().millisecondsSinceEpoch}.json');
       await tempFile.writeAsString(configJson);
 
       await _methodChannel.invokeMethod('startVpn', {'config': tempFile.path});
