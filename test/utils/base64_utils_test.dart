@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
-import '../../lib/utils/base64_utils.dart';
+import 'package:ivpn_new/utils/base64_utils.dart';
 
 void main() {
   group('Base64Utils', () {
@@ -12,7 +12,9 @@ void main() {
       test('decodes URL-safe Base64 string correctly', () {
         // "Hello-World_" encoded in URL-safe base64: SGVsbG8tV29ybGRf
         expect(
-            Base64Utils.safeDecode('SGVsbG8tV29ybGRf'), equals('Hello-World_'));
+          Base64Utils.safeDecode('SGVsbG8tV29ybGRf'),
+          equals('Hello-World_'),
+        );
       });
 
       test('decodes Base64 string missing padding', () {
@@ -36,21 +38,28 @@ void main() {
         expect(Base64Utils.safeDecode(invalidInput), equals(''));
 
         // returnOriginalOnFail = true -> returns original input
-        expect(Base64Utils.safeDecode(invalidInput, returnOriginalOnFail: true),
-            equals(invalidInput));
-      });
-
-      test('handles Base64 strings that decode to invalid UTF-8 gracefully',
-          () {
-        // "//79" decodes to bytes [0xff, 0xfe, 0xfd] which is not valid UTF-8
-        const invalidUtf8Base64 = '//79';
-
-        expect(Base64Utils.safeDecode(invalidUtf8Base64), equals(''));
         expect(
-            Base64Utils.safeDecode(invalidUtf8Base64,
-                returnOriginalOnFail: true),
-            equals(invalidUtf8Base64));
+          Base64Utils.safeDecode(invalidInput, returnOriginalOnFail: true),
+          equals(invalidInput),
+        );
       });
+
+      test(
+        'handles Base64 strings that decode to invalid UTF-8 gracefully',
+        () {
+          // "//79" decodes to bytes [0xff, 0xfe, 0xfd] which is not valid UTF-8
+          const invalidUtf8Base64 = '//79';
+
+          expect(Base64Utils.safeDecode(invalidUtf8Base64), equals(''));
+          expect(
+            Base64Utils.safeDecode(
+              invalidUtf8Base64,
+              returnOriginalOnFail: true,
+            ),
+            equals(invalidUtf8Base64),
+          );
+        },
+      );
 
       test('handles extremely large strings without crashing', () {
         // Create a large repeated string and correctly base64 encode it
@@ -71,7 +80,9 @@ void main() {
     group('isBase64', () {
       test('returns true for valid Base64 string', () {
         expect(
-            Base64Utils.isBase64('SGVsbG8gV29ybGQ='), isTrue); // "Hello World"
+          Base64Utils.isBase64('SGVsbG8gV29ybGQ='),
+          isTrue,
+        ); // "Hello World"
       });
 
       test('returns false for invalid Base64 string', () {
@@ -85,7 +96,9 @@ void main() {
       test('returns true for URL-safe Base64 string', () {
         // "+/" replaced with "-_"
         expect(
-            Base64Utils.isBase64('SGVsbG8tV29ybGRf'), isTrue); // "Hello-World_"
+          Base64Utils.isBase64('SGVsbG8tV29ybGRf'),
+          isTrue,
+        ); // "Hello-World_"
       });
 
       test('returns true for valid Base64 string missing padding', () {
@@ -97,12 +110,13 @@ void main() {
       });
 
       test(
-          'returns false for strings that could be decoded with just padding added but are invalid length',
-          () {
-        // SGVs = "Hel"
-        // SGVsb = "Hel" + half a byte - invalid base64 length
-        expect(Base64Utils.isBase64('SGVsb'), isFalse);
-      });
+        'returns false for strings that could be decoded with just padding added but are invalid length',
+        () {
+          // SGVs = "Hel"
+          // SGVsb = "Hel" + half a byte - invalid base64 length
+          expect(Base64Utils.isBase64('SGVsb'), isFalse);
+        },
+      );
     });
   });
 }

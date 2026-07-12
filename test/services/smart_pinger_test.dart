@@ -14,19 +14,21 @@ class MockSocket implements Socket {
 
 void main() {
   group('SmartPinger Cancellation', () {
-    test('Pre-emptive cancellation prevents network calls and throws',
-        () async {
-      final token = CancelToken()..cancel();
+    test(
+      'Pre-emptive cancellation prevents network calls and throws',
+      () async {
+        final token = CancelToken()..cancel();
 
-      // We expect the Future to throw OperationCancelledException immediately
-      expect(
-        () => SmartPinger.pingMultiple(
-          endpoints: ['https://google.com'],
-          cancelToken: token,
-        ),
-        throwsA(isA<OperationCancelledException>()),
-      );
-    });
+        // We expect the Future to throw OperationCancelledException immediately
+        expect(
+          () => SmartPinger.pingMultiple(
+            endpoints: ['https://google.com'],
+            cancelToken: token,
+          ),
+          throwsA(isA<OperationCancelledException>()),
+        );
+      },
+    );
 
     test('Mid-flight cancellation aborts the operation and throws', () async {
       final token = CancelToken();
@@ -48,28 +50,30 @@ void main() {
   });
 
   group('SmartPinger Retry Logic', () {
-    test('Consistent failure exhausts maxRetries and returns failure',
-        () async {
-      int attempts = 0;
-      final result = await SmartPinger.pingWithRetry(
-        'https://google.com',
-        null,
-        maxRetries: 3,
-        timeout: const Duration(milliseconds: 100),
-        pingSingleInjector: (endpoint, token, {required timeout}) async {
-          attempts++;
-          return PingResult(
-            endpoint: endpoint,
-            latency: -1,
-            isSuccess: false,
-            error: 'Mocked connection refused',
-          );
-        },
-      );
-      expect(result.isSuccess, isFalse);
-      expect(result.latency, -1);
-      expect(attempts, 3);
-    });
+    test(
+      'Consistent failure exhausts maxRetries and returns failure',
+      () async {
+        int attempts = 0;
+        final result = await SmartPinger.pingWithRetry(
+          'https://google.com',
+          null,
+          maxRetries: 3,
+          timeout: const Duration(milliseconds: 100),
+          pingSingleInjector: (endpoint, token, {required timeout}) async {
+            attempts++;
+            return PingResult(
+              endpoint: endpoint,
+              latency: -1,
+              isSuccess: false,
+              error: 'Mocked connection refused',
+            );
+          },
+        );
+        expect(result.isSuccess, isFalse);
+        expect(result.latency, -1);
+        expect(attempts, 3);
+      },
+    );
 
     test('Transient failure recovers on the second attempt', () async {
       int attempts = 0;
@@ -88,11 +92,7 @@ void main() {
               error: 'Mocked connection refused',
             );
           }
-          return PingResult(
-            endpoint: endpoint,
-            latency: 10,
-            isSuccess: true,
-          );
+          return PingResult(endpoint: endpoint, latency: 10, isSuccess: true);
         },
       );
       expect(result.isSuccess, isTrue);
@@ -170,11 +170,7 @@ void main() {
           } else {
             // Second attempt (fired after 500ms stagger) returns quickly
             await Future.delayed(const Duration(milliseconds: 50));
-            return PingResult(
-              endpoint: endpoint,
-              latency: 10,
-              isSuccess: true,
-            );
+            return PingResult(endpoint: endpoint, latency: 10, isSuccess: true);
           }
         },
       );

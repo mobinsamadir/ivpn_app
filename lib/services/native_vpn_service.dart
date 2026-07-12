@@ -138,8 +138,9 @@ class NativeVpnService {
   /// Starts a lightweight Sing-box proxy for testing.
   /// Returns the SOCKS port on success, or negative error code.
   Future<int> startTestProxy(String configJson) async {
-    if (Platform.isWindows)
+    if (Platform.isWindows) {
       return -1; // Handled by EphemeralTester directly on Windows
+    }
 
     // CRITICAL: Prevent passing null/empty or malformed strings to native layer
     if (configJson.trim().isEmpty) {
@@ -177,7 +178,8 @@ class NativeVpnService {
     } on PlatformException catch (e) {
       if (e.code == 'PERMISSION_DENIED') {
         AdvancedLogger.warn(
-            "VPN Permission not granted. Skipping proxy start.");
+          "VPN Permission not granted. Skipping proxy start.",
+        );
         return -1;
       }
       AdvancedLogger.error("Failed to start test proxy: $e");
@@ -199,11 +201,15 @@ class NativeVpnService {
     }
   }
 
-  Future<void> connect(String rawLink,
-      {bool isKillSwitchEnabled = false}) async {
+  Future<void> connect(
+    String rawLink, {
+    bool isKillSwitchEnabled = false,
+  }) async {
     if (Platform.isWindows) {
-      await _windowsVpnService.startVpn(rawLink,
-          isKillSwitchEnabled: isKillSwitchEnabled);
+      await _windowsVpnService.startVpn(
+        rawLink,
+        isKillSwitchEnabled: isKillSwitchEnabled,
+      );
       // Windows service handles its own stream updates
       return;
     }
@@ -257,14 +263,16 @@ class NativeVpnService {
 
       timeoutTimer = Timer(const Duration(seconds: 15), () async {
         AdvancedLogger.warn(
-            "Native layer timed out. Forcing stopVpn and injecting ERROR event.");
+          "Native layer timed out. Forcing stopVpn and injecting ERROR event.",
+        );
         await statusSub?.cancel();
 
         try {
           await _methodChannel.invokeMethod('stopVpn');
         } catch (e) {
           AdvancedLogger.error(
-              "Failed to cleanup Native VPN after timeout: $e");
+            "Failed to cleanup Native VPN after timeout: $e",
+          );
         }
 
         if (!_statusController.isClosed) {

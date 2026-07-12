@@ -564,10 +564,11 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     } catch (e) {
       AdvancedLogger.warn("[HomeScreen] Config fetch failed: $e");
     } finally {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _isFetching = false;
         });
+      }
     }
 
     // Check for updates (Background)
@@ -695,8 +696,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddServerDialog,
         backgroundColor: Colors.blueAccent,
-        child: const Icon(Icons.add, color: Colors.white),
         tooltip: 'Add Manual Server',
+        child: const Icon(Icons.add, color: Colors.white),
       ),
       body: SafeArea(
         child: RefreshIndicator(
@@ -721,43 +722,38 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                         onAddTime: _showAdSequence,
                       ),
                       const SizedBox(height: 16),
-                      Container(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16.0,
-                            vertical: 8.0,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.autorenew,
-                                    color: Colors.blueAccent,
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16.0,
+                          vertical: 8.0,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.autorenew, color: Colors.blueAccent),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  'Auto Switch',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
                                   ),
-                                  const SizedBox(width: 8),
-                                  const Text(
-                                    'Auto Switch',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Switch(
-                                value: _configManager.isAutoSwitchEnabled,
-                                activeColor: Colors.blueAccent,
-                                onChanged: (val) {
-                                  setState(() {
-                                    _configManager.isAutoSwitchEnabled = val;
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
+                                ),
+                              ],
+                            ),
+                            Switch(
+                              value: _configManager.isAutoSwitchEnabled,
+                              activeThumbColor: Colors.blueAccent,
+                              onChanged: (val) {
+                                setState(() {
+                                  _configManager.isAutoSwitchEnabled = val;
+                                });
+                              },
+                            ),
+                          ],
                         ),
                       ),
                       ListenableBuilder(
@@ -791,8 +787,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                           setState(() {});
                         },
                         onDelete: (config) async {
-                          final confirm =
-                              await _showDeleteConfirmationDialog(config);
+                          final confirm = await _showDeleteConfirmationDialog(
+                            config,
+                          );
                           if (confirm && mounted) {
                             await _configManager.deleteConfig(config.id);
                             setState(() {});
@@ -1200,10 +1197,11 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     } catch (e) {
       _showToast('Failed to refresh configs: $e');
     } finally {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _isFetching = false;
         });
+      }
     }
   }
 
@@ -1260,7 +1258,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   // _buildAppHeader Removed
 
   Future<void> _showAddServerDialog() async {
-    final TextEditingController _urlController = TextEditingController();
+    final TextEditingController urlController = TextEditingController();
 
     return showDialog<void>(
       context: context,
@@ -1276,7 +1274,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
             style: TextStyle(color: Colors.white),
           ),
           content: TextField(
-            controller: _urlController,
+            controller: urlController,
             style: const TextStyle(color: Colors.white),
             decoration: InputDecoration(
               hintText: 'vmess:// or vless:// ...',
@@ -1304,7 +1302,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
               ),
               child: const Text('Add', style: TextStyle(color: Colors.white)),
               onPressed: () async {
-                final url = _urlController.text.trim();
+                final url = urlController.text.trim();
                 if (url.isNotEmpty) {
                   Navigator.of(context).pop();
                   // Constraint: Properly split multiline input for multiple configs
@@ -1492,10 +1490,7 @@ class _AdminWarningBanner extends StatelessWidget {
       child: Container(
         width: double.infinity,
         color: Colors.amberAccent.withValues(alpha: 0.2),
-        padding: const EdgeInsets.symmetric(
-          vertical: 8,
-          horizontal: 16,
-        ),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
         child: Row(
           children: const [
             Icon(

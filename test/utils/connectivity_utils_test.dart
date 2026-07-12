@@ -44,16 +44,18 @@ void main() {
       expect(result, isFalse);
     });
 
-    test('returns false when lookup returns list with empty rawAddress',
-        () async {
-      final addresses = [FakeInternetAddress('')];
+    test(
+      'returns false when lookup returns list with empty rawAddress',
+      () async {
+        final addresses = [FakeInternetAddress('')];
 
-      final result = await ConnectivityUtils.hasInternet(
-        lookup: (host) async => addresses,
-      );
+        final result = await ConnectivityUtils.hasInternet(
+          lookup: (host) async => addresses,
+        );
 
-      expect(result, isFalse);
-    });
+        expect(result, isFalse);
+      },
+    );
 
     test('returns false when lookup times out', () {
       fakeAsync((async) {

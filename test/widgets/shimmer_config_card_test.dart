@@ -3,14 +3,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ivpn_new/widgets/shimmer_config_card.dart';
 
 void main() {
-  testWidgets('ShimmerConfigCard renders without errors',
-      (WidgetTester tester) async {
+  testWidgets('ShimmerConfigCard renders without errors', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(
-          body: ShimmerConfigCard(),
-        ),
-      ),
+      const MaterialApp(home: Scaffold(body: ShimmerConfigCard())),
     );
 
     // Verify container and structure existence

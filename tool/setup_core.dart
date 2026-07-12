@@ -37,8 +37,11 @@ void main() async {
 
   // --- 1. WINDOWS BINARY (Crucial) ---
   final windowsBinary = File(p.join(windowsDir.path, 'sing-box.exe'));
-  bool validExe =
-      await _validateFile(windowsBinary, minExeSize, 'Windows Sing-box');
+  bool validExe = await _validateFile(
+    windowsBinary,
+    minExeSize,
+    'Windows Sing-box',
+  );
 
   if (validExe) {
     // Perform Execution Check (The "Gold Standard")
@@ -55,7 +58,8 @@ void main() async {
 
     if (await windowsBinary.exists()) {
       stdout.writeln(
-          'Corrupt/Invalid binary detected. Deleting to force re-download...');
+        'Corrupt/Invalid binary detected. Deleting to force re-download...',
+      );
       try {
         await windowsBinary.delete();
       } catch (e) {
@@ -78,8 +82,9 @@ void main() async {
       }
 
       if (singboxFile != null) {
-        await File(windowsBinary.path)
-            .writeAsBytes(singboxFile.content as List<int>);
+        await File(
+          windowsBinary.path,
+        ).writeAsBytes(singboxFile.content as List<int>);
         stdout.writeln('Saved to ${windowsBinary.path}');
 
         // Final Validation
@@ -88,7 +93,8 @@ void main() async {
         }
       } else {
         stdout.writeln(
-            'Critical Error: sing-box.exe not found in Windows archive.');
+          'Critical Error: sing-box.exe not found in Windows archive.',
+        );
         exit(1);
       }
     } catch (e) {
@@ -133,7 +139,10 @@ void main() async {
       await geositeFile.writeAsBytes(bytes);
       stdout.writeln('Saved to ${geositeFile.path}');
       if (!await _validateFile(
-          geositeFile, minDbSize, 'Geosite (Post-Download)')) {
+        geositeFile,
+        minDbSize,
+        'Geosite (Post-Download)',
+      )) {
         throw Exception("Downloaded Geosite is too small/corrupt.");
       }
     } catch (e) {
@@ -161,7 +170,8 @@ Future<bool> _validateFile(File file, int minSize, String label) async {
   final size = await file.length();
   if (size < minSize) {
     stdout.writeln(
-        '[Validation Fail] $label is too small (${(size / 1024 / 1024).toStringAsFixed(2)}MB < ${(minSize / 1024 / 1024).toStringAsFixed(2)}MB). Treating as corrupt.');
+      '[Validation Fail] $label is too small (${(size / 1024 / 1024).toStringAsFixed(2)}MB < ${(minSize / 1024 / 1024).toStringAsFixed(2)}MB). Treating as corrupt.',
+    );
     return false;
   }
   return true;
@@ -176,28 +186,31 @@ Future<bool> _checkBinaryExecution(File binary) async {
   final absolutePath = binary.absolute.path;
   stdout.writeln('Running execution check on $absolutePath ...');
   try {
-    final result = await Process.run(
-      absolutePath,
-      ['version'],
-      runInShell: false,
-    ).timeout(const Duration(seconds: 30), onTimeout: () {
-      throw TimeoutException("Execution timed out");
-    });
+    final result =
+        await Process.run(absolutePath, ['version'], runInShell: false).timeout(
+      const Duration(seconds: 30),
+      onTimeout: () {
+        throw TimeoutException("Execution timed out");
+      },
+    );
 
     if (result.exitCode == 0) {
       stdout.writeln(
-          'Execution check passed: ${result.stdout.toString().trim()}');
+        'Execution check passed: ${result.stdout.toString().trim()}',
+      );
       return true;
     } else {
       stdout.writeln(
-          'Execution check failed (Exit Code ${result.exitCode}): ${result.stderr}');
+        'Execution check failed (Exit Code ${result.exitCode}): ${result.stderr}',
+      );
       return false;
     }
   } catch (e) {
     stdout.writeln('Execution check failed/crashed: $e');
     if (e is TimeoutException) {
       stdout.writeln(
-          'FATAL: Binary hung during version check. Treating as corrupt.');
+        'FATAL: Binary hung during version check. Treating as corrupt.',
+      );
     }
     return false;
   }

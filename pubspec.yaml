@@ -44,6 +44,7 @@ dependencies:
   # File Opening (Fixed for Android)
   open_file: ^3.5.10 # جایگزین نسخه Plus شد
 
+  meta: ^1.9.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -55,7 +56,6 @@ dev_dependencies:
   # Build Script Requirements (حیاتی برای setup_core.dart)
   archive: ^3.6.1
   mocktail: ^1.0.4
-  webview_flutter_platform_interface: ^2.9.0
   fake_async: ^1.3.3
   clock: ^1.1.2
   integration_test:

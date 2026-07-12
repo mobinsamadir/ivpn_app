@@ -18,7 +18,10 @@ class MockFile implements File {
   bool existsSync() {
     if (_throwException) {
       throw const FileSystemException(
-          'Permission denied', 'path/to/file', OSError('Access is denied.', 5));
+        'Permission denied',
+        'path/to/file',
+        OSError('Access is denied.', 5),
+      );
     }
     return _exists;
   }
@@ -35,14 +38,11 @@ class MockFile implements File {
 void main() {
   group('WindowsVpnService.checkRequiredAssets', () {
     test('returns false when files do not exist', () async {
-      await IOOverrides.runZoned(
-        () async {
-          final service = WindowsVpnService();
-          final result = await service.checkRequiredAssets();
-          expect(result, isFalse);
-        },
-        createFile: (path) => MockFile(path, exists: false),
-      );
+      await IOOverrides.runZoned(() async {
+        final service = WindowsVpnService();
+        final result = await service.checkRequiredAssets();
+        expect(result, isFalse);
+      }, createFile: (path) => MockFile(path, exists: false));
     });
 
     test('returns false when only some files exist', () async {
@@ -60,27 +60,22 @@ void main() {
     });
 
     test(
-        'returns false when a FileSystemException is thrown (Permission Error)',
-        () async {
-      await IOOverrides.runZoned(
-        () async {
+      'returns false when a FileSystemException is thrown (Permission Error)',
+      () async {
+        await IOOverrides.runZoned(() async {
           final service = WindowsVpnService();
           final result = await service.checkRequiredAssets();
           expect(result, isFalse);
-        },
-        createFile: (path) => MockFile(path, throwException: true),
-      );
-    });
+        }, createFile: (path) => MockFile(path, throwException: true));
+      },
+    );
 
     test('returns true when files exist', () async {
-      await IOOverrides.runZoned(
-        () async {
-          final service = WindowsVpnService();
-          final result = await service.checkRequiredAssets();
-          expect(result, isTrue);
-        },
-        createFile: (path) => MockFile(path, exists: true),
-      );
+      await IOOverrides.runZoned(() async {
+        final service = WindowsVpnService();
+        final result = await service.checkRequiredAssets();
+        expect(result, isTrue);
+      }, createFile: (path) => MockFile(path, exists: true));
     });
   });
 }

@@ -111,10 +111,7 @@ class DragToResizeArea extends StatelessWidget {
                         width: resizeEdgeSize,
                         height: double.infinity,
                       ),
-                      Expanded(
-                        flex: 1,
-                        child: Container(),
-                      ),
+                      Expanded(flex: 1, child: Container()),
                       _buildDragToResizeEdge(
                         ResizeEdge.right,
                         cursor: SystemMouseCursors.resizeRight,

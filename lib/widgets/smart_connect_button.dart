@@ -149,11 +149,13 @@ class _SmartConnectButtonState extends State<SmartConnectButton>
                                 isConnecting,
                                 isButtonDisabled,
                               ),
-                              key: ValueKey(_getButtonText(
-                                isConnected,
-                                isConnecting,
-                                isButtonDisabled,
-                              )),
+                              key: ValueKey(
+                                _getButtonText(
+                                  isConnected,
+                                  isConnecting,
+                                  isButtonDisabled,
+                                ),
+                              ),
                               style: TextStyle(
                                 color: isButtonDisabled
                                     ? Colors.white54

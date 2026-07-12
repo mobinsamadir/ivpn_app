@@ -28,7 +28,7 @@ void main() {
       "path": "",
       "tls": "",
       "sni": "",
-      "alpn": ""
+      "alpn": "",
     };
     final jsonStr = jsonEncode(map);
     final base64Str = base64Encode(utf8.encode(jsonStr));
@@ -40,26 +40,23 @@ void main() {
     methodCalls.clear();
 
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(
-      methodChannel,
-      (MethodCall methodCall) async {
-        methodCalls.add(methodCall);
-        switch (methodCall.method) {
-          case 'testConfig':
-            return 100;
-          case 'startVpn':
-            return null;
-          case 'stopVpn':
-            return null;
-          case 'startTestProxy':
-            return 10808;
-          case 'stopTestProxy':
-            return null;
-          default:
-            return null;
-        }
-      },
-    );
+        .setMockMethodCallHandler(methodChannel, (MethodCall methodCall) async {
+      methodCalls.add(methodCall);
+      switch (methodCall.method) {
+        case 'testConfig':
+          return 100;
+        case 'startVpn':
+          return null;
+        case 'stopVpn':
+          return null;
+        case 'startTestProxy':
+          return 10808;
+        case 'stopTestProxy':
+          return null;
+        default:
+          return null;
+      }
+    });
   });
 
   tearDown(() {
@@ -98,8 +95,9 @@ void main() {
     service = NativeVpnService();
 
     // Listen to the stream
-    final future =
-        service.connectionStatusStream.firstWhere((e) => e == 'CONNECTED');
+    final future = service.connectionStatusStream.firstWhere(
+      (e) => e == 'CONNECTED',
+    );
 
     // Simulate Native Event
     const channelName = 'com.example.ivpn/vpn_status';
@@ -107,11 +105,7 @@ void main() {
     final data = codec.encodeSuccessEnvelope('CONNECTED');
 
     await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .handlePlatformMessage(
-      channelName,
-      data,
-      (ByteData? data) {},
-    );
+        .handlePlatformMessage(channelName, data, (ByteData? data) {});
 
     expect(await future, 'CONNECTED');
   });
@@ -119,8 +113,9 @@ void main() {
   test('Error Handling: Native Error Event', () async {
     service = NativeVpnService();
 
-    final future = service.connectionStatusStream
-        .firstWhere((e) => e.contains('ERROR: NATIVE_EVENT'));
+    final future = service.connectionStatusStream.firstWhere(
+      (e) => e.contains('ERROR: NATIVE_EVENT'),
+    );
 
     // Simulate Native Error
     const channelName = 'com.example.ivpn/vpn_status';
@@ -128,14 +123,13 @@ void main() {
     // Simulate error envelope?
     // EventChannel errors are usually sent via `encodeErrorEnvelope`.
     final data = codec.encodeErrorEnvelope(
-        code: 'NATIVE_ERR', message: 'Something went wrong', details: null);
+      code: 'NATIVE_ERR',
+      message: 'Something went wrong',
+      details: null,
+    );
 
     await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .handlePlatformMessage(
-      channelName,
-      data,
-      (ByteData? data) {},
-    );
+        .handlePlatformMessage(channelName, data, (ByteData? data) {});
 
     // The service catches error and emits "ERROR: NATIVE_EVENT: ..."
     // Expecting string starting with ERROR
@@ -144,25 +138,30 @@ void main() {
     expect(result, contains('Something went wrong'));
   });
 
-  test('connect() Timeout handles no native response', () async {
-    service = NativeVpnService();
-    final config = createValidVmess();
+  test(
+    'connect() Timeout handles no native response',
+    () async {
+      service = NativeVpnService();
+      final config = createValidVmess();
 
-    // Do NOT push a CONNECTED state so the timer fires.
+      // Do NOT push a CONNECTED state so the timer fires.
 
-    // We expect the stream to eventually emit ERROR: NATIVE_TIMEOUT
-    final errorFuture = service.connectionStatusStream
-        .firstWhere((e) => e.contains('ERROR: NATIVE_TIMEOUT'));
+      // We expect the stream to eventually emit ERROR: NATIVE_TIMEOUT
+      final errorFuture = service.connectionStatusStream.firstWhere(
+        (e) => e.contains('ERROR: NATIVE_TIMEOUT'),
+      );
 
-    await service.connect(config);
+      await service.connect(config);
 
-    expect(methodCalls.map((c) => c.method), contains('startVpn'));
+      expect(methodCalls.map((c) => c.method), contains('startVpn'));
 
-    // Wait for the timeout to trigger and emit the error
-    final result = await errorFuture;
-    expect(result, 'ERROR: NATIVE_TIMEOUT');
+      // Wait for the timeout to trigger and emit the error
+      final result = await errorFuture;
+      expect(result, 'ERROR: NATIVE_TIMEOUT');
 
-    // The timeout logic should also invoke 'stopVpn' to clean up
-    expect(methodCalls.map((c) => c.method), contains('stopVpn'));
-  }, timeout: const Timeout(Duration(seconds: 20)));
+      // The timeout logic should also invoke 'stopVpn' to clean up
+      expect(methodCalls.map((c) => c.method), contains('stopVpn'));
+    },
+    timeout: const Timeout(Duration(seconds: 20)),
+  );
 }

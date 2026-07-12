@@ -105,8 +105,9 @@ void main() {
 
     test('Restoration: Init restores from SharedPreferences', () async {
       final storedTime = DateTime(2024, 1, 1, 12, 0, 0);
-      SharedPreferences.setMockInitialValues(
-          {'vpn_access_expiration': storedTime.millisecondsSinceEpoch});
+      SharedPreferences.setMockInitialValues({
+        'vpn_access_expiration': storedTime.millisecondsSinceEpoch,
+      });
 
       // We need to re-create or reset logic, but since it's singleton, we just call init()
       // But init() relies on retrieving fresh prefs instance.
@@ -121,8 +122,9 @@ void main() {
       // But we called clearAccess() in setUp which gets instance.
 
       // Let's try setting values here.
-      SharedPreferences.setMockInitialValues(
-          {'vpn_access_expiration': storedTime.millisecondsSinceEpoch});
+      SharedPreferences.setMockInitialValues({
+        'vpn_access_expiration': storedTime.millisecondsSinceEpoch,
+      });
 
       // We need to force reload from prefs.
       // AccessManager.init() does `await SharedPreferences.getInstance()`.
@@ -133,8 +135,10 @@ void main() {
       await accessManager.init();
 
       expect(accessManager.expirationDate, storedTime);
-      expect(accessManager.hasAccess,
-          isTrue); // Assuming clock is default (2023) vs stored (2024)
+      expect(
+        accessManager.hasAccess,
+        isTrue,
+      ); // Assuming clock is default (2023) vs stored (2024)
     });
   });
 }

@@ -800,7 +800,8 @@ class ConfigManager extends ChangeNotifier {
 
   // Isolate entry point for encoding configs to JSON
   static Future<String> _encodeConfigsInIsolate(
-      List<Map<String, dynamic>> configsJson) async {
+    List<Map<String, dynamic>> configsJson,
+  ) async {
     return jsonEncode(configsJson);
   }
 
@@ -873,7 +874,9 @@ class ConfigManager extends ChangeNotifier {
   Future<void> _saveBlacklist() async {
     try {
       await storage.setString(
-          _blacklistKey, jsonEncode(_blockedConfigs.toList()));
+        _blacklistKey,
+        jsonEncode(_blockedConfigs.toList()),
+      );
     } catch (e) {
       AdvancedLogger.warn('[ConfigManager] Failed to save blacklist: $e');
     }
@@ -923,7 +926,9 @@ class ConfigManager extends ChangeNotifier {
   Future<void> _saveSplitTunnelingPackages() async {
     _setCache(_splitTunnelingKey, _splitTunnelingPackages);
     await storage.setString(
-        _splitTunnelingKey, jsonEncode(_splitTunnelingPackages));
+      _splitTunnelingKey,
+      jsonEncode(_splitTunnelingPackages),
+    );
   }
 
   Future<void> switchConfig(VpnConfigWithMetrics newConfig) async {

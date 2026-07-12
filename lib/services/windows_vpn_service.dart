@@ -268,8 +268,10 @@ class WindowsVpnService {
     }
   }
 
-  Future<void> startVpn(String configContent,
-      {bool isKillSwitchEnabled = false}) async {
+  Future<void> startVpn(
+    String configContent, {
+    bool isKillSwitchEnabled = false,
+  }) async {
     isUserInitiatedDisconnect = false;
     AdvancedLogger.info(
       '[WindowsVpnService] startVpn called with config length: ${configContent.length}',
