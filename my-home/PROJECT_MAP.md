@@ -1,9 +1,7 @@
 # 🗺️ نقشه پروژه
 
 ## پوشه‌های اصلی و مسئول
-- (مهندس باید اینو برای ما ترکیب کنه یا خودت بساز)
-
-مثال:
-- `apps/payments/` → حساس ⛔ (نقش Security)
-- `apps/videos/` → Performance (نقش Optimizer)
-- `apps/users/` → UX/Conversion (نقش Converter)
+- `lib/services/` → حساس، Core (نقش Hunter/Gatekeeper)
+- `android/`, `windows/`, `macos/`, `linux/`, `ios/` → Native Code (نقش Hunter/Optimizer)
+- `lib/screens/`, `lib/widgets/` → UI/UX (نقش Converter)
+- `test/` → Testing (نقش Gatekeeper)
