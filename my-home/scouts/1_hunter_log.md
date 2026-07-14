@@ -1,17 +1,16 @@
-=== MISSION BRIEF: 2026-07-13 ===
-ROLE_TONIGHT: Security
+=== MISSION BRIEF: 2026-07-14 ===
+ROLE_TONIGHT: Security Fixer
 ASSIGNED_BY: Mastermind
-REASON: شب اول - نگاهِ عمومی امنیتی
+REASON: شب دوم - رفع مشکلات حیاتی امنیتی نشت اطلاعات فایل‌های کانفیگ
 
 SCOPE:
-- lib/
-- android/
-- windows/
+- lib/services/windows_vpn_service.dart
+- lib/services/native_vpn_service.dart
 
 FROZEN_ZONES:
 - none
 
-SPECIFIC_TASK: شب اول - اسکن اولیه امنیتی روی کدهای مربوط به ارتباطات شبکه و فایل‌های تنظیمات.
+SPECIFIC_TASK: رفع باگ عدم حذف فایل‌های کانفیگ در فولدر موقت (Information Disclosure).
 
 CROSS_AUDIT_TARGET: نه
 === END BRIEF ===

@@ -2,10 +2,11 @@
 
 | فایل | مالک شب | وضعیت | تا کی |
 |------|---------|-------|-------|
+| `lib/services/windows_vpn_service.dart` | Hunter | 🔒 Lock | تا صبح |
+| `lib/services/native_vpn_service.dart` | Hunter | 🔒 Lock | تا صبح |
+| `lib/services/funnel_service.dart` | Optimizer | 🔒 Lock | تا صبح |
+| `lib/services/config_manager.dart` | Optimizer | 🔒 Lock | تا صبح |
 | `lib/widgets/universal_ad_widget.dart` | Converter | 🔒 Lock | تا صبح |
 | `lib/screens/connection_home_screen.dart` | Converter | 🔒 Lock | تا صبح |
-| `lib/services/binary_manager.dart` | Gatekeeper | 🔒 Lock | تا صبح |
-| `lib/services/funnel_service.dart` | Gatekeeper | 🔒 Lock | تا صبح |
-| `lib/services/testers/ephemeral_tester.dart` | Gatekeeper | 🔒 Lock | تا صبح |
 
 (ترتیب: شب اول Hunter، بعد Optimizer، بعد Converter، بعد Gatekeeper)

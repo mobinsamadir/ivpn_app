@@ -1,17 +1,16 @@
-=== MISSION BRIEF: 2026-07-13 ===
-ROLE_TONIGHT: UX/Conversion
+=== MISSION BRIEF: 2026-07-14 ===
+ROLE_TONIGHT: UX/Conversion Fixer
 ASSIGNED_BY: Mastermind
-REASON: شب اول - نگاهِ عمومی رابط کاربری و تجربه کاربری
+REASON: شب دوم - بهبودهای UX برای افزایش درگیری کاربر
 
 SCOPE:
-- lib/screens/
-- lib/widgets/
+- lib/widgets/universal_ad_widget.dart
+- lib/screens/connection_home_screen.dart
 
 FROZEN_ZONES:
 - lib/services/
-- (Business Logic)
 
-SPECIFIC_TASK: شب اول - بررسی اولیه ویجت‌ها و انیمیشن‌ها.
+SPECIFIC_TASK: پیاده‌سازی ScaleOnTap برای تبلیغات و افزودن انیمیشن Glow/Pulse به دکمه دریافت زمان.
 
 CROSS_AUDIT_TARGET: نه
 === END BRIEF ===
