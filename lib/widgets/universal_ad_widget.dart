@@ -12,6 +12,7 @@ import 'package:video_player/video_player.dart';
 import '../services/ad_manager_service.dart';
 import '../models/ad_config.dart';
 import '../utils/advanced_logger.dart';
+import '../widgets/scale_on_tap.dart';
 
 class UniversalAdWidget extends StatefulWidget {
   final String slot;
@@ -113,7 +114,7 @@ class _ImageAd extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return ScaleOnTap(
       onTap: () {
         if (targetUrl.isNotEmpty) {
           launchUrl(Uri.parse(targetUrl), mode: LaunchMode.externalApplication);
@@ -180,7 +181,7 @@ class _VideoAdState extends State<_VideoAd> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    return GestureDetector(
+    return ScaleOnTap(
       onTap: () {
         if (widget.targetUrl.isNotEmpty) {
           launchUrl(
@@ -197,7 +198,7 @@ class _VideoAdState extends State<_VideoAd> {
 class _WebViewAd extends StatelessWidget {
   final String mediaSource;
   final String
-      targetUrl; // Not used for iframe usually, but maybe for overlay click
+  targetUrl; // Not used for iframe usually, but maybe for overlay click
 
   const _WebViewAd({required this.mediaSource, required this.targetUrl});
 
@@ -219,7 +220,8 @@ class _WebViewAd extends StatelessWidget {
 
     // Step 3: Wrap in Full HTML Template (For Transparency & Centering)
     if (!content.contains("<html")) {
-      content = """
+      content =
+          """
       <!DOCTYPE html>
       <html>
       <head>
@@ -288,8 +290,10 @@ class _MobileWebViewState extends State<_MobileWebView> {
       children: [
         WebViewWidget(
           controller: _controller,
-          gestureRecognizers: <Factory<
-              OneSequenceGestureRecognizer>>{}, // Prevent scroll hijacking
+          gestureRecognizers:
+              <
+                Factory<OneSequenceGestureRecognizer>
+              >{}, // Prevent scroll hijacking
         ),
         if (_isLoading)
           const Center(
