@@ -1,18 +1,17 @@
-=== MISSION BRIEF: 2026-07-13 ===
+=== MISSION BRIEF: 2026-07-14 ===
 ROLE_TONIGHT: QA/Testing
 ASSIGNED_BY: Mastermind
-REASON: شب اول - نگاهِ عمومی به تست‌ها و پوشش کد
+REASON: شب دوم - بررسی تغییرات اعمال شده توسط سایر ایجنت‌ها و تضمین کیفیت
 
 SCOPE:
 - test/
-- lib/services/
 
 FROZEN_ZONES:
 - none
 
-SPECIFIC_TASK: شب اول - بررسی وضعیت تست‌های موجود و پوشش کدهای حساس.
+SPECIFIC_TASK: نظارت بر تغییرات Hunter, Optimizer, Converter و نوشتن تست در صورت نیاز.
 
-CROSS_AUDIT_TARGET: نه
+CROSS_AUDIT_TARGET: Hunter, Optimizer, Converter
 === END BRIEF ===
 
 --- تاریخچه گزارش‌ها ---
