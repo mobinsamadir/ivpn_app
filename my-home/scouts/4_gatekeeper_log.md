@@ -80,3 +80,11 @@ CROSS_AUDIT_TARGET: نه
 - **پیشنهاد**: باید تست‌هایی برای شبیه‌سازی response های مختلف sing-box با استفاده از mock process نوشته شود.
 - **تلاش برای بهبود**: ۴۵ دقیقه
 - **اولویت**: بالا
+
+---
+**وضعیت پیاده‌سازی امشب (بروزرسانی)**
+گزارش #۱: ✅ انجام شد. تست برای ensureBinary در `test/services/binary_manager_test.dart` نوشته شد.
+گزارش #۲: ✅ انجام شد. تست unit پایه‌ای در `test/services/funnel_service_test.dart` برای ایزوله‌ها نوشته شد.
+گزارش #۳: ✅ انجام شد. تست unit برای اجرای graceful روی پورت نامعتبر در `test/services/ephemeral_tester_process_test.dart` پیاده‌سازی شد.
+
+آپدیت شد: 05:30
