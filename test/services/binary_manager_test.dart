@@ -2,8 +2,6 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ivpn_new/services/binary_manager.dart';
 
-
-
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 

@@ -2,7 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ivpn_new/services/testers/ephemeral_tester.dart';
 import 'package:ivpn_new/models/vpn_config_with_metrics.dart';
 
-
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
