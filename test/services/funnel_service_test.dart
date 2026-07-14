@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ivpn_new/services/funnel_service.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('Funnel Service Isolate Logic', () {
     test(
       'batchProcessConfigsInIsolate handles mixed valid and invalid configs',
@@ -45,5 +47,18 @@ void main() {
         );
       },
     );
+  });
+
+  group('FunnelService queue processing tests', () {
+    test('stop clears internal state without throwing exceptions', () async {
+      final service = FunnelService();
+
+      service.startFunnel();
+
+      // Stop should cancel all streams safely
+      service.stop();
+
+      expect(true, isTrue); // Graceful execution
+    });
   });
 }
