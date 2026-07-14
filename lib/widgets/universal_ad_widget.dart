@@ -12,7 +12,6 @@ import 'package:video_player/video_player.dart';
 import '../services/ad_manager_service.dart';
 import '../models/ad_config.dart';
 import '../utils/advanced_logger.dart';
-import '../widgets/scale_on_tap.dart';
 
 class UniversalAdWidget extends StatefulWidget {
   final String slot;
@@ -114,7 +113,7 @@ class _ImageAd extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ScaleOnTap(
+    return GestureDetector(
       onTap: () {
         if (targetUrl.isNotEmpty) {
           launchUrl(Uri.parse(targetUrl), mode: LaunchMode.externalApplication);
@@ -181,7 +180,7 @@ class _VideoAdState extends State<_VideoAd> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    return ScaleOnTap(
+    return GestureDetector(
       onTap: () {
         if (widget.targetUrl.isNotEmpty) {
           launchUrl(
