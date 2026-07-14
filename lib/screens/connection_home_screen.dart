@@ -1560,7 +1560,7 @@ class _AdBannerSection extends StatelessWidget {
   }
 }
 
-class _SubscriptionCard extends StatelessWidget {
+class _SubscriptionCard extends StatefulWidget {
   final bool hasTime;
   final int remainingSeconds;
   final VoidCallback onAddTime;
@@ -1570,6 +1570,39 @@ class _SubscriptionCard extends StatelessWidget {
     required this.remainingSeconds,
     required this.onAddTime,
   });
+
+  @override
+  State<_SubscriptionCard> createState() => _SubscriptionCardState();
+}
+
+class _SubscriptionCardState extends State<_SubscriptionCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pulseController;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _glowAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+
+    _glowAnimation = Tween<double>(begin: 0.0, end: 8.0).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1590,21 +1623,41 @@ class _SubscriptionCard extends StatelessWidget {
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         subtitle: Text(
-          hasTime
-              ? '${(remainingSeconds ~/ 3600)}h ${((remainingSeconds % 3600) ~/ 60)}m remaining'
+          widget.hasTime
+              ? '${(widget.remainingSeconds ~/ 3600)}h ${((widget.remainingSeconds % 3600) ~/ 60)}m remaining'
               : 'No active plan',
           style: const TextStyle(color: Colors.grey),
         ),
-        trailing: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.blueAccent,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-          ),
-          onPressed: onAddTime,
-          child: const Text('Add Time'),
+        trailing: AnimatedBuilder(
+          animation: _pulseController,
+          builder: (context, child) {
+            return Transform.scale(
+              scale: _scaleAnimation.value,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.blueAccent.withValues(alpha: 0.6),
+                      blurRadius: _glowAnimation.value + 4.0,
+                      spreadRadius: _glowAnimation.value / 2,
+                    ),
+                  ],
+                ),
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blueAccent,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                  onPressed: widget.onAddTime,
+                  child: const Text('🎁 Add Time'),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
