@@ -361,14 +361,8 @@ void main() {
 
           // Both need currentPing > 0 to be valid candidates
           for (var c in manager.allConfigs) {
-            // Need funnelStage to be > 0 and different scores to ensure predictability in skipToNext, or similar scores but stable addedDate.
-            await manager.updateConfigDirectly(c.copyWith(funnelStage: 1));
             await manager.updateConfigMetrics(c.id, ping: 100);
           }
-
-          // Force different addedDates so that sorting is stable
-          manager.allConfigs[0] = manager.allConfigs[0].copyWith(addedDate: DateTime.fromMillisecondsSinceEpoch(1));
-          manager.allConfigs[1] = manager.allConfigs[1].copyWith(addedDate: DateTime.fromMillisecondsSinceEpoch(2));
 
           manager.selectConfig(
             manager.allConfigs.firstWhere((c) => c.name == 'Skip1'),
