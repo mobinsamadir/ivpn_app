@@ -397,7 +397,11 @@ class ConfigManager extends ChangeNotifier {
 
     // Process in chunks to avoid Isolate memory overload
     for (int i = 0; i < configStrings.length; i += batchSize) {
-      final chunk = configStrings.sublist(i, (i + batchSize > configStrings.length) ? configStrings.length : i + batchSize);
+      final chunk = configStrings.sublist(
+          i,
+          (i + batchSize > configStrings.length)
+              ? configStrings.length
+              : i + batchSize);
 
       final args = {
         'configStrings': chunk,
