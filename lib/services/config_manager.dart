@@ -393,7 +393,10 @@ class ConfigManager extends ChangeNotifier {
 
     // Process in chunks to avoid Isolate memory overload
     for (int i = 0; i < configStrings.length; i += batchSize) {
-      final chunk = configStrings.skip(i).take(batchSize).toList();
+      final end = (i + batchSize < configStrings.length)
+          ? i + batchSize
+          : configStrings.length;
+      final chunk = configStrings.sublist(i, end);
 
       final args = {
         'configStrings': chunk,
@@ -758,7 +761,8 @@ class ConfigManager extends ChangeNotifier {
   }
 
   static Future<List<VpnConfigWithMetrics>> _decodeConfigsInIsolate(
-      String jsonStr) async {
+    String jsonStr,
+  ) async {
     final List<VpnConfigWithMetrics> configs = [];
     final list = jsonDecode(jsonStr) as List;
     for (var e in list) {
@@ -800,15 +804,15 @@ class ConfigManager extends ChangeNotifier {
 
   // Isolate entry point for encoding configs to JSON
   static Future<String> _encodeConfigsInIsolate(
-    List<Map<String, dynamic>> configsJson,
+    List<VpnConfigWithMetrics> configs,
   ) async {
-    return jsonEncode(configsJson);
+    return jsonEncode(configs.map((e) => e.toJson()).toList());
   }
 
   Future<void> _saveAllConfigs() async {
     try {
       // Deep copy to prevent concurrent modification exceptions during isolate execution
-      final configsSnapshot = allConfigs.map((e) => e.toJson()).toList();
+      final configsSnapshot = List<VpnConfigWithMetrics>.from(allConfigs);
 
       // Compute JSON encoding in a background isolate to prevent UI thread blockage
       compute(_encodeConfigsInIsolate, configsSnapshot).then((jsonString) {
