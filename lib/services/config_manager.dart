@@ -394,7 +394,11 @@ class ConfigManager extends ChangeNotifier {
 
     // Process in chunks to avoid Isolate memory overload
     for (int i = 0; i < configStrings.length; i += batchSize) {
-      final chunk = configStrings.sublist(i, (i + batchSize > configStrings.length) ? configStrings.length : i + batchSize);
+      final chunk = configStrings.sublist(
+          i,
+          (i + batchSize > configStrings.length)
+              ? configStrings.length
+              : i + batchSize);
 
       final args = {
         'configStrings': chunk,
@@ -882,7 +886,8 @@ class ConfigManager extends ChangeNotifier {
 
   Future<void> _saveBlacklist() async {
     try {
-      final encodedStr = await compute(_encodeStringListInIsolate, _blockedConfigs.toList());
+      final encodedStr =
+          await compute(_encodeStringListInIsolate, _blockedConfigs.toList());
       await storage.setString(
         _blacklistKey,
         encodedStr,
@@ -917,7 +922,8 @@ class ConfigManager extends ChangeNotifier {
     final jsonStr = await storage.getString(_splitTunnelingKey);
     if (jsonStr != null) {
       try {
-        _splitTunnelingPackages = await compute(_decodeStringListInIsolate, jsonStr);
+        _splitTunnelingPackages =
+            await compute(_decodeStringListInIsolate, jsonStr);
         _setCache(_splitTunnelingKey, _splitTunnelingPackages);
       } catch (e) {
         AdvancedLogger.error(
@@ -934,7 +940,8 @@ class ConfigManager extends ChangeNotifier {
 
   Future<void> _saveSplitTunnelingPackages() async {
     _setCache(_splitTunnelingKey, _splitTunnelingPackages);
-    final encodedStr = await compute(_encodeStringListInIsolate, _splitTunnelingPackages);
+    final encodedStr =
+        await compute(_encodeStringListInIsolate, _splitTunnelingPackages);
     await storage.setString(
       _splitTunnelingKey,
       encodedStr,
