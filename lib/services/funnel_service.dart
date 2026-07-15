@@ -179,7 +179,7 @@ class FunnelService {
       _cachedServerDetails = {};
       final int batchSize = 200;
       for (int i = 0; i < lightweightConfigs.length; i += batchSize) {
-        final chunk = lightweightConfigs.skip(i).take(batchSize).toList();
+        final chunk = lightweightConfigs.sublist(i, (i + batchSize > lightweightConfigs.length) ? lightweightConfigs.length : i + batchSize);
         final chunkResults = await compute(batchProcessConfigsInIsolate, chunk);
         _cachedServerDetails.addAll(chunkResults);
       }

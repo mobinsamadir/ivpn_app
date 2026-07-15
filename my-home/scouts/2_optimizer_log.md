@@ -18,3 +18,5 @@ CROSS_AUDIT_TARGET: نه
 --- تاریخچه گزارش‌ها ---
 
 [شروع]
+
+[2026-07-14] (Phase 2): Refactored `.skip().take()` O(N*M) bottlenecks into `sublist` replacements, and moved heavy JSON parsing inside `config_manager.dart` to a `compute()` isolate. Cleaned up workspace after execution and tests pass perfectly.

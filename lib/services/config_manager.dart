@@ -19,6 +19,10 @@ import 'testers/ephemeral_tester.dart';
 
 // --- TOP-LEVEL HELPER FUNCTIONS FOR ISOLATE ---
 
+dynamic _parseJsonInIsolate(String jsonStr) {
+  return jsonDecode(jsonStr);
+}
+
 String _extractServerName(String raw) {
   try {
     final uri = Uri.parse(raw);
@@ -393,7 +397,7 @@ class ConfigManager extends ChangeNotifier {
 
     // Process in chunks to avoid Isolate memory overload
     for (int i = 0; i < configStrings.length; i += batchSize) {
-      final chunk = configStrings.skip(i).take(batchSize).toList();
+      final chunk = configStrings.sublist(i, (i + batchSize > configStrings.length) ? configStrings.length : i + batchSize);
 
       final args = {
         'configStrings': chunk,
@@ -861,7 +865,8 @@ class ConfigManager extends ChangeNotifier {
     try {
       final str = await storage.getString(_blacklistKey);
       if (str != null) {
-        final list = jsonDecode(str) as List;
+        final parsed = await compute(_parseJsonInIsolate, str);
+        final list = parsed as List;
         _blockedConfigs = list.cast<String>().toSet();
       } else {
         _blockedConfigs = <String>{};
@@ -907,7 +912,8 @@ class ConfigManager extends ChangeNotifier {
     final jsonStr = await storage.getString(_splitTunnelingKey);
     if (jsonStr != null) {
       try {
-        final List<dynamic> decoded = jsonDecode(jsonStr);
+        final parsed = await compute(_parseJsonInIsolate, jsonStr);
+        final List<dynamic> decoded = parsed as List<dynamic>;
         _splitTunnelingPackages = decoded.cast<String>();
         _setCache(_splitTunnelingKey, _splitTunnelingPackages);
       } catch (e) {
