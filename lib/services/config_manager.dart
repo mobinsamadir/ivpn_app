@@ -371,7 +371,6 @@ class ConfigManager extends ChangeNotifier {
 
   Future<void> _onThrottleTick() async {
     await _updateLists(); // Async update via isolate
-    unawaited(_saveAllConfigs()); // Ensure disk write doesn't block UI
     _safeNotifyListeners();
 
     _throttleTimer = null;
@@ -543,7 +542,7 @@ class ConfigManager extends ChangeNotifier {
         isAlive: true,
       );
       await _updateLists();
-      unawaited(_saveAllConfigs());
+      await _saveAllConfigs();
       _safeNotifyListeners();
     }
   }
@@ -556,7 +555,7 @@ class ConfigManager extends ChangeNotifier {
         isAlive: false,
       );
       await _updateLists();
-      unawaited(_saveAllConfigs());
+      await _saveAllConfigs();
       _safeNotifyListeners();
     }
   }
@@ -574,7 +573,7 @@ class ConfigManager extends ChangeNotifier {
         lastFailedStage: "Invalid_Config",
       );
       await _updateLists();
-      unawaited(_saveAllConfigs());
+      await _saveAllConfigs();
       _safeNotifyListeners();
     }
   }
@@ -766,17 +765,8 @@ class ConfigManager extends ChangeNotifier {
     }
   }
 
-  static List<String> _decodeStringListInIsolate(String jsonStr) {
-    return (jsonDecode(jsonStr) as List).cast<String>();
-  }
-
-  static String _encodeStringListInIsolate(List<String> list) {
-    return jsonEncode(list);
-  }
-
   static Future<List<VpnConfigWithMetrics>> _decodeConfigsInIsolate(
-    String jsonStr,
-  ) async {
+      String jsonStr) async {
     final List<VpnConfigWithMetrics> configs = [];
     final list = jsonDecode(jsonStr) as List;
     for (var e in list) {
@@ -818,15 +808,15 @@ class ConfigManager extends ChangeNotifier {
 
   // Isolate entry point for encoding configs to JSON
   static Future<String> _encodeConfigsInIsolate(
-    List<VpnConfigWithMetrics> configs,
+    List<Map<String, dynamic>> configsJson,
   ) async {
-    return jsonEncode(configs.map((e) => e.toJson()).toList());
+    return jsonEncode(configsJson);
   }
 
   Future<void> _saveAllConfigs() async {
     try {
       // Deep copy to prevent concurrent modification exceptions during isolate execution
-      final configsSnapshot = List<VpnConfigWithMetrics>.from(allConfigs);
+      final configsSnapshot = allConfigs.map((e) => e.toJson()).toList();
 
       // Compute JSON encoding in a background isolate to prevent UI thread blockage
       compute(_encodeConfigsInIsolate, configsSnapshot).then((jsonString) {
@@ -892,11 +882,9 @@ class ConfigManager extends ChangeNotifier {
 
   Future<void> _saveBlacklist() async {
     try {
-      final encodedStr =
-          await compute(_encodeStringListInIsolate, _blockedConfigs.toList());
       await storage.setString(
         _blacklistKey,
-        encodedStr,
+        jsonEncode(_blockedConfigs.toList()),
       );
     } catch (e) {
       AdvancedLogger.warn('[ConfigManager] Failed to save blacklist: $e');
@@ -947,11 +935,9 @@ class ConfigManager extends ChangeNotifier {
 
   Future<void> _saveSplitTunnelingPackages() async {
     _setCache(_splitTunnelingKey, _splitTunnelingPackages);
-    final encodedStr =
-        await compute(_encodeStringListInIsolate, _splitTunnelingPackages);
     await storage.setString(
       _splitTunnelingKey,
-      encodedStr,
+      jsonEncode(_splitTunnelingPackages),
     );
   }
 
