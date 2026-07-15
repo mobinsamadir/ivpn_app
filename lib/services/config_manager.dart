@@ -857,11 +857,15 @@ class ConfigManager extends ChangeNotifier {
     }
   }
 
+  static Future<List<dynamic>> _decodeJsonInIsolate(String str) async {
+    return jsonDecode(str) as List<dynamic>;
+  }
+
   Future<void> _loadBlacklist() async {
     try {
       final str = await storage.getString(_blacklistKey);
       if (str != null) {
-        final list = jsonDecode(str) as List;
+        final list = await compute(_decodeJsonInIsolate, str);
         _blockedConfigs = list.cast<String>().toSet();
       } else {
         _blockedConfigs = <String>{};
@@ -871,11 +875,16 @@ class ConfigManager extends ChangeNotifier {
     }
   }
 
+  static Future<String> _encodeJsonInIsolate(List<dynamic> list) async {
+    return jsonEncode(list);
+  }
+
   Future<void> _saveBlacklist() async {
     try {
+      final str = await compute(_encodeJsonInIsolate, _blockedConfigs.toList());
       await storage.setString(
         _blacklistKey,
-        jsonEncode(_blockedConfigs.toList()),
+        str,
       );
     } catch (e) {
       AdvancedLogger.warn('[ConfigManager] Failed to save blacklist: $e');
@@ -907,7 +916,7 @@ class ConfigManager extends ChangeNotifier {
     final jsonStr = await storage.getString(_splitTunnelingKey);
     if (jsonStr != null) {
       try {
-        final List<dynamic> decoded = jsonDecode(jsonStr);
+        final List<dynamic> decoded = await compute(_decodeJsonInIsolate, jsonStr);
         _splitTunnelingPackages = decoded.cast<String>();
         _setCache(_splitTunnelingKey, _splitTunnelingPackages);
       } catch (e) {
@@ -925,9 +934,10 @@ class ConfigManager extends ChangeNotifier {
 
   Future<void> _saveSplitTunnelingPackages() async {
     _setCache(_splitTunnelingKey, _splitTunnelingPackages);
+    final str = await compute(_encodeJsonInIsolate, _splitTunnelingPackages);
     await storage.setString(
       _splitTunnelingKey,
-      jsonEncode(_splitTunnelingPackages),
+      str,
     );
   }
 
