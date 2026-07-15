@@ -766,10 +766,6 @@ class ConfigManager extends ChangeNotifier {
     }
   }
 
-  static List<String> _decodeStringListInIsolate(String jsonStr) {
-    return (jsonDecode(jsonStr) as List).cast<String>();
-  }
-
   static String _encodeStringListInIsolate(List<String> list) {
     return jsonEncode(list);
   }
@@ -875,10 +871,6 @@ class ConfigManager extends ChangeNotifier {
     }
   }
 
-  static Future<List<dynamic>> _decodeJsonInIsolate(String str) async {
-    return jsonDecode(str) as List<dynamic>;
-  }
-
   Future<void> _loadBlacklist() async {
     try {
       final str = await storage.getString(_blacklistKey);
@@ -892,10 +884,6 @@ class ConfigManager extends ChangeNotifier {
     } catch (e) {
       AdvancedLogger.warn('[ConfigManager] Failed to load blacklist: $e');
     }
-  }
-
-  static Future<String> _encodeJsonInIsolate(List<dynamic> list) async {
-    return jsonEncode(list);
   }
 
   Future<void> _saveBlacklist() async {
