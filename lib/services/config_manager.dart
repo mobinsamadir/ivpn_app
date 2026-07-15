@@ -19,6 +19,10 @@ import 'testers/ephemeral_tester.dart';
 
 // --- TOP-LEVEL HELPER FUNCTIONS FOR ISOLATE ---
 
+dynamic _parseJsonInIsolate(String jsonStr) {
+  return jsonDecode(jsonStr);
+}
+
 String _extractServerName(String raw) {
   try {
     final uri = Uri.parse(raw);
@@ -367,6 +371,7 @@ class ConfigManager extends ChangeNotifier {
 
   Future<void> _onThrottleTick() async {
     await _updateLists(); // Async update via isolate
+    unawaited(_saveAllConfigs()); // Ensure disk write doesn't block UI
     _safeNotifyListeners();
 
     _throttleTimer = null;
@@ -393,7 +398,11 @@ class ConfigManager extends ChangeNotifier {
 
     // Process in chunks to avoid Isolate memory overload
     for (int i = 0; i < configStrings.length; i += batchSize) {
-      final chunk = configStrings.skip(i).take(batchSize).toList();
+      final chunk = configStrings.sublist(
+          i,
+          (i + batchSize > configStrings.length)
+              ? configStrings.length
+              : i + batchSize);
 
       final args = {
         'configStrings': chunk,
@@ -534,7 +543,7 @@ class ConfigManager extends ChangeNotifier {
         isAlive: true,
       );
       await _updateLists();
-      await _saveAllConfigs();
+      unawaited(_saveAllConfigs());
       _safeNotifyListeners();
     }
   }
@@ -547,7 +556,7 @@ class ConfigManager extends ChangeNotifier {
         isAlive: false,
       );
       await _updateLists();
-      await _saveAllConfigs();
+      unawaited(_saveAllConfigs());
       _safeNotifyListeners();
     }
   }
@@ -565,7 +574,7 @@ class ConfigManager extends ChangeNotifier {
         lastFailedStage: "Invalid_Config",
       );
       await _updateLists();
-      await _saveAllConfigs();
+      unawaited(_saveAllConfigs());
       _safeNotifyListeners();
     }
   }
@@ -757,8 +766,17 @@ class ConfigManager extends ChangeNotifier {
     }
   }
 
+  static List<String> _decodeStringListInIsolate(String jsonStr) {
+    return (jsonDecode(jsonStr) as List).cast<String>();
+  }
+
+  static String _encodeStringListInIsolate(List<String> list) {
+    return jsonEncode(list);
+  }
+
   static Future<List<VpnConfigWithMetrics>> _decodeConfigsInIsolate(
-      String jsonStr) async {
+    String jsonStr,
+  ) async {
     final List<VpnConfigWithMetrics> configs = [];
     final list = jsonDecode(jsonStr) as List;
     for (var e in list) {
@@ -800,15 +818,15 @@ class ConfigManager extends ChangeNotifier {
 
   // Isolate entry point for encoding configs to JSON
   static Future<String> _encodeConfigsInIsolate(
-    List<Map<String, dynamic>> configsJson,
+    List<VpnConfigWithMetrics> configs,
   ) async {
-    return jsonEncode(configsJson);
+    return jsonEncode(configs.map((e) => e.toJson()).toList());
   }
 
   Future<void> _saveAllConfigs() async {
     try {
       // Deep copy to prevent concurrent modification exceptions during isolate execution
-      final configsSnapshot = allConfigs.map((e) => e.toJson()).toList();
+      final configsSnapshot = List<VpnConfigWithMetrics>.from(allConfigs);
 
       // Compute JSON encoding in a background isolate to prevent UI thread blockage
       compute(_encodeConfigsInIsolate, configsSnapshot).then((jsonString) {
@@ -865,7 +883,8 @@ class ConfigManager extends ChangeNotifier {
     try {
       final str = await storage.getString(_blacklistKey);
       if (str != null) {
-        final list = await compute(_decodeJsonInIsolate, str);
+        final parsed = await compute(_parseJsonInIsolate, str);
+        final list = parsed as List;
         _blockedConfigs = list.cast<String>().toSet();
       } else {
         _blockedConfigs = <String>{};
@@ -881,10 +900,11 @@ class ConfigManager extends ChangeNotifier {
 
   Future<void> _saveBlacklist() async {
     try {
-      final str = await compute(_encodeJsonInIsolate, _blockedConfigs.toList());
+      final encodedStr =
+          await compute(_encodeStringListInIsolate, _blockedConfigs.toList());
       await storage.setString(
         _blacklistKey,
-        str,
+        encodedStr,
       );
     } catch (e) {
       AdvancedLogger.warn('[ConfigManager] Failed to save blacklist: $e');
@@ -916,8 +936,8 @@ class ConfigManager extends ChangeNotifier {
     final jsonStr = await storage.getString(_splitTunnelingKey);
     if (jsonStr != null) {
       try {
-        final List<dynamic> decoded =
-            await compute(_decodeJsonInIsolate, jsonStr);
+        final parsed = await compute(_parseJsonInIsolate, jsonStr);
+        final List<dynamic> decoded = parsed as List<dynamic>;
         _splitTunnelingPackages = decoded.cast<String>();
         _setCache(_splitTunnelingKey, _splitTunnelingPackages);
       } catch (e) {
@@ -935,10 +955,11 @@ class ConfigManager extends ChangeNotifier {
 
   Future<void> _saveSplitTunnelingPackages() async {
     _setCache(_splitTunnelingKey, _splitTunnelingPackages);
-    final str = await compute(_encodeJsonInIsolate, _splitTunnelingPackages);
+    final encodedStr =
+        await compute(_encodeStringListInIsolate, _splitTunnelingPackages);
     await storage.setString(
       _splitTunnelingKey,
-      str,
+      encodedStr,
     );
   }
 

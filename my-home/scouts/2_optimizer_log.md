@@ -18,19 +18,12 @@ CROSS_AUDIT_TARGET: نه
 --- تاریخچه گزارش‌ها ---
 
 [شروع]
-### [تاریخ: 2026-07-14] Optimizer Report (Phase 2)
+### [تاریخ: ۲۰۲۶-۰۷-۱۴] Optimizer Report (Phase 2)
 
 **اقدامات انجام شده:**
-- گلوگاه `.skip().take()` در `lib/services/funnel_service.dart` برطرف شد و با `.sublist(i, end)` که دارای O(N) هست جایگزین شد.
-- دی‌کد و انکد کردن JSON برای عملیات‌های بلک‌لیست و split tunneling در `lib/services/config_manager.dart` با استفاده از `compute()` و isolates انجام شد تا UI thread مسدود نشود.
+۱. رفع O(N*M) در استفاده از `.skip().take()` در توابع `startFunnel` در `funnel_service.dart` و `addConfigs` در `config_manager.dart` با جایگزینی آن به کمک `.sublist()`.
+۲. حل مشکل فریز شدن رابط کاربری ناشی از تبدیل لیست بزرگ پیکربندی‌ها به JSON در ترد اصلی. از متدهای مجزای `compute` برای parse و encode استفاده شد.
+۳. اجرای موفق تمامی تست‌ها (به ویژه `funnel_service_test.dart` و `config_manager_test.dart`) برای حصول اطمینان از عدم ایجاد پس‌رفت (regression) در سیستم.
+تغییرات در کدهای پروژه نهایی شده و با موفقیت push شد.
 
-**نتایج:**
-- تست‌های `flutter test` پاس شدند و خطایی وجود نداشت.
-### [تاریخ: 2026-07-14] Optimizer Report (Phase 2)
-
-**اقدامات انجام شده:**
-- گلوگاه `.skip().take()` در `lib/services/funnel_service.dart` برطرف شد و با `.sublist(i, end)` که دارای O(N) هست جایگزین شد.
-- دی‌کد و انکد کردن JSON برای عملیات‌های بلک‌لیست و split tunneling در `lib/services/config_manager.dart` با استفاده از `compute()` و isolates انجام شد تا UI thread مسدود نشود.
-
-**نتایج:**
-- تست‌های `flutter test` پاس شدند و خطایی وجود نداشت.
+آپدیت شد: 06:12
