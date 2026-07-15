@@ -916,7 +916,8 @@ class ConfigManager extends ChangeNotifier {
     final jsonStr = await storage.getString(_splitTunnelingKey);
     if (jsonStr != null) {
       try {
-        final List<dynamic> decoded = await compute(_decodeJsonInIsolate, jsonStr);
+        final List<dynamic> decoded =
+            await compute(_decodeJsonInIsolate, jsonStr);
         _splitTunnelingPackages = decoded.cast<String>();
         _setCache(_splitTunnelingKey, _splitTunnelingPackages);
       } catch (e) {
