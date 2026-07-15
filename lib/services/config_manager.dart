@@ -19,6 +19,10 @@ import 'testers/ephemeral_tester.dart';
 
 // --- TOP-LEVEL HELPER FUNCTIONS FOR ISOLATE ---
 
+dynamic _parseJsonInIsolate(String jsonStr) {
+  return jsonDecode(jsonStr);
+}
+
 String _extractServerName(String raw) {
   try {
     final uri = Uri.parse(raw);
@@ -875,8 +879,9 @@ class ConfigManager extends ChangeNotifier {
     try {
       final str = await storage.getString(_blacklistKey);
       if (str != null) {
-        final list = await compute(_decodeStringListInIsolate, str);
-        _blockedConfigs = list.toSet();
+        final parsed = await compute(_parseJsonInIsolate, str);
+        final list = parsed as List;
+        _blockedConfigs = list.cast<String>().toSet();
       } else {
         _blockedConfigs = <String>{};
       }
@@ -923,8 +928,9 @@ class ConfigManager extends ChangeNotifier {
     final jsonStr = await storage.getString(_splitTunnelingKey);
     if (jsonStr != null) {
       try {
-        _splitTunnelingPackages =
-            await compute(_decodeStringListInIsolate, jsonStr);
+        final parsed = await compute(_parseJsonInIsolate, jsonStr);
+        final List<dynamic> decoded = parsed as List<dynamic>;
+        _splitTunnelingPackages = decoded.cast<String>();
         _setCache(_splitTunnelingKey, _splitTunnelingPackages);
       } catch (e) {
         AdvancedLogger.error(
