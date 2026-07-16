@@ -266,7 +266,8 @@ class NativeVpnService {
       await tempFile.writeAsString(configJson);
 
       try {
-        await _methodChannel.invokeMethod('startVpn', {'config': tempFile.path});
+        await _methodChannel
+            .invokeMethod('startVpn', {'config': tempFile.path});
       } catch (e) {
         if (tempFile.existsSync()) {
           tempFile.deleteSync();
