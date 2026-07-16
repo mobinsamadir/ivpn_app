@@ -1,7 +1,7 @@
-=== MISSION BRIEF: 2026-07-14 ===
+=== MISSION BRIEF: 2026-07-15 ===
 ROLE_TONIGHT: Security Fixer
 ASSIGNED_BY: Mastermind
-REASON: شب دوم - رفع مشکلات حیاتی امنیتی نشت اطلاعات فایل‌های کانفیگ
+REASON: شب سوم - رفع مشکلات حیاتی امنیتی نشت اطلاعات فایل‌های موقت (منتظر تایید نهایی انسان برای اجرا)
 
 SCOPE:
 - lib/services/windows_vpn_service.dart
@@ -10,7 +10,7 @@ SCOPE:
 FROZEN_ZONES:
 - none
 
-SPECIFIC_TASK: رفع باگ عدم حذف فایل‌های کانفیگ در فولدر موقت (Information Disclosure).
+SPECIFIC_TASK: رفع باگ عدم حذف فایل‌های کانفیگ در فولدر موقت (Information Disclosure) - پس از دریافت تاییدیه (***).
 
 CROSS_AUDIT_TARGET: نه
 === END BRIEF ===
