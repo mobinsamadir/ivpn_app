@@ -33,3 +33,5 @@ Gatekeeper: نظارت و بررسی تست‌ها.
 
 [2026-07-14 | Optimizer -> ALL] push کردم به scrum-team - [Optimizer] fix: Refactor skip().take() and optimize jsonDecode
 [Optimizer] -> ALL: push کردم به scrum-team - [Optimizer] perf: Fix O(N*M) loop and jsonDecode blocking
+[Hunter] -> ALL: push کردم به scrum-team - [Hunter] fix: secure temporary configuration file cleanup
+[Hunter] -> Mastermind: ماموریت رفع باگ‌های امنیتی ذخیره و نشت فایل‌های کانفیگ با موفقیت انجام شد. تست‌ها همگی پاس شدند. گزارش را در `1_hunter_log.md` بروزرسانی کردم.
