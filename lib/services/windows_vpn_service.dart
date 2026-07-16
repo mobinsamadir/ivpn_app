@@ -21,6 +21,7 @@ String _generateConfigWrapper(Map<String, dynamic> args) {
 class WindowsVpnService {
   static bool isUserInitiatedDisconnect = false;
   Process? _process;
+  String? _currentConfigPath;
 
   // Log Stream (Stdout/Stderr)
   final _logController = StreamController<String>.broadcast();
@@ -370,6 +371,7 @@ class WindowsVpnService {
       final tempDir = await getTemporaryDirectory();
       final configFile = File(p.join(tempDir.path, 'config.json'));
       await configFile.writeAsString(jsonConfig);
+      _currentConfigPath = configFile.path;
       AdvancedLogger.info(
         '[WindowsVpnService] Config file written to: ${configFile.path}',
       );
@@ -594,6 +596,25 @@ class WindowsVpnService {
       }
     } else {
       AdvancedLogger.info('[WindowsVpnService] No VPN process to stop');
+    }
+
+    // Clean up sensitive configuration file
+    if (_currentConfigPath != null) {
+      try {
+        final configFile = File(_currentConfigPath!);
+        if (configFile.existsSync()) {
+          configFile.deleteSync();
+          AdvancedLogger.info(
+            '[WindowsVpnService] Deleted temporary config file: $_currentConfigPath',
+          );
+        }
+      } catch (e) {
+        AdvancedLogger.warn(
+          '[WindowsVpnService] Failed to delete config file: $_currentConfigPath, error: $e',
+        );
+      } finally {
+        _currentConfigPath = null;
+      }
     }
 
     // Heavy-Duty Disconnect: Kill all sing-box processes including child processes
