@@ -116,10 +116,17 @@ class NativeVpnService {
           '${tempDir.path}/ping_config_${DateTime.now().millisecondsSinceEpoch}.json');
       await tempFile.writeAsString(config);
 
-      final int latency = await _methodChannel.invokeMethod('testConfig', {
-        'config': tempFile.path,
-      });
-      return latency <= 0 ? failedPingValue : latency;
+      try {
+        final int latency = await _methodChannel.invokeMethod('testConfig', {
+          'config': tempFile.path,
+        });
+        return latency <= 0 ? failedPingValue : latency;
+      } catch (e) {
+        if (tempFile.existsSync()) {
+          tempFile.deleteSync();
+        }
+        rethrow;
+      }
     } on PlatformException catch (e) {
       if (e.code == 'PERMISSION_DENIED') {
         AdvancedLogger.warn("VPN Permission not granted. Skipping test.");
@@ -171,10 +178,17 @@ class NativeVpnService {
           '${tempDir.path}/test_proxy_${DateTime.now().millisecondsSinceEpoch}.json');
       await tempFile.writeAsString(configJson);
 
-      final int result = await _methodChannel.invokeMethod('startTestProxy', {
-        'config': tempFile.path,
-      });
-      return result;
+      try {
+        final int result = await _methodChannel.invokeMethod('startTestProxy', {
+          'config': tempFile.path,
+        });
+        return result;
+      } catch (e) {
+        if (tempFile.existsSync()) {
+          tempFile.deleteSync();
+        }
+        rethrow;
+      }
     } on PlatformException catch (e) {
       if (e.code == 'PERMISSION_DENIED') {
         AdvancedLogger.warn(
@@ -251,7 +265,15 @@ class NativeVpnService {
           '${tempDir.path}/vpn_config_${DateTime.now().millisecondsSinceEpoch}.json');
       await tempFile.writeAsString(configJson);
 
-      await _methodChannel.invokeMethod('startVpn', {'config': tempFile.path});
+      try {
+        await _methodChannel
+            .invokeMethod('startVpn', {'config': tempFile.path});
+      } catch (e) {
+        if (tempFile.existsSync()) {
+          tempFile.deleteSync();
+        }
+        rethrow;
+      }
 
       AdvancedLogger.info(
         "✅ [Native] Connect command sent. Waiting for OS confirmation...",
