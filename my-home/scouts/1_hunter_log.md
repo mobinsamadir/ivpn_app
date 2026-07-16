@@ -1,7 +1,7 @@
-=== MISSION BRIEF: 2026-07-14 ===
+=== MISSION BRIEF: 2026-07-15 ===
 ROLE_TONIGHT: Security Fixer
 ASSIGNED_BY: Mastermind
-REASON: شب دوم - رفع مشکلات حیاتی امنیتی نشت اطلاعات فایل‌های کانفیگ
+REASON: شب سوم - رفع مشکلات حیاتی امنیتی نشت اطلاعات فایل‌های موقت (منتظر تایید نهایی انسان برای اجرا)
 
 SCOPE:
 - lib/services/windows_vpn_service.dart
@@ -10,7 +10,7 @@ SCOPE:
 FROZEN_ZONES:
 - none
 
-SPECIFIC_TASK: رفع باگ عدم حذف فایل‌های کانفیگ در فولدر موقت (Information Disclosure).
+SPECIFIC_TASK: رفع باگ عدم حذف فایل‌های کانفیگ در فولدر موقت (Information Disclosure) - پس از دریافت تاییدیه (***).
 
 CROSS_AUDIT_TARGET: نه
 === END BRIEF ===
@@ -63,3 +63,11 @@ CROSS_AUDIT_TARGET: نه
 ۲. رفع نشت فایل در `native_vpn_service.dart`: عملیات فرستادن فایل به Native در متدهای `getPing`، `startTestProxy` و `connect` در بلاک `try-catch` قرار گرفت تا در صورت بروز Exception، فایل موقت فوراً حذف شود.
 ۳. تست‌ها برای اطمینان از صحت تغییرات اجرا شدند.
 وضعیت: با موفقیت اعمال شد.
+### [تاریخ: ۲۰۲۶-۰۷-۱۴] Hunter Report (Phase 2)
+**اقدامات انجام شده (Security Fix):**
+۱. رفع `Information Disclosure` در فایل `windows_vpn_service.dart`: یک فیلد `_currentConfigPath` اضافه شد که مسیر ساخت فایل `config.json` را در هنگام `startVpn` ذخیره کرده و در متد `stopVpn` آن را در صورت وجود حذف می‌کند.
+۲. رفع مشکل عدم پاک شدن فایل‌های موقت در `native_vpn_service.dart` (اندروید/iOS): در متدهای `getPing`، `startTestProxy` و `connect` عملیات ارسال به سمت Native (`_methodChannel.invokeMethod`) در یک بلوک `try-catch` محصور شد. در صورت بروز هرگونه خطا (`Exception`)، ابتدا فایل کانفیگ بلافاصله با `tempFile.deleteSync()` پاک شده و سپس خطا با `rethrow` پرتاب می‌شود. این روش علاوه بر تضمین امنیت، باعث می‌شود با پردازش‌های مستقلِ Native تداخل صورت نگیرد (Race Condition جلوگیری شود).
+۳. تمام تست‌های واحد با موفقیت اجرا شدند و هیچ‌گونه رگرسیونی ایجاد نشده است.
+تغییرات با موفقیت اعمال و در ریپازیتوری کامیت شدند.
+
+آپدیت شد: 02:40
