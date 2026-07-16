@@ -705,6 +705,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
           color: Colors.blueAccent,
           onRefresh: _refreshConfigsManual,
           child: CustomScrollView(
+            // ignore: deprecated_member_use
             cacheExtent: 1000,
             slivers: [
               // 1. Banner for Admin Warning (Windows only)
