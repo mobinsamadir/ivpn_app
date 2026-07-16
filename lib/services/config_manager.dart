@@ -766,9 +766,6 @@ class ConfigManager extends ChangeNotifier {
     }
   }
 
-  static List<String> _decodeStringListInIsolate(String jsonStr) {
-    return (jsonDecode(jsonStr) as List).cast<String>();
-  }
 
   static String _encodeStringListInIsolate(List<String> list) {
     return jsonEncode(list);
