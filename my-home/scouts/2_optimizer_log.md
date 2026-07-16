@@ -1,16 +1,16 @@
-=== MISSION BRIEF: 2026-07-14 ===
-ROLE_TONIGHT: Performance Fixer
+=== MISSION BRIEF: 2026-07-15 ===
+ROLE_TONIGHT: Performance Auditor
 ASSIGNED_BY: Mastermind
-REASON: شب دوم - رفع گلوگاه‌های عملکردی و کندی UI
+REASON: شب سوم - بررسی عملکرد و گلوگاه‌ها در سرویس‌های جدید
 
 SCOPE:
-- lib/services/funnel_service.dart
-- lib/services/config_manager.dart
+- lib/services/test_orchestrator.dart
+- lib/services/smart_pinger.dart
 
 FROZEN_ZONES:
 - none
 
-SPECIFIC_TASK: رفع O(N*M) در استفاده از .skip().take() و بهینه‌سازی jsonDecode و جلوگیری از UI thread blocking.
+SPECIFIC_TASK: جستجو برای پیدا کردن مشکلات Performance مانند blocking call ها، مصرف منابع بالا، یا anti-pattern ها در سرویس‌های ذکر شده (Phase 1).
 
 CROSS_AUDIT_TARGET: نه
 === END BRIEF ===
