@@ -64,18 +64,27 @@ class SmartPinger {
 
     cancelToken?.throwIfCancelled();
 
-    final List<PingResult> allResults = resultDataList
-        .map((data) => PingResult(
-              endpoint: data['endpoint'] as String,
-              latency: data['latency'] as int,
-              isSuccess: data['isSuccess'] as bool,
-              error: data['error'] as String?,
-            ))
-        .toList();
+    final List<PingResult> allResults = [];
+    final List<PingResult> successful = [];
+    final List<PingResult> failed = [];
+    int totalLatency = 0;
 
-    // Analyze results
-    final successful = allResults.where((r) => r.isSuccess).toList();
-    final failed = allResults.where((r) => !r.isSuccess).toList();
+    for (final data in resultDataList) {
+      final result = PingResult(
+        endpoint: data['endpoint'] as String,
+        latency: data['latency'] as int,
+        isSuccess: data['isSuccess'] as bool,
+        error: data['error'] as String?,
+      );
+      allResults.add(result);
+
+      if (result.isSuccess) {
+        successful.add(result);
+        totalLatency += result.latency;
+      } else {
+        failed.add(result);
+      }
+    }
 
     // Generate recommendation
     String recommendation;
@@ -95,10 +104,7 @@ class SmartPinger {
       recommendation = '❌ Network Failure - No endpoints responded';
     }
 
-    final avg = successful.isNotEmpty
-        ? successful.map((r) => r.latency).reduce((a, b) => a + b) /
-            successful.length
-        : -1.0;
+    final avg = successful.isNotEmpty ? totalLatency / successful.length : -1.0;
 
     return SmartPingResult(
       isOverallSuccess: overallSuccess,
@@ -293,53 +299,64 @@ Future<List<Map<String, dynamic>>> _isolatePingBatch(
   final maxRetries = args['maxRetries'] as int? ?? 2;
   final timeout = Duration(milliseconds: timeoutInMilliseconds);
 
-  final List<Future<Map<String, dynamic>>> futures = [];
+  final List<Map<String, dynamic>> allResults = [];
+  const int chunkSize = 50;
 
-  for (final endpoint in endpoints) {
-    futures.add(() async {
-      String? lastError;
+  for (int i = 0; i < endpoints.length; i += chunkSize) {
+    final int end =
+        (i + chunkSize < endpoints.length) ? i + chunkSize : endpoints.length;
+    final chunk = endpoints.sublist(i, end);
+    final List<Future<Map<String, dynamic>>> futures = [];
 
-      for (int attempt = 1; attempt <= maxRetries; attempt++) {
-        final stopwatch = Stopwatch()..start();
-        Socket? socket;
-        try {
-          final uri = Uri.parse(endpoint);
-          final host = uri.host;
-          final port =
-              uri.port == 0 ? (uri.scheme == 'https' ? 443 : 80) : uri.port;
+    for (final endpoint in chunk) {
+      futures.add(() async {
+        String? lastError;
 
-          socket = await Socket.connect(host, port, timeout: timeout);
-          stopwatch.stop();
-
-          return {
-            'endpoint': endpoint,
-            'latency': stopwatch.elapsedMilliseconds,
-            'isSuccess': true,
-            'error': null,
-          };
-        } catch (e) {
-          stopwatch.stop();
-          lastError = e.toString();
-        } finally {
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+          final stopwatch = Stopwatch()..start();
+          Socket? socket;
           try {
-            socket?.destroy();
-          } catch (_) {}
+            final uri = Uri.parse(endpoint);
+            final host = uri.host;
+            final port =
+                uri.port == 0 ? (uri.scheme == 'https' ? 443 : 80) : uri.port;
+
+            socket = await Socket.connect(host, port, timeout: timeout);
+            stopwatch.stop();
+
+            return {
+              'endpoint': endpoint,
+              'latency': stopwatch.elapsedMilliseconds,
+              'isSuccess': true,
+              'error': null,
+            };
+          } catch (e) {
+            stopwatch.stop();
+            lastError = e.toString();
+          } finally {
+            try {
+              socket?.destroy();
+            } catch (_) {}
+          }
+
+          // Wait before next retry if not last attempt
+          if (attempt < maxRetries) {
+            await Future.delayed(const Duration(milliseconds: 500));
+          }
         }
 
-        // Wait before next retry if not last attempt
-        if (attempt < maxRetries) {
-          await Future.delayed(const Duration(milliseconds: 500));
-        }
-      }
+        return {
+          'endpoint': endpoint,
+          'latency': -1,
+          'isSuccess': false,
+          'error': 'All retries failed: $lastError',
+        };
+      }());
+    }
 
-      return {
-        'endpoint': endpoint,
-        'latency': -1,
-        'isSuccess': false,
-        'error': 'All retries failed: $lastError',
-      };
-    }());
+    final chunkResults = await Future.wait(futures);
+    allResults.addAll(chunkResults);
   }
 
-  return await Future.wait(futures);
+  return allResults;
 }
