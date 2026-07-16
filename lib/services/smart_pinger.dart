@@ -104,9 +104,7 @@ class SmartPinger {
       recommendation = '❌ Network Failure - No endpoints responded';
     }
 
-    final avg = successful.isNotEmpty
-        ? totalLatency / successful.length
-        : -1.0;
+    final avg = successful.isNotEmpty ? totalLatency / successful.length : -1.0;
 
     return SmartPingResult(
       isOverallSuccess: overallSuccess,
@@ -305,7 +303,8 @@ Future<List<Map<String, dynamic>>> _isolatePingBatch(
   const int chunkSize = 50;
 
   for (int i = 0; i < endpoints.length; i += chunkSize) {
-    final int end = (i + chunkSize < endpoints.length) ? i + chunkSize : endpoints.length;
+    final int end =
+        (i + chunkSize < endpoints.length) ? i + chunkSize : endpoints.length;
     final chunk = endpoints.sublist(i, end);
     final List<Future<Map<String, dynamic>>> futures = [];
 
