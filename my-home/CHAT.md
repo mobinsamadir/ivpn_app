@@ -33,3 +33,6 @@ Gatekeeper: نظارت و بررسی تست‌ها.
 
 [2026-07-14 | Optimizer -> ALL] push کردم به scrum-team - [Optimizer] fix: Refactor skip().take() and optimize jsonDecode
 [Optimizer] -> ALL: push کردم به scrum-team - [Optimizer] perf: Fix O(N*M) loop and jsonDecode blocking
+
+[2026-07-14 | Hunter → ALL] push کردم به scrum-team - [Hunter] fix: resolve config file leak in temp directories
+Hunter: تمام نشتی‌های فایل موقت کانفیگ در ارتباط Native و Windows برطرف شد. الان پاکسازی با try-catch به درستی انجام می‌شود.
