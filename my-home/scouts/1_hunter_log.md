@@ -56,6 +56,13 @@ CROSS_AUDIT_TARGET: نه
 - **ROI**: بالا (جلوگیری از پر شدن حافظه و لو رفتن کانفیگ‌ها در صورت Crash)
 - **تلاش برای fix**: ۱۰ دقیقه
 - **وضعیت**: ✋ در انتظار تایید
+
+### [تاریخ: ۲۰۲۶-۰۷-۱۴] Hunter Report (Phase 2)
+**اقدامات انجام شده:**
+۱. رفع نشت فایل در `windows_vpn_service.dart`: فایل `config.json` در متدهای `startVpn` (در صورت خطا) و `stopVpn` به طور کامل حذف می‌شود.
+۲. رفع نشت فایل در `native_vpn_service.dart`: عملیات فرستادن فایل به Native در متدهای `getPing`، `startTestProxy` و `connect` در بلاک `try-catch` قرار گرفت تا در صورت بروز Exception، فایل موقت فوراً حذف شود.
+۳. تست‌ها برای اطمینان از صحت تغییرات اجرا شدند.
+وضعیت: با موفقیت اعمال شد.
 ### [تاریخ: ۲۰۲۶-۰۷-۱۴] Hunter Report (Phase 2)
 **اقدامات انجام شده (Security Fix):**
 ۱. رفع `Information Disclosure` در فایل `windows_vpn_service.dart`: یک فیلد `_currentConfigPath` اضافه شد که مسیر ساخت فایل `config.json` را در هنگام `startVpn` ذخیره کرده و در متد `stopVpn` آن را در صورت وجود حذف می‌کند.

@@ -29,6 +29,7 @@ class WindowsVpnService {
 
   // Status Stream (CONNECTED, DISCONNECTED, etc. for HomeProvider)
   final _statusController = StreamController<String>.broadcast();
+  File? _currentConfigFile;
   Stream<String> get statusStream => _statusController.stream;
 
   static Future<String> getExecutablePath() async {
@@ -371,7 +372,7 @@ class WindowsVpnService {
       final tempDir = await getTemporaryDirectory();
       final configFile = File(p.join(tempDir.path, 'config.json'));
       await configFile.writeAsString(jsonConfig);
-      _currentConfigPath = configFile.path;
+      _currentConfigFile = configFile;
       AdvancedLogger.info(
         '[WindowsVpnService] Config file written to: ${configFile.path}',
       );
@@ -487,6 +488,10 @@ class WindowsVpnService {
         throw Exception("VPN process failed to start properly");
       }
     } catch (e, stackTrace) {
+      if (_currentConfigFile?.existsSync() ?? false) {
+        _currentConfigFile?.deleteSync();
+        _currentConfigFile = null;
+      }
       _logController.add("❌ Connection Failed: $e");
       _statusController.add("ERROR");
       AdvancedLogger.error(
@@ -550,6 +555,11 @@ class WindowsVpnService {
     isUserInitiatedDisconnect = true;
     AdvancedLogger.info('[WindowsVpnService] stopVpn called');
     _logController.add("🔻 Stopping VPN...");
+
+    if (_currentConfigFile?.existsSync() ?? false) {
+      _currentConfigFile?.deleteSync();
+      _currentConfigFile = null;
+    }
 
     // Force kill any existing sing-box processes to free up ports immediately
     try {
