@@ -1,18 +1,14 @@
-=== MISSION BRIEF: 2026-07-15 ===
-ROLE_TONIGHT: Security Fixer
+=== MISSION BRIEF: 2026-07-16 ===
+ROLE_TONIGHT: Security Auditor
 ASSIGNED_BY: Mastermind
-REASON: شب سوم - رفع مشکلات حیاتی امنیتی نشت اطلاعات فایل‌های موقت (منتظر تایید نهایی انسان برای اجرا)
-
+REASON: بررسی نحوه ذخیره‌سازی داده‌های حساس و کلیدها
 SCOPE:
-- lib/services/windows_vpn_service.dart
-- lib/services/native_vpn_service.dart
-
+- lib/services/storage_interface.dart
+- lib/services/config_gist_service.dart
 FROZEN_ZONES:
 - none
-
-SPECIFIC_TASK: رفع باگ عدم حذف فایل‌های کانفیگ در فولدر موقت (Information Disclosure) - پس از دریافت تاییدیه (***).
-
-CROSS_AUDIT_TARGET: نه
+SPECIFIC_TASK: جستجوی نشت اطلاعات یا رمزنگاری ناامن در ذخیره فایل‌های کانفیگ Gist.
+CROSS_AUDIT_TARGET: none
 === END BRIEF ===
 
 --- تاریخچه گزارش‌ها ---
