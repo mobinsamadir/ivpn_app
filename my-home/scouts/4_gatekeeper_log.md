@@ -87,3 +87,13 @@ CROSS_AUDIT_TARGET: none
 گزارش #۳: ✅ انجام شد. تست unit برای اجرای graceful روی پورت نامعتبر در `test/services/ephemeral_tester_process_test.dart` پیاده‌سازی شد.
 
 آپدیت شد: 05:30
+
+---
+
+**گزارش #۴: پوشش تست برای TestOrchestrator**
+- **فایل**: lib/services/test_orchestrator.dart
+- **مشکل**: در مرحله‌های پیشین Coverage بسیار پایینی داشت.
+- **تلاش برای بهبود**: ۲۰ دقیقه
+- **وضعیت**: ✅ انجام شد. تست‌های unit کاملی برای صف‌های مختلف، enqueue کردن، لغو کردن (Cancellation)، و متدهای استاتوس (Status reporting) نوشته شد. تست‌ها با موفقیت پاس شدند.
+
+آپدیت شد: 06:10
