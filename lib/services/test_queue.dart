@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:async';
 import '../utils/advanced_logger.dart';
 import '../utils/cancellable_operation.dart';
@@ -30,7 +31,7 @@ class TestQueue {
   final String category;
   TestQueue({required this.category});
 
-  final List<_QueueItem> _queue = [];
+  final Queue<_QueueItem> _queue = Queue<_QueueItem>();
   _QueueItem? _activeJob;
 
   bool get isBusy => _activeJob != null;
@@ -86,7 +87,7 @@ class TestQueue {
   Future<void> _processNext() async {
     if (_activeJob != null || _queue.isEmpty) return;
 
-    _activeJob = _queue.removeAt(0);
+    _activeJob = _queue.removeFirst();
     final item = _activeJob!;
 
     final timer = Timer(item.timeout, () async {
