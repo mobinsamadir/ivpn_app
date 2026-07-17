@@ -1,16 +1,13 @@
-=== MISSION BRIEF: 2026-07-15 ===
+=== MISSION BRIEF: 2026-07-16 ===
 ROLE_TONIGHT: QA/Testing
 ASSIGNED_BY: Mastermind
-REASON: شب سوم - بررسی فایل‌های جدید و تست‌نشده و تضمین کیفیت کدهای قبلی
-
+REASON: بررسی Coverage منطق اقتصادی و زمان
 SCOPE:
-- test/
-
+- test/services/time_wallet_service_test.dart
+- lib/services/time_wallet_service.dart
 FROZEN_ZONES:
 - none
-
-SPECIFIC_TASK: جستجوی Coverage پایین و نوشتن گزارش برای فایل‌های تست نشده مانند lib/services/test_orchestrator.dart و lib/services/smart_pinger.dart.
-
+SPECIFIC_TASK: تضمین Coverage بالای 90% برای TimeWalletService تا از باگ‌های کسر زمان جلوگیری شود.
 CROSS_AUDIT_TARGET: none
 === END BRIEF ===
 

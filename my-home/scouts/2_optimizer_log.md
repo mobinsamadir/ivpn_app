@@ -1,18 +1,14 @@
-=== MISSION BRIEF: 2026-07-15 ===
+=== MISSION BRIEF: 2026-07-16 ===
 ROLE_TONIGHT: Performance Auditor
 ASSIGNED_BY: Mastermind
-REASON: شب سوم - بررسی عملکرد و گلوگاه‌ها در سرویس‌های جدید
-
+REASON: بررسی گلوگاه‌های پارس کردن JSON پیکربندی‌ها
 SCOPE:
-- lib/services/test_orchestrator.dart
-- lib/services/smart_pinger.dart
-
+- lib/services/config_parser.dart
+- lib/services/config_manager.dart
 FROZEN_ZONES:
 - none
-
-SPECIFIC_TASK: جستجو برای پیدا کردن مشکلات Performance مانند blocking call ها، مصرف منابع بالا، یا anti-pattern ها در سرویس‌های ذکر شده (Phase 1).
-
-CROSS_AUDIT_TARGET: نه
+SPECIFIC_TASK: جستجو برای کارهای سنگین روی Main Thread هنگام پردازش هزاران کانفیگ.
+CROSS_AUDIT_TARGET: none
 === END BRIEF ===
 
 --- تاریخچه گزارش‌ها ---
