@@ -57,8 +57,10 @@ void main() {
     });
 
     test('Cancellation methods trigger individual queues', () {
-      TestOrchestrator.enqueueSpeedTest((token, id) async => await Future.delayed(Duration(seconds: 5)));
-      TestOrchestrator.enqueueStabilityTest((token, id) async => await Future.delayed(Duration(seconds: 5)));
+      TestOrchestrator.enqueueSpeedTest(
+          (token, id) async => await Future.delayed(Duration(seconds: 5)));
+      TestOrchestrator.enqueueStabilityTest(
+          (token, id) async => await Future.delayed(Duration(seconds: 5)));
 
       TestOrchestrator.cancelSpeedTests();
       TestOrchestrator.cancelStabilityTests();
