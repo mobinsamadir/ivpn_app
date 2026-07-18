@@ -396,19 +396,25 @@ class ConfigManager extends ChangeNotifier {
     int initialAddedCount = 0;
     final int batchSize = 100;
 
+    // Cache current lists to avoid O(N*M) map/toList inside the loop
+    List<String> currentBlockedHashes = _blockedConfigs.toList();
+    List<String> currentExistingConfigs =
+        allConfigs.map((c) => c.rawConfig.trim()).toList();
+
     // Process in chunks to avoid Isolate memory overload
     for (int i = 0; i < configStrings.length; i += batchSize) {
       final chunk = configStrings.sublist(
-          i,
-          (i + batchSize > configStrings.length)
-              ? configStrings.length
-              : i + batchSize);
+        i,
+        (i + batchSize > configStrings.length)
+            ? configStrings.length
+            : i + batchSize,
+      );
 
       final args = {
         'configStrings': chunk,
-        'blockedHashes': _blockedConfigs.toList(),
+        'blockedHashes': currentBlockedHashes,
         'checkBlacklist': checkBlacklist,
-        'existingConfigs': allConfigs.map((c) => c.rawConfig.trim()).toList(),
+        'existingConfigs': currentExistingConfigs,
         'initialAddedCount': initialAddedCount,
       };
 
@@ -423,6 +429,7 @@ class ConfigManager extends ChangeNotifier {
         // Update Blacklist
         if (hashesToRemove.isNotEmpty) {
           _blockedConfigs.removeAll(hashesToRemove);
+          currentBlockedHashes = _blockedConfigs.toList();
           await _saveBlacklist();
           AdvancedLogger.info(
             "[ConfigManager] Manual overwrite: Removed ${hashesToRemove.length} configs from blacklist.",
@@ -432,6 +439,9 @@ class ConfigManager extends ChangeNotifier {
         // Add New Configs
         if (newConfigs.isNotEmpty) {
           allConfigs.addAll(newConfigs);
+          currentExistingConfigs.addAll(
+            newConfigs.map((c) => c.rawConfig.trim()),
+          );
           totalAdded += newConfigs.length;
         }
       } catch (e) {
@@ -888,12 +898,11 @@ class ConfigManager extends ChangeNotifier {
 
   Future<void> _saveBlacklist() async {
     try {
-      final encodedStr =
-          await compute(_encodeStringListInIsolate, _blockedConfigs.toList());
-      await storage.setString(
-        _blacklistKey,
-        encodedStr,
+      final encodedStr = await compute(
+        _encodeStringListInIsolate,
+        _blockedConfigs.toList(),
       );
+      await storage.setString(_blacklistKey, encodedStr);
     } catch (e) {
       AdvancedLogger.warn('[ConfigManager] Failed to save blacklist: $e');
     }
@@ -943,12 +952,11 @@ class ConfigManager extends ChangeNotifier {
 
   Future<void> _saveSplitTunnelingPackages() async {
     _setCache(_splitTunnelingKey, _splitTunnelingPackages);
-    final encodedStr =
-        await compute(_encodeStringListInIsolate, _splitTunnelingPackages);
-    await storage.setString(
-      _splitTunnelingKey,
-      encodedStr,
+    final encodedStr = await compute(
+      _encodeStringListInIsolate,
+      _splitTunnelingPackages,
     );
+    await storage.setString(_splitTunnelingKey, encodedStr);
   }
 
   Future<void> switchConfig(VpnConfigWithMetrics newConfig) async {
