@@ -1,13 +1,12 @@
-=== MISSION BRIEF: 2026-07-16 ===
-ROLE_TONIGHT: UX/Conversion Fixer
+=== MISSION BRIEF: 2026-07-17 ===
+ROLE_TONIGHT: UX/Conversion
 ASSIGNED_BY: Mastermind
-REASON: بهبود تجربه کاربری در تنظیمات برنامه
+REASON: بررسی تجربه‌کاربری
 SCOPE:
 - lib/screens/
-- lib/widgets/
 FROZEN_ZONES:
 - lib/services/
-SPECIFIC_TASK: شناسایی فرصت‌ها برای بهبود بازخورد بصری دکمه‌های Settings و استفاده از انیمیشن‌های مناسب.
+SPECIFIC_TASK: یافتن فرصت‌های جدید برای بهبود UX.
 CROSS_AUDIT_TARGET: none
 === END BRIEF ===
 

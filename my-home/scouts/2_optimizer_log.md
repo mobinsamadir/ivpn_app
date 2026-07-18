@@ -1,13 +1,12 @@
-=== MISSION BRIEF: 2026-07-16 ===
-ROLE_TONIGHT: Performance Auditor
+=== MISSION BRIEF: 2026-07-17 ===
+ROLE_TONIGHT: Performance Executor
 ASSIGNED_BY: Mastermind
-REASON: بررسی گلوگاه‌های پارس کردن JSON پیکربندی‌ها
+REASON: اعمال بهینه‌سازی‌های گزارش شده (Phase 2)
 SCOPE:
-- lib/services/config_parser.dart
 - lib/services/config_manager.dart
 FROZEN_ZONES:
 - none
-SPECIFIC_TASK: جستجو برای کارهای سنگین روی Main Thread هنگام پردازش هزاران کانفیگ.
+SPECIFIC_TASK: رفع سه مشکل: O(N*M) loop blockages (.skip().take()), heavy UI thread blocking from deep serialization, and slow parsing via jsonDecode.
 CROSS_AUDIT_TARGET: none
 === END BRIEF ===
 

@@ -1,13 +1,12 @@
-=== MISSION BRIEF: 2026-07-16 ===
+=== MISSION BRIEF: 2026-07-17 ===
 ROLE_TONIGHT: QA/Testing
 ASSIGNED_BY: Mastermind
-REASON: بررسی Coverage منطق اقتصادی و زمان
+REASON: بهبود Coverage
 SCOPE:
-- test/services/time_wallet_service_test.dart
-- lib/services/time_wallet_service.dart
+- test/
 FROZEN_ZONES:
 - none
-SPECIFIC_TASK: تضمین Coverage بالای 90% برای TimeWalletService تا از باگ‌های کسر زمان جلوگیری شود.
+SPECIFIC_TASK: نوشتن تست‌های بیشتر برای کلاس‌های بدون Coverage.
 CROSS_AUDIT_TARGET: none
 === END BRIEF ===
 

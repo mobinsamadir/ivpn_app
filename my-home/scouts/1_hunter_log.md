@@ -1,13 +1,12 @@
-=== MISSION BRIEF: 2026-07-16 ===
-ROLE_TONIGHT: Security Auditor
+=== MISSION BRIEF: 2026-07-17 ===
+ROLE_TONIGHT: Security
 ASSIGNED_BY: Mastermind
-REASON: بررسی نحوه ذخیره‌سازی داده‌های حساس و کلیدها
+REASON: بررسی امنیتی جدید
 SCOPE:
-- lib/services/storage_interface.dart
-- lib/services/config_gist_service.dart
+- lib/services/
 FROZEN_ZONES:
 - none
-SPECIFIC_TASK: جستجوی نشت اطلاعات یا رمزنگاری ناامن در ذخیره فایل‌های کانفیگ Gist.
+SPECIFIC_TASK: جستجو برای آسیب‌پذیری‌های دیگر.
 CROSS_AUDIT_TARGET: none
 === END BRIEF ===
 
