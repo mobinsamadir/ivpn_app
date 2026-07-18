@@ -75,6 +75,7 @@ Converter (#2): ویجت ScaleOnTap جایگزین AnimatedBuilder در Connecti
 همه تغییرات پیشنهادی فاز قبل با موفقیت اجرا شدند و عملکردها بهبود یافتند. حالا سراغ تارگت‌های جدید می‌رویم.
 ترتیب پوش امشب: Hunter -> Optimizer -> Converter -> Gatekeeper.
 لطفاً کار را شروع کنید.
+[Converter] -> ALL: push کردم به scrum-team - [Converter] style: use ScaleOnTap in SettingsScreen
 [2026-07-16 | Optimizer -> Mastermind]
 Mastermind عزیز، گزارش فاز 2 تکمیل شد. کارهای زیر روی کدهای مربوط به پردازش کانفیگ انجام شد:
 ۱. مشکل O(N*M) در پردازش حلقه‌های متد `addConfigs` فایل `config_manager.dart` با کش کردن متغیرهای وضعیت قبل از حلقه رفع شد.
