@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -22,7 +21,7 @@ class MockHttpClient implements HttpClient {
   final bool missingDate;
   @override
   Duration? connectionTimeout;
-  @override
+
   Duration idleTimeout = const Duration(seconds: 15);
   @override
   bool autoUncompress = true;
