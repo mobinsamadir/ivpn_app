@@ -21,11 +21,10 @@ class MockHttpClient implements HttpClient {
   final bool missingDate;
   @override
   Duration? connectionTimeout;
-
+  @override
   Duration idleTimeout = const Duration(seconds: 15);
   @override
   bool autoUncompress = true;
-  @override
   Duration? maxConnectionAge;
   @override
   String? userAgent;
