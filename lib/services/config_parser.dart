@@ -8,9 +8,19 @@ Future<List<String>> parseConfigsInIsolate(String text) async {
 
   String processedText = text;
 
+  // Pre-condition check for HTML to prevent traversing huge non-HTML texts
+  bool isHtml = false;
+  if (text.length > 500) {
+    final prefix = text.substring(0, 500).trimLeft().toLowerCase();
+    isHtml = prefix.startsWith('<') || prefix.contains('<!doctype html>');
+  } else {
+    final lower = text.trimLeft().toLowerCase();
+    isHtml = lower.startsWith('<') || lower.contains('<!doctype html>');
+  }
+
   // 1. Detect & Parse HTML
   // If it looks like HTML, use the parser to get clean text (decodes entities automatically)
-  if (text.trimLeft().startsWith('<') || text.contains('<!DOCTYPE html>')) {
+  if (isHtml) {
     try {
       var document = html_parser.parse(text);
       // .text automatically decodes &amp; -> & and strips tags
