@@ -40,3 +40,17 @@ CROSS_AUDIT_TARGET: none
 تغییرات با موفقیت در مخزن کامیت خواهد شد.
 
 آپدیت شد: 06:40
+### [تاریخ: ۲۰۲۶-۰۷-۱۶] Optimizer Report
+**گزارش عملکرد: بررسی Config Parser و Config Manager**
+
+با بررسی کدهای هدف (`lib/services/config_parser.dart` و `lib/services/config_manager.dart`) در جستجوی کارهای سنگین روی Main Thread، نتایج زیر حاصل شد:
+۱. در فایل `config_parser.dart` تابع `parseConfigsInIsolate` به درستی نوشته شده است تا در یک Isolate اجرا شود و از فریز شدن Main Thread جلوگیری می‌کند. با این حال، در سایر قسمت‌های کد (نظیر `config_gist_service.dart`) از طریق `compute` به صورت مجزا فراخوانی می‌شود، که رویکرد درستی است. هیچ کد مسدود کننده‌ای یافت نشد.
+۲. در فایل `config_manager.dart` در بخش `addConfigs` (از خطوط 400 تا 440) فرآیند پردازش لیست‌های بلند از پیکربندی‌ها با استفاده از `compute` و تابع ایزوله شده `_processConfigsInIsolate` انجام می‌شود که نشان‌دهنده offload موفق این بار کاری است.
+۳. رمزگشایی و کدگذاری JSON نیز در `config_manager.dart` تماما توسط توابع `_decodeConfigsInIsolate` و `_encodeConfigsInIsolate` از طریق متد `compute` اجرا می‌شود.
+۴. همچنین مشکل `sublist()` به جای حلقه O(N*M) قبلاً رفع شده است.
+
+در نتیجه هیچ گلوگاه Performance خاصی که باعث مسدود شدن Main Thread در حین پردازش هزاران کانفیگ شود، مشاهده نگردید و تمام متدهای مرتبط با JSON و پارسینگ بهینه و Non-blocking هستند! بهینه سازی اضافی در این فاز نیاز نیست.
+
+تلاش برای بازرسی: ۲۰ دقیقه
+وضعیت: ✋ بازرسی کامل شد، مورد مسدود کننده‌ای یافت نشد. منتظر تصمیمات بعدی.
+آپدیت شد: 13:42
