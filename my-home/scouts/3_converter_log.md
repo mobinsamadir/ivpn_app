@@ -1,12 +1,13 @@
-=== MISSION BRIEF: 2026-07-17 ===
-ROLE_TONIGHT: UX/Conversion
+=== MISSION BRIEF: 2026-07-18 ===
+ROLE_TONIGHT: UX/Conversion Executor
 ASSIGNED_BY: Mastermind
-REASON: بررسی تجربه‌کاربری
+REASON: اعمال تغییرات UX پیشنهادی در صفحه about و splash (Phase 2)
 SCOPE:
-- lib/screens/
+- lib/screens/about_screen.dart
+- lib/screens/splash_screen.dart
 FROZEN_ZONES:
 - lib/services/
-SPECIFIC_TASK: یافتن فرصت‌های جدید برای بهبود UX.
+SPECIFIC_TASK: پیاده‌سازی ScaleOnTap به جای دکمه‌های ساده برای تلگرام و Retry طبق گزارش دیشب
 CROSS_AUDIT_TARGET: none
 === END BRIEF ===
 

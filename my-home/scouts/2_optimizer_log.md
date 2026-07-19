@@ -1,12 +1,13 @@
-=== MISSION BRIEF: 2026-07-17 ===
-ROLE_TONIGHT: Performance Executor
+=== MISSION BRIEF: 2026-07-18 ===
+ROLE_TONIGHT: Performance
 ASSIGNED_BY: Mastermind
-REASON: اعمال بهینه‌سازی‌های گزارش شده (Phase 2)
+REASON: شروع بررسی جدید برای پرفورمنس رابط کاربری (Phase 1)
 SCOPE:
-- lib/services/config_manager.dart
+- lib/widgets/
 FROZEN_ZONES:
-- none
-SPECIFIC_TASK: رفع سه مشکل: O(N*M) loop blockages (.skip().take()), heavy UI thread blocking from deep serialization, and slow parsing via jsonDecode.
+- lib/services/
+- lib/screens/
+SPECIFIC_TASK: پیدا کردن مشکلات رندرینگ و بازسازی‌های غیرضروری (Unnecessary Rebuilds)
 CROSS_AUDIT_TARGET: none
 === END BRIEF ===
 
