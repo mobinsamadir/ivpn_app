@@ -1,12 +1,12 @@
-=== MISSION BRIEF: 2026-07-17 ===
+=== MISSION BRIEF: 2026-07-18 ===
 ROLE_TONIGHT: QA/Testing
 ASSIGNED_BY: Mastermind
-REASON: بهبود Coverage
+REASON: ادامه بهبود Coverage (Phase 1)
 SCOPE:
 - test/
 FROZEN_ZONES:
 - none
-SPECIFIC_TASK: نوشتن تست‌های بیشتر برای کلاس‌های بدون Coverage.
+SPECIFIC_TASK: نوشتن تست برای ویجت‌ها و سرویس‌هایی که پوشش ندارند
 CROSS_AUDIT_TARGET: none
 === END BRIEF ===
 
