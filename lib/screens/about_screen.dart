@@ -52,7 +52,7 @@ class AboutScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             ScaleOnTap(
-              onTap: _launchUrl,
+              onTap: _launchUrl, // با کلیک روی این آیتم، لینک باز می‌شود
               child: ListTile(
                 leading: const Icon(Icons.send_outlined, color: Colors.blue),
                 title: const Text('کانال تلگرام ما'),
