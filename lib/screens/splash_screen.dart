@@ -8,6 +8,7 @@ import '../utils/advanced_logger.dart';
 import '../services/ad_manager_service.dart';
 import '../services/funnel_service.dart';
 import 'connection_home_screen.dart';
+import '../widgets/scale_on_tap.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -194,13 +195,18 @@ class _SplashScreenState extends State<SplashScreen>
                   style: const TextStyle(color: Colors.redAccent, fontSize: 16),
                 ),
                 const SizedBox(height: 24),
-                ElevatedButton.icon(
-                  onPressed: _initializeApp,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Retry'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black,
+                ScaleOnTap(
+                  onTap: _initializeApp,
+                  child: IgnorePointer(
+                    child: ElevatedButton.icon(
+                      onPressed: () {},
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Retry'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black,
+                      ),
+                    ),
                   ),
                 ),
               ] else ...[

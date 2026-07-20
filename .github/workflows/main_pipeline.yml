@@ -19,7 +19,7 @@ jobs:
       windows: ${{ steps.filter.outputs.windows }}
     steps:
       - uses: actions/checkout@v7.0.0
-      - uses: dorny/paths-filter@v4.0.2
+      - uses: dorny/paths-filter@v3
         id: filter
         with:
           filters: |
