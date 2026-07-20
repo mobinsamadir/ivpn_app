@@ -197,20 +197,15 @@ class _SplashScreenState extends State<SplashScreen>
                 const SizedBox(height: 24),
                 ScaleOnTap(
                   onTap: _initializeApp,
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        Icon(Icons.refresh, color: Colors.black),
-                        SizedBox(width: 8),
-                        Text('Retry', style: TextStyle(color: Colors.black)),
-                      ],
+                  child: IgnorePointer(
+                    child: ElevatedButton.icon(
+                      onPressed: () {},
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Retry'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black,
+                      ),
                     ),
                   ),
                 ),

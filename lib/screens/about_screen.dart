@@ -58,6 +58,7 @@ class AboutScreen extends StatelessWidget {
                 title: const Text('کانال تلگرام ما'),
                 subtitle: const Text('برای خرید و دریافت سرورهای اختصاصی'),
                 trailing: const Icon(Icons.open_in_new),
+                onTap: null, // Gesture handled by ScaleOnTap
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                   side: BorderSide(color: Colors.grey.shade300),
