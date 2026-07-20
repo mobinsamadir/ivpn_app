@@ -987,8 +987,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                     if (_isFetching) {
                       return SliverList(
                         delegate: SliverChildBuilderDelegate(
-                          (context, index) =>
-                              const RepaintBoundary(child: ShimmerConfigCard()),
+                          (context, index) => const ShimmerConfigCard(),
                           childCount: 6,
                         ),
                       );
@@ -1024,46 +1023,41 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                   return SliverList(
                     delegate: SliverChildBuilderDelegate((context, index) {
                       final config = configs[index];
-                      return RepaintBoundary(
-                        child: ConfigCard(
-                          config: config,
-                          isSelected:
-                              _configManager.selectedConfig?.id == config.id,
-                          isTesting: _activeTestIds.contains(config.id),
-                          onTap: () async {
-                            _configManager.selectConfig(config);
-                            setState(() {});
+                      return ConfigCard(
+                        config: config,
+                        isSelected:
+                            _configManager.selectedConfig?.id == config.id,
+                        isTesting: _activeTestIds.contains(config.id),
+                        onTap: () async {
+                          _configManager.selectConfig(config);
 
-                            if (_configManager.isAutoSwitchEnabled) {
-                              if (_configManager.isConnected) {
-                                // Start the switch process properly within ConfigManager to avoid race conditions
-                                await _configManager.switchConfig(config);
-                              }
-                            } else {
-                              // Forced manual connect
-                              try {
-                                await _configManager.connectManual(config);
-                              } catch (e) {
-                                _showToast('Connection failed: $e');
-                              }
+                          if (_configManager.isAutoSwitchEnabled) {
+                            if (_configManager.isConnected) {
+                              // Start the switch process properly within ConfigManager to avoid race conditions
+                              await _configManager.switchConfig(config);
                             }
-                          },
-                          onTestLatency: () => _runSingleTest(config),
-                          onTestSpeed: () => _runSingleTest(config),
-                          onToggleFavorite: () async {
-                            await _configManager.toggleFavorite(config.id);
-                            setState(() {});
-                          },
-                          onDelete: () async {
-                            final confirm = await _showDeleteConfirmationDialog(
-                              config,
-                            );
-                            if (confirm && mounted) {
-                              await _configManager.deleteConfig(config.id);
-                              setState(() {});
+                          } else {
+                            // Forced manual connect
+                            try {
+                              await _configManager.connectManual(config);
+                            } catch (e) {
+                              _showToast('Connection failed: $e');
                             }
-                          },
-                        ),
+                          }
+                        },
+                        onTestLatency: () => _runSingleTest(config),
+                        onTestSpeed: () => _runSingleTest(config),
+                        onToggleFavorite: () async {
+                          await _configManager.toggleFavorite(config.id);
+                        },
+                        onDelete: () async {
+                          final confirm = await _showDeleteConfirmationDialog(
+                            config,
+                          );
+                          if (confirm && mounted) {
+                            await _configManager.deleteConfig(config.id);
+                          }
+                        },
                       );
                     }, childCount: configs.length),
                   );
@@ -1821,27 +1815,28 @@ class _ConnectButton extends StatelessWidget {
                           const Color(0xFF38EF7D),
                         ] // Green/Teal
                       : (isConnecting
-                          ? [
-                              const Color(0xFFF2994A),
-                              const Color(0xFFF2C94C),
-                            ] // Orange/Yellow
-                          : [
-                              const Color(0xFF4A5568),
-                              const Color(0xFF2D3748),
-                            ]), // Dark Grey
+                            ? [
+                                const Color(0xFFF2994A),
+                                const Color(0xFFF2C94C),
+                              ] // Orange/Yellow
+                            : [
+                                const Color(0xFF4A5568),
+                                const Color(0xFF2D3748),
+                              ]), // Dark Grey
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: (isConnected
-                            ? const Color(0xFF38EF7D)
-                            : (isConnecting
-                                ? const Color(0xFFF2994A)
-                                : Colors.black))
-                        .withValues(
-                      alpha: isConnected || isConnecting ? 0.5 : 0.3,
-                    ),
+                    color:
+                        (isConnected
+                                ? const Color(0xFF38EF7D)
+                                : (isConnecting
+                                      ? const Color(0xFFF2994A)
+                                      : Colors.black))
+                            .withValues(
+                              alpha: isConnected || isConnecting ? 0.5 : 0.3,
+                            ),
                     blurRadius: isConnected || isConnecting ? 25 : 15,
                     spreadRadius: isConnected || isConnecting ? 8 : 2,
                     offset: const Offset(0, 8),

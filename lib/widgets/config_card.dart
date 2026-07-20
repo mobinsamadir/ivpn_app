@@ -228,6 +228,18 @@ class _ConfigInfo extends StatelessWidget {
           children: [
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 300),
+              layoutBuilder: (
+                Widget? currentChild,
+                List<Widget> previousChildren,
+              ) {
+                return Stack(
+                  alignment: Alignment.centerLeft,
+                  children: <Widget>[
+                    ...previousChildren,
+                    if (currentChild != null) currentChild,
+                  ],
+                );
+              },
               child: isTesting
                   ? Row(
                       key: const ValueKey('testing'),
@@ -333,6 +345,18 @@ class _ConfigInfo extends StatelessWidget {
             const Spacer(),
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 300),
+              layoutBuilder: (
+                Widget? currentChild,
+                List<Widget> previousChildren,
+              ) {
+                return Stack(
+                  alignment: Alignment.centerRight,
+                  children: <Widget>[
+                    ...previousChildren,
+                    if (currentChild != null) currentChild,
+                  ],
+                );
+              },
               child: isTesting
                   ? const SizedBox.shrink(key: ValueKey('empty_score'))
                   : Text(
