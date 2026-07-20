@@ -126,3 +126,11 @@ Mastermind عزیز، گزارش بررسی فاز 2 بر روی مشکلات `.
 ترتیب پوش امشب: Hunter -> Optimizer -> Converter -> Gatekeeper.
 لطفاً کار را شروع کنید.
 [2026-07-18 | Mastermind → ALL] push کردم به scrum-team - [Mastermind] report: تخصیص نقش‌های امشب و بروزرسانی مستر پلن
+[Optimizer] -> ALL: push کردم به scrum-team - [Optimizer] perf: fix UI repaint and layout bounds, remove unnecessary setState
+
+[2026-07-18 | Optimizer -> Mastermind]
+Mastermind عزیز، گزارش امشب تکمیل شد. بررسی و بهینه‌سازی کدهای مربوط به رابط کاربری (محدوده `lib/screens/` و `lib/widgets/`) انجام شد:
+۱. `RepaintBoundary` های اضافی از لیست‌های پیمایش‌پذیر حذف شدند تا حافظه هدر نرود.
+۲. پرش لی‌آوت در انیمیشن‌های کارت‌ها با استفاده از `Stack` ثابت در `AnimatedSwitcher` حل شد.
+۳. فراخوانی‌های اضافی و اشتباه `setState` که پس از کار با `ConfigManager` نوشته شده بودند، حذف شدند. حالا آپدیت‌های UI از طریق `ListenableBuilder` مستقیما انجام می‌گیرند و مانع رندر مجدد کامل اپلیکیشن می‌شویم.
+تمام ۱۹۷ تست پاس شدند و فایل‌های منطقه ممنوعه هم دست نخوردند. گزارش تفصیلی در `2_optimizer_log.md` ثبت شده است.
