@@ -13,7 +13,8 @@ class FullScreenAdDialog extends StatefulWidget {
 }
 
 class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
-  final ValueNotifier<int> _timeLeftNotifier = ValueNotifier<int>(15); // Strict 15s countdown
+  final ValueNotifier<int> _timeLeftNotifier =
+      ValueNotifier<int>(15); // Strict 15s countdown
   Timer? _timer;
 
   @override
@@ -135,7 +136,8 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
                         padding: const EdgeInsets.all(24),
                         decoration: const BoxDecoration(
                           color: Color(0xFF1E1E1E),
-                          border: Border(top: BorderSide(color: Color(0xFF333333))),
+                          border:
+                              Border(top: BorderSide(color: Color(0xFF333333))),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,

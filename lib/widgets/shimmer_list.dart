@@ -11,8 +11,7 @@ class ShimmerList extends StatelessWidget {
         itemCount: 8,
         physics: const NeverScrollableScrollPhysics(),
         // Rendering Optimization
-        itemBuilder: (context, index) =>
-            const ShimmerConfigCard(),
+        itemBuilder: (context, index) => const ShimmerConfigCard(),
       ),
     );
   }
