@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart'; // این پکیج را در مرحله بعد اضافه می‌کنیم
+import '../widgets/scale_on_tap.dart';
 
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
@@ -50,15 +51,17 @@ class AboutScreen extends StatelessWidget {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            ListTile(
-              leading: const Icon(Icons.send_outlined, color: Colors.blue),
-              title: const Text('کانال تلگرام ما'),
-              subtitle: const Text('برای خرید و دریافت سرورهای اختصاصی'),
-              trailing: const Icon(Icons.open_in_new),
+            ScaleOnTap(
               onTap: _launchUrl, // با کلیک روی این آیتم، لینک باز می‌شود
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-                side: BorderSide(color: Colors.grey.shade300),
+              child: ListTile(
+                leading: const Icon(Icons.send_outlined, color: Colors.blue),
+                title: const Text('کانال تلگرام ما'),
+                subtitle: const Text('برای خرید و دریافت سرورهای اختصاصی'),
+                trailing: const Icon(Icons.open_in_new),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  side: BorderSide(color: Colors.grey.shade300),
+                ),
               ),
             ),
           ],
