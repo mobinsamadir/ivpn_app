@@ -87,90 +87,91 @@ class _SmartConnectButtonState extends State<SmartConnectButton>
                 builder: (context, child) {
                   return Transform.scale(
                     scale: _pulseAnimation.value,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 400),
-                      curve: Curves.easeInOut,
-                      width: widget.buttonSize,
-                      height: widget.buttonSize,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: _getButtonGradient(
+                    child: child,
+                  );
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 400),
+                  curve: Curves.easeInOut,
+                  width: widget.buttonSize,
+                  height: widget.buttonSize,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: _getButtonGradient(
+                      isConnected,
+                      isConnecting,
+                      isButtonDisabled,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _getButtonGlowColor(
                           isConnected,
                           isConnecting,
                           isButtonDisabled,
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: _getButtonGlowColor(
-                              isConnected,
-                              isConnecting,
-                              isButtonDisabled,
-                            ),
-                            blurRadius: isConnecting || isConnected ? 25 : 15,
-                            spreadRadius: isConnecting || isConnected ? 8 : 2,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
+                        blurRadius: isConnecting || isConnected ? 25 : 15,
+                        spreadRadius: isConnecting || isConnected ? 8 : 2,
+                        offset: const Offset(0, 8),
                       ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 300),
-                            child: isConnecting
-                                ? SizedBox(
-                                    key: const ValueKey('connecting'),
-                                    width: widget.buttonSize * 0.3,
-                                    height: widget.buttonSize * 0.3,
-                                    child: const CircularProgressIndicator(
-                                      color: Colors.white,
-                                      strokeWidth: 3,
-                                    ),
-                                  )
-                                : Icon(
-                                    key: const ValueKey('icon'),
-                                    _getButtonIcon(
-                                      isConnected,
-                                      isConnecting,
-                                      isButtonDisabled,
-                                    ),
-                                    size: widget.buttonSize * 0.35,
-                                    color: isButtonDisabled
-                                        ? Colors.white54
-                                        : Colors.white,
-                                  ),
-                          ),
-                          const SizedBox(height: 12),
-                          AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 300),
-                            child: Text(
-                              _getButtonText(
-                                isConnected,
-                                isConnecting,
-                                isButtonDisabled,
-                              ),
-                              key: ValueKey(
-                                _getButtonText(
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 300),
+                        child: isConnecting
+                            ? SizedBox(
+                                key: const ValueKey('connecting'),
+                                width: widget.buttonSize * 0.3,
+                                height: widget.buttonSize * 0.3,
+                                child: const CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 3,
+                                ),
+                              )
+                            : Icon(
+                                key: const ValueKey('icon'),
+                                _getButtonIcon(
                                   isConnected,
                                   isConnecting,
                                   isButtonDisabled,
                                 ),
-                              ),
-                              style: TextStyle(
+                                size: widget.buttonSize * 0.35,
                                 color: isButtonDisabled
                                     ? Colors.white54
                                     : Colors.white,
-                                fontSize: widget.buttonSize * 0.1,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 1.5,
                               ),
+                      ),
+                      const SizedBox(height: 12),
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 300),
+                        child: Text(
+                          _getButtonText(
+                            isConnected,
+                            isConnecting,
+                            isButtonDisabled,
+                          ),
+                          key: ValueKey(
+                            _getButtonText(
+                              isConnected,
+                              isConnecting,
+                              isButtonDisabled,
                             ),
                           ),
-                        ],
+                          style: TextStyle(
+                            color: isButtonDisabled
+                                ? Colors.white54
+                                : Colors.white,
+                            fontSize: widget.buttonSize * 0.1,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 1.5,
+                          ),
+                        ),
                       ),
-                    ),
-                  );
-                },
+                    ],
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 20),
