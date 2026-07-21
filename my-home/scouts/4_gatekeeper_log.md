@@ -99,3 +99,56 @@ CROSS_AUDIT_TARGET: none
 گزارش #۵: ✅ انجام شد. تست‌های `TimeWalletService` به طور کامل بازنویسی شدند. حالا 100% از Branch و Line های آن کاور می‌شود. این شامل تست‌های network fallback و چرخه timer/dispose است.
 
 آپدیت شد: 06:45
+### [تاریخ: 2026-07-18] Gatekeeper Report
+
+**گزارش #۱: صفر Coverage برای BackgroundAdService**
+- **فایل**: lib/services/background_ad_service.dart
+- **مشکل**: این فایل مسئول بارگذاری WebView تبلیغات در پس‌زمینه (Windows) است اما هیچ تستی ندارد!
+  - Coverage: ۰٪
+  - Risk: بالا (ممکن است کرش کند یا باعث Memory Leak شود)
+- **تست‌های مورد نیاز**:
+
+  **Test Case 1: اجرای بدون کرش در ویندوز**
+  ```dart
+  void test_background_ad_init_windows() {
+    // Override Platform to Windows
+    // Pump BackgroundAdService widget
+    // Verify WebViewController is initialized without error
+  }
+  ```
+
+- **تلاش برای نوشتنِ تست**: ۳۰ دقیقه
+- **وضعیت**: ✋ در انتظار تایید
+
+---
+
+**گزارش #۲: صفر Coverage برای ScaleOnTap**
+- **فایل**: lib/widgets/scale_on_tap.dart
+- **مشکل**: این ویجت در سراسر اپلیکیشن (از جمله About و Splash) اضافه شده ولی تست unit برای gesture و انیمیشن ندارد.
+  - Coverage: ۰٪
+  - Risk: متوسط
+- **تست‌های مورد نیاز**:
+
+  **Test Case 1: اجرای انیمیشن ScaleDown در onTapDown**
+  ```dart
+  void test_scale_on_tap_animation() {
+    // Pump ScaleOnTap widget
+    // Trigger gesture onTapDown
+    // Expect Transform.scale to be less than 1.0
+  }
+  ```
+- **تلاش برای بهبود**: ۲۰ دقیقه
+- **اولویت**: متوسط
+
+---
+
+**گزارش #۳: Cross-Audit - تغییرات Converter**
+- **فایل**: lib/screens/about_screen.dart & splash_screen.dart
+- **بررسیِ QA**:
+  ✅ خوب: Callback های native مانند onTap و onPressed داخل ScaleOnTap با null و IgnorePointer غیرفعال شده‌اند که جلوی double-firing را می‌گیرد.
+  ✅ خوب: انیمیشن‌ها باعث بلاک شدن ترد اصلی نمی‌شوند.
+- **تلاش برای fix**: ۰ دقیقه (مشکلی نبود)
+
+---
+**سوالاتِ برای تیم**
+- ALL: آیا تست‌های WebView در ویندوز نیاز به محیط خاصی برای CI دارند؟
