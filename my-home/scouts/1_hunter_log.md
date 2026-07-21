@@ -1,13 +1,13 @@
-=== MISSION BRIEF: 2026-07-18 ===
+=== MISSION BRIEF: 2026-07-19 ===
 ROLE_TONIGHT: Security
 ASSIGNED_BY: Mastermind
-REASON: ادامه بررسی‌های امنیتی و نشت اطلاعات (Phase 1)
+REASON: شب جدید - بررسی امنیتی ارتباطات شبکه و API
 SCOPE:
 - lib/services/
 FROZEN_ZONES:
 - lib/screens/
-- lib/widgets/
-SPECIFIC_TASK: یافتن باگ‌های احتمالی در منطق مسیریابی و ارتباط با API
+- test/
+SPECIFIC_TASK: یافتن آسیب‌پذیری‌ها در دریافت و ذخیره کانفیگ‌ها
 CROSS_AUDIT_TARGET: none
 === END BRIEF ===
 
