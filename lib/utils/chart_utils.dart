@@ -21,10 +21,17 @@ class ChartUtils {
     final validSamples = samples.where((s) => s > 0).toList();
     if (validSamples.isEmpty) return 0.0;
 
-    double mean = validSamples.reduce((a, b) => a + b) / validSamples.length;
-    double variance =
-        validSamples.map((x) => pow(x - mean, 2)).reduce((a, b) => a + b) /
-            validSamples.length;
+    double sum = 0;
+    for (final s in validSamples) {
+      sum += s;
+    }
+    double mean = sum / validSamples.length;
+
+    double varianceSum = 0;
+    for (final s in validSamples) {
+      varianceSum += pow(s - mean, 2);
+    }
+    double variance = varianceSum / validSamples.length;
 
     return sqrt(variance);
   }
