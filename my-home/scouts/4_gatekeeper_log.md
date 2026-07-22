@@ -1,13 +1,13 @@
-=== MISSION BRIEF: 2026-07-19 ===
+=== MISSION BRIEF: 2026-07-20 ===
 ROLE_TONIGHT: QA/Testing
 ASSIGNED_BY: Mastermind
-REASON: فاز 2 - تکمیل تست‌های پوشش‌داده‌نشده
+REASON: ادامه تست‌نویسی برای کلاس‌های فاقد Coverage (فاز ۱)
 SCOPE:
 - test/
 FROZEN_ZONES:
 - lib/screens/
-SPECIFIC_TASK: پیاده‌سازی تست برای background_ad_service و scale_on_tap بر اساس گزارش شب قبل
-CROSS_AUDIT_TARGET: بررسی تداخل تست‌های ویجت
+SPECIFIC_TASK: none
+CROSS_AUDIT_TARGET: none
 === END BRIEF ===
 
 --- تاریخچه گزارش‌ها ---
