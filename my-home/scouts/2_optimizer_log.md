@@ -1,14 +1,13 @@
-=== MISSION BRIEF: 2026-07-19 ===
+=== MISSION BRIEF: 2026-07-20 ===
 ROLE_TONIGHT: Performance
 ASSIGNED_BY: Mastermind
-REASON: شب جدید - بررسی پرفورمنس پردازش‌های پس‌زمینه
+REASON: بررسی پرفورمنس جدید در رابط کاربری (فاز ۱)
 SCOPE:
-- lib/utils/
-- lib/services/
-FROZEN_ZONES:
 - lib/screens/
-- test/
-SPECIFIC_TASK: پیدا کردن گلوگاه‌های پردازشی در Utility ها
+- lib/widgets/
+FROZEN_ZONES:
+- lib/services/
+SPECIFIC_TASK: none
 CROSS_AUDIT_TARGET: none
 === END BRIEF ===
 
