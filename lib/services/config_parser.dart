@@ -93,7 +93,7 @@ String _safeBase64Decode(String input) {
     String processed = input.trim();
 
     // Remove whitespace
-    processed = processed.replaceAll(RegExp(r'\s+'), '');
+    processed = processed.split(RegExp(r'\s+')).join('');
 
     // Normalize URL-safe characters
     processed = processed.replaceAll('-', '+').replaceAll('_', '/');
