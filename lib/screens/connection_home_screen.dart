@@ -126,7 +126,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
-        setState(() {}); // Rebuild to switch lists
+        // Rebuild handled by AnimatedBuilder
       }
     });
 
@@ -779,23 +779,24 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                         ),
                       ),
                       const SizedBox(height: 30),
-                      _SelectedConfigView(
-                        config: _configManager.selectedConfig,
-                        activeTestIds: _activeTestIds,
-                        onRunSingleTest: _runSingleTest,
-                        onToggleFavorite: (id) async {
-                          await _configManager.toggleFavorite(id);
-                          setState(() {});
-                        },
-                        onDelete: (config) async {
-                          final confirm = await _showDeleteConfirmationDialog(
-                            config,
-                          );
-                          if (confirm && mounted) {
-                            await _configManager.deleteConfig(config.id);
-                            setState(() {});
-                          }
-                        },
+                      ListenableBuilder(
+                        listenable: _configManager,
+                        builder: (context, _) => _SelectedConfigView(
+                          config: _configManager.selectedConfig,
+                          activeTestIds: _activeTestIds,
+                          onRunSingleTest: _runSingleTest,
+                          onToggleFavorite: (id) async {
+                            await _configManager.toggleFavorite(id);
+                          },
+                          onDelete: (config) async {
+                            final confirm = await _showDeleteConfirmationDialog(
+                              config,
+                            );
+                            if (confirm && mounted) {
+                              await _configManager.deleteConfig(config.id);
+                            }
+                          },
+                        ),
                       ),
                       const SizedBox(height: 25),
                       _AutoTestToggleGroup(
@@ -967,11 +968,13 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                   backgroundColor: const Color(0xFF0A0A0A),
                 ),
               ),
-              ListenableBuilder(
-                listenable: _configManager,
-                builder: (context, _) {
-                  List<VpnConfigWithMetrics> configs;
-                  switch (_tabController.index) {
+              AnimatedBuilder(
+                animation: _tabController,
+                builder: (context, _) => ListenableBuilder(
+                  listenable: _configManager,
+                  builder: (context, _) {
+                    List<VpnConfigWithMetrics> configs;
+                    switch (_tabController.index) {
                     case 1:
                       configs = _configManager.validatedConfigs;
                       break;
@@ -1063,6 +1066,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                   );
                 },
               ),
+            ),
               const SliverToBoxAdapter(child: SizedBox(height: 20)),
             ],
           ),
