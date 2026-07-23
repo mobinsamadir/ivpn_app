@@ -124,7 +124,7 @@ CROSS_AUDIT_TARGET: none
 
 ### [تاریخ: ۲۰۲۶-۰۷-۲۰] Converter Report (Phase 2)
 **اقدامات نهایی اجرا شده:**
-۱. دکمه Close & Connect در `ad_dialog.dart` درون یک `ScaleOnTap` قرار گرفت تا بازخورد لمسی ارائه دهد. برای جلوگیری از تداخل Gesture، از `IgnorePointer` و `onPressed: null` در `ElevatedButton` استفاده شد.
+۱. دکمه Close & Connect در `ad_dialog.dart` درون یک `ScaleOnTap` قرار گرفت تا بازخورد لمسی ارائه دهد. برای جلوگیری از تداخل Gesture، از `IgnorePointer` و `onPressed: () {}` در `ElevatedButton` استفاده شد.
 ۲. دکمه Update Now در `update_dialog.dart` به انیمیشن `ScaleOnTap` مجهز شد. وضعیت‌های Disabled رنگ دکمه هم تنظیم شدند تا ظاهر اولیه حفظ شود.
 ۳. تست‌های پروژه اجرا شد و با موفقیت پاس شدند. تغییرات طبق قانون طلایی نهایی و تایید می‌گردد.
 **وضعیت**: ✅ تأیید شده و با موفقیت تکمیل شد (تصمیم‌گیری خودکار).

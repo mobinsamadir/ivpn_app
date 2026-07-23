@@ -112,24 +112,26 @@ class _AdDialogState extends State<AdDialog> {
               width: double.infinity,
               height: 50,
               child: ScaleOnTap(
-                onTap: _canClose ? () {} : null,
-                child: ElevatedButton(
-                  onPressed: _canClose ? () => Navigator.of(context).pop(true) : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _canClose ? Colors.green : Colors.grey[800],
-                    disabledBackgroundColor: Colors.grey[800],
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                onTap: _canClose ? () => Navigator.of(context).pop(true) : null,
+                child: IgnorePointer(
+                  child: ElevatedButton(
+                    onPressed: _canClose ? () {} : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _canClose ? Colors.green : Colors.grey[800],
+                      disabledBackgroundColor: Colors.grey[800],
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
-                  ),
-                  child: Text(
-                    _canClose
-                        ? 'Close & Connect'
-                        : 'Please wait (${_timeLeft}s)...',
-                    style: TextStyle(
-                      color: _canClose ? Colors.white : Colors.white54,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                    child: Text(
+                      _canClose
+                          ? 'Close & Connect'
+                          : 'Please wait (${_timeLeft}s)...',
+                      style: TextStyle(
+                        color: _canClose ? Colors.white : Colors.white54,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),

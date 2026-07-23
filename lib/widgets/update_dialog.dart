@@ -140,22 +140,24 @@ class UpdateDialog extends StatelessWidget {
                 ),
                 const SizedBox(width: 12),
                 ScaleOnTap(
-                  onTap: () {},
-                  child: ElevatedButton.icon(
-                    onPressed: onUpdate,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blueAccent,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  onTap: onUpdate,
+                  child: IgnorePointer(
+                    child: ElevatedButton.icon(
+                      onPressed: () {},
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blueAccent,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
                       ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 12,
-                      ),
+                      icon: const Icon(Icons.download, size: 18),
+                      label: const Text('Update Now'),
                     ),
-                    icon: const Icon(Icons.download, size: 18),
-                    label: const Text('Update Now'),
                   ),
                 ),
               ],
