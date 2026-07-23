@@ -38,7 +38,7 @@ void main() {
       expect(find.text('Update Now'), findsOneWidget);
 
       // Tap update now
-      await tester.tap(find.text('Update Now'));
+      await tester.tap(find.text('Update Now'), warnIfMissed: false);
       await tester.pump();
       expect(onUpdateCalled, isTrue);
     });
