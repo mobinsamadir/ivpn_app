@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'scale_on_tap.dart';
 import '../services/ad_manager_service.dart';
 import 'universal_ad_widget.dart';
 
@@ -110,24 +111,29 @@ class _AdDialogState extends State<AdDialog> {
             SizedBox(
               width: double.infinity,
               height: 50,
-              child: ElevatedButton(
-                onPressed:
-                    _canClose ? () => Navigator.of(context).pop(true) : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _canClose ? Colors.green : Colors.grey[800],
-                  disabledBackgroundColor: Colors.grey[800],
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: Text(
-                  _canClose
-                      ? 'Close & Connect'
-                      : 'Please wait (${_timeLeft}s)...',
-                  style: TextStyle(
-                    color: _canClose ? Colors.white : Colors.white54,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+              child: ScaleOnTap(
+                onTap: _canClose ? () => Navigator.of(context).pop(true) : null,
+                child: IgnorePointer(
+                  child: ElevatedButton(
+                    onPressed: _canClose ? () {} : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          _canClose ? Colors.green : Colors.grey[800],
+                      disabledBackgroundColor: Colors.grey[800],
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      _canClose
+                          ? 'Close & Connect'
+                          : 'Please wait (${_timeLeft}s)...',
+                      style: TextStyle(
+                        color: _canClose ? Colors.white : Colors.white54,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
               ),

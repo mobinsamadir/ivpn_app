@@ -93,7 +93,7 @@ void main() {
     test('getBestConfig returns valid config or null', () async {
       final manager = ConfigManager();
       await manager.init();
-      // clearAllData handled in setUp
+      await manager.clearAllData();
 
       var best = await manager.getBestConfig();
       expect(best, isNull);
