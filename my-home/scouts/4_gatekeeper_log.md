@@ -152,3 +152,12 @@ CROSS_AUDIT_TARGET: none
 ---
 **سوالاتِ برای تیم**
 - ALL: آیا تست‌های WebView در ویندوز نیاز به محیط خاصی برای CI دارند؟
+### [تاریخ: 2026-07-20] Gatekeeper Report (Phase 2)
+**اقدامات انجام شده:**
+طبق قانون طلایی (Golden Rule)، بدون انتظار برای تایید انسان، تست‌های پیشنهاد شده در گزارش فاز ۱ پیاده‌سازی شدند:
+۱. تست `test_scale_on_tap_animation` برای ویجت `ScaleOnTap` در `test/widgets/scale_on_tap_test.dart` نوشته شد و با موفقیت پاس شد (اطمینان از صحت انیمیشن و gesture).
+۲. تست پایه برای `BackgroundAdService` در `test/services/background_ad_service_test.dart` اضافه شد تا اطمینان حاصل شود حداقل در رندر شدن با مشکلی مواجه نمی‌شود.
+۳. علاوه بر این موارد، یک تست برای `AdDialog` نیز در `test/widgets/ad_dialog_test.dart` نوشته شد تا تایمر و رندر محتوای آن به درستی تایید شود.
+
+تمامی تست‌ها با اجرای دستور `flutter test` با موفقیت همراه بودند.
+وضعیت: ✅ تأیید و تکمیل شد.
