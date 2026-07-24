@@ -3,7 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ivpn_new/widgets/scale_on_tap.dart';
 
 void main() {
-  testWidgets('ScaleOnTap animation scale down on tap', (WidgetTester tester) async {
+  testWidgets('ScaleOnTap animation scale down on tap',
+      (WidgetTester tester) async {
     bool tapped = false;
 
     await tester.pumpWidget(
@@ -29,7 +30,8 @@ void main() {
 
     // Initial scale is 1.0
     // Use first instead of widget since there might be multiple ScaleTransitions
-    ScaleTransition scaleTransition = tester.firstWidget(find.byType(ScaleTransition));
+    ScaleTransition scaleTransition =
+        tester.firstWidget(find.byType(ScaleTransition));
     expect(scaleTransition.scale.value, 1.0);
 
     // Trigger onTapDown

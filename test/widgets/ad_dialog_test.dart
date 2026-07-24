@@ -4,7 +4,8 @@ import 'package:ivpn_new/widgets/ad_dialog.dart';
 import 'package:ivpn_new/widgets/universal_ad_widget.dart';
 
 void main() {
-  testWidgets('AdDialog renders correctly and has a timer', (WidgetTester tester) async {
+  testWidgets('AdDialog renders correctly and has a timer',
+      (WidgetTester tester) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(
