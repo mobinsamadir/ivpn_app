@@ -975,98 +975,98 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                   builder: (context, _) {
                     List<VpnConfigWithMetrics> configs;
                     switch (_tabController.index) {
-                    case 1:
-                      configs = _configManager.validatedConfigs;
-                      break;
-                    case 2:
-                      configs = _configManager.favoriteConfigs;
-                      break;
-                    case 0:
-                    default:
-                      configs = _configManager.allConfigs;
-                  }
+                      case 1:
+                        configs = _configManager.validatedConfigs;
+                        break;
+                      case 2:
+                        configs = _configManager.favoriteConfigs;
+                        break;
+                      case 0:
+                      default:
+                        configs = _configManager.allConfigs;
+                    }
 
-                  if (configs.isEmpty) {
-                    if (_isFetching) {
-                      return SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) => const ShimmerConfigCard(),
-                          childCount: 6,
+                    if (configs.isEmpty) {
+                      if (_isFetching) {
+                        return SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) => const ShimmerConfigCard(),
+                            childCount: 6,
+                          ),
+                        );
+                      }
+
+                      return SliverToBoxAdapter(
+                        child: Container(
+                          padding: const EdgeInsets.all(50),
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.inbox_outlined,
+                                  size: 64,
+                                  color: Colors.grey[600],
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'No configs available',
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontSize: 18,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       );
                     }
 
-                    return SliverToBoxAdapter(
-                      child: Container(
-                        padding: const EdgeInsets.all(50),
-                        child: Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.inbox_outlined,
-                                size: 64,
-                                color: Colors.grey[600],
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'No configs available',
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 18,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+                    return SliverList(
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        final config = configs[index];
+                        return ConfigCard(
+                          config: config,
+                          isSelected:
+                              _configManager.selectedConfig?.id == config.id,
+                          isTesting: _activeTestIds.contains(config.id),
+                          onTap: () async {
+                            _configManager.selectConfig(config);
+
+                            if (_configManager.isAutoSwitchEnabled) {
+                              if (_configManager.isConnected) {
+                                // Start the switch process properly within ConfigManager to avoid race conditions
+                                await _configManager.switchConfig(config);
+                              }
+                            } else {
+                              // Forced manual connect
+                              try {
+                                await _configManager.connectManual(config);
+                              } catch (e) {
+                                _showToast('Connection failed: $e');
+                              }
+                            }
+                          },
+                          onTestLatency: () => _runSingleTest(config),
+                          onTestSpeed: () => _runSingleTest(config),
+                          onToggleFavorite: () async {
+                            await _configManager.toggleFavorite(config.id);
+                          },
+                          onDelete: () async {
+                            final confirm = await _showDeleteConfirmationDialog(
+                              config,
+                            );
+                            if (confirm && mounted) {
+                              await _configManager.deleteConfig(config.id);
+                            }
+                          },
+                        );
+                      }, childCount: configs.length),
                     );
-                  }
-
-                  return SliverList(
-                    delegate: SliverChildBuilderDelegate((context, index) {
-                      final config = configs[index];
-                      return ConfigCard(
-                        config: config,
-                        isSelected:
-                            _configManager.selectedConfig?.id == config.id,
-                        isTesting: _activeTestIds.contains(config.id),
-                        onTap: () async {
-                          _configManager.selectConfig(config);
-
-                          if (_configManager.isAutoSwitchEnabled) {
-                            if (_configManager.isConnected) {
-                              // Start the switch process properly within ConfigManager to avoid race conditions
-                              await _configManager.switchConfig(config);
-                            }
-                          } else {
-                            // Forced manual connect
-                            try {
-                              await _configManager.connectManual(config);
-                            } catch (e) {
-                              _showToast('Connection failed: $e');
-                            }
-                          }
-                        },
-                        onTestLatency: () => _runSingleTest(config),
-                        onTestSpeed: () => _runSingleTest(config),
-                        onToggleFavorite: () async {
-                          await _configManager.toggleFavorite(config.id);
-                        },
-                        onDelete: () async {
-                          final confirm = await _showDeleteConfirmationDialog(
-                            config,
-                          );
-                          if (confirm && mounted) {
-                            await _configManager.deleteConfig(config.id);
-                          }
-                        },
-                      );
-                    }, childCount: configs.length),
-                  );
-                },
+                  },
+                ),
               ),
-            ),
               const SliverToBoxAdapter(child: SizedBox(height: 20)),
             ],
           ),
