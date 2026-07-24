@@ -1,13 +1,11 @@
-=== MISSION BRIEF: 2026-07-20 ===
+=== MISSION BRIEF: 2026-07-25 ===
 ROLE_TONIGHT: UX/Conversion
 ASSIGNED_BY: Mastermind
 REASON: بررسی فرصت‌های بهبود تعامل کاربر (فاز ۱)
 SCOPE:
-- lib/screens/
 - lib/widgets/
 FROZEN_ZONES:
-- lib/services/
-- test/
+- none
 SPECIFIC_TASK: none
 CROSS_AUDIT_TARGET: none
 === END BRIEF ===
