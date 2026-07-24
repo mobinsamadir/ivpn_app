@@ -1,9 +1,9 @@
-=== MISSION BRIEF: 2026-07-20 ===
+=== MISSION BRIEF: 2026-07-25 ===
 ROLE_TONIGHT: Security
 ASSIGNED_BY: Mastermind
-REASON: بررسی امنیتی جدید (فاز ۱)
+REASON: بررسی باگ‌های نیتیو (فاز ۱)
 SCOPE:
-- lib/
+- android/
 FROZEN_ZONES:
 - none
 SPECIFIC_TASK: none

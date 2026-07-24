@@ -1,12 +1,11 @@
-=== MISSION BRIEF: 2026-07-20 ===
-ROLE_TONIGHT: Performance
+=== MISSION BRIEF: 2026-07-25 ===
+ROLE_TONIGHT: Refactoring
 ASSIGNED_BY: Mastermind
-REASON: بررسی پرفورمنس جدید در رابط کاربری (فاز ۱)
+REASON: ریفکتور ابزارها (فاز ۱)
 SCOPE:
-- lib/screens/
-- lib/widgets/
+- lib/utils/
 FROZEN_ZONES:
-- lib/services/
+- none
 SPECIFIC_TASK: none
 CROSS_AUDIT_TARGET: none
 === END BRIEF ===
