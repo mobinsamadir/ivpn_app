@@ -1,1 +1,33 @@
-{}
+{
+  "week": "2026-07-20_to_2026-07-26",
+  "agents": {
+    "hunter": {
+      "proposals": 3,
+      "approved": 3,
+      "rejected": 0,
+      "pending": 0,
+      "best_find": "Gomobile Panic Crash Fix in Kotlin"
+    },
+    "optimizer": {
+      "proposals": 5,
+      "approved": 5,
+      "rejected": 0,
+      "pending": 0,
+      "best_find": "Unnecessary Rebuilds in SmartConnectButton"
+    },
+    "converter": {
+      "proposals": 5,
+      "approved": 4,
+      "rejected": 1,
+      "pending": 0,
+      "best_find": "ScaleOnTap in View Ad Button"
+    },
+    "gatekeeper": {
+      "proposals": 4,
+      "approved": 4,
+      "rejected": 0,
+      "pending": 0,
+      "best_find": "Test coverage for TimeWalletService and BackgroundAdService"
+    }
+  }
+}
