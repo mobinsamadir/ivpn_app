@@ -38,7 +38,8 @@ class SingboxConfigGenerator {
 
     final link = rawLink.trim();
     if (kDebugMode) {
-      AdvancedLogger.info("--- Parsing Protocol: ${link.split('://').first} ---");
+      AdvancedLogger.info(
+          "--- Parsing Protocol: ${link.split('://').first} ---");
     }
 
     try {
