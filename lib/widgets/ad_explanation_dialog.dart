@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'scale_on_tap.dart';
 
 class AdExplanationDialog extends StatefulWidget {
   final Future<bool> Function() onAdView;
@@ -52,14 +53,19 @@ class _AdExplanationDialogState extends State<AdExplanationDialog> {
                 height: 24,
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
-            : ElevatedButton(
-                onPressed: _handleViewAd,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blueAccent,
-                ),
-                child: const Text(
-                  'View Ad',
-                  style: TextStyle(color: Colors.white),
+            : ScaleOnTap(
+                onTap: _handleViewAd,
+                child: IgnorePointer(
+                  child: ElevatedButton(
+                    onPressed: () {},
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueAccent,
+                    ),
+                    child: const Text(
+                      'View Ad',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
                 ),
               ),
       ],
