@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import '../utils/advanced_logger.dart';
-import '../utils/file_logger.dart';
+
 import 'singbox_config_generator.dart';
 
 // Top-level function for compute to prevent UI lag
@@ -499,7 +499,7 @@ class WindowsVpnService {
         error: e,
         stackTrace: stackTrace,
       );
-      FileLogger.log("Connection Error: $e");
+      AdvancedLogger.error("Connection Error: $e");
       rethrow;
     }
   }

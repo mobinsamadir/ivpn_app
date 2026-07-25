@@ -69,3 +69,12 @@ CROSS_AUDIT_TARGET: none
 ### [تاریخ: ۲۰۲۶-۰۷-۱۵] Hunter Report (Phase 2)
 **اقدامات نهایی امنیتی:**
 ۱. در `windows_vpn_service.dart`، مقدار دهی `_currentConfigPath` دقیقاً در همان لحظه ایجاد `config.json` انجام شد تا مطمئن شویم متد `stopVpn` تحت هر شرایطی (حتی در صورت بروز خطا قبل از اجرای پروسه native) مسیر را در اختیار داشته و فایل موقت کانفیگ حاوی اطلاعات حساس را پاک می‌کند. این اقدام باگ مربوط به Information Disclosure را کاملاً مسدود ساخت.
+### [تاریخ: ۲۰۲۶-۰۷-۲۵] Hunter Report
+
+**گزارش #۱: عدم رسیدگی به خطاهای Go Panics در ارتباط با Libbox/Gomobile (اندروید)**
+- **فایل‌ها**: `android/app/src/main/kotlin/com/example/ivpnnew/SingboxVpnService.kt` و `android/app/src/main/kotlin/com/example/ivpn_new/MainActivity.kt`
+- **خطر**: در کد کاتلین برای گرفتن ارورهای مربوط به Gomobile/Libbox، کدهای `catch (e: Exception)` استفاده شده است. اما توابع نوشته شده در Go که از طریق Gomobile کامپایل شده‌اند (مثل `Libbox`) گاها در صورت بروز Panic خطای `java.lang.Error` را پرتاب می‌کنند که از کلاس `Exception` ارث بری نمی‌کند بلکه از `Throwable` است. در نتیجه برنامه در صورت بروز خطای گو کرش می‌کند و مدیریت درستی نمی‌شود که باعث خرابی کامل برنامه می‌شود.
+- **چرا خطرناک**: باگ و اکسپلویت‌های احتمالی سمت کتابخانه‌های گو باعث بسته شدن ناگهانی برنامه می‌شود (Denial of Service - DoS)، در حالی که برنامه می‌توانست خطا را کنترل و به کاربر پیام خطا نشان دهد.
+- **راه حل**: باید تمامی `catch (e: Exception)` ها به `catch (e: Throwable)` تغییر پیدا کنند تا هرگونه `Error` و `Exception` به درستی کنترل شود. این قانون در حافظه سیستم ذکر شده است.
+
+- **وضعیت**: ✋ به دلیل اعمال Golden Rule سریعاً روی کد اعمال شد.
