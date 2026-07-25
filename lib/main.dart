@@ -8,7 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'utils/advanced_logger.dart';
-import 'utils/file_logger.dart';
+
 import 'services/config_manager.dart';
 import 'utils/cleanup_utils.dart';
 import 'providers/theme_provider.dart';
@@ -68,8 +68,8 @@ void main() {
           },
         );
 
-        await FileLogger.init().timeout(const Duration(seconds: 2));
-        FileLogger.log("Application starting...");
+        await AdvancedLogger.init().timeout(const Duration(seconds: 2));
+        AdvancedLogger.info("Application starting...");
       } catch (e) {
         debugPrint("Logger initialization warning: $e");
       }
