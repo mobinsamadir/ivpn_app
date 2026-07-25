@@ -5,34 +5,47 @@ class ChartUtils {
   static double calculateJitter(List<int> samples) {
     if (samples.length < 2) return 0.0;
 
-    // Filter out -1 (failures) for jitter calculation
-    final validSamples = samples.where((s) => s > 0).toList();
-    if (validSamples.length < 2) return 0.0;
-
     double sumOfDifferences = 0;
-    for (int i = 1; i < validSamples.length; i++) {
-      sumOfDifferences += (validSamples[i] - validSamples[i - 1]).abs();
+    int validCount = 0;
+    int lastValidSample = -1;
+
+    for (int i = 0; i < samples.length; i++) {
+      if (samples[i] > 0) {
+        if (lastValidSample != -1) {
+          sumOfDifferences += (samples[i] - lastValidSample).abs();
+          validCount++;
+        }
+        lastValidSample = samples[i];
+      }
     }
 
-    return sumOfDifferences / (validSamples.length - 1);
+    if (validCount == 0) return 0.0;
+    return sumOfDifferences / validCount;
   }
 
   static double calculateStandardDeviation(List<int> samples) {
-    final validSamples = samples.where((s) => s > 0).toList();
-    if (validSamples.isEmpty) return 0.0;
-
+    int validCount = 0;
     double sum = 0;
-    for (final s in validSamples) {
-      sum += s;
-    }
-    double mean = sum / validSamples.length;
 
+    for (final s in samples) {
+      if (s > 0) {
+        sum += s;
+        validCount++;
+      }
+    }
+
+    if (validCount == 0) return 0.0;
+
+    double mean = sum / validCount;
     double varianceSum = 0;
-    for (final s in validSamples) {
-      varianceSum += pow(s - mean, 2);
-    }
-    double variance = varianceSum / validSamples.length;
 
+    for (final s in samples) {
+      if (s > 0) {
+        varianceSum += pow(s - mean, 2);
+      }
+    }
+
+    double variance = varianceSum / validCount;
     return sqrt(variance);
   }
 
@@ -43,16 +56,26 @@ class ChartUtils {
   ) {
     if (samples.isEmpty) return [];
 
-    List<double> result = [];
+    List<double> result = List.filled(samples.length, 0.0);
+
     for (int i = 0; i < samples.length; i++) {
       int start = max(0, i - windowSize + 1);
       int end = i + 1;
-      final window = samples.sublist(start, end).where((s) => s > 0).toList();
 
-      if (window.isEmpty) {
-        result.add(0.0);
+      double sum = 0;
+      int validCount = 0;
+
+      for (int j = start; j < end; j++) {
+        if (samples[j] > 0) {
+          sum += samples[j];
+          validCount++;
+        }
+      }
+
+      if (validCount == 0) {
+        result[i] = 0.0;
       } else {
-        result.add(window.reduce((a, b) => a + b) / window.length);
+        result[i] = sum / validCount;
       }
     }
     return result;
