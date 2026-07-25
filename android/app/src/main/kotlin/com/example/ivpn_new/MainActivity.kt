@@ -157,7 +157,7 @@ class MainActivity : FlutterActivity() {
                             result.notImplemented()
                         }
                     }
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     result.error("METHOD_ERROR", "Exception during method call: ${e.message}", null)
                 }
             }
