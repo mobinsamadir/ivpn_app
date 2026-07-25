@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart'; // For kDebugMode
 import '../utils/advanced_logger.dart';
-import '../utils/file_logger.dart';
+
 import '../utils/base64_utils.dart';
 
 class SingboxConfigGenerator {
@@ -38,7 +38,7 @@ class SingboxConfigGenerator {
 
     final link = rawLink.trim();
     if (kDebugMode) {
-      FileLogger.log("--- Parsing Protocol: ${link.split('://').first} ---");
+      AdvancedLogger.info("--- Parsing Protocol: ${link.split('://').first} ---");
     }
 
     try {
@@ -74,7 +74,7 @@ class SingboxConfigGenerator {
         throw Exception("Unsupported protocol: ${link.split('://').first}");
       }
     } catch (e) {
-      FileLogger.log("❌ ERROR: Protocol parsing failed: $e");
+      AdvancedLogger.error("❌ ERROR: Protocol parsing failed: $e");
       AdvancedLogger.warn("[PARSER-FAIL] Raw URL: $link");
       rethrow;
     }
@@ -488,7 +488,7 @@ class SingboxConfigGenerator {
 
       return null;
     } catch (e) {
-      FileLogger.log('[CONFIG-GEN] Error extracting server details: $e');
+      AdvancedLogger.info('[CONFIG-GEN] Error extracting server details: $e');
       return null;
     }
   }
