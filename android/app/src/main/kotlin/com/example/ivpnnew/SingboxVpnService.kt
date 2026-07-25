@@ -67,7 +67,7 @@ class SingboxVpnService :
                     testServer = null
                     android.util.Log.d("NativeVpnLifecycle", "testServer successfully closed.")
                     delay(100) // Ensure OS cleans up socket/goroutine
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     android.util.Log.e("NativeVpnLifecycle", "Error closing testServer: ${e.message}")
                     e.printStackTrace()
                 }
@@ -93,7 +93,7 @@ class SingboxVpnService :
             if (deleteAfterRead) {
                 try {
                     file.delete()
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     e.printStackTrace()
                 }
             }
@@ -128,7 +128,7 @@ class SingboxVpnService :
                     val configJson: String
                     try {
                         configJson = getValidJsonConfig(rawInput, true)
-                    } catch (e: Exception) {
+                    } catch (e: Throwable) {
                         // Send error to Flutter immediately on the Main Thread
                         result?.let { r -> Handler(Looper.getMainLooper()).post { r.error("CONFIG_ERROR", e.message, null) } }
                         return@withContext // EXIT the coroutine. DO NOT proceed to Libbox!
@@ -206,7 +206,7 @@ class SingboxVpnService :
                     delay(200)
 
                     result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(socksPort) } }
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     e.printStackTrace()
                     result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-4) } }
                 }
@@ -218,7 +218,7 @@ class SingboxVpnService :
                 nativeCallMutex.withLock {
                     try {
                         closeTestServerUnlocked()
-                    } catch (e: Exception) {
+                    } catch (e: Throwable) {
                         e.printStackTrace()
                     }
                 }
@@ -242,7 +242,7 @@ class SingboxVpnService :
                     val configJson: String
                     try {
                         configJson = getValidJsonConfig(rawInput, true)
-                    } catch (e: Exception) {
+                    } catch (e: Throwable) {
                         // Send error to Flutter immediately on the Main Thread
                         result?.let { r -> Handler(Looper.getMainLooper()).post { r.error("CONFIG_ERROR", e.message, null) } }
                         return@withContext // EXIT the coroutine. DO NOT proceed to Libbox!
@@ -326,7 +326,7 @@ class SingboxVpnService :
                     } else {
                         result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
                     }
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
                 } finally {
                     // test server close handled normally
@@ -378,7 +378,7 @@ class SingboxVpnService :
                     if (configJson.isNullOrBlank()) {
                         throw IllegalArgumentException("Config string is null or empty")
                     }
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     MainActivity.sendVpnStatus("ERROR: CONFIG_ERROR - ${e.message}")
                     stopVpnInternal()
                     return
@@ -467,7 +467,7 @@ class SingboxVpnService :
             // CRITICAL FIX: Broadcast "DISCONNECTED" State to Dart
             MainActivity.sendVpnStatus("DISCONNECTED")
             android.util.Log.d("NativeVpnLifecycle", "stopVpnInternal completed successfully")
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             android.util.Log.e("NativeVpnLifecycle", "stopVpnInternal error: ${e.message}")
             e.printStackTrace()
         }
