@@ -1,17 +1,16 @@
-# 🌙 خلاصه شب 2026-07-24
+# 🌙 خلاصه شب 2026-07-25
 
 ## ✅ پیشنهادات تایید‌شده از شب قبل
-- بهبودهای امنیتی (Hunter) انجام شد.
-- پرفورمنس رابط کاربری بررسی و تایید شد (Optimizer).
-- بهبود UX و تعاملات تکمیل شد (Converter).
-- تست‌های رابط کاربری پیاده‌سازی شدند (Gatekeeper).
+- باگ کرش اپلیکیشن در کاتلین با تبدیل `catch (e: Exception)` به `Throwable` رفع شد (Hunter).
+- کلاس‌های `logger.dart` و `file_logger.dart` پاک‌سازی و با `AdvancedLogger` یکپارچه شدند (Optimizer).
+- انیمیشن `ScaleOnTap` به دکمه "View Ad" در `ad_explanation_dialog.dart` اضافه شد (Converter).
 
 ## 🔴 پیشنهادات اصلی امشب (منتظر تصمیم شما)
-- تخصیص ماموریت‌های جدید برای تاریخ 2026-07-25:
-  - Hunter: `android/`
-  - Optimizer: `lib/utils/`
-  - Converter: `lib/widgets/`
-  - Gatekeeper: `test/`
+- تخصیص ماموریت‌های جدید برای تاریخ 2026-07-26:
+  - Hunter: `lib/services/` (ارزیابی امنیتی منطق شبکه)
+  - Optimizer: `android/` (بهینه‌سازی کارایی نیتیو)
+  - Converter: `lib/screens/` (بهبود تعامل در صفحات اصلی)
+  - Gatekeeper: `test/` (تست‌نویسی مستمر)
 
 ## ⚠️ تضادها یا نیاز به بحث
 - مسئله‌ای وجود ندارد.

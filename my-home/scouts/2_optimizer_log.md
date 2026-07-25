@@ -1,18 +1,15 @@
-=== MISSION BRIEF: 2026-07-25 ===
-ROLE_TONIGHT: Refactoring
+=== MISSION BRIEF: 2026-07-26 ===
+ROLE_TONIGHT: Performance
 ASSIGNED_BY: Mastermind
-REASON: ریفکتور ابزارها (فاز ۱)
+REASON: بررسی پرفورمنس در کدهای نیتیو (فاز ۱)
 SCOPE:
-- lib/utils/
+- android/
 FROZEN_ZONES:
 - none
 SPECIFIC_TASK: none
 CROSS_AUDIT_TARGET: none
 === END BRIEF ===
 
---- تاریخچه گزارش‌ها ---
-
-=== END BRIEF ===
 
 --- تاریخچه گزارش‌ها ---
 
