@@ -19,7 +19,8 @@ void main() {
 
     test('triggerFallback other handles it', () {
       final token = CancelToken();
-      TestFallbackStrategy.triggerFallback(TestType.stability, 'job_789', token);
+      TestFallbackStrategy.triggerFallback(
+          TestType.stability, 'job_789', token);
       expect(true, isTrue);
     });
   });
