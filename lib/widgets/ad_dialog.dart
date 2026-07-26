@@ -124,7 +124,9 @@ class _AdDialogState extends State<AdDialog> {
                     valueListenable: _timeLeftNotifier,
                     builder: (context, timeLeft, child) {
                       return ScaleOnTap(
-                        onTap: canClose ? () => Navigator.of(context).pop(true) : null,
+                        onTap: canClose
+                            ? () => Navigator.of(context).pop(true)
+                            : null,
                         child: IgnorePointer(
                           child: ElevatedButton(
                             onPressed: canClose ? () {} : null,
