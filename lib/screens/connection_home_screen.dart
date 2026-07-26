@@ -1295,12 +1295,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                 Navigator.of(context).pop();
               },
             ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blueAccent,
-              ),
-              child: const Text('Add', style: TextStyle(color: Colors.white)),
-              onPressed: () async {
+            ScaleOnTap(
+              onTap: () async {
                 final url = urlController.text.trim();
                 if (url.isNotEmpty) {
                   Navigator.of(context).pop();
@@ -1324,6 +1320,15 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                   _showToast("Please enter a valid URL.");
                 }
               },
+              child: IgnorePointer(
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blueAccent,
+                  ),
+                  child: const Text('Add', style: TextStyle(color: Colors.white)),
+                  onPressed: () {},
+                ),
+              ),
             ),
           ],
         );
