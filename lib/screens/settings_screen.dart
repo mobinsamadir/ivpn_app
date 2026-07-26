@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../providers/theme_provider.dart'; // برای دسترسی به ThemeProvider
 import '../services/config_manager.dart';
+import '../widgets/scale_on_tap.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -66,9 +67,14 @@ class _SettingsScreenState extends State<SettingsScreen>
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancel'),
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Open Settings'),
+          ScaleOnTap(
+            onTap: () => Navigator.pop(context, true),
+            child: IgnorePointer(
+              child: ElevatedButton(
+                onPressed: () {},
+                child: const Text('Open Settings'),
+              ),
+            ),
           ),
         ],
       ),
