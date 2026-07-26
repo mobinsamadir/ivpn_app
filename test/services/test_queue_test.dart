@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ivpn_new/services/test_queue.dart';
-import 'package:ivpn_new/services/test_job.dart';
+
 import 'package:ivpn_new/utils/cancellable_operation.dart';
 
 void main() {
@@ -28,19 +28,13 @@ void main() {
     });
 
     test('cancelAll cancels running and pending jobs', () async {
-      bool task1Finished = false;
-      bool task2Finished = false;
-
       // Enqueue a job that takes some time
-      final future1 = queue.enqueue((token, jobId) async {
+      queue.enqueue((token, jobId) async {
         await Future.delayed(const Duration(milliseconds: 100));
-        task1Finished = true;
       }, name: 'Task1');
 
       // Enqueue a second job
-      final future2 = queue.enqueue((token, jobId) async {
-        task2Finished = true;
-      }, name: 'Task2');
+      final future2 = queue.enqueue((token, jobId) async {}, name: 'Task2');
 
       expect(queue.isBusy, true);
       expect(queue.queueLength, 1); // 1 active, 1 in queue

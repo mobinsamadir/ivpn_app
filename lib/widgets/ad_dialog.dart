@@ -17,8 +17,8 @@ class AdDialog extends StatefulWidget {
 }
 
 class _AdDialogState extends State<AdDialog> {
-  int _timeLeft = 10;
-  bool _canClose = false;
+  final ValueNotifier<int> _timeLeftNotifier = ValueNotifier<int>(10);
+  final ValueNotifier<bool> _canCloseNotifier = ValueNotifier<bool>(false);
   Timer? _timer;
 
   @override
@@ -29,28 +29,25 @@ class _AdDialogState extends State<AdDialog> {
 
   void _initializeTimer() {
     final ad = AdManagerService().getAdUnit(widget.unitId);
-    _timeLeft = ad?.timerSeconds ?? 10;
+    int initialTime = ad?.timerSeconds ?? 10;
     // Enforce a minimum safety of 3 seconds if enabled, unless explicitly 0
-    if (_timeLeft > 0 && _timeLeft < 3) {
-      _timeLeft = 3;
+    if (initialTime > 0 && initialTime < 3) {
+      initialTime = 3;
     }
+    _timeLeftNotifier.value = initialTime;
     _startTimer();
   }
 
   void _startTimer() {
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_timeLeft > 0) {
+      if (_timeLeftNotifier.value > 0) {
         if (mounted) {
-          setState(() {
-            _timeLeft--;
-          });
+          _timeLeftNotifier.value--;
         }
       } else {
         _timer?.cancel();
         if (mounted) {
-          setState(() {
-            _canClose = true;
-          });
+          _canCloseNotifier.value = true;
         }
       }
     });
@@ -59,6 +56,8 @@ class _AdDialogState extends State<AdDialog> {
   @override
   void dispose() {
     _timer?.cancel();
+    _timeLeftNotifier.dispose();
+    _canCloseNotifier.dispose();
     super.dispose();
   }
 
@@ -85,11 +84,18 @@ class _AdDialogState extends State<AdDialog> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                if (_canClose)
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.grey),
-                    onPressed: () => Navigator.of(context).pop(true),
-                  ),
+                ValueListenableBuilder<bool>(
+                  valueListenable: _canCloseNotifier,
+                  builder: (context, canClose, child) {
+                    if (canClose) {
+                      return IconButton(
+                        icon: const Icon(Icons.close, color: Colors.grey),
+                        onPressed: () => Navigator.of(context).pop(true),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
               ],
             ),
             const SizedBox(height: 10),
@@ -111,31 +117,43 @@ class _AdDialogState extends State<AdDialog> {
             SizedBox(
               width: double.infinity,
               height: 50,
-              child: ScaleOnTap(
-                onTap: _canClose ? () => Navigator.of(context).pop(true) : null,
-                child: IgnorePointer(
-                  child: ElevatedButton(
-                    onPressed: _canClose ? () {} : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          _canClose ? Colors.green : Colors.grey[800],
-                      disabledBackgroundColor: Colors.grey[800],
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Text(
-                      _canClose
-                          ? 'Close & Connect'
-                          : 'Please wait (${_timeLeft}s)...',
-                      style: TextStyle(
-                        color: _canClose ? Colors.white : Colors.white54,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
+              child: ValueListenableBuilder<bool>(
+                valueListenable: _canCloseNotifier,
+                builder: (context, canClose, child) {
+                  return ValueListenableBuilder<int>(
+                    valueListenable: _timeLeftNotifier,
+                    builder: (context, timeLeft, child) {
+                      return ScaleOnTap(
+                        onTap: canClose
+                            ? () => Navigator.of(context).pop(true)
+                            : null,
+                        child: IgnorePointer(
+                          child: ElevatedButton(
+                            onPressed: canClose ? () {} : null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  canClose ? Colors.green : Colors.grey[800],
+                              disabledBackgroundColor: Colors.grey[800],
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: Text(
+                              canClose
+                                  ? 'Close & Connect'
+                                  : 'Please wait (${timeLeft}s)...',
+                              style: TextStyle(
+                                color: canClose ? Colors.white : Colors.white54,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
               ),
             ),
           ],
