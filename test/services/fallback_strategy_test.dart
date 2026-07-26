@@ -4,21 +4,24 @@ import 'package:ivpn_new/services/test_job.dart';
 import 'package:ivpn_new/utils/cancellable_operation.dart';
 
 void main() {
-  group('TestFallbackStrategy Tests', () {
-    test('triggerFallback does not throw error for speed test', () {
+  group('TestFallbackStrategy', () {
+    test('triggerFallback speed handles it', () {
       final token = CancelToken();
-      expect(
-        () => TestFallbackStrategy.triggerFallback(TestType.speed, '123', token),
-        returnsNormally,
-      );
+      TestFallbackStrategy.triggerFallback(TestType.speed, 'job_123', token);
+      expect(true, isTrue); // If it doesn't throw, it works.
     });
 
-    test('triggerFallback does not throw error for health test', () {
+    test('triggerFallback health handles it', () {
       final token = CancelToken();
-      expect(
-        () => TestFallbackStrategy.triggerFallback(TestType.health, '123', token),
-        returnsNormally,
-      );
+      TestFallbackStrategy.triggerFallback(TestType.health, 'job_456', token);
+      expect(true, isTrue);
+    });
+
+    test('triggerFallback other handles it', () {
+      final token = CancelToken();
+      TestFallbackStrategy.triggerFallback(
+          TestType.stability, 'job_789', token);
+      expect(true, isTrue);
     });
   });
 }
