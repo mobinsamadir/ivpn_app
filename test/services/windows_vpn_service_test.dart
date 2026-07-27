@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ivpn_new/services/windows_vpn_service.dart';
+import 'dart:async';
 
 class MockFile implements File {
   final String _path;
@@ -76,6 +77,28 @@ void main() {
         final result = await service.checkRequiredAssets();
         expect(result, isTrue);
       }, createFile: (path) => MockFile(path, exists: true));
+    });
+  });
+
+  group('WindowsVpnService Basic Methods', () {
+    late WindowsVpnService service;
+
+    setUp(() {
+      service = WindowsVpnService();
+    });
+
+    test('isUserInitiatedDisconnect is updated statically', () {
+      WindowsVpnService.isUserInitiatedDisconnect = true;
+      expect(WindowsVpnService.isUserInitiatedDisconnect, isTrue);
+    });
+
+    test('Streams exist', () {
+      expect(service.statusStream, isA<Stream<String>>());
+      expect(service.logStream, isA<Stream<String>>());
+    });
+
+    test('stopVpn handles disconnected state gracefully', () async {
+      await expectLater(service.stopVpn(), completes);
     });
   });
 }
