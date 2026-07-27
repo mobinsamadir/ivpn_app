@@ -485,12 +485,18 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
               onPressed: () => Navigator.pop(context, false),
               child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
             ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-              child: const Text(
-                'Claim +1 Hour',
-                style: TextStyle(color: Colors.white),
+            ScaleOnTap(
+              onTap: () => Navigator.pop(context, true),
+              child: IgnorePointer(
+                child: ElevatedButton(
+                  onPressed: () {},
+                  style:
+                      ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                  child: const Text(
+                    'Claim +1 Hour',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
               ),
             ),
           ],
@@ -693,11 +699,18 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddServerDialog,
-        backgroundColor: Colors.blueAccent,
-        tooltip: 'Add Manual Server',
-        child: const Icon(Icons.add, color: Colors.white),
+      floatingActionButton: Tooltip(
+        message: 'Add Manual Server',
+        child: ScaleOnTap(
+          onTap: _showAddServerDialog,
+          child: IgnorePointer(
+            child: FloatingActionButton(
+              onPressed: () {},
+              backgroundColor: Colors.blueAccent,
+              child: const Icon(Icons.add, color: Colors.white),
+            ),
+          ),
+        ),
       ),
       body: SafeArea(
         child: RefreshIndicator(
