@@ -490,7 +490,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
               child: IgnorePointer(
                 child: ElevatedButton(
                   onPressed: () {},
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                  style:
+                      ElevatedButton.styleFrom(backgroundColor: Colors.green),
                   child: const Text(
                     'Claim +1 Hour',
                     style: TextStyle(color: Colors.white),
