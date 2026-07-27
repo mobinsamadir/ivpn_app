@@ -1,14 +1,15 @@
-=== MISSION BRIEF: 2026-07-26 ===
+=== MISSION BRIEF: 2026-07-28 ===
 ROLE_TONIGHT: Performance
 ASSIGNED_BY: Mastermind
-REASON: بررسی پرفورمنس در کدهای نیتیو (فاز ۱)
+REASON: بررسی پرفورمنس سرویس‌ها (فاز ۱)
 SCOPE:
-- android/
+- lib/services/
 FROZEN_ZONES:
 - none
 SPECIFIC_TASK: none
 CROSS_AUDIT_TARGET: none
 === END BRIEF ===
+
 
 
 --- تاریخچه گزارش‌ها ---
