@@ -5,7 +5,8 @@ import 'package:ivpn_new/services/ad_manager_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  testWidgets('UniversalAdWidget handles disabled ad configuration', (WidgetTester tester) async {
+  testWidgets('UniversalAdWidget handles disabled ad configuration',
+      (WidgetTester tester) async {
     SharedPreferences.setMockInitialValues({});
     await AdManagerService().initialize();
     kEnableAds = false;

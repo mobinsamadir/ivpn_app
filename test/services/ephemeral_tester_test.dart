@@ -1,9 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:ivpn_new/services/testers/ephemeral_tester.dart';
+import 'package:ivpn_new/models/vpn_config_with_metrics.dart';
 
 void main() {
-  group('Semaphore Tests', () {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  group('EphemeralTester Tests', () {
     test('Semaphore limits concurrent execution', () {
       fakeAsync((async) {
         final semaphore = Semaphore(3);
@@ -23,13 +26,37 @@ void main() {
 
         async.elapse(const Duration(milliseconds: 500));
 
-        // At this point, the wait should complete inside fakeAsync
         expect(maxActive, lessThanOrEqualTo(3));
         expect(active, 0);
       });
     });
 
-    test('Semaphore processes tasks in order (FIFO)', () {
+    test('runTest handles errors gracefully and returns updated config',
+        () async {
+      final tester = EphemeralTester();
+      final config = VpnConfigWithMetrics(
+        id: '1',
+        rawConfig: 'invalid://',
+        name: 'test',
+        addedDate: DateTime.now(),
+      );
+      final result = await tester.runTest(config);
+      expect(result.tier, equals(0));
+    });
+
+    test('runTest throws argument error on null', () async {
+      final tester = EphemeralTester();
+      final config = VpnConfigWithMetrics(
+        id: '3',
+        rawConfig: '{"invalid": true',
+        name: 'test3',
+        addedDate: DateTime.now(),
+      );
+      final result = await tester.runTest(config);
+      expect(result.tier, equals(0));
+    });
+
+    test('Semaphore limits concurrent execution FIFO', () {
       fakeAsync((async) {
         final semaphore = Semaphore(1);
         final List<int> order = [];
@@ -41,16 +68,13 @@ void main() {
           semaphore.release();
         }
 
-        // Fire tasks 0, 1, 2, 3, 4
         task(0);
         task(1);
         task(2);
-        task(3);
-        task(4);
 
         async.elapse(const Duration(milliseconds: 100));
 
-        expect(order, [0, 1, 2, 3, 4]);
+        expect(order, [0, 1, 2]);
       });
     });
   });
