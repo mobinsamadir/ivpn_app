@@ -717,9 +717,12 @@ class ConfigManager extends ChangeNotifier {
     if (list.isEmpty) return false;
 
     // Filter out obviously dead configs
-    final validCandidates = list
-        .where((c) => !c.isDead && (c.currentPing > 0 || c.funnelStage > 0))
-        .toList();
+    final List<VpnConfigWithMetrics> validCandidates = [];
+    for (final c in list) {
+      if (!c.isDead && (c.currentPing > 0 || c.funnelStage > 0)) {
+        validCandidates.add(c);
+      }
+    }
 
     if (validCandidates.isEmpty) {
       AdvancedLogger.warn(

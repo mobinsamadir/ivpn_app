@@ -161,21 +161,21 @@ class ConfigGistService {
       if (backupJson != null && backupJson.isNotEmpty) {
         try {
           final List<dynamic> rawList = jsonDecode(backupJson);
-          final List<String> backupConfigs =
-              rawList.map((e) => e.toString()).where((c) {
-            if (c.trim().isEmpty) return false;
+          final List<String> backupConfigs = [];
+          for (var e in rawList) {
+            String c = e.toString();
+            if (c.trim().isEmpty) continue;
             if (!c.trim().startsWith('{')) {
               // If it doesn't start with {, it's likely a raw URL, which addConfigs handles
               // If it's supposed to be JSON, this would be an issue. But addConfigs parses URLs.
-              return true;
+              backupConfigs.add(c);
+              continue;
             }
             try {
               jsonDecode(c);
-              return true;
-            } catch (_) {
-              return false;
-            }
-          }).toList();
+              backupConfigs.add(c);
+            } catch (_) {}
+          }
 
           if (backupConfigs.isNotEmpty) {
             AdvancedLogger.warn(
