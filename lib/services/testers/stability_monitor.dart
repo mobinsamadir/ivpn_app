@@ -62,16 +62,27 @@ class StabilityMonitor {
     }
 
     final endTime = DateTime.now();
-    final validSamples = samples.where((s) => s > 0).toList();
 
-    final avgLatency = validSamples.isEmpty
-        ? 0.0
-        : validSamples.reduce((a, b) => a + b) / validSamples.length;
+    int sumLatency = 0;
+    int maxLatency = 0;
+    int minLatency = 0;
+    int validCount = 0;
 
-    final maxLatency =
-        validSamples.isEmpty ? 0 : validSamples.reduce((a, b) => a > b ? a : b);
-    final minLatency =
-        validSamples.isEmpty ? 0 : validSamples.reduce((a, b) => a < b ? a : b);
+    for (final s in samples) {
+      if (s > 0) {
+        sumLatency += s;
+        if (validCount == 0) {
+          maxLatency = s;
+          minLatency = s;
+        } else {
+          if (s > maxLatency) maxLatency = s;
+          if (s < minLatency) minLatency = s;
+        }
+        validCount++;
+      }
+    }
+
+    final avgLatency = validCount == 0 ? 0.0 : sumLatency / validCount;
 
     final metrics = StabilityMetrics(
       samples: samples,
