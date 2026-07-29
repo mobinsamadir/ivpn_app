@@ -134,6 +134,48 @@ class AdvancedLogger {
     return p.join(directory.path, 'vpn_logs');
   }
 
+  static String _maskSensitiveData(String data) {
+    // Safe replacement maintaining JSON formatting and string boundaries using replaceAllMapped
+    return data.replaceAllMapped(
+        RegExp(
+            r'(password|uuid|token|secret|private_key)["\s:=]+([a-zA-Z0-9_-]+)',
+            caseSensitive: false),
+        (match) => '${match.group(1)}": "[REDACTED]"');
+  }
+
+  static dynamic _redactValue(String key, dynamic value) {
+    final lowerKey = key.toLowerCase();
+    // Exact match for sensitive keys to avoid false positives
+    if (lowerKey == 'password' ||
+        lowerKey == 'uuid' ||
+        lowerKey == 'token' ||
+        lowerKey == 'secret' ||
+        lowerKey == 'private_key') {
+      return '[REDACTED]';
+    }
+
+    if (value is String) {
+      return _maskSensitiveData(value);
+    } else if (value is Map<String, dynamic>) {
+      return _maskMetadata(value);
+    } else if (value is List) {
+      return value
+          .map((e) => e is Map<String, dynamic>
+              ? _maskMetadata(e)
+              : (e is String ? _maskSensitiveData(e) : e))
+          .toList();
+    }
+    return value;
+  }
+
+  static Map<String, dynamic> _maskMetadata(Map<String, dynamic> metadata) {
+    final masked = <String, dynamic>{};
+    metadata.forEach((key, value) {
+      masked[key] = _redactValue(key, value);
+    });
+    return masked;
+  }
+
   /// Private logging method
   static void _log(
     LogLevel level,
@@ -145,25 +187,29 @@ class AdvancedLogger {
 
     if (level.index < _minLevel.index) return;
 
+    final maskedMessage = _maskSensitiveData(message);
+    final maskedMetadata = metadata != null ? _maskMetadata(metadata) : null;
+
     final entry = {
       'level': level.toString().split('.').last,
       'timestamp': DateTime.now().toIso8601String(),
-      'message': message,
-      if (metadata != null && metadata.isNotEmpty) 'metadata': metadata,
+      'message': maskedMessage,
+      if (maskedMetadata != null && maskedMetadata.isNotEmpty)
+        'metadata': maskedMetadata,
     };
 
     // Console output with colors
     final color = _getColorCode(level);
     const reset = '\x1B[0m';
     final levelStr = level.toString().split('.').last.padRight(5);
-    debugPrint('$color[$levelStr]$reset $message');
-    if (metadata != null && metadata.isNotEmpty) {
-      debugPrint('  └─ ${jsonEncode(metadata)}');
+    debugPrint('$color[$levelStr]$reset $maskedMessage');
+    if (maskedMetadata != null && maskedMetadata.isNotEmpty) {
+      debugPrint('  └─ ${jsonEncode(maskedMetadata)}');
     }
 
     // Format log for in-app viewer: [TIME] [LEVEL] Message
     final formattedLog =
-        '[${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}:${DateTime.now().second.toString().padLeft(2, '0')}] [${level.toString().split('.').last}] $message';
+        '[${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}:${DateTime.now().second.toString().padLeft(2, '0')}] [${level.toString().split('.').last}] $maskedMessage';
 
     // Add to memory buffer
     _logHistory.add(formattedLog);

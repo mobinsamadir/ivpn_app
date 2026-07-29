@@ -1,9 +1,46 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ivpn_new/utils/clipboard_utils.dart';
+import 'package:flutter/services.dart';
 import 'dart:convert';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('ClipboardUtils', () {
+    test('getText returns empty string on exception', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform,
+              (MethodCall methodCall) async {
+        if (methodCall.method == 'Clipboard.getData') {
+          throw PlatformException(code: 'error');
+        }
+        return null;
+      });
+      final text = await ClipboardUtils.getText();
+      expect(text, equals(''));
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, null);
+    });
+
+    test('getText returns text from clipboard', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform,
+              (MethodCall methodCall) async {
+        if (methodCall.method == 'Clipboard.getData') {
+          return {'text': 'clipboard_data'};
+        }
+        return null;
+      });
+      final text = await ClipboardUtils.getText();
+      expect(text, equals('clipboard_data'));
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, null);
+    });
+
+    test('setText does not crash', () async {
+      expect(() => ClipboardUtils.setText('test'), returnsNormally);
+    });
+
     group('detectFormat', () {
       test('should correctly identify standard formats', () {
         expect(
@@ -89,6 +126,16 @@ void main() {
       test('should identify partial or incomplete valid URI strings', () {
         expect(ClipboardUtils.detectFormat('vmess://'), equals('vmess'));
         expect(ClipboardUtils.detectFormat('ss://'), equals('shadowsocks'));
+      });
+
+      test('should identify valid URI with scheme', () {
+        expect(ClipboardUtils.detectFormat('custom://test'), equals('custom'));
+      });
+
+      test('should handle invalid URI gracefully in detectFormat', () {
+        expect(ClipboardUtils.detectFormat('http://[::1]'),
+            equals('url')); // valid but might be tricky
+        expect(ClipboardUtils.detectFormat('::1'), equals('unknown'));
       });
     });
 
@@ -195,6 +242,13 @@ void main() {
           ClipboardUtils.validateConfig('http://'),
           isFalse,
           reason: 'URL missing host should return false',
+        );
+      });
+
+      test('invalidates standard URLs with parse error', () {
+        expect(
+          ClipboardUtils.validateConfig('http://invalid-url::'),
+          isFalse,
         );
       });
 
