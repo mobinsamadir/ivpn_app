@@ -131,11 +131,16 @@ class UpdateDialog extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text(
-                    'Later',
-                    style: TextStyle(color: Colors.grey),
+                ScaleOnTap(
+                  onTap: () => Navigator.of(context).pop(),
+                  child: IgnorePointer(
+                    child: TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text(
+                        'Later',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
