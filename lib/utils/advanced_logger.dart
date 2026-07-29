@@ -137,7 +137,9 @@ class AdvancedLogger {
   static String _maskSensitiveData(String data) {
     // Safe replacement maintaining JSON formatting and string boundaries using replaceAllMapped
     return data.replaceAllMapped(
-        RegExp(r'(password|uuid|token|secret|private_key)["\s:=]+([a-zA-Z0-9_-]+)', caseSensitive: false),
+        RegExp(
+            r'(password|uuid|token|secret|private_key)["\s:=]+([a-zA-Z0-9_-]+)',
+            caseSensitive: false),
         (match) => '${match.group(1)}": "[REDACTED]"');
   }
 
@@ -157,7 +159,11 @@ class AdvancedLogger {
     } else if (value is Map<String, dynamic>) {
       return _maskMetadata(value);
     } else if (value is List) {
-      return value.map((e) => e is Map<String, dynamic> ? _maskMetadata(e) : (e is String ? _maskSensitiveData(e) : e)).toList();
+      return value
+          .map((e) => e is Map<String, dynamic>
+              ? _maskMetadata(e)
+              : (e is String ? _maskSensitiveData(e) : e))
+          .toList();
     }
     return value;
   }
@@ -188,7 +194,8 @@ class AdvancedLogger {
       'level': level.toString().split('.').last,
       'timestamp': DateTime.now().toIso8601String(),
       'message': maskedMessage,
-      if (maskedMetadata != null && maskedMetadata.isNotEmpty) 'metadata': maskedMetadata,
+      if (maskedMetadata != null && maskedMetadata.isNotEmpty)
+        'metadata': maskedMetadata,
     };
 
     // Console output with colors
