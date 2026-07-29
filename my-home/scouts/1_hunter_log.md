@@ -1,17 +1,18 @@
-=== MISSION BRIEF: 2026-07-28 ===
+=== MISSION BRIEF: 2026-07-29 ===
 ROLE_TONIGHT: Security
 ASSIGNED_BY: Mastermind
 REASON: بررسی امنیتی ابزارها (فاز ۱)
+
 SCOPE:
 - lib/utils/
+
 FROZEN_ZONES:
 - none
+
 SPECIFIC_TASK: none
+
 CROSS_AUDIT_TARGET: none
 === END BRIEF ===
-
-
-
 
 --- تاریخچه گزارش‌ها ---
 

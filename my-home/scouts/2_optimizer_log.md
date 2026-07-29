@@ -1,16 +1,18 @@
-=== MISSION BRIEF: 2026-07-28 ===
+=== MISSION BRIEF: 2026-07-29 ===
 ROLE_TONIGHT: Performance
 ASSIGNED_BY: Mastermind
-REASON: بررسی پرفورمنس سرویس‌ها (فاز ۱)
+REASON: بررسی پرفورمنس مدل‌ها (فاز ۱)
+
 SCOPE:
-- lib/services/
+- lib/models/
+
 FROZEN_ZONES:
 - none
+
 SPECIFIC_TASK: none
+
 CROSS_AUDIT_TARGET: none
 === END BRIEF ===
-
-
 
 --- تاریخچه گزارش‌ها ---
 

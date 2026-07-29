@@ -1,15 +1,18 @@
-=== MISSION BRIEF: 2026-07-28 ===
+=== MISSION BRIEF: 2026-07-29 ===
 ROLE_TONIGHT: QA/Testing
 ASSIGNED_BY: Mastermind
-REASON: ادامه تست‌نویسی برای کلاس‌های فاقد Coverage (فاز ۱)
+REASON: تست‌نویسی مستمر (فاز ۱)
+
 SCOPE:
 - test/
+
 FROZEN_ZONES:
 - none
+
 SPECIFIC_TASK: none
+
 CROSS_AUDIT_TARGET: none
 === END BRIEF ===
-
 
 --- تاریخچه گزارش‌ها ---
 
