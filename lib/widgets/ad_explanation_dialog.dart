@@ -43,9 +43,14 @@ class _AdExplanationDialogState extends State<AdExplanationDialog> {
         style: TextStyle(color: Colors.grey),
       ),
       actions: [
-        TextButton(
-          onPressed: _isLoading ? null : () => Navigator.pop(context, false),
-          child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+        ScaleOnTap(
+          onTap: _isLoading ? null : () => Navigator.pop(context, false),
+          child: IgnorePointer(
+            child: TextButton(
+              onPressed: _isLoading ? null : () => Navigator.pop(context, false),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+            ),
+          ),
         ),
         _isLoading
             ? const SizedBox(
