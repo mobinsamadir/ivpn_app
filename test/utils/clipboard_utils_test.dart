@@ -8,35 +8,37 @@ void main() {
 
   group('ClipboardUtils', () {
     test('getText returns empty string on exception', () async {
-       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(SystemChannels.platform, (MethodCall methodCall) async {
-         if (methodCall.method == 'Clipboard.getData') {
-            throw PlatformException(code: 'error');
-         }
-         return null;
-       });
-       final text = await ClipboardUtils.getText();
-       expect(text, equals(''));
-       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform,
+              (MethodCall methodCall) async {
+        if (methodCall.method == 'Clipboard.getData') {
+          throw PlatformException(code: 'error');
+        }
+        return null;
+      });
+      final text = await ClipboardUtils.getText();
+      expect(text, equals(''));
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(SystemChannels.platform, null);
     });
 
     test('getText returns text from clipboard', () async {
-       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(SystemChannels.platform, (MethodCall methodCall) async {
-         if (methodCall.method == 'Clipboard.getData') {
-            return {'text': 'clipboard_data'};
-         }
-         return null;
-       });
-       final text = await ClipboardUtils.getText();
-       expect(text, equals('clipboard_data'));
-       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform,
+              (MethodCall methodCall) async {
+        if (methodCall.method == 'Clipboard.getData') {
+          return {'text': 'clipboard_data'};
+        }
+        return null;
+      });
+      final text = await ClipboardUtils.getText();
+      expect(text, equals('clipboard_data'));
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(SystemChannels.platform, null);
     });
 
     test('setText does not crash', () async {
-       expect(() => ClipboardUtils.setText('test'), returnsNormally);
+      expect(() => ClipboardUtils.setText('test'), returnsNormally);
     });
 
     group('detectFormat', () {
@@ -131,8 +133,9 @@ void main() {
       });
 
       test('should handle invalid URI gracefully in detectFormat', () {
-         expect(ClipboardUtils.detectFormat('http://[::1]'), equals('url')); // valid but might be tricky
-         expect(ClipboardUtils.detectFormat('::1'), equals('unknown'));
+        expect(ClipboardUtils.detectFormat('http://[::1]'),
+            equals('url')); // valid but might be tricky
+        expect(ClipboardUtils.detectFormat('::1'), equals('unknown'));
       });
     });
 
