@@ -63,7 +63,7 @@ class _AdExplanationDialogState extends State<AdExplanationDialog> {
                 onTap: _handleViewAd,
                 child: IgnorePointer(
                   child: ElevatedButton(
-                    onPressed: () {},
+                    onPressed: _handleViewAd,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blueAccent,
                     ),

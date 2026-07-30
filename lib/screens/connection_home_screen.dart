@@ -489,7 +489,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
               onTap: () => Navigator.pop(context, true),
               child: IgnorePointer(
                 child: ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () => Navigator.pop(context, true),
                   style:
                       ElevatedButton.styleFrom(backgroundColor: Colors.green),
                   child: const Text(
@@ -705,7 +705,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
           onTap: _showAddServerDialog,
           child: IgnorePointer(
             child: FloatingActionButton(
-              onPressed: () {},
+              onPressed: _showAddServerDialog,
               backgroundColor: Colors.blueAccent,
               child: const Icon(Icons.add, color: Colors.white),
             ),
@@ -1272,6 +1272,31 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   Future<void> _showAddServerDialog() async {
     final TextEditingController urlController = TextEditingController();
 
+    Future<void> handleAdd() async {
+      final url = urlController.text.trim();
+      if (url.isNotEmpty) {
+        Navigator.of(context).pop();
+        // Constraint: Properly split multiline input for multiple configs
+        final lines = url
+            .split(RegExp(r'\r?\n|\s+'))
+            .where((e) => e.trim().isNotEmpty)
+            .toList();
+        final added = await _configManager.addConfigs(
+          lines.isNotEmpty ? lines : [url],
+        );
+        if (added > 0) {
+          _showToast("Server added successfully!");
+          setState(() {});
+        } else {
+          _showToast(
+            "Failed to add server. Invalid format or already exists.",
+          );
+        }
+      } else {
+        _showToast("Please enter a valid URL.");
+      }
+    }
+
     return showDialog<void>(
       context: context,
       barrierDismissible: true,
@@ -1309,30 +1334,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
               },
             ),
             ScaleOnTap(
-              onTap: () async {
-                final url = urlController.text.trim();
-                if (url.isNotEmpty) {
-                  Navigator.of(context).pop();
-                  // Constraint: Properly split multiline input for multiple configs
-                  final lines = url
-                      .split(RegExp(r'\r?\n|\s+'))
-                      .where((e) => e.trim().isNotEmpty)
-                      .toList();
-                  final added = await _configManager.addConfigs(
-                    lines.isNotEmpty ? lines : [url],
-                  );
-                  if (added > 0) {
-                    _showToast("Server added successfully!");
-                    setState(() {});
-                  } else {
-                    _showToast(
-                      "Failed to add server. Invalid format or already exists.",
-                    );
-                  }
-                } else {
-                  _showToast("Please enter a valid URL.");
-                }
-              },
+              onTap: handleAdd,
               child: IgnorePointer(
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
@@ -1340,7 +1342,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                   ),
                   child:
                       const Text('Add', style: TextStyle(color: Colors.white)),
-                  onPressed: () {},
+                  onPressed: handleAdd,
                 ),
               ),
             ),
