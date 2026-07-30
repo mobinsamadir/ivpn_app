@@ -1,17 +1,16 @@
-=== MISSION BRIEF: 2026-07-29 ===
+=== MISSION BRIEF: 2026-07-30 ===
 ROLE_TONIGHT: Performance
 ASSIGNED_BY: Mastermind
-REASON: بررسی پرفورمنس مدل‌ها (فاز ۱)
+REASON: شب پنجم - بررسی پرفورمنس ویجت‌های پرکاربرد.
 
 SCOPE:
-- lib/models/
+- lib/widgets/
 
 FROZEN_ZONES:
-- none
+- سیستم پرداخت کارت‌به‌کارت (فقط نگاه کن، تغییر نده)
 
-SPECIFIC_TASK: none
-
-CROSS_AUDIT_TARGET: none
+SPECIFIC_TASK: جلوگیری از rebuild های غیرضروری در ویجت‌ها.
+CROSS_AUDIT_TARGET: نه
 === END BRIEF ===
 
 --- تاریخچه گزارش‌ها ---
