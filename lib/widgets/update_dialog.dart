@@ -148,7 +148,7 @@ class UpdateDialog extends StatelessWidget {
                   onTap: onUpdate,
                   child: IgnorePointer(
                     child: ElevatedButton.icon(
-                      onPressed: () {},
+                      onPressed: onUpdate,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blueAccent,
                         foregroundColor: Colors.white,

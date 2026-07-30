@@ -71,7 +71,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             onTap: () => Navigator.pop(context, true),
             child: IgnorePointer(
               child: ElevatedButton(
-                onPressed: () {},
+                onPressed: () => Navigator.pop(context, true),
                 child: const Text('Open Settings'),
               ),
             ),
