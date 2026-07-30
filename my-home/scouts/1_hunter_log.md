@@ -1,17 +1,16 @@
-=== MISSION BRIEF: 2026-07-29 ===
+=== MISSION BRIEF: 2026-07-30 ===
 ROLE_TONIGHT: Security
 ASSIGNED_BY: Mastermind
-REASON: بررسی امنیتی ابزارها (فاز ۱)
+REASON: شب پنجم - جلوگیری از آسیب‌پذیری‌های شبکه و نشت داده در ارتباطات.
 
 SCOPE:
-- lib/utils/
+- lib/network/
 
 FROZEN_ZONES:
-- none
+- سیستم پرداخت کارت‌به‌کارت (فقط نگاه کن، تغییر نده)
 
-SPECIFIC_TASK: none
-
-CROSS_AUDIT_TARGET: none
+SPECIFIC_TASK: بررسی امنیتی درخواست‌های شبکه و اطمینان از صحت پروتکل‌ها.
+CROSS_AUDIT_TARGET: نه
 === END BRIEF ===
 
 --- تاریخچه گزارش‌ها ---

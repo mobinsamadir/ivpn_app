@@ -2,8 +2,8 @@
 
 | فایل | مالک شب | وضعیت | تا کی |
 |------|---------|-------|-------|
-| `lib/utils/` | Hunter | 🔒 Lock | تا صبح |
-| `lib/models/` | Optimizer | 🔒 Lock | تا صبح |
+| `lib/network/` | Hunter | 🔒 Lock | تا صبح |
+| `lib/widgets/` | Optimizer | 🔒 Lock | تا صبح |
 | `lib/screens/` | Converter | 🔒 Lock | تا صبح |
 | `test/` | Gatekeeper | 🔒 Lock | تا صبح |
 

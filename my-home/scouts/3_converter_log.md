@@ -1,17 +1,17 @@
-=== MISSION BRIEF: 2026-07-29 ===
+=== MISSION BRIEF: 2026-07-30 ===
 ROLE_TONIGHT: UX/Conversion
 ASSIGNED_BY: Mastermind
-REASON: بهبود تعامل در صفحات (فاز ۱)
+REASON: شب پنجم - ادامه بهبود تجربه کاربری و دسترسی‌پذیری.
 
 SCOPE:
 - lib/screens/
+- lib/dialogs/ (در صورت وجود)
 
 FROZEN_ZONES:
-- none
+- منطق شبکه
 
-SPECIFIC_TASK: none
-
-CROSS_AUDIT_TARGET: none
+SPECIFIC_TASK: بررسی و بهبود دیالوگ‌ها و صفحات برای روان‌تر شدن انیمیشن‌ها.
+CROSS_AUDIT_TARGET: نه
 === END BRIEF ===
 
 --- تاریخچه گزارش‌ها ---
