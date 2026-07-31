@@ -31,13 +31,14 @@ class UniversalAdWidget extends StatefulWidget {
 }
 
 class _UniversalAdWidgetState extends State<UniversalAdWidget> {
-  AdUnit? _currentAd;
+  late final ValueNotifier<AdUnit?> _currentAdNotifier;
 
   @override
   void initState() {
     super.initState();
     // Initialize with current value
-    _currentAd = AdManagerService().getAdUnit(widget.slot);
+    _currentAdNotifier =
+        ValueNotifier<AdUnit?>(AdManagerService().getAdUnit(widget.slot));
 
     // Listen for updates
     AdManagerService().configNotifier.addListener(_onConfigChanged);
@@ -46,16 +47,15 @@ class _UniversalAdWidgetState extends State<UniversalAdWidget> {
   @override
   void dispose() {
     AdManagerService().configNotifier.removeListener(_onConfigChanged);
+    _currentAdNotifier.dispose();
     super.dispose();
   }
 
   void _onConfigChanged() {
     final newAd = AdManagerService().getAdUnit(widget.slot);
-    if (newAd != _currentAd) {
+    if (newAd != _currentAdNotifier.value) {
       if (mounted) {
-        setState(() {
-          _currentAd = newAd;
-        });
+        _currentAdNotifier.value = newAd;
       }
     }
   }
@@ -66,27 +66,32 @@ class _UniversalAdWidgetState extends State<UniversalAdWidget> {
       return const SizedBox.shrink();
     }
 
-    if (_currentAd == null || !_currentAd!.isEnabled) {
-      return const SizedBox.shrink();
-    }
+    return ValueListenableBuilder<AdUnit?>(
+      valueListenable: _currentAdNotifier,
+      builder: (context, currentAd, child) {
+        if (currentAd == null || !currentAd.isEnabled) {
+          return const SizedBox.shrink();
+        }
 
-    final ad = _currentAd!;
-    // CRITICAL FIX: Fallback to a default height if null to prevent unconstrained expansion (Black Screen)
-    double effectiveHeight = widget.height ?? 250.0;
+        final ad = currentAd;
+        // CRITICAL FIX: Fallback to a default height if null to prevent unconstrained expansion (Black Screen)
+        double effectiveHeight = widget.height ?? 250.0;
 
-    // Enforce strict 60dp for banner slots
-    if (widget.slot == 'home_banner_top' ||
-        widget.slot == 'home_banner_bottom') {
-      effectiveHeight = 60.0;
-    }
+        // Enforce strict 60dp for banner slots
+        if (widget.slot == 'home_banner_top' ||
+            widget.slot == 'home_banner_bottom') {
+          effectiveHeight = 60.0;
+        }
 
-    return SizedBox(
-      width: widget.width ?? double.infinity,
-      height: effectiveHeight,
-      child: ConstrainedBox(
-        constraints: BoxConstraints.tightFor(height: effectiveHeight),
-        child: _buildContent(ad),
-      ),
+        return SizedBox(
+          width: widget.width ?? double.infinity,
+          height: effectiveHeight,
+          child: ConstrainedBox(
+            constraints: BoxConstraints.tightFor(height: effectiveHeight),
+            child: _buildContent(ad),
+          ),
+        );
+      },
     );
   }
 
@@ -157,15 +162,17 @@ class _VideoAdState extends State<_VideoAd> {
     );
     await _videoController.initialize();
 
-    _chewieController = ChewieController(
-      videoPlayerController: _videoController,
-      autoPlay: true,
-      looping: true,
-      showControls: false, // Ad style
-      aspectRatio: _videoController.value.aspectRatio,
-    );
-
-    if (mounted) setState(() {});
+    if (mounted) {
+      setState(() {
+        _chewieController = ChewieController(
+          videoPlayerController: _videoController,
+          autoPlay: true,
+          looping: true,
+          showControls: false, // Ad style
+          aspectRatio: _videoController.value.aspectRatio,
+        );
+      });
+    }
   }
 
   @override
