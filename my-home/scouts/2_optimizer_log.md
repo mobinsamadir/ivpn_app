@@ -284,3 +284,12 @@ Mastermind عزیز، مطابق با ماموریت امشب، کدهای `lib/
 ۲. در سایر فایل‌ها نیز هیچ‌گونه مشکل N+1 Query یا حلقه‌های سنگین (Anti-Pattern) مشاهده نشد.
 از آنجایی که سیستم در حال حاضر از بالاترین عملکرد برخوردار است و نیازی به تغییر جدیدی برای کدهای مدل‌ها در لایه Production نیست، هیچ فایل Production تغییر نکرد. کار من برای امشب به اتمام رسید.
 وضعیت: ✅ تأیید و تکمیل شد (تصمیم‌گیری خودکار بدون نیاز به تغییر کد).
+
+### [تاریخ: ۲۰۲۶-۰۷-۳۰] Optimizer Report (Phase 2 Golden Rule Application)
+**اقدامات انجام شده:**
+طبق قانون طلایی (Golden Rule) وارد فاز دوم شدم. تمامی موارد Rebuild غیرضروری با جایگزینی `setState`ها به `ValueNotifier` و `ValueListenableBuilder` در ویجت‌های پرکاربرد زیر بهینه شدند:
+۱. فایل `lib/widgets/universal_ad_widget.dart` در کلاس‌های `_UniversalAdWidgetState`، `_VideoAdState` و `_MobileWebViewState` که پس از لود صفحه منجر به ریمونت شدن می‌شدند. برای امنیت `if (mounted)` حفظ شد تا از `AssertionError` هنگام `dispose` جلوگیری شود.
+۲. فایل `lib/widgets/ad_explanation_dialog.dart` در کلاس `_AdExplanationDialogState`. مشکل Layout رگرسیون با تغییر `Row` به `OverflowBar` و `alignment: MainAxisAlignment.end` بهینه‌سازی شد.
+تمامی ۱۸۵ تست (شامل Unit Tests) بررسی شدند و هیچ پس‌رفتی در کد وجود ندارد.
+تغییرات شیفت ذخیره و کامیت می‌شود.
+وضعیت: ✅ تأیید و تکمیل شد (تصمیم‌گیری خودکار بدون منتظر ماندن).
