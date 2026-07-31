@@ -1,17 +1,17 @@
-=== MISSION BRIEF: 2026-07-30 ===
-ROLE_TONIGHT: QA/Testing
+=== MISSION BRIEF: 2026-07-31 ===
+ROLE_TONIGHT: QA
 ASSIGNED_BY: Mastermind
-REASON: شب پنجم - افزایش Coverage با تمرکز بر لایه‌های منطقی.
-
+REASON: ادامه تست‌نویسی برای کلاس‌های فاقد Coverage
 SCOPE:
 - test/
 
 FROZEN_ZONES:
-- فایل‌های تغییر یافته توسط ایجنت‌های دیگر در امشب.
+- lib/
 
-SPECIFIC_TASK: نوشتن تست‌های واحد برای منطق‌های بدون تست.
+SPECIFIC_TASK: افزایش Coverage برای screens و widgets
 CROSS_AUDIT_TARGET: نه
 === END BRIEF ===
+
 
 --- تاریخچه گزارش‌ها ---
 
