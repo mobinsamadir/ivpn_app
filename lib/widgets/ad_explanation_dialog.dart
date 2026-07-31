@@ -11,10 +11,10 @@ class AdExplanationDialog extends StatefulWidget {
 }
 
 class _AdExplanationDialogState extends State<AdExplanationDialog> {
-  bool _isLoading = false;
+  final ValueNotifier<bool> _isLoadingNotifier = ValueNotifier<bool>(false);
 
   Future<void> _handleViewAd() async {
-    setState(() => _isLoading = true);
+    _isLoadingNotifier.value = true;
     try {
       final result = await widget.onAdView();
       if (mounted) {
@@ -24,7 +24,17 @@ class _AdExplanationDialogState extends State<AdExplanationDialog> {
       if (mounted) {
         Navigator.pop(context, false);
       }
+    } finally {
+      if (mounted) {
+        _isLoadingNotifier.value = false;
+      }
     }
+  }
+
+  @override
+  void dispose() {
+    _isLoadingNotifier.dispose();
+    super.dispose();
   }
 
   @override
@@ -43,37 +53,48 @@ class _AdExplanationDialogState extends State<AdExplanationDialog> {
         style: TextStyle(color: Colors.grey),
       ),
       actions: [
-        ScaleOnTap(
-          onTap: _isLoading ? null : () => Navigator.pop(context, false),
-          child: IgnorePointer(
-            child: TextButton(
-              onPressed:
-                  _isLoading ? null : () => Navigator.pop(context, false),
-              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
-            ),
-          ),
-        ),
-        _isLoading
-            ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : ScaleOnTap(
-                onTap: _handleViewAd,
-                child: IgnorePointer(
-                  child: ElevatedButton(
-                    onPressed: _handleViewAd,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blueAccent,
-                    ),
-                    child: const Text(
-                      'View Ad',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
+        ValueListenableBuilder<bool>(
+          valueListenable: _isLoadingNotifier,
+          builder: (context, isLoading, child) {
+            return ScaleOnTap(
+              onTap: isLoading ? null : () => Navigator.pop(context, false),
+              child: IgnorePointer(
+                child: TextButton(
+                  onPressed:
+                      isLoading ? null : () => Navigator.pop(context, false),
+                  child: const Text('Cancel',
+                      style: TextStyle(color: Colors.grey)),
                 ),
               ),
+            );
+          },
+        ),
+        ValueListenableBuilder<bool>(
+          valueListenable: _isLoadingNotifier,
+          builder: (context, isLoading, child) {
+            return isLoading
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : ScaleOnTap(
+                    onTap: _handleViewAd,
+                    child: IgnorePointer(
+                      child: ElevatedButton(
+                        onPressed: _handleViewAd,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blueAccent,
+                        ),
+                        child: const Text(
+                          'View Ad',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  );
+          },
+        ),
       ],
     );
   }
