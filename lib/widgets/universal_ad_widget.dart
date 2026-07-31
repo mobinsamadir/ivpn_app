@@ -37,7 +37,8 @@ class _UniversalAdWidgetState extends State<UniversalAdWidget> {
   void initState() {
     super.initState();
     // Initialize with current value
-    _currentAdNotifier = ValueNotifier(AdManagerService().getAdUnit(widget.slot));
+    _currentAdNotifier =
+        ValueNotifier(AdManagerService().getAdUnit(widget.slot));
 
     // Listen for updates
     AdManagerService().configNotifier.addListener(_onConfigChanged);
@@ -71,23 +72,23 @@ class _UniversalAdWidgetState extends State<UniversalAdWidget> {
         }
 
         final ad = currentAd;
-    // CRITICAL FIX: Fallback to a default height if null to prevent unconstrained expansion (Black Screen)
-    double effectiveHeight = widget.height ?? 250.0;
+        // CRITICAL FIX: Fallback to a default height if null to prevent unconstrained expansion (Black Screen)
+        double effectiveHeight = widget.height ?? 250.0;
 
-    // Enforce strict 60dp for banner slots
-    if (widget.slot == 'home_banner_top' ||
-        widget.slot == 'home_banner_bottom') {
-      effectiveHeight = 60.0;
-    }
+        // Enforce strict 60dp for banner slots
+        if (widget.slot == 'home_banner_top' ||
+            widget.slot == 'home_banner_bottom') {
+          effectiveHeight = 60.0;
+        }
 
-    return SizedBox(
-      width: widget.width ?? double.infinity,
-      height: effectiveHeight,
-      child: ConstrainedBox(
-        constraints: BoxConstraints.tightFor(height: effectiveHeight),
-        child: _buildContent(ad),
-      ),
-    );
+        return SizedBox(
+          width: widget.width ?? double.infinity,
+          height: effectiveHeight,
+          child: ConstrainedBox(
+            constraints: BoxConstraints.tightFor(height: effectiveHeight),
+            child: _buildContent(ad),
+          ),
+        );
       },
     );
   }
