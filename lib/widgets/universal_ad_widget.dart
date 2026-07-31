@@ -31,14 +31,14 @@ class UniversalAdWidget extends StatefulWidget {
 }
 
 class _UniversalAdWidgetState extends State<UniversalAdWidget> {
-  late ValueNotifier<AdUnit?> _currentAdNotifier;
+  late final ValueNotifier<AdUnit?> _currentAdNotifier;
 
   @override
   void initState() {
     super.initState();
     // Initialize with current value
     _currentAdNotifier =
-        ValueNotifier(AdManagerService().getAdUnit(widget.slot));
+        ValueNotifier<AdUnit?>(AdManagerService().getAdUnit(widget.slot));
 
     // Listen for updates
     AdManagerService().configNotifier.addListener(_onConfigChanged);
@@ -54,7 +54,9 @@ class _UniversalAdWidgetState extends State<UniversalAdWidget> {
   void _onConfigChanged() {
     final newAd = AdManagerService().getAdUnit(widget.slot);
     if (newAd != _currentAdNotifier.value) {
-      _currentAdNotifier.value = newAd;
+      if (mounted) {
+        _currentAdNotifier.value = newAd;
+      }
     }
   }
 
@@ -162,15 +164,17 @@ class _VideoAdState extends State<_VideoAd> {
     );
     await _videoController.initialize();
 
-    _chewieController = ChewieController(
-      videoPlayerController: _videoController,
-      autoPlay: true,
-      looping: true,
-      showControls: false, // Ad style
-      aspectRatio: _videoController.value.aspectRatio,
-    );
-
-    if (mounted) _isInitialized.value = true;
+    if (mounted) {
+      setState(() {
+        _chewieController = ChewieController(
+          videoPlayerController: _videoController,
+          autoPlay: true,
+          looping: true,
+          showControls: false, // Ad style
+          aspectRatio: _videoController.value.aspectRatio,
+        );
+      });
+    }
   }
 
   @override
