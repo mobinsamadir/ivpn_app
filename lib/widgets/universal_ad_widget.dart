@@ -31,13 +31,14 @@ class UniversalAdWidget extends StatefulWidget {
 }
 
 class _UniversalAdWidgetState extends State<UniversalAdWidget> {
-  AdUnit? _currentAd;
+  late final ValueNotifier<AdUnit?> _currentAdNotifier;
 
   @override
   void initState() {
     super.initState();
     // Initialize with current value
-    _currentAd = AdManagerService().getAdUnit(widget.slot);
+    _currentAdNotifier =
+        ValueNotifier<AdUnit?>(AdManagerService().getAdUnit(widget.slot));
 
     // Listen for updates
     AdManagerService().configNotifier.addListener(_onConfigChanged);
@@ -46,16 +47,15 @@ class _UniversalAdWidgetState extends State<UniversalAdWidget> {
   @override
   void dispose() {
     AdManagerService().configNotifier.removeListener(_onConfigChanged);
+    _currentAdNotifier.dispose();
     super.dispose();
   }
 
   void _onConfigChanged() {
     final newAd = AdManagerService().getAdUnit(widget.slot);
-    if (newAd != _currentAd) {
+    if (newAd != _currentAdNotifier.value) {
       if (mounted) {
-        setState(() {
-          _currentAd = newAd;
-        });
+        _currentAdNotifier.value = newAd;
       }
     }
   }
@@ -66,27 +66,32 @@ class _UniversalAdWidgetState extends State<UniversalAdWidget> {
       return const SizedBox.shrink();
     }
 
-    if (_currentAd == null || !_currentAd!.isEnabled) {
-      return const SizedBox.shrink();
-    }
+    return ValueListenableBuilder<AdUnit?>(
+      valueListenable: _currentAdNotifier,
+      builder: (context, currentAd, child) {
+        if (currentAd == null || !currentAd.isEnabled) {
+          return const SizedBox.shrink();
+        }
 
-    final ad = _currentAd!;
-    // CRITICAL FIX: Fallback to a default height if null to prevent unconstrained expansion (Black Screen)
-    double effectiveHeight = widget.height ?? 250.0;
+        final ad = currentAd;
+        // CRITICAL FIX: Fallback to a default height if null to prevent unconstrained expansion (Black Screen)
+        double effectiveHeight = widget.height ?? 250.0;
 
-    // Enforce strict 60dp for banner slots
-    if (widget.slot == 'home_banner_top' ||
-        widget.slot == 'home_banner_bottom') {
-      effectiveHeight = 60.0;
-    }
+        // Enforce strict 60dp for banner slots
+        if (widget.slot == 'home_banner_top' ||
+            widget.slot == 'home_banner_bottom') {
+          effectiveHeight = 60.0;
+        }
 
-    return SizedBox(
-      width: widget.width ?? double.infinity,
-      height: effectiveHeight,
-      child: ConstrainedBox(
-        constraints: BoxConstraints.tightFor(height: effectiveHeight),
-        child: _buildContent(ad),
-      ),
+        return SizedBox(
+          width: widget.width ?? double.infinity,
+          height: effectiveHeight,
+          child: ConstrainedBox(
+            constraints: BoxConstraints.tightFor(height: effectiveHeight),
+            child: _buildContent(ad),
+          ),
+        );
+      },
     );
   }
 
@@ -151,46 +156,56 @@ class _VideoAdState extends State<_VideoAd> {
     _initializePlayer();
   }
 
+  final ValueNotifier<bool> _isInitialized = ValueNotifier(false);
+
   Future<void> _initializePlayer() async {
     _videoController = VideoPlayerController.networkUrl(
       Uri.parse(widget.videoUrl),
     );
     await _videoController.initialize();
 
-    _chewieController = ChewieController(
-      videoPlayerController: _videoController,
-      autoPlay: true,
-      looping: true,
-      showControls: false, // Ad style
-      aspectRatio: _videoController.value.aspectRatio,
-    );
-
-    if (mounted) setState(() {});
+    if (mounted) {
+      setState(() {
+        _chewieController = ChewieController(
+          videoPlayerController: _videoController,
+          autoPlay: true,
+          looping: true,
+          showControls: false, // Ad style
+          aspectRatio: _videoController.value.aspectRatio,
+        );
+      });
+    }
   }
 
   @override
   void dispose() {
     _videoController.dispose();
     _chewieController?.dispose();
+    _isInitialized.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_chewieController == null) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    return ScaleOnTap(
-      onTap: () {
-        if (widget.targetUrl.isNotEmpty) {
-          launchUrl(
-            Uri.parse(widget.targetUrl),
-            mode: LaunchMode.externalApplication,
-          );
+    return ValueListenableBuilder<bool>(
+      valueListenable: _isInitialized,
+      builder: (context, isInitialized, child) {
+        if (!isInitialized || _chewieController == null) {
+          return const Center(child: CircularProgressIndicator());
         }
+
+        return ScaleOnTap(
+          onTap: () {
+            if (widget.targetUrl.isNotEmpty) {
+              launchUrl(
+                Uri.parse(widget.targetUrl),
+                mode: LaunchMode.externalApplication,
+              );
+            }
+          },
+          child: Chewie(controller: _chewieController!),
+        );
       },
-      child: Chewie(controller: _chewieController!),
     );
   }
 }
@@ -252,7 +267,7 @@ class _MobileWebView extends StatefulWidget {
 
 class _MobileWebViewState extends State<_MobileWebView> {
   late final WebViewController _controller;
-  bool _isLoading = true;
+  final ValueNotifier<bool> _isLoadingNotifier = ValueNotifier(true);
 
   @override
   void initState() {
@@ -267,7 +282,7 @@ class _MobileWebViewState extends State<_MobileWebView> {
         NavigationDelegate(
           onPageFinished: (_) {
             AdvancedLogger.info('[AdWidget] Mobile Page Loaded.');
-            if (mounted) setState(() => _isLoading = false);
+            if (mounted) _isLoadingNotifier.value = false;
           },
           onNavigationRequest: (NavigationRequest request) {
             final url = request.url;
@@ -284,6 +299,12 @@ class _MobileWebViewState extends State<_MobileWebView> {
   }
 
   @override
+  void dispose() {
+    _isLoadingNotifier.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
@@ -292,12 +313,19 @@ class _MobileWebViewState extends State<_MobileWebView> {
           gestureRecognizers: <Factory<
               OneSequenceGestureRecognizer>>{}, // Prevent scroll hijacking
         ),
-        if (_isLoading)
-          const Center(
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.blueAccent),
-            ),
-          ),
+        ValueListenableBuilder<bool>(
+          valueListenable: _isLoadingNotifier,
+          builder: (context, isLoading, child) {
+            if (isLoading) {
+              return const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blueAccent),
+                ),
+              );
+            }
+            return const SizedBox.shrink();
+          },
+        ),
       ],
     );
   }
