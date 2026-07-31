@@ -62,7 +62,8 @@ class _AdExplanationDialogState extends State<AdExplanationDialog> {
                 child: TextButton(
                   onPressed:
                       isLoading ? null : () => Navigator.pop(context, false),
-                  child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+                  child: const Text('Cancel',
+                      style: TextStyle(color: Colors.grey)),
                 ),
               ),
             );

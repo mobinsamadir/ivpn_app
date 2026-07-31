@@ -36,7 +36,8 @@ class _UniversalAdWidgetState extends State<UniversalAdWidget> {
   @override
   void initState() {
     super.initState();
-    _currentAdNotifier = ValueNotifier<AdUnit?>(AdManagerService().getAdUnit(widget.slot));
+    _currentAdNotifier =
+        ValueNotifier<AdUnit?>(AdManagerService().getAdUnit(widget.slot));
     AdManagerService().configNotifier.addListener(_onConfigChanged);
   }
 
@@ -142,7 +143,8 @@ class _VideoAd extends StatefulWidget {
 
 class _VideoAdState extends State<_VideoAd> {
   late VideoPlayerController _videoController;
-  final ValueNotifier<ChewieController?> _chewieControllerNotifier = ValueNotifier<ChewieController?>(null);
+  final ValueNotifier<ChewieController?> _chewieControllerNotifier =
+      ValueNotifier<ChewieController?>(null);
 
   @override
   void initState() {
