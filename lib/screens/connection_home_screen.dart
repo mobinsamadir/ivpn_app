@@ -1343,7 +1343,6 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                   onPressed: handleAdd,
                   child:
                       const Text('Add', style: TextStyle(color: Colors.white)),
-
                 ),
               ),
             ),
