@@ -20,6 +20,8 @@ dependencies:
   window_manager: ^0.5.1
   screen_retriever: ^0.2.1
   webview_flutter: ^4.9.0
+  webview_flutter_platform_interface: ^2.15.1
+  webview_flutter_android: ^4.12.0
   flutter_markdown: ^0.7.4 # اضافه شد برای رفع ارور دیالوگ آپدیت
 
   # Media & Ads
@@ -60,8 +62,6 @@ dev_dependencies:
   clock: ^1.1.2
   integration_test:
     sdk: flutter
-  webview_flutter_platform_interface: ^2.15.1
-  webview_flutter_android: ^4.12.0
 
 # تنظیمات آیکون
 flutter_launcher_icons:
