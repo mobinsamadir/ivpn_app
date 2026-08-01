@@ -1340,9 +1340,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blueAccent,
                   ),
+                  onPressed: handleAdd,
                   child:
                       const Text('Add', style: TextStyle(color: Colors.white)),
-                  onPressed: handleAdd,
                 ),
               ),
             ),

@@ -44,7 +44,7 @@ void main() {
       await tester.tap(find.text('Show'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Cancel'));
+      await tester.tap(find.text('Cancel'), warnIfMissed: false);
       await tester.pumpAndSettle();
 
       expect(result, isFalse);
@@ -78,7 +78,7 @@ void main() {
       await tester.tap(find.text('Show'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('View Ad'));
+      await tester.tap(find.text('View Ad'), warnIfMissed: false);
       await tester.pump(); // Start the async operation
 
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
@@ -115,7 +115,7 @@ void main() {
       await tester.tap(find.text('Show'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('View Ad'));
+      await tester.tap(find.text('View Ad'), warnIfMissed: false);
       await tester.pumpAndSettle(); // Handle error and close dialog
 
       expect(result, isFalse);
