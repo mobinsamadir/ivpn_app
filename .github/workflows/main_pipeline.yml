@@ -2,6 +2,12 @@ name: iVPN Final Build
 
 # Automatic triggers temporarily disabled during high-change period — run manually via workflow_dispatch until re-enabled
 on:
+  push:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
   workflow_dispatch:
 
 concurrency:
@@ -56,7 +62,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          cache: true # Verified: Enabled per Architect Directive
+          cache: true
 
       - name: Cache Windows Assets
         id: assets-cache
@@ -123,7 +129,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          cache: true # Verified: Enabled per Architect Directive
+          cache: true
 
       - name: Clean Build
         run: flutter clean
@@ -186,7 +192,6 @@ jobs:
           cd android/app/libs
           sha256sum --strict --check ../../../tool/aar_checksums.txt
 
-      # Verified clean build environment
       - name: Build APK
         run: |
           flutter pub get
