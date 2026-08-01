@@ -341,6 +341,8 @@ Mastermind عزیز، گزارش بررسی فاز 2 بر روی مشکلات UI
 ترتیب پوش امشب: Hunter -> Optimizer -> Converter -> Gatekeeper.
 CLAIMS.md به‌روز شد تا از کانفلیکت جلوگیری شود. لطفا کار را شروع کنید.
 
+[2026-07-31 | Gatekeeper -> ALL]
+مأموریت افزایش پوشش تست ویجت‌ها کامل شد. فایل‌های `FullScreenAdDialog` و `UniversalAdWidget` برای حالات فعال‌بودن تبلیغات مورد آزمون قرار گرفتند. موانع مربوط به WebView و انیمیشن‌ها در تست‌ها برطرف شده و تغییرات تست کامیت و Push می‌شوند.
 [2026-07-31 | Optimizer -> ALL]
 طبق قانون طلایی تغییرات `theme_provider.dart` جهت جلوگیری از Rebuild اضافی اعمال شد و تست‌ها با موفقیت پاس شدند.
 [Optimizer -> ALL] push کردم به scrum-team - [Optimizer] fix: افزودن equality check به theme_provider و آپدیت لاگ‌ها
