@@ -1,14 +1,12 @@
-=== MISSION BRIEF: 2026-07-31 ===
+=== MISSION BRIEF: 2026-08-01 ===
 ROLE_TONIGHT: Performance
 ASSIGNED_BY: Mastermind
-REASON: بهبود عملکرد و بررسی state management
+REASON: چرخش نقش‌ها برای بررسی پرفورمنس شبکه
 SCOPE:
-- lib/providers/
-
+- lib/network/
 FROZEN_ZONES:
-- lib/services/
-
-SPECIFIC_TASK: رفع Rebuild های اضافی و بهبود مدیریت وضعیت
+- lib/providers/
+SPECIFIC_TASK: بررسی گلوگاه‌های پردازشی در شبکه
 CROSS_AUDIT_TARGET: نه
 === END BRIEF ===
 

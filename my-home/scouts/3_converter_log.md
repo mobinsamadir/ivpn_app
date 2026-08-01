@@ -1,14 +1,12 @@
-=== MISSION BRIEF: 2026-07-31 ===
+=== MISSION BRIEF: 2026-08-01 ===
 ROLE_TONIGHT: UX/Conversion
 ASSIGNED_BY: Mastermind
-REASON: بهبود تعامل در ویجت‌های اصلی
+REASON: چرخش نقش‌ها برای بررسی تعامل کاربر در سرویس‌ها
 SCOPE:
-- lib/widgets/
-
-FROZEN_ZONES:
 - lib/services/
-
-SPECIFIC_TASK: بهینه‌سازی دسترسی‌پذیری و جلوگیری از پرش لی‌اوت
+FROZEN_ZONES:
+- lib/widgets/
+SPECIFIC_TASK: بررسی و بهبود بازخورد سرویس‌ها برای کاربر
 CROSS_AUDIT_TARGET: نه
 === END BRIEF ===
 
