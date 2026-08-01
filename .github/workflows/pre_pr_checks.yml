@@ -4,6 +4,11 @@ on:
   pull_request:
     branches:
       - main
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
   workflow_dispatch:
 
 concurrency:
@@ -11,14 +16,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  changes:
+  validate-and-build:
     runs-on: ubuntu-latest
-    outputs:
-      dart: ${{ steps.filter.outputs.dart }}
-      android_native: ${{ steps.filter.outputs.android_native }}
-      workflows: ${{ steps.filter.outputs.workflows }}
     steps:
       - uses: actions/checkout@v7.0.0
+
       - uses: dorny/paths-filter@v3
         id: filter
         with:
@@ -37,95 +39,63 @@ jobs:
               - '.github/workflows/**'
               - 'tool/**'
 
-  temp-files-guard:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7.0.0
       - name: Run Temp Files Guard
         run: ./tool/pre_pr_check.sh
 
-  flutter-checks:
-    needs: changes
-    if: ${{ needs.changes.outputs.dart == 'true' || needs.changes.outputs.workflows == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7.0.0
-
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: true
-
-      - name: Install Dependencies
-        run: flutter pub get
-
-      - name: Format Check
-        run: dart format --set-exit-if-changed .
-
-      - name: Analyze
-        run: flutter analyze --no-fatal-infos lib test
-
-      - name: Run Tests
-        run: flutter test test/
-
-  android-lint:
-    needs: changes
-    if: ${{ needs.changes.outputs.android_native == 'true' || needs.changes.outputs.workflows == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7.0.0
-
-      - name: Set up Java
-        uses: actions/setup-java@v5.5.0
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Download ktlint
-        run: |
-          curl -sSLO https://github.com/pinterest/ktlint/releases/download/1.3.0/ktlint
-          chmod a+x ktlint
-
-      - name: Run ktlint
-        run: ./ktlint "android/**/*.kt"
-
-  android-build:
-    needs: [changes, flutter-checks, android-lint]
-    if: |
-      always() &&
-      (needs.changes.outputs.dart == 'true' || needs.changes.outputs.android_native == 'true' || needs.changes.outputs.workflows == 'true') &&
-      (needs.flutter-checks.result == 'success' || needs.flutter-checks.result == 'skipped') &&
-      (needs.android-lint.result == 'success' || needs.android-lint.result == 'skipped')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7.0.0
-
-      - name: Validate Core Tag
-        run: |
-          TAG=$(cat tool/core_version.txt | xargs)
-          echo "Using tag: $TAG"
-          if [[ "$TAG" == *"-test"* ]]; then
-            echo "ERROR: Refusing to build PR with a test core tag ($TAG)."
-            exit 1
-          fi
-          echo "CORE_RELEASE_TAG=$TAG" >> $GITHUB_ENV
-
       - name: Set up Java 17
+        if: ${{ steps.filter.outputs.dart == 'true' || steps.filter.outputs.android_native == 'true' || steps.filter.outputs.workflows == 'true' }}
         uses: actions/setup-java@v5.5.0
         with:
           distribution: 'temurin'
           java-version: '17'
 
       - name: Setup Gradle
+        if: ${{ steps.filter.outputs.dart == 'true' || steps.filter.outputs.android_native == 'true' || steps.filter.outputs.workflows == 'true' }}
         uses: gradle/actions/setup-gradle@v4
 
       - name: Setup Flutter
+        if: ${{ steps.filter.outputs.dart == 'true' || steps.filter.outputs.android_native == 'true' || steps.filter.outputs.workflows == 'true' }}
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
           cache: true
 
+      - name: Install Flutter Dependencies
+        if: ${{ steps.filter.outputs.dart == 'true' || steps.filter.outputs.workflows == 'true' || steps.filter.outputs.android_native == 'true' }}
+        run: flutter pub get
+
+      - name: Format Check
+        if: ${{ steps.filter.outputs.dart == 'true' || steps.filter.outputs.workflows == 'true' }}
+        run: dart format --set-exit-if-changed .
+
+      - name: Analyze
+        if: ${{ steps.filter.outputs.dart == 'true' || steps.filter.outputs.workflows == 'true' }}
+        run: flutter analyze --no-fatal-infos lib test
+
+      - name: Run Tests
+        if: ${{ steps.filter.outputs.dart == 'true' || steps.filter.outputs.workflows == 'true' }}
+        run: flutter test test/
+
+      - name: Download and Run ktlint
+        if: ${{ steps.filter.outputs.android_native == 'true' || steps.filter.outputs.workflows == 'true' }}
+        run: |
+          curl -sSLO https://github.com/pinterest/ktlint/releases/download/1.3.0/ktlint
+          chmod a+x ktlint
+          ./ktlint "android/**/*.kt"
+
+      - name: Validate Core Tag
+        if: ${{ steps.filter.outputs.dart == 'true' || steps.filter.outputs.android_native == 'true' || steps.filter.outputs.workflows == 'true' }}
+        run: |
+          TAG=$(cat tool/core_version.txt | xargs)
+          echo "Using tag: $TAG"
+          if [[ "$TAG" == *"-test"* ]]; then
+            echo "ERROR: Refusing to build PR with a test core tag ($TAG)."
+            bash -c 'exit 1'
+          fi
+          echo "CORE_RELEASE_TAG=$TAG" >> $GITHUB_ENV
+
       - name: Cache AARs
+        if: ${{ steps.filter.outputs.dart == 'true' || steps.filter.outputs.android_native == 'true' || steps.filter.outputs.workflows == 'true' }}
         id: aar-cache
         uses: actions/cache@v6.1.0
         with:
@@ -133,7 +103,7 @@ jobs:
           key: ${{ runner.os }}-aar-internal-${{ hashFiles('tool/core_version.txt') }}
 
       - name: Download Secure AARs
-        if: steps.aar-cache.outputs.cache-hit != 'true'
+        if: ${{ (steps.filter.outputs.dart == 'true' || steps.filter.outputs.android_native == 'true' || steps.filter.outputs.workflows == 'true') && steps.aar-cache.outputs.cache-hit != 'true' }}
         run: |
           mkdir -p android/app/libs
 
@@ -152,59 +122,12 @@ jobs:
           curl -L -A "Mozilla/5.0" -o android/app/libs/terminal-emulator.aar "https://jitpack.io/com/github/termux/termux-app/terminal-emulator/v0.118.3/terminal-emulator-v0.118.3.aar"
 
       - name: Verify AAR Checksums
-        if: steps.aar-cache.outputs.cache-hit != 'true'
+        if: ${{ (steps.filter.outputs.dart == 'true' || steps.filter.outputs.android_native == 'true' || steps.filter.outputs.workflows == 'true') && steps.aar-cache.outputs.cache-hit != 'true' }}
         run: |
           echo "Verifying SHA256 hashes against trusted anchor..."
           cd android/app/libs
-          # Path logic check:
-          # current dir: repo-root/android/app/libs
-          # target file: repo-root/tool/aar_checksums.txt
-          #   .. (libs -> app)
-          #   .. (app -> android)
-          #   .. (android -> root)
-          # Thus: ../../../tool/aar_checksums.txt is correct.
           sha256sum --strict --check ../../../tool/aar_checksums.txt
 
       - name: Build Android App Bundle (Debug)
+        if: ${{ steps.filter.outputs.dart == 'true' || steps.filter.outputs.android_native == 'true' || steps.filter.outputs.workflows == 'true' }}
         run: flutter build appbundle --debug
-
-  pr-summary:
-    needs: [changes, temp-files-guard, flutter-checks, android-lint, android-build]
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check Job Statuses
-        run: |
-          FAILED=false
-
-          if [ "${{ needs.changes.result }}" == "failure" ] || [ "${{ needs.changes.result }}" == "cancelled" ]; then
-            echo "changes job failed or was cancelled."
-            FAILED=true
-          fi
-
-          if [ "${{ needs.temp-files-guard.result }}" == "failure" ] || [ "${{ needs.temp-files-guard.result }}" == "cancelled" ]; then
-            echo "temp-files-guard job failed or was cancelled."
-            FAILED=true
-          fi
-
-          if [ "${{ needs.flutter-checks.result }}" == "failure" ] || [ "${{ needs.flutter-checks.result }}" == "cancelled" ]; then
-            echo "flutter-checks job failed or was cancelled."
-            FAILED=true
-          fi
-
-          if [ "${{ needs.android-lint.result }}" == "failure" ] || [ "${{ needs.android-lint.result }}" == "cancelled" ]; then
-            echo "android-lint job failed or was cancelled."
-            FAILED=true
-          fi
-
-          if [ "${{ needs.android-build.result }}" == "failure" ] || [ "${{ needs.android-build.result }}" == "cancelled" ]; then
-            echo "android-build job failed or was cancelled."
-            FAILED=true
-          fi
-
-          if [ "$FAILED" == "true" ]; then
-            echo "Pipeline failed."
-            exit 1
-          fi
-
-          echo "All checks passed successfully."

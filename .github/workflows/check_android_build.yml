@@ -1,6 +1,12 @@
 name: Check Android Build
 # Automatic triggers temporarily disabled during high-change period — run manually via workflow_dispatch until re-enabled
 on:
+  push:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
   workflow_dispatch:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -74,6 +80,5 @@ jobs:
           sha256sum --strict --check ../../../tool/aar_checksums.txt
       - name: Check Kotlin Build
         run: |
-
           yes | flutter doctor --android-licenses || true
           flutter build apk --split-per-abi --release
