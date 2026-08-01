@@ -29,7 +29,8 @@ void main() {
     expect(find.byType(SizedBox), findsWidgets);
   });
 
-  testWidgets('UniversalAdWidget renders webview ad', (WidgetTester tester) async {
+  testWidgets('UniversalAdWidget renders webview ad',
+      (WidgetTester tester) async {
     kEnableAds = true;
     AdManagerService().configNotifier.value = AdConfig(
       configVersion: 'test',
@@ -57,10 +58,12 @@ void main() {
 
     expect(find.byType(UniversalAdWidget), findsOneWidget);
     // Finds the internally used WebView widget inside _MobileWebView
-    expect(find.byType(CircularProgressIndicator), findsOneWidget); // Is loading initially
+    expect(find.byType(CircularProgressIndicator),
+        findsOneWidget); // Is loading initially
   });
 
-  testWidgets('UniversalAdWidget renders image ad', (WidgetTester tester) async {
+  testWidgets('UniversalAdWidget renders image ad',
+      (WidgetTester tester) async {
     kEnableAds = true;
     AdManagerService().configNotifier.value = AdConfig(
       configVersion: 'test',
