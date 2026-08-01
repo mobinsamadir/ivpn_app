@@ -60,6 +60,8 @@ dev_dependencies:
   clock: ^1.1.2
   integration_test:
     sdk: flutter
+  webview_flutter_platform_interface: ^2.15.1
+  webview_flutter_android: ^4.12.0
 
 # تنظیمات آیکون
 flutter_launcher_icons:
