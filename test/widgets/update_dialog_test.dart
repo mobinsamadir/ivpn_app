@@ -70,7 +70,7 @@ void main() {
       await tester.tap(find.text('Show'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Later'));
+      await tester.tap(find.text('Later'), warnIfMissed: false);
       await tester.pumpAndSettle();
 
       expect(find.byType(UpdateDialog), findsNothing);
