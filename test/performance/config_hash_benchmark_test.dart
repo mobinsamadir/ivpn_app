@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:crypto/crypto.dart';
@@ -100,10 +101,10 @@ void main() {
     _optimizedLogic(configs, checkBlacklist, blockedHashes);
     stopwatchOptimized.stop();
 
-    print(
+    debugPrint(
       'Original (checkBlacklist=false): ${stopwatchOriginal.elapsedMilliseconds} ms',
     );
-    print(
+    debugPrint(
       'Optimized (checkBlacklist=false): ${stopwatchOptimized.elapsedMilliseconds} ms',
     );
 
