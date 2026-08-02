@@ -1,33 +1,33 @@
 {
-  "week": "2026-07-26_to_2026-07-30",
+  "week": "2026-07-26_to_2026-08-02",
   "agents": {
     "hunter": {
-      "proposals": 3,
-      "approved": 3,
+      "proposals": 4,
+      "approved": 4,
       "rejected": 0,
       "pending": 0,
-      "best_find": "Redaction in advanced_logger.dart"
+      "best_find": "Checked lib/models/"
     },
     "optimizer": {
+      "proposals": 6,
+      "approved": 6,
+      "rejected": 0,
+      "pending": 0,
+      "best_find": "ValueNotifier in theme_provider.dart"
+    },
+    "converter": {
       "proposals": 5,
       "approved": 5,
       "rejected": 0,
       "pending": 0,
-      "best_find": "ValueNotifier in ad_dialog.dart"
-    },
-    "converter": {
-      "proposals": 4,
-      "approved": 4,
-      "rejected": 0,
-      "pending": 0,
-      "best_find": "LayoutBuilder for AnimatedSwitcher"
+      "best_find": "Checked lib/services/"
     },
     "gatekeeper": {
-      "proposals": 4,
-      "approved": 4,
+      "proposals": 5,
+      "approved": 5,
       "rejected": 0,
       "pending": 0,
-      "best_find": "Coverage for LogViewerScreen and SettingsScreen"
+      "best_find": "Coverage for UniversalAdWidget"
     }
   }
 }

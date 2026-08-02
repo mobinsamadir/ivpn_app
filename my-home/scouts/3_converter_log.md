@@ -1,12 +1,12 @@
-=== MISSION BRIEF: 2026-08-01 ===
+=== MISSION BRIEF: 2026-08-02 ===
 ROLE_TONIGHT: UX/Conversion
 ASSIGNED_BY: Mastermind
-REASON: چرخش نقش‌ها برای بررسی تعامل کاربر در سرویس‌ها
+REASON: چرخش نقش‌ها برای بررسی تعامل
 SCOPE:
-- lib/services/
+- lib/models/
 FROZEN_ZONES:
-- lib/widgets/
-SPECIFIC_TASK: بررسی و بهبود بازخورد سرویس‌ها برای کاربر
+- lib/screens/
+SPECIFIC_TASK: بررسی بازخورد مدل‌ها
 CROSS_AUDIT_TARGET: نه
 === END BRIEF ===
 
