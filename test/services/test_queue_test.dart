@@ -1,7 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ivpn_new/services/test_queue.dart';
-
 import 'package:ivpn_new/utils/cancellable_operation.dart';
+import 'package:ivpn_new/services/test_job.dart';
+import 'dart:async';
 
 void main() {
   group('TestQueue Tests', () {
@@ -61,9 +62,30 @@ void main() {
       expect(queue.isJobBusy(1), true);
       expect(queue.isJobBusy(2), true);
       expect(queue.isJobBusy(3), false);
+    });
 
-      // Do not call cancelAll because it fails pending jobs
-      // causing the test itself to fail due to unhandled async error.
+    test('Job timeout works', () async {
+      final future = queue.enqueue((token, jobId) async {
+        await Future.delayed(const Duration(milliseconds: 200));
+      }, name: 'TimeoutJob', timeout: const Duration(milliseconds: 50));
+
+      await expectLater(future, throwsA(isA<TimeoutException>()));
+    });
+
+    test('Job throws custom exception', () async {
+      final future = queue.enqueue((token, jobId) async {
+        throw Exception("Custom error");
+      }, name: 'ErrorJob');
+
+      await expectLater(future, throwsException);
+    });
+
+    test('Job timeout triggers fallback if type is provided', () async {
+      final future = queue.enqueue((token, jobId) async {
+        await Future.delayed(const Duration(milliseconds: 200));
+      }, name: 'TimeoutJobWithType', timeout: const Duration(milliseconds: 50), type: TestType.ping);
+
+      await expectLater(future, throwsA(isA<TimeoutException>()));
     });
   });
 }
