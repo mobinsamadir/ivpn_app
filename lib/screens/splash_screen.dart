@@ -38,12 +38,13 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
 
-    _progressController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 4), // Fallback visual duration
-    )..addListener(() {
-        setState(() {});
-      });
+    _progressController =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(seconds: 4), // Fallback visual duration
+        )..addListener(() {
+          setState(() {});
+        });
 
     // Start progress animation
     _progressController.forward();
@@ -232,6 +233,16 @@ class _SplashScreenState extends State<SplashScreen>
                 const SizedBox(height: 24),
                 // Rotating Message
                 AnimatedSwitcher(
+                  layoutBuilder:
+                      (Widget? currentChild, List<Widget> previousChildren) {
+                        return Stack(
+                          alignment: Alignment.centerLeft,
+                          children: <Widget>[
+                            ...previousChildren,
+                            if (currentChild != null) currentChild,
+                          ],
+                        );
+                      },
                   duration: const Duration(milliseconds: 500),
                   child: Text(
                     _statusMessage,

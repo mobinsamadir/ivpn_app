@@ -490,8 +490,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
               child: IgnorePointer(
                 child: ElevatedButton(
                   onPressed: () => Navigator.pop(context, true),
-                  style:
-                      ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                  ),
                   child: const Text(
                     'Claim +1 Hour',
                     style: TextStyle(color: Colors.white),
@@ -1288,9 +1289,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
           _showToast("Server added successfully!");
           setState(() {});
         } else {
-          _showToast(
-            "Failed to add server. Invalid format or already exists.",
-          );
+          _showToast("Failed to add server. Invalid format or already exists.");
         }
       } else {
         _showToast("Please enter a valid URL.");
@@ -1341,8 +1340,10 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                     backgroundColor: Colors.blueAccent,
                   ),
                   onPressed: handleAdd,
-                  child:
-                      const Text('Add', style: TextStyle(color: Colors.white)),
+                  child: const Text(
+                    'Add',
+                    style: TextStyle(color: Colors.white),
+                  ),
                 ),
               ),
             ),
@@ -1722,6 +1723,16 @@ class _ConnectionStatus extends StatelessWidget {
       children: [
         Center(
           child: AnimatedSwitcher(
+            layoutBuilder:
+                (Widget? currentChild, List<Widget> previousChildren) {
+                  return Stack(
+                    alignment: Alignment.centerLeft,
+                    children: <Widget>[
+                      ...previousChildren,
+                      if (currentChild != null) currentChild,
+                    ],
+                  );
+                },
             duration: const Duration(milliseconds: 300),
             child: Text(
               connectionStatus,
@@ -1840,27 +1851,28 @@ class _ConnectButton extends StatelessWidget {
                           const Color(0xFF38EF7D),
                         ] // Green/Teal
                       : (isConnecting
-                          ? [
-                              const Color(0xFFF2994A),
-                              const Color(0xFFF2C94C),
-                            ] // Orange/Yellow
-                          : [
-                              const Color(0xFF4A5568),
-                              const Color(0xFF2D3748),
-                            ]), // Dark Grey
+                            ? [
+                                const Color(0xFFF2994A),
+                                const Color(0xFFF2C94C),
+                              ] // Orange/Yellow
+                            : [
+                                const Color(0xFF4A5568),
+                                const Color(0xFF2D3748),
+                              ]), // Dark Grey
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: (isConnected
-                            ? const Color(0xFF38EF7D)
-                            : (isConnecting
-                                ? const Color(0xFFF2994A)
-                                : Colors.black))
-                        .withValues(
-                      alpha: isConnected || isConnecting ? 0.5 : 0.3,
-                    ),
+                    color:
+                        (isConnected
+                                ? const Color(0xFF38EF7D)
+                                : (isConnecting
+                                      ? const Color(0xFFF2994A)
+                                      : Colors.black))
+                            .withValues(
+                              alpha: isConnected || isConnecting ? 0.5 : 0.3,
+                            ),
                     blurRadius: isConnected || isConnecting ? 25 : 15,
                     spreadRadius: isConnected || isConnecting ? 8 : 2,
                     offset: const Offset(0, 8),
@@ -1871,6 +1883,16 @@ class _ConnectButton extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   AnimatedSwitcher(
+                    layoutBuilder:
+                        (Widget? currentChild, List<Widget> previousChildren) {
+                          return Stack(
+                            alignment: Alignment.centerLeft,
+                            children: <Widget>[
+                              ...previousChildren,
+                              if (currentChild != null) currentChild,
+                            ],
+                          );
+                        },
                     duration: const Duration(milliseconds: 300),
                     child: isConnecting
                         ? const SizedBox(
@@ -1891,6 +1913,16 @@ class _ConnectButton extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   AnimatedSwitcher(
+                    layoutBuilder:
+                        (Widget? currentChild, List<Widget> previousChildren) {
+                          return Stack(
+                            alignment: Alignment.centerLeft,
+                            children: <Widget>[
+                              ...previousChildren,
+                              if (currentChild != null) currentChild,
+                            ],
+                          );
+                        },
                     duration: const Duration(milliseconds: 300),
                     child: Text(
                       isConnected
