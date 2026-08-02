@@ -17,6 +17,18 @@ void main() {
       expect(true, isTrue);
     });
 
+    test('triggerFallback ping handles it', () {
+      final token = CancelToken();
+      TestFallbackStrategy.triggerFallback(TestType.ping, 'job_555', token);
+      expect(true, isTrue);
+    });
+
+    test('triggerFallback adaptive handles it', () {
+      final token = CancelToken();
+      TestFallbackStrategy.triggerFallback(TestType.adaptive, 'job_666', token);
+      expect(true, isTrue);
+    });
+
     test('triggerFallback other handles it', () {
       final token = CancelToken();
       TestFallbackStrategy.triggerFallback(
