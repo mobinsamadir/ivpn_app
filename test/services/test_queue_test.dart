@@ -83,7 +83,10 @@ void main() {
     test('Job timeout triggers fallback if type is provided', () async {
       final future = queue.enqueue((token, jobId) async {
         await Future.delayed(const Duration(milliseconds: 200));
-      }, name: 'TimeoutJobWithType', timeout: const Duration(milliseconds: 50), type: TestType.ping);
+      },
+          name: 'TimeoutJobWithType',
+          timeout: const Duration(milliseconds: 50),
+          type: TestType.ping);
 
       await expectLater(future, throwsA(isA<TimeoutException>()));
     });
