@@ -232,6 +232,16 @@ class _SplashScreenState extends State<SplashScreen>
                 const SizedBox(height: 24),
                 // Rotating Message
                 AnimatedSwitcher(
+                  layoutBuilder:
+                      (Widget? currentChild, List<Widget> previousChildren) {
+                    return Stack(
+                      alignment: Alignment.centerLeft,
+                      children: <Widget>[
+                        ...previousChildren,
+                        if (currentChild != null) currentChild,
+                      ],
+                    );
+                  },
                   duration: const Duration(milliseconds: 500),
                   child: Text(
                     _statusMessage,
