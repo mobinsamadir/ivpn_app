@@ -138,9 +138,9 @@ class AdvancedLogger {
     // Safe replacement maintaining JSON formatting and string boundaries using replaceAllMapped
     return data.replaceAllMapped(
         RegExp(
-            r'(password|uuid|token|secret|private_key)["\s:=]+([a-zA-Z0-9_-]+)',
+            r'(password|uuid|token|secret|private_key)(["\s:=]+)([^"&\s,}]+)',
             caseSensitive: false),
-        (match) => '${match.group(1)}": "[REDACTED]"');
+        (match) => '${match.group(1)}${match.group(2)}[REDACTED]');
   }
 
   static dynamic _redactValue(String key, dynamic value) {
