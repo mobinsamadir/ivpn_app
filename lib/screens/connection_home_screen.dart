@@ -96,7 +96,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   Timer? _pingMonitorTimer;
 
   // Progress State
-  String _testProgress = "";
+  final ValueNotifier<String> _testProgress = ValueNotifier<String>("");
 
   // Stream Subscriptions
   StreamSubscription? _funnelSubscription;
@@ -154,7 +154,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
 
     // Listen to Funnel Progress
     _funnelSubscription = _funnelService.progressStream.listen((msg) {
-      if (mounted) setState(() => _testProgress = msg);
+      if (mounted) _testProgress.value = msg;
     });
 
     // VPN Connection Status Listener
@@ -294,6 +294,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     _timeWalletService.removeListener(_onTimeChanged);
     _timerUpdater?.cancel();
     _pingMonitorTimer?.cancel();
+    _testProgress.dispose();
     _tabController.dispose();
     super.dispose();
   }
@@ -848,50 +849,58 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                   padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
                   child: Column(
                     children: [
-                      if (_testProgress.isNotEmpty &&
-                          _testProgress != "Completed" &&
-                          _testProgress != "Stopped")
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF1A1A1A),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: Colors.blueAccent.withValues(alpha: 0.3),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
+                      ValueListenableBuilder<String>(
+                        valueListenable: _testProgress,
+                        builder: (context, progressValue, child) {
+                          if (progressValue.isNotEmpty &&
+                              progressValue != "Completed" &&
+                              progressValue != "Stopped") {
+                            return Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF1A1A1A),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color:
+                                      Colors.blueAccent.withValues(alpha: 0.3),
                                 ),
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  _testProgress,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 13,
+                              child: Row(
+                                children: [
+                                  const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
                                   ),
-                                ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      progressValue,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.stop,
+                                      color: Colors.redAccent,
+                                    ),
+                                    onPressed: () {
+                                      _funnelService.stop();
+                                      _showToast("Test Stopped");
+                                    },
+                                  ),
+                                ],
                               ),
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.stop,
-                                  color: Colors.redAccent,
-                                ),
-                                onPressed: () {
-                                  _funnelService.stop();
-                                  _showToast("Test Stopped");
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        },
+                      ),
                     ],
                   ),
                 ),
