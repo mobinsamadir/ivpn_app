@@ -861,7 +861,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                                 color: const Color(0xFF1A1A1A),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                  color: Colors.blueAccent.withValues(alpha: 0.3),
+                                  color:
+                                      Colors.blueAccent.withValues(alpha: 0.3),
                                 ),
                               ),
                               child: Row(
