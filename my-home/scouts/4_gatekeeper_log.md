@@ -247,3 +247,35 @@ CROSS_AUDIT_TARGET: نه
 بهبودهای مورد نظر در حوزه `test/` به درستی اعمال شد و این کلاس‌های پایه‌ای و مهمِ سیستم از این پس در زمان Refactoring از خطاهای پنهان در امان خواهند بود.
 
 وضعیت: ✅ تأیید و تکمیل شد (تصمیم‌گیری خودکار بدون نیاز به تغییر کد در Production).
+
+### [تاریخ: 2026-08-02] Gatekeeper Report (Phase 1 Golden Rule Application)
+
+**وضعیت Coverage فعلی `test/` در برابر سورس فایل‌ها**
+طبق دستور در نقش QA، تست‌ها و فایل‌های پروژه رو بررسی کردم. پایین‌ترین Coverage ها در بین فایل‌های کلیدی:
+1. `lib/screens/connection_home_screen.dart` - Coverage: 12.22%
+2. `lib/services/testers/ephemeral_tester.dart` - Coverage: 17.28%
+3. `lib/services/background_ad_service.dart` - Coverage: 22.92%
+4. `lib/services/config_gist_service.dart` - Coverage: 24.04%
+5. `lib/services/windows_vpn_service.dart` - Coverage: 25.66%
+
+با توجه به MISSION BRIEF امشب، دستور: "افزایش پوشش تست" و SCOPE: "test/" و FROZEN_ZONES: "lib/".
+
+**گزارش #۱: کمبود پوشش تست در `connection_home_screen.dart`**
+- **مشکل**: تست‌های فعلی فقط بخش‌های بسیار محدودی از ویجت‌های درونی این فایل (`_ConnectButton` و `_ConnectionStatus`) را کاور کرده‌اند اما ساختار اصلی `ConnectionHomeScreen` هیچ تستی ندارد.
+- **تلاش برای نوشتنِ تست**: ۳۰ دقیقه
+- **وضعیت**: ✋ گزارش شد. در فاز ۲ اقدام خواهد شد.
+
+**گزارش #۲: کمبود پوشش تست در `ephemeral_tester.dart`**
+- **مشکل**: لاجیک‌های اصلی مثل ارتباطات، مدیریت processها و timeouts کاور نشده‌اند.
+- **تلاش برای نوشتنِ تست**: ۳۰ دقیقه
+- **وضعیت**: ✋ گزارش شد. در فاز ۲ اقدام خواهد شد.
+### [تاریخ: 2026-08-02] Gatekeeper Report (Phase 2 Golden Rule Application)
+
+**اقدامات انجام شده:**
+طبق قانون طلایی (Golden Rule) و با تایید مشکل کمبود پوشش تست در `connection_home_screen.dart` و `ephemeral_tester.dart`، بدون دریافت تاییدیه‌ی انسان، تغییرات اعمال شدند:
+۱. برای ویجت `ConnectionHomeScreen` وضعیت `uninitialized` با رندر شدن `CircularProgressIndicator` مورد تست قرار گرفت (فایل `test/screens/connection_home_screen_test.dart`).
+۲. برای `EphemeralTester`، وضعیت بازگشت خطای `failureReason` در صورت `invalid configuration` (`runTest sets failureReason and ping to -1 on invalid configuration`) بررسی شد (فایل `test/services/ephemeral_tester_test.dart`).
+۳. پوشش تست این فایل‌ها با موفقیت بهبود یافت و هیچ خطایی در اجرا مشاهده نشد.
+تمامی تست‌های نوشته شده با `flutter test` اجرا و کاملاً سبز شدند.
+
+وضعیت: ✅ تأیید و در ریپازیتوری کامیت شد.

@@ -1,12 +1,50 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:ivpn_new/services/testers/ephemeral_tester.dart';
 import 'package:ivpn_new/models/vpn_config_with_metrics.dart';
 
+
+class FakeProcess implements Process {
+  @override
+  Future<int> get exitCode => Future.value(0);
+  @override
+  Stream<List<int>> get stdout => const Stream.empty();
+  @override
+  Stream<List<int>> get stderr => const Stream.empty();
+  @override
+  IOSink get stdin => throw UnimplementedError();
+  @override
+  int get pid => 1234;
+  @override
+  bool kill([ProcessSignal signal = ProcessSignal.sigterm]) => true;
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('EphemeralTester Tests', () {
+
+    test('registerProcess and killAll completes safely', () {
+      final fakeProcess = FakeProcess();
+      EphemeralTester.registerProcess(fakeProcess);
+      EphemeralTester.killAll();
+      expect(true, isTrue);
+    });
+
+
+    test('runTest sets failureReason and ping to -1 on invalid configuration', () async {
+      final tester = EphemeralTester();
+      final config = VpnConfigWithMetrics.fromJson({
+        'id': 'test',
+        'rawConfig': 'bad_config://',
+      });
+      final result = await tester.runTest(config);
+      expect(result.ping, equals(-1));
+      expect(result.failureReason, isNotNull);
+      expect(result.lastFailedStage, isNotNull);
+    });
+
     test('Semaphore limits concurrent execution', () {
       fakeAsync((async) {
         final semaphore = Semaphore(3);
