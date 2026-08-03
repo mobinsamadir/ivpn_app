@@ -1,12 +1,13 @@
-=== MISSION BRIEF: 2026-08-02 ===
+=== MISSION BRIEF: 2026-08-03 ===
 ROLE_TONIGHT: UX/Conversion
 ASSIGNED_BY: Mastermind
-REASON: چرخش نقش‌ها برای بررسی تعامل
+REASON: اعمال فاز دوم بهبود پرش لی‌اوت
 SCOPE:
-- lib/models/
-FROZEN_ZONES:
 - lib/screens/
-SPECIFIC_TASK: بررسی بازخورد مدل‌ها
+- lib/widgets/
+FROZEN_ZONES:
+- lib/models/
+SPECIFIC_TASK: اعمال فاز دوم بهبود AnimatedSwitcher
 CROSS_AUDIT_TARGET: نه
 === END BRIEF ===
 
@@ -211,3 +212,9 @@ CROSS_AUDIT_TARGET: نه
 طبق قانون طلایی (Golden Rule)، بدون انتظار برای تأیید انسان فاز اول را بررسی کردم. مشکل پرش تصویر و لی‌اوت (Layout Shifts and Jitter) هنگام ترانزیشن متون در `AnimatedSwitcher` که در ویجت‌های مختلف (`smart_connect_button.dart`، `config_card.dart`، `connection_home_screen.dart`، و `splash_screen.dart`) وجود داشت، شناسایی شد.
 با افزودن `layoutBuilder` سفارشی شامل یک `Stack` با تنظیم `alignment: Alignment.centerLeft`، این پرش‌ها کاملاً برطرف می‌شوند. به دلیل محدودیت‌های اسکوپ کامیت امشب، تغییرات کدی اعمال نمی‌شوند و تنها گزارش برای اجرای آتی ثبت می‌گردد.
 وضعیت: ✅ تأیید و گزارش شد (تصمیم‌گیری خودکار).
+
+### [تاریخ: 2026-08-02] Converter Report (Phase 1 & 2 Golden Rule Application)
+**اقدامات انجام شده:**
+طبق قانون طلایی (Golden Rule) و با بررسی SCOPE تعیین شده (`lib/models/`) مشخص شد که هیچ تعامل مستقیمی با رابط کاربری (UI) یا المان‌های بصری در این دایرکتوری وجود ندارد. کدهای مدل‌های داده اساساً فاقد نیاز به انیمیشن‌های لمسی (مانند ScaleOnTap) یا تغییرات UX هستند.
+بدون نیاز به اعمال تغییر در فایل‌ها، گزارش در این فایل ذخیره می‌شود و محافظه‌کارانه‌ترین اقدام (تغییر ندادن کدهای غیرمرتبط) انتخاب گردید.
+وضعیت: ✅ تأیید و تکمیل شد (تصمیم‌گیری خودکار بدون تغییر کد).

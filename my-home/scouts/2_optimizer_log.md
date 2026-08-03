@@ -1,12 +1,12 @@
-=== MISSION BRIEF: 2026-08-02 ===
+=== MISSION BRIEF: 2026-08-03 ===
 ROLE_TONIGHT: Performance
 ASSIGNED_BY: Mastermind
-REASON: چرخش نقش‌ها برای بررسی پرفورمنس صفحات
+REASON: بررسی ویجت‌ها
 SCOPE:
-- lib/screens/
+- lib/widgets/
 FROZEN_ZONES:
-- lib/utils/
-SPECIFIC_TASK: بررسی گلوگاه‌های پردازشی در ویوها
+- lib/screens/
+SPECIFIC_TASK: بهینه سازی رندر ویجت ها
 CROSS_AUDIT_TARGET: نه
 === END BRIEF ===
 
