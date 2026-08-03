@@ -3,6 +3,20 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ivpn_new/screens/connection_home_screen.dart';
 
 void main() {
+  group('ConnectionHomeScreen Initialization', () {
+    testWidgets('Renders CircularProgressIndicator when not initialized',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ConnectionHomeScreen(),
+        ),
+      );
+      // It renders a Scaffold and CircularProgressIndicator before initialization finishes.
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.byType(Scaffold), findsOneWidget);
+    });
+  });
+
   group('_ConnectButton Widget Tests', () {
     testWidgets('displays CONNECT text when disconnected', (
       WidgetTester tester,
