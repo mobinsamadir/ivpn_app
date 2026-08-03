@@ -3,9 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ivpn_new/screens/connection_home_screen.dart';
 
 void main() {
-
   group('ConnectionHomeScreen Initialization', () {
-    testWidgets('Renders CircularProgressIndicator when not initialized', (WidgetTester tester) async {
+    testWidgets('Renders CircularProgressIndicator when not initialized',
+        (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: ConnectionHomeScreen(),

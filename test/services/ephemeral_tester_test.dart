@@ -4,7 +4,6 @@ import 'package:fake_async/fake_async.dart';
 import 'package:ivpn_new/services/testers/ephemeral_tester.dart';
 import 'package:ivpn_new/models/vpn_config_with_metrics.dart';
 
-
 class FakeProcess implements Process {
   @override
   Future<int> get exitCode => Future.value(0);
@@ -24,7 +23,6 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('EphemeralTester Tests', () {
-
     test('registerProcess and killAll completes safely', () {
       final fakeProcess = FakeProcess();
       EphemeralTester.registerProcess(fakeProcess);
@@ -32,8 +30,8 @@ void main() {
       expect(true, isTrue);
     });
 
-
-    test('runTest sets failureReason and ping to -1 on invalid configuration', () async {
+    test('runTest sets failureReason and ping to -1 on invalid configuration',
+        () async {
       final tester = EphemeralTester();
       final config = VpnConfigWithMetrics.fromJson({
         'id': 'test',
