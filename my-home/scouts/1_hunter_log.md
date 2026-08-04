@@ -1,12 +1,12 @@
-=== MISSION BRIEF: 2026-08-03 ===
+=== MISSION BRIEF: 2026-08-04 ===
 ROLE_TONIGHT: Security
 ASSIGNED_BY: Mastermind
-REASON: چرخش نقش‌ها برای بررسی شبکه
+REASON: بررسی امنیتی سرویس‌های بومی
 SCOPE:
-- lib/network/
+- android/
 FROZEN_ZONES:
-- lib/utils/
-SPECIFIC_TASK: بررسی امنیتی شبکه
+- lib/
+SPECIFIC_TASK: بررسی کدهای بومی اندروید از نظر امنیتی
 CROSS_AUDIT_TARGET: نه
 === END BRIEF ===
 
