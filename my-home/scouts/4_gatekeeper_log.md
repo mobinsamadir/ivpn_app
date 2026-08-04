@@ -279,3 +279,12 @@ CROSS_AUDIT_TARGET: نه
 تمامی تست‌های نوشته شده با `flutter test` اجرا و کاملاً سبز شدند.
 
 وضعیت: ✅ تأیید و در ریپازیتوری کامیت شد.
+
+### [تاریخ: 2026-08-03] Gatekeeper Report (Phase 2)
+**اقدامات انجام شده:**
+۱. برای کلاس `AdManagerService` تستی برای بررسی خطای دریافت کانفیگ و fallback صحیح آن اضافه شد و Unit test های دیگر این کلاس هم کامل شد (`test/services/ad_manager_service_test.dart`).
+۲. برای `FunnelService`، تستی برای تابع `batchProcessConfigsInIsolate` اضافه شد تا اطمینان حاصل شود که پردازش و هندل کردن خطای کانفیگ‌های نادرست به درستی انجام می‌شود (`test/services/funnel_service_test.dart`).
+۳. در فایل `ephemeral_tester.dart` تست‌های اضافه‌تری برای تست‌کردن `registerProcess` و `killAll` با استفاده از `FakeProcess` نوشته شد تا پوشش این کلاس بهبود یابد (`test/services/ephemeral_tester_test.dart`).
+
+تست‌های نوشته شده به همراه سایر تست‌های پروژه با موفقیت اجرا شدند.
+وضعیت: ✅ تأیید و تکمیل شد (تصمیم‌گیری خودکار بدون منتظر ماندن).

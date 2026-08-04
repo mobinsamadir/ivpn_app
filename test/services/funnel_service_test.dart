@@ -50,6 +50,17 @@ void main() {
   });
 
   group('FunnelService queue processing tests', () {
+    test('startFunnel prevents concurrent executions', () async {
+      final service = FunnelService();
+
+      service.startFunnel();
+      // Second call should log warning but not throw or crash
+      await service.startFunnel();
+
+      // Stop should cancel all streams safely
+      service.stop();
+    });
+
     test('stop clears internal state without throwing exceptions', () async {
       final service = FunnelService();
 

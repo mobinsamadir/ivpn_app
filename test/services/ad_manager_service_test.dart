@@ -26,6 +26,12 @@ void main() {
       expect(unit?.type, equals('webview'));
     });
 
+    test('getAdUnit returns null for unknown unit', () async {
+      await adManager.initialize();
+      final unit = adManager.getAdUnit('unknown_ad');
+      expect(unit, isNull);
+    });
+
     test('showPreConnectionAd fails open without context', () async {
       await adManager.initialize();
       // Test without valid context handles fail open via checking context.mounted

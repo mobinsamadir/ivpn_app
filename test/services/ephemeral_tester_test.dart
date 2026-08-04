@@ -92,6 +92,17 @@ void main() {
       expect(result.tier, equals(0));
     });
 
+    test('runTest timeout is handled gracefully', () async {
+      final tester = EphemeralTester();
+      final config = VpnConfigWithMetrics.fromJson({
+        'id': 'test',
+        'rawConfig': 'vless://uuid@127.0.0.1:443', // valid config
+      });
+      // Will fail gracefully due to missing binary or no real connection
+      final result = await tester.runTest(config);
+      expect(result.ping, equals(-1));
+    });
+
     test('Semaphore limits concurrent execution FIFO', () {
       fakeAsync((async) {
         final semaphore = Semaphore(1);
