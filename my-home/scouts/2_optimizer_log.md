@@ -1,12 +1,12 @@
-=== MISSION BRIEF: 2026-08-03 ===
+=== MISSION BRIEF: 2026-08-04 ===
 ROLE_TONIGHT: Performance
 ASSIGNED_BY: Mastermind
-REASON: بررسی ویجت‌ها
+REASON: بررسی پرفورمنس سرویس‌های بومی
 SCOPE:
-- lib/widgets/
+- android/
 FROZEN_ZONES:
-- lib/screens/
-SPECIFIC_TASK: بهینه سازی رندر ویجت ها
+- lib/
+SPECIFIC_TASK: بررسی کدهای بومی اندروید از نظر پرفورمنس
 CROSS_AUDIT_TARGET: نه
 === END BRIEF ===
 

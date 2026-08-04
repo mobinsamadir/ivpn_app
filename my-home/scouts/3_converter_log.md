@@ -1,13 +1,12 @@
-=== MISSION BRIEF: 2026-08-03 ===
+=== MISSION BRIEF: 2026-08-04 ===
 ROLE_TONIGHT: UX/Conversion
 ASSIGNED_BY: Mastermind
-REASON: اعمال فاز دوم بهبود پرش لی‌اوت
+REASON: بررسی تعامل کاربر در مدل‌ها
 SCOPE:
-- lib/screens/
-- lib/widgets/
-FROZEN_ZONES:
 - lib/models/
-SPECIFIC_TASK: اعمال فاز دوم بهبود AnimatedSwitcher
+FROZEN_ZONES:
+- lib/screens/
+SPECIFIC_TASK: بررسی مجدد مدل‌ها در صورت نیاز
 CROSS_AUDIT_TARGET: نه
 === END BRIEF ===
 
