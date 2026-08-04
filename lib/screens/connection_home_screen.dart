@@ -491,8 +491,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
               child: IgnorePointer(
                 child: ElevatedButton(
                   onPressed: () => Navigator.pop(context, true),
-                  style:
-                      ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                  ),
                   child: const Text(
                     'Claim +1 Hour',
                     style: TextStyle(color: Colors.white),
@@ -861,8 +862,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                                 color: const Color(0xFF1A1A1A),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                  color:
-                                      Colors.blueAccent.withValues(alpha: 0.3),
+                                  color: Colors.blueAccent.withValues(
+                                    alpha: 0.3,
+                                  ),
                                 ),
                               ),
                               child: Row(
@@ -1297,9 +1299,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
           _showToast("Server added successfully!");
           setState(() {});
         } else {
-          _showToast(
-            "Failed to add server. Invalid format or already exists.",
-          );
+          _showToast("Failed to add server. Invalid format or already exists.");
         }
       } else {
         _showToast("Please enter a valid URL.");
@@ -1350,8 +1350,10 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                     backgroundColor: Colors.blueAccent,
                   ),
                   onPressed: handleAdd,
-                  child:
-                      const Text('Add', style: TextStyle(color: Colors.white)),
+                  child: const Text(
+                    'Add',
+                    style: TextStyle(color: Colors.white),
+                  ),
                 ),
               ),
             ),
@@ -1890,6 +1892,16 @@ class _ConnectButton extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   AnimatedSwitcher(
+                    layoutBuilder:
+                        (Widget? currentChild, List<Widget> previousChildren) {
+                      return Stack(
+                        alignment: Alignment.centerLeft,
+                        children: <Widget>[
+                          ...previousChildren,
+                          if (currentChild != null) currentChild,
+                        ],
+                      );
+                    },
                     duration: const Duration(milliseconds: 300),
                     child: isConnecting
                         ? const SizedBox(
