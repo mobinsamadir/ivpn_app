@@ -119,6 +119,18 @@ class _SmartConnectButtonState extends State<SmartConnectButton>
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       AnimatedSwitcher(
+                        layoutBuilder: (
+                          Widget? currentChild,
+                          List<Widget> previousChildren,
+                        ) {
+                          return Stack(
+                            alignment: Alignment.centerLeft,
+                            children: <Widget>[
+                              ...previousChildren,
+                              if (currentChild != null) currentChild,
+                            ],
+                          );
+                        },
                         duration: const Duration(milliseconds: 300),
                         child: isConnecting
                             ? SizedBox(
@@ -145,8 +157,10 @@ class _SmartConnectButtonState extends State<SmartConnectButton>
                       ),
                       const SizedBox(height: 12),
                       AnimatedSwitcher(
-                        layoutBuilder: (Widget? currentChild,
-                            List<Widget> previousChildren) {
+                        layoutBuilder: (
+                          Widget? currentChild,
+                          List<Widget> previousChildren,
+                        ) {
                           return Stack(
                             alignment: Alignment.centerLeft,
                             children: <Widget>[
