@@ -206,9 +206,8 @@ class _ConfigInfo extends StatelessWidget {
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 14,
-                  fontWeight: config.isFavorite
-                      ? FontWeight.bold
-                      : FontWeight.w600,
+                  fontWeight:
+                      config.isFavorite ? FontWeight.bold : FontWeight.w600,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -231,14 +230,14 @@ class _ConfigInfo extends StatelessWidget {
               duration: const Duration(milliseconds: 300),
               layoutBuilder:
                   (Widget? currentChild, List<Widget> previousChildren) {
-                    return Stack(
-                      alignment: Alignment.centerLeft,
-                      children: <Widget>[
-                        ...previousChildren,
-                        if (currentChild != null) currentChild,
-                      ],
-                    );
-                  },
+                return Stack(
+                  alignment: Alignment.centerLeft,
+                  children: <Widget>[
+                    ...previousChildren,
+                    if (currentChild != null) currentChild,
+                  ],
+                );
+              },
               child: isTesting
                   ? Row(
                       key: const ValueKey('testing'),
@@ -277,18 +276,16 @@ class _ConfigInfo extends StatelessWidget {
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color:
-                                  (config.currentPing == -1
-                                          ? Colors.redAccent
-                                          : getPingColor(config.currentPing))
-                                      .withValues(alpha: 0.1),
+                              color: (config.currentPing == -1
+                                      ? Colors.redAccent
+                                      : getPingColor(config.currentPing))
+                                  .withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(6),
                               border: Border.all(
-                                color:
-                                    (config.currentPing == -1
-                                            ? Colors.redAccent
-                                            : getPingColor(config.currentPing))
-                                        .withValues(alpha: 0.3),
+                                color: (config.currentPing == -1
+                                        ? Colors.redAccent
+                                        : getPingColor(config.currentPing))
+                                    .withValues(alpha: 0.3),
                               ),
                             ),
                             child: Text(
@@ -353,14 +350,14 @@ class _ConfigInfo extends StatelessWidget {
               duration: const Duration(milliseconds: 300),
               layoutBuilder:
                   (Widget? currentChild, List<Widget> previousChildren) {
-                    return Stack(
-                      alignment: Alignment.centerRight,
-                      children: <Widget>[
-                        ...previousChildren,
-                        if (currentChild != null) currentChild,
-                      ],
-                    );
-                  },
+                return Stack(
+                  alignment: Alignment.centerRight,
+                  children: <Widget>[
+                    ...previousChildren,
+                    if (currentChild != null) currentChild,
+                  ],
+                );
+              },
               child: isTesting
                   ? const SizedBox.shrink(key: ValueKey('empty_score'))
                   : Text(

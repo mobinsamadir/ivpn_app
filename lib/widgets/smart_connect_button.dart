@@ -55,9 +55,9 @@ class _SmartConnectButtonState extends State<SmartConnectButton>
         final connectionStatus = configManager.connectionStatus;
         final isConnecting =
             connectionStatus.toLowerCase().contains('connecting') ||
-            connectionStatus.toLowerCase().contains('finding') ||
-            connectionStatus.toLowerCase().contains('preparing') ||
-            connectionStatus.toLowerCase().contains('testing');
+                connectionStatus.toLowerCase().contains('finding') ||
+                connectionStatus.toLowerCase().contains('preparing') ||
+                connectionStatus.toLowerCase().contains('testing');
 
         if (isConnecting || isConnected) {
           _pulseController.repeat(reverse: true);
@@ -66,8 +66,7 @@ class _SmartConnectButtonState extends State<SmartConnectButton>
           _pulseController.value = 0.0;
         }
 
-        final bool hasConfigs =
-            configManager.validatedConfigs.isNotEmpty ||
+        final bool hasConfigs = configManager.validatedConfigs.isNotEmpty ||
             configManager.allConfigs.isNotEmpty;
         final bool isButtonDisabled =
             !hasConfigs && !isConnecting && !isConnected;
@@ -82,7 +81,7 @@ class _SmartConnectButtonState extends State<SmartConnectButton>
               onTap: isButtonDisabled
                   ? null
                   : (widget.onPressed ??
-                        () => _handleConnection(configManager)),
+                      () => _handleConnection(configManager)),
               child: AnimatedBuilder(
                 animation: _pulseAnimation,
                 builder: (context, child) {
@@ -120,19 +119,18 @@ class _SmartConnectButtonState extends State<SmartConnectButton>
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       AnimatedSwitcher(
-                        layoutBuilder:
-                            (
-                              Widget? currentChild,
-                              List<Widget> previousChildren,
-                            ) {
-                              return Stack(
-                                alignment: Alignment.centerLeft,
-                                children: <Widget>[
-                                  ...previousChildren,
-                                  if (currentChild != null) currentChild,
-                                ],
-                              );
-                            },
+                        layoutBuilder: (
+                          Widget? currentChild,
+                          List<Widget> previousChildren,
+                        ) {
+                          return Stack(
+                            alignment: Alignment.centerLeft,
+                            children: <Widget>[
+                              ...previousChildren,
+                              if (currentChild != null) currentChild,
+                            ],
+                          );
+                        },
                         duration: const Duration(milliseconds: 300),
                         child: isConnecting
                             ? SizedBox(
@@ -159,19 +157,18 @@ class _SmartConnectButtonState extends State<SmartConnectButton>
                       ),
                       const SizedBox(height: 12),
                       AnimatedSwitcher(
-                        layoutBuilder:
-                            (
-                              Widget? currentChild,
-                              List<Widget> previousChildren,
-                            ) {
-                              return Stack(
-                                alignment: Alignment.centerLeft,
-                                children: <Widget>[
-                                  ...previousChildren,
-                                  if (currentChild != null) currentChild,
-                                ],
-                              );
-                            },
+                        layoutBuilder: (
+                          Widget? currentChild,
+                          List<Widget> previousChildren,
+                        ) {
+                          return Stack(
+                            alignment: Alignment.centerLeft,
+                            children: <Widget>[
+                              ...previousChildren,
+                              if (currentChild != null) currentChild,
+                            ],
+                          );
+                        },
                         duration: const Duration(milliseconds: 300),
                         child: Text(
                           _getButtonText(
