@@ -228,10 +228,8 @@ class _ConfigInfo extends StatelessWidget {
           children: [
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 300),
-              layoutBuilder: (
-                Widget? currentChild,
-                List<Widget> previousChildren,
-              ) {
+              layoutBuilder:
+                  (Widget? currentChild, List<Widget> previousChildren) {
                 return Stack(
                   alignment: Alignment.centerLeft,
                   children: <Widget>[
@@ -274,7 +272,9 @@ class _ConfigInfo extends StatelessWidget {
                           AnimatedContainer(
                             duration: const Duration(milliseconds: 300),
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: (config.currentPing == -1
                                       ? Colors.redAccent
@@ -307,13 +307,16 @@ class _ConfigInfo extends StatelessWidget {
                           AnimatedContainer(
                             duration: const Duration(milliseconds: 300),
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.greenAccent.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(6),
                               border: Border.all(
-                                color:
-                                    Colors.greenAccent.withValues(alpha: 0.3),
+                                color: Colors.greenAccent.withValues(
+                                  alpha: 0.3,
+                                ),
                               ),
                             ),
                             child: Text(
@@ -345,10 +348,8 @@ class _ConfigInfo extends StatelessWidget {
             const Spacer(),
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 300),
-              layoutBuilder: (
-                Widget? currentChild,
-                List<Widget> previousChildren,
-              ) {
+              layoutBuilder:
+                  (Widget? currentChild, List<Widget> previousChildren) {
                 return Stack(
                   alignment: Alignment.centerRight,
                   children: <Widget>[
@@ -438,6 +439,15 @@ class _ConfigActions extends StatelessWidget {
 
         // Selection indicator
         AnimatedSwitcher(
+          layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
+            return Stack(
+              alignment: Alignment.centerLeft,
+              children: <Widget>[
+                ...previousChildren,
+                if (currentChild != null) currentChild,
+              ],
+            );
+          },
           duration: const Duration(milliseconds: 300),
           child: isSelected
               ? Container(
@@ -457,7 +467,10 @@ class _ConfigActions extends StatelessWidget {
                   ),
                 )
               : const SizedBox(
-                  key: ValueKey('unselected'), width: 8, height: 8),
+                  key: ValueKey('unselected'),
+                  width: 8,
+                  height: 8,
+                ),
         ),
       ],
     );
