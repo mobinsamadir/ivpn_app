@@ -1,3 +1,4 @@
+import 'package:path/path.dart' as p;
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ivpn_new/services/windows_vpn_service.dart';
@@ -99,6 +100,40 @@ void main() {
 
     test('stopVpn handles disconnected state gracefully', () async {
       await expectLater(service.stopVpn(), completes);
+    });
+        });
+
+  group('WindowsVpnService.getExecutablePath', () {
+    test('finds executable in local path', () async {
+      final expectedLocalPath = p.join(
+        Directory.current.path,
+        'assets',
+        'executables',
+        'windows',
+        'sing-box.exe',
+      );
+      await IOOverrides.runZoned(() async {
+        final path = await WindowsVpnService.getExecutablePath();
+        expect(path, expectedLocalPath);
+      }, createFile: (path) => MockFile(path, exists: path == expectedLocalPath));
+    });
+
+    test('finds executable in bundled path', () async {
+       final exeDir = p.dirname(Platform.resolvedExecutable);
+       final expectedBundledPath = p.join(
+         exeDir,
+         'data',
+         'flutter_assets',
+         'assets',
+         'executables',
+         'windows',
+         'sing-box.exe',
+       );
+
+       await IOOverrides.runZoned(() async {
+        final path = await WindowsVpnService.getExecutablePath();
+        expect(path, expectedBundledPath);
+      }, createFile: (path) => MockFile(path, exists: path == expectedBundledPath));
     });
   });
 }
