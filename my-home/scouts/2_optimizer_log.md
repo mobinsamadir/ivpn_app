@@ -1,15 +1,14 @@
-=== MISSION BRIEF: 2026-08-04 ===
+=== MISSION BRIEF: 2026-08-05 ===
 ROLE_TONIGHT: Performance
 ASSIGNED_BY: Mastermind
-REASON: بررسی پرفورمنس سرویس‌های بومی
+REASON: بررسی پرفورمنس لایه ابزارها
 SCOPE:
-- android/
+- lib/utils/
 FROZEN_ZONES:
-- lib/
-SPECIFIC_TASK: بررسی کدهای بومی اندروید از نظر پرفورمنس
+- android/
+SPECIFIC_TASK: بررسی کدهای utils از نظر پرفورمنس
 CROSS_AUDIT_TARGET: نه
 === END BRIEF ===
-
 
 --- تاریخچه گزارش‌ها ---
 
