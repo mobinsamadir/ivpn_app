@@ -28,7 +28,7 @@ void main() {
       when(() => mockManager.addConfigs(any(),
               checkBlacklist: any(named: 'checkBlacklist')))
           .thenAnswer((_) async => 1);
-      final res = await service.fetchAndApplyConfigs(mockManager, force: true);
+      await service.fetchAndApplyConfigs(mockManager, force: true);
     });
   });
 }
