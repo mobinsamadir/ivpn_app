@@ -11,14 +11,17 @@ class Base64Utils {
       String processed = input.trim();
 
       // Remove whitespace
-      processed = processed.split(RegExp(r'\s+')).join('');
+      processed = processed.replaceAll(RegExp(r'\s+'), '');
 
       // Normalize URL-safe characters
       processed = processed.replaceAll('-', '+').replaceAll('_', '/');
 
       // Fix Padding
-      while (processed.length % 4 != 0) {
-        processed += '=';
+      if (processed.length % 4 != 0) {
+        processed = processed.padRight(
+          processed.length + (4 - processed.length % 4),
+          '=',
+        );
       }
 
       return utf8.decode(base64Decode(processed));
@@ -32,7 +35,7 @@ class Base64Utils {
   static bool isBase64(String input) {
     if (input.isEmpty) return false;
 
-    String processed = input.trim().split(RegExp(r'\s+')).join('');
+    String processed = input.trim().replaceAll(RegExp(r'\s+'), '');
     processed = processed.replaceAll('-', '+').replaceAll('_', '/');
 
     // Remove valid padding
@@ -47,8 +50,11 @@ class Base64Utils {
 
     try {
       // Fix Padding
-      while (processed.length % 4 != 0) {
-        processed += '=';
+      if (processed.length % 4 != 0) {
+        processed = processed.padRight(
+          processed.length + (4 - processed.length % 4),
+          '=',
+        );
       }
 
       base64Decode(processed);

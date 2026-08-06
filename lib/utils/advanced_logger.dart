@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
+import 'dart:collection';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -16,7 +17,7 @@ class AdvancedLogger {
   static Timer? _flushTimer;
 
   // Memory buffering for in-app viewing
-  static final List<String> _logHistory = [];
+  static final Queue<String> _logHistory = Queue<String>();
   static final ValueNotifier<List<String>> logNotifier = ValueNotifier([]);
   static const int _maxLogEntries = 1000; // Keep last 1000 log entries
 
@@ -137,10 +138,12 @@ class AdvancedLogger {
   static String _maskSensitiveData(String data) {
     // Safe replacement maintaining JSON formatting and string boundaries using replaceAllMapped
     return data.replaceAllMapped(
-        RegExp(
-            r'(password|uuid|token|secret|private_key)(["\s:=]+)([^"&\s,}]+)',
-            caseSensitive: false),
-        (match) => '${match.group(1)}${match.group(2)}[REDACTED]');
+      RegExp(
+        r'(password|uuid|token|secret|private_key)(["\s:=]+)([^"&\s,}]+)',
+        caseSensitive: false,
+      ),
+      (match) => '${match.group(1)}${match.group(2)}[REDACTED]',
+    );
   }
 
   static dynamic _redactValue(String key, dynamic value) {
@@ -160,9 +163,11 @@ class AdvancedLogger {
       return _maskMetadata(value);
     } else if (value is List) {
       return value
-          .map((e) => e is Map<String, dynamic>
-              ? _maskMetadata(e)
-              : (e is String ? _maskSensitiveData(e) : e))
+          .map(
+            (e) => e is Map<String, dynamic>
+                ? _maskMetadata(e)
+                : (e is String ? _maskSensitiveData(e) : e),
+          )
           .toList();
     }
     return value;
@@ -216,11 +221,11 @@ class AdvancedLogger {
 
     // Maintain max log entries
     if (_logHistory.length > _maxLogEntries) {
-      _logHistory.removeAt(0); // Remove oldest entry
+      _logHistory.removeFirst(); // Remove oldest entry
     }
 
     // Update notifier for UI
-    logNotifier.value = List.from(_logHistory);
+    logNotifier.value = _logHistory.toList();
 
     // Add to file buffer
     _buffer.add(jsonEncode(entry));

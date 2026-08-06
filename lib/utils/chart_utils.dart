@@ -57,25 +57,29 @@ class ChartUtils {
     if (samples.isEmpty) return [];
 
     List<double> result = List.filled(samples.length, 0.0);
+    double currentSum = 0;
+    int currentValidCount = 0;
 
     for (int i = 0; i < samples.length; i++) {
-      int start = max(0, i - windowSize + 1);
-      int end = i + 1;
+      // Add current element
+      if (samples[i] > 0) {
+        currentSum += samples[i];
+        currentValidCount++;
+      }
 
-      double sum = 0;
-      int validCount = 0;
-
-      for (int j = start; j < end; j++) {
-        if (samples[j] > 0) {
-          sum += samples[j];
-          validCount++;
+      // Remove element that falls out of the window
+      if (i >= windowSize) {
+        int outIndex = i - windowSize;
+        if (samples[outIndex] > 0) {
+          currentSum -= samples[outIndex];
+          currentValidCount--;
         }
       }
 
-      if (validCount == 0) {
+      if (currentValidCount == 0) {
         result[i] = 0.0;
       } else {
-        result[i] = sum / validCount;
+        result[i] = currentSum / currentValidCount;
       }
     }
     return result;
