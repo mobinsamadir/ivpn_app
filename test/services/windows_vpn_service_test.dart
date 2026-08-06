@@ -101,7 +101,7 @@ void main() {
     test('stopVpn handles disconnected state gracefully', () async {
       await expectLater(service.stopVpn(), completes);
     });
-        });
+          });
 
   group('WindowsVpnService.getExecutablePath', () {
     test('finds executable in local path', () async {

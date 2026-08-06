@@ -414,6 +414,8 @@ class SingboxVpnService :
                     }
                 }
 
+                configFile.writeText(jsonObject.toString())
+
                 // SAFE CALL - pass JSON content string
                 try {
                     val options = io.nekohasekai.libbox.SetupOptions()

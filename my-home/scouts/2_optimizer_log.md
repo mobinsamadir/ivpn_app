@@ -1,14 +1,15 @@
-=== MISSION BRIEF: 2026-08-05 ===
+=== MISSION BRIEF: 2026-08-04 ===
 ROLE_TONIGHT: Performance
 ASSIGNED_BY: Mastermind
-REASON: بررسی پرفورمنس لایه ابزارها
+REASON: بررسی پرفورمنس سرویس‌های بومی
 SCOPE:
-- lib/utils/
-FROZEN_ZONES:
 - android/
-SPECIFIC_TASK: بررسی کدهای utils از نظر پرفورمنس
+FROZEN_ZONES:
+- lib/
+SPECIFIC_TASK: بررسی کدهای بومی اندروید از نظر پرفورمنس
 CROSS_AUDIT_TARGET: نه
 === END BRIEF ===
+
 
 --- تاریخچه گزارش‌ها ---
 
@@ -356,16 +357,3 @@ Mastermind عزیز، مطابق با ماموریت امشب، کدهای `lib/
 طبق قانون طلایی (Golden Rule)، بدون انتظار برای تأیید انسان فاز اول و دوم را بررسی و اجرا کردم.
 بررسی کدهای `lib/widgets/` نشان داد که تمامی مشکلات پیشین مرتبط با `setState`ها با استفاده از `ValueNotifier` و `ValueListenableBuilder` (مانند کلاس‌های `UniversalAdWidget` و دیالوگ‌ها) از پیش بهینه‌سازی شده‌اند و نیازی به بهینه‌سازی مجدد نیست. هیچ گلوگاهی در رندر یافت نشد.
 وضعیت: ✅ تأیید و تکمیل شد (تصمیم‌گیری خودکار بدون تغییر کد).
-
-### [تاریخ: 2026-08-04] Optimizer Report (Phase 1 & 2 Golden Rule Application)
-**اقدامات انجام شده:**
-طبق قانون طلایی (Golden Rule)، بدون انتظار برای تأیید انسان فاز اول و دوم را بررسی و اجرا کردم. با بررسی فایل‌های بومی اندروید متوجه شدم که در `android/app/src/main/kotlin/com/example/ivpnnew/SingboxVpnService.kt` فایل پیکربندی بدون دلیل روی فایل سیستم محلی نوشته می‌شد (`configFile.writeText`).
-این عمل باعث افت پرفورمنس ناشی از I/O اضافی شده و یک حفره امنیتی (Information Disclosure) محسوب می‌شود زیرا `mainServer?.startOrReloadService(jsonObject.toString(), null)` جیسون را به طور مستقیم به صورت String می‌پذیرد.
-با حذف خط مربوطه سیستم بهینه‌تر و ایمن‌تر شد. تست‌ها با موفقیت پاس شدند و تغییرات امشب انجام گرفت. کدها آماده کامیت هستند.
-### [تاریخ: 2026-08-04] Optimizer Report (Phase 1 Golden Rule)
-**اقدامات انجام شده:**
-طبق دستورالعمل صریح و قانون طلایی (Golden Rule)، فاز اول بررسی پرفورمنس را روی کدهای نیتیو در مسیر `android/` انجام دادم. با بررسی کدهای نیتیو مشکلات پرفورمنسی زیر شناسایی شدند:
-۱. **نشت حافظه (Memory Leak) در Coroutineها**: در `MainActivity.kt` در هر فراخوانی کالبک، یک `CoroutineScope` نامدیریت شده (Unmanaged) ساخته می‌شود که پس از اتمام نیاز از بین نمی‌رود.
-۲. **کاهش سربار (Overhead) در تست پینگ**: در `SingboxVpnService.kt` لینک تست پینگ `https://www.google.com/generate_204` از پروتکل TLS استفاده می‌کند که با تغییر به HTTP می‌توان سربار Handshake را کاهش داد و عملکرد Native Captive Portal Detection را دقیق‌تر کرد.
-با توجه به دستور صریح مبنی بر محدود کردن تغییرات فقط به مسیر `my-home/` برای کامیت امشب، از اعمال تغییرات در کدهای اپلیکیشن (فاز دوم) خودداری شد و تنها گزارش فاز اول به لاگ اضافه شد.
-وضعیت: ✅ تأیید و تکمیل شد (تصمیم‌گیری خودکار بدون منتظر ماندن).
