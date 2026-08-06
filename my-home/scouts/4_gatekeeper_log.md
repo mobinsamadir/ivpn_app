@@ -287,3 +287,15 @@ CROSS_AUDIT_TARGET: نه
 
 تست‌های نوشته شده به همراه سایر تست‌های پروژه با موفقیت اجرا شدند.
 وضعیت: ✅ تأیید و تکمیل شد (تصمیم‌گیری خودکار بدون منتظر ماندن).
+
+### [تاریخ: 2026-08-05] Gatekeeper Report (Phase 1 & 2 Golden Rule)
+**اقدامات انجام شده:**
+طبق قانون طلایی (Golden Rule)، بدون انتظار برای تأیید انسان فاز اول بررسی و فاز دوم مستقیماً اجرا گردید:
+۱. برای کلاس `BinaryManager` که پوشش ۰٪ داشت، تستی در `test/services/binary_manager_test.dart` اضافه شد تا رفتار fallback در سایر پلتفرم‌ها کاور شود.
+۲. برای افزایش پوشش `WindowsVpnService` تست‌هایی جهت پوشش `checkRequiredAssets`، استریم‌ها، و مدیریت پروسس‌ها در `test/services/windows_vpn_service_coverage3_test.dart` و `test/services/windows_vpn_service_coverage4_test.dart` نوشته شد.
+۳. تست‌هایی برای بهبود کاوریج `AdManagerService` در سناریوهای Fallback شبکه و Cache در `test/services/ad_manager_service_coverage_test.dart` و موارد مشابه اضافه گردید.
+۴. پوشش‌های اضافه‌ای در بخش `BackgroundAdService`، `ConfigGistService`، `ConnectionHomeScreen` و `EphemeralTester` نیز برای سناریوهای خطا (Error Handling) و Unmounted Context ایجاد شد.
+
+تمامی تست‌ها با دستور `flutter test` اجرا و تایید شدند. تغییری در مسیر `lib/` صورت نگرفته و پوشش تست بهبود یافته است.
+
+وضعیت: ✅ تأیید و در ریپازیتوری کامیت شد.
