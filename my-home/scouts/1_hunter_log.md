@@ -1,15 +1,14 @@
-=== MISSION BRIEF: 2026-08-04 ===
+=== MISSION BRIEF: 2026-08-05 ===
 ROLE_TONIGHT: Security
 ASSIGNED_BY: Mastermind
-REASON: بررسی امنیتی سرویس‌های بومی
+REASON: بررسی امنیتی لایه سرویس‌ها
 SCOPE:
-- android/
+- lib/services/
 FROZEN_ZONES:
-- lib/
-SPECIFIC_TASK: بررسی کدهای بومی اندروید از نظر امنیتی
+- android/
+SPECIFIC_TASK: بررسی امنیتی و رفع مشکلات کانفیگ‌ها
 CROSS_AUDIT_TARGET: نه
 === END BRIEF ===
-
 
 --- تاریخچه گزارش‌ها ---
 
@@ -104,3 +103,37 @@ CROSS_AUDIT_TARGET: نه
 - **راه حل**: Regex به `([^"&\s,}]+)` تغییر یافت تا تمام کاراکترهای متصل (بدون فاصله، کوتیشن یا کاما) تا پایان مقدار، انتخاب و با `[REDACTED]` جایگزین شوند. این تغییر طبق قانون طلایی مستقیماً اعمال شد.
 - **ROI**: جلوگیری از افشای پسوردهای پیچیده در لاگ‌ها (High)
 - **وضعیت**: ✅ تأیید و تکمیل شد (تصمیم‌گیری خودکار).
+
+### [تاریخ: ۲۰۲۶-۰۸-۰۴] Hunter Report
+
+**گزارش #۱: Information Disclosure (نشت فایل‌های کانفیگ در ارتباط با Libbox)**
+- **فایل**: `android/app/src/main/kotlin/com/example/ivpnnew/SingboxVpnService.kt` (متدهای `startTestProxy`، `measurePing` و `startVpn`)
+- **خطر**: فایل‌های حاوی کانفیگ VPN (مثل `test_proxy_*.json`، `test_*.json` و `config.json`) بر روی حافظه دستگاه نوشته می‌شوند. اگر پس از نوشتن فایل در اجرای `Libbox.setup` یا استارت سرور خطایی رخ دهد (Exception)، این فایل‌ها پاک نمی‌شوند.
+- **کد خطرناک**:
+  ```kotlin
+  val testConfigFile = File(tempDir, "test_${System.currentTimeMillis()}.json")
+  testConfigFile.writeText(json.toString())
+
+  // اگر در کدهای پایین‌تر استثنا رخ دهد، فایل پاک نمی‌شود.
+  ```
+- **چرا خطرناک**: این فایل‌ها حاوی IP سرورها، پورت‌ها و کلیدهای خصوصی هستند. بدافزارها می‌توانند با دسترسی به پوشه کَش، این اطلاعات را سرقت کنند.
+- **راه حل**: باید عملیات از زمان ساخت فایل تا اتمام استفاده از آن، درون یک بلاک `try-finally` قرار گیرد و در بخش `finally` دستور `file.delete()` فراخوانی شود.
+- **ROI**: بالا (جلوگیری از لو رفتن کانفیگ‌ها و حفظ حریم خصوصی)
+- **تلاش برای fix**: ۱۵ دقیقه
+- **وضعیت**: ✋ در انتظار تایید Mastermind
+
+---
+
+**گزارش #۲: Insecure File Storage (ذخیره کانفیگ در حافظه خارجی)**
+- **فایل**: `android/app/src/main/kotlin/com/example/ivpnnew/SingboxVpnService.kt` (متد `startVpn`)
+- **خطر**: فایل `config.json` با اولویت در `getExternalFilesDir` ذخیره می‌شود.
+- **کد مشکل‌دار**:
+  ```kotlin
+  val configDir = getExternalFilesDir(null) ?: filesDir
+  val configFile = File(configDir, "config.json")
+  ```
+- **چرا خطرناک**: فایل‌های موجود در `getExternalFilesDir` نسبت به `filesDir` امنیت کمتری دارند و روی دیوایس‌های روت شده یا از طریق USB راحت‌تر قابل دسترسی هستند.
+- **راه حل**: فقط از `filesDir` (حافظه داخلی و محافظت شده اپلیکیشن) استفاده شود.
+- **ROI**: بالا (افزایش امنیت فایل کانفیگ)
+- **تلاش برای fix**: ۲ دقیقه
+- **وضعیت**: ✋ در انتظار تایید
