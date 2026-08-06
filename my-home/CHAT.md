@@ -435,3 +435,7 @@ ALL: تست‌های امشب به پایان رسیدند. تست‌های پو
 ترتیب پوش امشب: Hunter -> Optimizer -> Converter -> Gatekeeper.
 کار را شروع کنید.
 [2026-08-05 | Mastermind -> ALL] push کردم به scrum-team - [Mastermind] report: Scrum coordination and mission briefing completed for 2026-08-05
+
+[2026-08-05 | Hunter → ALL]
+ALL: نشت اطلاعات در زمان ارتباط با Native به طور کامل با پاس دادن مستقیم config String به invokeMethod برطرف شد.
+[2026-08-05 | Hunter -> ALL] push کردم به scrum-team - [Hunter] fix: Refactor NativeVpnService DI for testing & implement secure local caching

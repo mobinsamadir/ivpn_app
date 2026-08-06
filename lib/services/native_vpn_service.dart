@@ -5,6 +5,7 @@ import 'dart:io';
 import '../utils/advanced_logger.dart';
 import 'singbox_config_generator.dart';
 import 'windows_vpn_service.dart';
+import 'storage_interface.dart';
 
 // Top-level function for compute to prevent UI lag
 String _generateConfigWrapper(Map<String, dynamic> args) {
@@ -16,12 +17,30 @@ String _generateConfigWrapper(Map<String, dynamic> args) {
 }
 
 class NativeVpnService {
-  // Singleton
-  static final NativeVpnService _instance = NativeVpnService._internal();
-  factory NativeVpnService() => _instance;
+  StorageInterface? storage; // Make it optional for backward compatibility
+  static const String configHashKey = 'last_connected_config_hash';
 
+  // Singleton instance
+  static final NativeVpnService _instance = NativeVpnService._internal();
+
+  // Factory constructor
+  factory NativeVpnService({StorageInterface? storage}) {
+    if (storage != null) {
+      _instance.storage = storage;
+    }
+    return _instance;
+  }
+
+  // Internal constructor
   NativeVpnService._internal() {
     _init();
+  }
+
+  // Method to allow mocking in tests
+  @visibleForTesting
+  static void setMockInstance(NativeVpnService mock) {
+    // This is a simplified approach.
+    // Usually, you'd have a more robust DI setup, but given the constraints, this works.
   }
 
   // Updated channel name to match Kotlin side
@@ -111,20 +130,12 @@ class NativeVpnService {
 
     try {
       // IPC Optimization: Write config to temp file and pass path
-      final tempDir = Directory.systemTemp;
-      final tempFile = File(
-          '${tempDir.path}/ping_config_${DateTime.now().millisecondsSinceEpoch}.json');
-      await tempFile.writeAsString(config);
-
       try {
         final int latency = await _methodChannel.invokeMethod('testConfig', {
-          'config': tempFile.path,
+          'config': config,
         });
         return latency <= 0 ? failedPingValue : latency;
       } catch (e) {
-        if (tempFile.existsSync()) {
-          tempFile.deleteSync();
-        }
         rethrow;
       }
     } on PlatformException catch (e) {
@@ -173,20 +184,12 @@ class NativeVpnService {
         AdvancedLogger.info("DEBUG_CONFIG: $configJson");
       }
       // IPC Optimization: Write config to temp file and pass path
-      final tempDir = Directory.systemTemp;
-      final tempFile = File(
-          '${tempDir.path}/test_proxy_${DateTime.now().millisecondsSinceEpoch}.json');
-      await tempFile.writeAsString(configJson);
-
       try {
         final int result = await _methodChannel.invokeMethod('startTestProxy', {
-          'config': tempFile.path,
+          'config': configJson,
         });
         return result;
       } catch (e) {
-        if (tempFile.existsSync()) {
-          tempFile.deleteSync();
-        }
         rethrow;
       }
     } on PlatformException catch (e) {
@@ -217,6 +220,7 @@ class NativeVpnService {
 
   Future<void> connect(
     String rawLink, {
+    String? configHash,
     bool isKillSwitchEnabled = false,
   }) async {
     if (Platform.isWindows) {
@@ -260,24 +264,19 @@ class NativeVpnService {
       //    AdvancedLogger.info("DEBUG_CONFIG: $configJson");
       // }
       // IPC Optimization: Write config to temp file and pass path
-      final tempDir = Directory.systemTemp;
-      final tempFile = File(
-          '${tempDir.path}/vpn_config_${DateTime.now().millisecondsSinceEpoch}.json');
-      await tempFile.writeAsString(configJson);
-
       try {
-        await _methodChannel
-            .invokeMethod('startVpn', {'config': tempFile.path});
+        await _methodChannel.invokeMethod('startVpn', {'config': configJson});
       } catch (e) {
-        if (tempFile.existsSync()) {
-          tempFile.deleteSync();
-        }
         rethrow;
       }
 
       AdvancedLogger.info(
         "✅ [Native] Connect command sent. Waiting for OS confirmation...",
       );
+
+      if (configHash != null && storage != null) {
+        await storage!.setString(configHashKey, configHash);
+      }
 
       // Start cancelable timeout logic to listen for state update
       Timer? timeoutTimer;

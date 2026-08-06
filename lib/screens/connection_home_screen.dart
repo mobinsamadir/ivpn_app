@@ -7,6 +7,8 @@ import 'dart:io';
 import '../models/vpn_config_with_metrics.dart';
 import '../services/config_manager.dart';
 import '../services/native_vpn_service.dart';
+import '../services/storage_interface.dart';
+import '../services/secure_storage_service.dart';
 import '../widgets/universal_ad_widget.dart';
 import '../widgets/config_card.dart';
 import '../utils/advanced_logger.dart';
@@ -111,7 +113,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   void initState() {
     super.initState();
 
-    _nativeVpnService = widget.nativeVpnService ?? NativeVpnService();
+    _nativeVpnService = widget.nativeVpnService ??
+        NativeVpnService(storage: SecureStorageService());
     _funnelService = widget.funnelService ?? FunnelService();
     _ephemeralTester = widget.ephemeralTester ?? EphemeralTester();
     _configManager = widget.configManager ?? ConfigManager();

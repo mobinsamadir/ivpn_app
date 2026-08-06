@@ -68,13 +68,13 @@ void main() {
     service = NativeVpnService();
     final config = createValidVmess();
 
-    await service.connect(config);
+    await service.connect(config, configHash: 'hash');
 
     expect(methodCalls, hasLength(1));
     expect(methodCalls.first.method, 'startVpn');
     // Verify the generated Singbox config contains expected structure
     final args = methodCalls.first.arguments as Map;
-    expect(args, containsPair('config', contains('.json')));
+    expect(args, containsPair('config', contains('outbounds')));
   });
 
   test('Disconnect calls stopVpn', () async {
@@ -151,7 +151,7 @@ void main() {
         (e) => e.contains('ERROR: NATIVE_TIMEOUT'),
       );
 
-      await service.connect(config);
+      await service.connect(config, configHash: 'hash');
 
       expect(methodCalls.map((c) => c.method), contains('startVpn'));
 

@@ -15,6 +15,7 @@ import 'time_wallet_service.dart';
 import '../utils/connectivity_utils.dart';
 import '../utils/cancellable_operation.dart';
 import 'native_vpn_service.dart';
+import 'storage_interface.dart';
 import 'testers/ephemeral_tester.dart';
 
 // --- TOP-LEVEL HELPER FUNCTIONS FOR ISOLATE ---
@@ -269,7 +270,9 @@ class ConfigManager extends ChangeNotifier {
     });
 
     // PASSIVE EVENT-DRIVEN AUTO-HEALING
-    NativeVpnService().connectionStatusStream.listen((status) async {
+    NativeVpnService(storage: storage)
+        .connectionStatusStream
+        .listen((status) async {
       _connectionStatus = status;
 
       if (status == 'CONNECTED') {
@@ -968,7 +971,7 @@ class ConfigManager extends ChangeNotifier {
     isConnectionCancelled = true;
 
     // 1. Issue the disconnect
-    final NativeVpnService nativeService = NativeVpnService();
+    final NativeVpnService nativeService = NativeVpnService(storage: storage);
     await nativeService.disconnect();
 
     // 2. Wait securely until the status is actually DISCONNECTED
@@ -1134,7 +1137,7 @@ class ConfigManager extends ChangeNotifier {
 
     int attempts = 0;
     const maxAttempts = 3;
-    final NativeVpnService nativeService = NativeVpnService();
+    final NativeVpnService nativeService = NativeVpnService(storage: storage);
     final EphemeralTester tester = EphemeralTester();
 
     while (
@@ -1271,7 +1274,7 @@ class ConfigManager extends ChangeNotifier {
     setConnected(false, status: 'Connecting...');
     selectConfig(target);
 
-    final NativeVpnService nativeService = NativeVpnService();
+    final NativeVpnService nativeService = NativeVpnService(storage: storage);
 
     try {
       // Initiate native connection

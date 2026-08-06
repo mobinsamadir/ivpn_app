@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import '../storage_interface.dart';
+import '../secure_storage_service.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import '../../models/vpn_config_with_metrics.dart';
@@ -123,7 +125,7 @@ class EphemeralTester {
           _activeProcesses.remove(processForCleanup);
         } else if (Platform.isAndroid) {
           try {
-            NativeVpnService().stopTestProxy();
+            NativeVpnService(storage: SecureStorageService()).stopTestProxy();
           } catch (_) {}
         }
 
@@ -223,7 +225,7 @@ class EphemeralTester {
       // STAGE 2 & 3: Native Proxy (Serialized)
       await _androidSemaphore.acquire();
 
-      final nativeService = NativeVpnService();
+      final nativeService = NativeVpnService(storage: SecureStorageService());
       int proxyPort = -1;
       int listenPort = 0; // NEW: Dynamic Port Allocation
       int latency = 0;
