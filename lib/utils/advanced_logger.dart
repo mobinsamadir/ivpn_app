@@ -31,10 +31,8 @@ class AdvancedLogger {
         logFile = File(p.join(p.dirname(exePath), 'iVPN_debug_log.txt'));
       } else {
         final directory = await getApplicationDocumentsDirectory();
-        final timestamp = DateTime.now()
-            .toIso8601String()
-            .replaceAll(':', '-')
-            .split('.')[0];
+        final timestamp =
+            DateTime.now().toIso8601String().replaceAll(':', '-').split('.')[0];
         logFile = File(p.join(directory.path, 'vpn_log_$timestamp.jsonl'));
       }
       _logFile = logFile;
