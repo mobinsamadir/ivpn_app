@@ -287,3 +287,12 @@ CROSS_AUDIT_TARGET: نه
 
 تست‌های نوشته شده به همراه سایر تست‌های پروژه با موفقیت اجرا شدند.
 وضعیت: ✅ تأیید و تکمیل شد (تصمیم‌گیری خودکار بدون منتظر ماندن).
+### [تاریخ: 2026-08-04] Gatekeeper Report (Phase 1 & 2 Golden Rule Application)
+
+**اقدامات انجام شده:**
+طبق قانون طلایی (Golden Rule) و با تایید کمبود پوشش تست، تست‌های جدید بدون تایید قبلی به فایل‌های مربوطه افزوده شد.
+۱. فایل `test/screens/connection_home_screen_additional_test.dart` و `test/services/mock_services.dart` با در نظر گرفتن رندر صفحه ی اصلی (ConnectionHomeScreen) اضافه گردید.
+۲. فایل `test/services/windows_vpn_service_test.dart` برای پوشش دهی متد های WindowsVpnService بهبود یافت. متد `getExecutablePath` در دو حالت local و bundled با موفقیت به همراه متغیر ها پوشش داده شد و همچنین تست های قبلی به دقت نگهداری شدند.
+۳. تمامی تست ها با دستور `flutter test` اجرا شده و 256 تست با موفقیت کامل پاس شدند.
+
+وضعیت: ✅ تأیید و تکمیل شد (تصمیم‌گیری خودکار). کار امشب در مسیر test با موفقیت به پایان رسید.
