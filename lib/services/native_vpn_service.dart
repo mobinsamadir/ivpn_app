@@ -113,7 +113,8 @@ class NativeVpnService {
       // IPC Optimization: Write config to temp file and pass path
       final tempDir = Directory.systemTemp;
       final tempFile = File(
-          '${tempDir.path}/ping_config_${DateTime.now().millisecondsSinceEpoch}.json');
+        '${tempDir.path}/ping_config_${DateTime.now().millisecondsSinceEpoch}.json',
+      );
       await tempFile.writeAsString(config);
 
       try {
@@ -121,11 +122,10 @@ class NativeVpnService {
           'config': tempFile.path,
         });
         return latency <= 0 ? failedPingValue : latency;
-      } catch (e) {
+      } finally {
         if (tempFile.existsSync()) {
           tempFile.deleteSync();
         }
-        rethrow;
       }
     } on PlatformException catch (e) {
       if (e.code == 'PERMISSION_DENIED') {
@@ -175,7 +175,8 @@ class NativeVpnService {
       // IPC Optimization: Write config to temp file and pass path
       final tempDir = Directory.systemTemp;
       final tempFile = File(
-          '${tempDir.path}/test_proxy_${DateTime.now().millisecondsSinceEpoch}.json');
+        '${tempDir.path}/test_proxy_${DateTime.now().millisecondsSinceEpoch}.json',
+      );
       await tempFile.writeAsString(configJson);
 
       try {
@@ -183,11 +184,10 @@ class NativeVpnService {
           'config': tempFile.path,
         });
         return result;
-      } catch (e) {
+      } finally {
         if (tempFile.existsSync()) {
           tempFile.deleteSync();
         }
-        rethrow;
       }
     } on PlatformException catch (e) {
       if (e.code == 'PERMISSION_DENIED') {
@@ -262,17 +262,18 @@ class NativeVpnService {
       // IPC Optimization: Write config to temp file and pass path
       final tempDir = Directory.systemTemp;
       final tempFile = File(
-          '${tempDir.path}/vpn_config_${DateTime.now().millisecondsSinceEpoch}.json');
+        '${tempDir.path}/vpn_config_${DateTime.now().millisecondsSinceEpoch}.json',
+      );
       await tempFile.writeAsString(configJson);
 
       try {
-        await _methodChannel
-            .invokeMethod('startVpn', {'config': tempFile.path});
-      } catch (e) {
+        await _methodChannel.invokeMethod('startVpn', {
+          'config': tempFile.path,
+        });
+      } finally {
         if (tempFile.existsSync()) {
           tempFile.deleteSync();
         }
-        rethrow;
       }
 
       AdvancedLogger.info(
