@@ -373,6 +373,7 @@ class WindowsVpnService {
       final configFile = File(p.join(tempDir.path, 'config.json'));
       await configFile.writeAsString(jsonConfig);
       _currentConfigFile = configFile;
+      _currentConfigPath = configFile.path;
       AdvancedLogger.info(
         '[WindowsVpnService] Config file written to: ${configFile.path}',
       );

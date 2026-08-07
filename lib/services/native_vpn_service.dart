@@ -53,12 +53,12 @@ class NativeVpnService {
 
   late final StreamController<String> _statusController =
       StreamController<String>.broadcast(
-    onListen: () {
-      if (_lastKnownState != null && !_statusController.isClosed) {
-        _statusController.add(_lastKnownState!);
-      }
-    },
-  );
+        onListen: () {
+          if (_lastKnownState != null && !_statusController.isClosed) {
+            _statusController.add(_lastKnownState!);
+          }
+        },
+      );
 
   // Initialization logic moved here
   void _init() {
@@ -75,7 +75,8 @@ class NativeVpnService {
           // 2. Smart Filter: Only update UI for valid status changes to prevent UI jank
           // Known statuses: CONNECTED, CONNECTING, DISCONNECTED, RECONNECTING
           // Errors start with ERROR
-          bool isStatus = [
+          bool isStatus =
+              [
                 "CONNECTED",
                 "CONNECTING",
                 "DISCONNECTED",
@@ -113,7 +114,8 @@ class NativeVpnService {
       // IPC Optimization: Write config to temp file and pass path
       final tempDir = Directory.systemTemp;
       final tempFile = File(
-          '${tempDir.path}/ping_config_${DateTime.now().millisecondsSinceEpoch}.json');
+        '${tempDir.path}/ping_config_${DateTime.now().millisecondsSinceEpoch}.json',
+      );
       await tempFile.writeAsString(config);
 
       try {
@@ -121,11 +123,10 @@ class NativeVpnService {
           'config': tempFile.path,
         });
         return latency <= 0 ? failedPingValue : latency;
-      } catch (e) {
+      } finally {
         if (tempFile.existsSync()) {
           tempFile.deleteSync();
         }
-        rethrow;
       }
     } on PlatformException catch (e) {
       if (e.code == 'PERMISSION_DENIED') {
@@ -156,8 +157,9 @@ class NativeVpnService {
     }
 
     // 1. Diagnostic Log (First 10 chars)
-    final String start =
-        configJson.length > 10 ? configJson.substring(0, 10) : configJson;
+    final String start = configJson.length > 10
+        ? configJson.substring(0, 10)
+        : configJson;
     AdvancedLogger.warn("[DEBUG-INTERNAL] Config start: $start");
 
     // 2. Validate Format
@@ -175,7 +177,8 @@ class NativeVpnService {
       // IPC Optimization: Write config to temp file and pass path
       final tempDir = Directory.systemTemp;
       final tempFile = File(
-          '${tempDir.path}/test_proxy_${DateTime.now().millisecondsSinceEpoch}.json');
+        '${tempDir.path}/test_proxy_${DateTime.now().millisecondsSinceEpoch}.json',
+      );
       await tempFile.writeAsString(configJson);
 
       try {
@@ -183,11 +186,10 @@ class NativeVpnService {
           'config': tempFile.path,
         });
         return result;
-      } catch (e) {
+      } finally {
         if (tempFile.existsSync()) {
           tempFile.deleteSync();
         }
-        rethrow;
       }
     } on PlatformException catch (e) {
       if (e.code == 'PERMISSION_DENIED') {
@@ -241,8 +243,9 @@ class NativeVpnService {
       AdvancedLogger.warn("[CORE-INPUT-JSON] $configJson");
 
       // 1. Diagnostic Log (First 10 chars)
-      final String start =
-          configJson.length > 10 ? configJson.substring(0, 10) : configJson;
+      final String start = configJson.length > 10
+          ? configJson.substring(0, 10)
+          : configJson;
       AdvancedLogger.warn("[DEBUG-INTERNAL] Config start: $start");
 
       // 2. Validate Format
@@ -262,17 +265,18 @@ class NativeVpnService {
       // IPC Optimization: Write config to temp file and pass path
       final tempDir = Directory.systemTemp;
       final tempFile = File(
-          '${tempDir.path}/vpn_config_${DateTime.now().millisecondsSinceEpoch}.json');
+        '${tempDir.path}/vpn_config_${DateTime.now().millisecondsSinceEpoch}.json',
+      );
       await tempFile.writeAsString(configJson);
 
       try {
-        await _methodChannel
-            .invokeMethod('startVpn', {'config': tempFile.path});
-      } catch (e) {
+        await _methodChannel.invokeMethod('startVpn', {
+          'config': tempFile.path,
+        });
+      } finally {
         if (tempFile.existsSync()) {
           tempFile.deleteSync();
         }
-        rethrow;
       }
 
       AdvancedLogger.info(
