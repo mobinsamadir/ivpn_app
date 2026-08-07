@@ -1,12 +1,23 @@
 name: Check Android Build
 # Automatic triggers temporarily disabled during high-change period — run manually via workflow_dispatch until re-enabled
 on:
-  push:
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - 'LICENSE'
-      - '.gitignore'
+  # ==============================================================================
+  # 🚦 TRIGGER OPTIONS (Optimize for GitHub Free Minutes)
+  # ==============================================================================
+
+  # 1. RUN ON PUSH (Uncomment below to enable)
+  # push:
+  #   paths-ignore:
+  #     - '**.md'
+  #     - 'docs/**'
+  #     - 'LICENSE'
+  #     - '.gitignore'
+
+  # 2. RUN AT SPECIFIC HOURS (e.g., 21:00 to 02:00 UTC)
+  # schedule:
+  #   - cron: '0 21,22,23,0,1,2 * * *'
+
+  # 3. RUN MANUALLY (Always enabled)
   workflow_dispatch:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
