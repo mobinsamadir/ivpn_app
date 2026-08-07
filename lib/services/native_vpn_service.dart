@@ -53,12 +53,12 @@ class NativeVpnService {
 
   late final StreamController<String> _statusController =
       StreamController<String>.broadcast(
-        onListen: () {
-          if (_lastKnownState != null && !_statusController.isClosed) {
-            _statusController.add(_lastKnownState!);
-          }
-        },
-      );
+    onListen: () {
+      if (_lastKnownState != null && !_statusController.isClosed) {
+        _statusController.add(_lastKnownState!);
+      }
+    },
+  );
 
   // Initialization logic moved here
   void _init() {
@@ -75,8 +75,7 @@ class NativeVpnService {
           // 2. Smart Filter: Only update UI for valid status changes to prevent UI jank
           // Known statuses: CONNECTED, CONNECTING, DISCONNECTED, RECONNECTING
           // Errors start with ERROR
-          bool isStatus =
-              [
+          bool isStatus = [
                 "CONNECTED",
                 "CONNECTING",
                 "DISCONNECTED",
@@ -157,9 +156,8 @@ class NativeVpnService {
     }
 
     // 1. Diagnostic Log (First 10 chars)
-    final String start = configJson.length > 10
-        ? configJson.substring(0, 10)
-        : configJson;
+    final String start =
+        configJson.length > 10 ? configJson.substring(0, 10) : configJson;
     AdvancedLogger.warn("[DEBUG-INTERNAL] Config start: $start");
 
     // 2. Validate Format
@@ -243,9 +241,8 @@ class NativeVpnService {
       AdvancedLogger.warn("[CORE-INPUT-JSON] $configJson");
 
       // 1. Diagnostic Log (First 10 chars)
-      final String start = configJson.length > 10
-          ? configJson.substring(0, 10)
-          : configJson;
+      final String start =
+          configJson.length > 10 ? configJson.substring(0, 10) : configJson;
       AdvancedLogger.warn("[DEBUG-INTERNAL] Config start: $start");
 
       // 2. Validate Format
