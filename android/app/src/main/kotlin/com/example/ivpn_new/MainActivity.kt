@@ -15,6 +15,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.cancel
 import java.util.concurrent.atomic.AtomicBoolean
 
 class SafeResult(
@@ -100,7 +101,7 @@ class MainActivity : FlutterActivity() {
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channel).setMethodCallHandler { call, rawResult ->
             val result = SafeResult(rawResult)
-            CoroutineScope(Dispatchers.IO).launch {
+            scope.launch(Dispatchers.IO) {
                 try {
                     when (call.method) {
                         "startVpn" -> {
@@ -224,5 +225,10 @@ class MainActivity : FlutterActivity() {
                 putExtra("action", SingboxVpnService.ACTION_STOP)
             }
         startService(serviceIntent)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        scope.cancel()
     }
 }

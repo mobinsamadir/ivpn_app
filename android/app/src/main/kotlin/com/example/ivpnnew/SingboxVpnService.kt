@@ -310,7 +310,7 @@ class SingboxVpnService :
                     val request =
                         Request
                             .Builder()
-                            .url("https://www.google.com/generate_204")
+                            .url("http://www.google.com/generate_204")
                             .head()
                             .build()
 
