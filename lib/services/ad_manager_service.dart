@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/ad_config.dart';
@@ -117,7 +118,7 @@ class AdManagerService {
       final prefs = await SharedPreferences.getInstance();
       final jsonString = prefs.getString(_storageKey);
       if (jsonString != null) {
-        final jsonMap = jsonDecode(jsonString);
+        final jsonMap = await compute(_parseJsonInBackground, jsonString);
         final cachedConfig = AdConfig.fromJson(jsonMap);
         // Load global toggle from cache
         final int globalAds = jsonMap['global_ads_enabled'] as int? ?? 0;
@@ -149,7 +150,7 @@ class AdManagerService {
       if (response.statusCode == 200 && response.data != null) {
         dynamic data = response.data;
         if (data is String) {
-          data = jsonDecode(data);
+          data = await compute(_parseJsonInBackground, data);
         }
 
         final remoteConfig = AdConfig.fromJson(data);
