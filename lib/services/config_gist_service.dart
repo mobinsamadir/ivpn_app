@@ -11,6 +11,8 @@ import '../widgets/update_dialog.dart';
 import 'config_manager.dart';
 import 'config_parser.dart';
 
+dynamic _parseJson(String str) => jsonDecode(str);
+
 class ConfigGistService {
   static final ConfigGistService _instance = ConfigGistService._internal();
 
@@ -160,7 +162,8 @@ class ConfigGistService {
       final backupJson = prefs.getString(_backupConfigsKey);
       if (backupJson != null && backupJson.isNotEmpty) {
         try {
-          final List<dynamic> rawList = jsonDecode(backupJson);
+          final List<dynamic> rawList =
+              await compute(_parseJson, backupJson) as List<dynamic>;
           final List<String> backupConfigs = [];
           for (var e in rawList) {
             String c = e.toString();

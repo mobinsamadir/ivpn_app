@@ -405,8 +405,8 @@ class SingboxConfigGenerator {
       final pluginName = pluginParts.first;
 
       final Map<String, String> pluginOpts = {};
-      for (var part in pluginParts.skip(1)) {
-        final kv = part.split('=');
+      for (int i = 1; i < pluginParts.length; i++) {
+        final kv = pluginParts[i].split('=');
         if (kv.length == 2) pluginOpts[kv[0]] = kv[1];
       }
 
