@@ -1,0 +1,43 @@
+<<<<<<< SEARCH
+  Future<void> _loadFromCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final jsonString = prefs.getString(_storageKey);
+      if (jsonString != null) {
+        final jsonMap = jsonDecode(jsonString);
+        final cachedConfig = AdConfig.fromJson(jsonMap);
+=======
+  Future<void> _loadFromCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final jsonString = prefs.getString(_storageKey);
+      if (jsonString != null) {
+        // Offload parsing to background isolate to prevent UI blockage
+        final jsonMap = await compute(_parseJsonInBackground, jsonString);
+        final cachedConfig = AdConfig.fromJson(jsonMap);
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+      if (response.statusCode == 200 && response.data != null) {
+        dynamic data = response.data;
+        if (data is String) {
+          data = jsonDecode(data);
+        }
+
+        final remoteConfig = AdConfig.fromJson(data);
+=======
+      if (response.statusCode == 200 && response.data != null) {
+        dynamic data = response.data;
+        if (data is String) {
+          data = await compute(_parseJsonInBackground, data);
+        }
+
+        final remoteConfig = AdConfig.fromJson(data);
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+}
+=======
+}
+
+// Top-level function for background isolate JSON decoding
+dynamic _parseJsonInBackground(String source) => jsonDecode(source);
+>>>>>>> REPLACE

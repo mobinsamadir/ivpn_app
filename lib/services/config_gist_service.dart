@@ -42,7 +42,7 @@ class ConfigGistService {
           .get(Uri.parse(_updateUrl))
           .timeout(const Duration(seconds: 10));
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = await compute(_parseJsonInBackground, response.body);
         // Robust parsing to prevent ANY crash
         final latestBuild =
             int.tryParse(data['version_code']?.toString() ?? '0') ?? 0;
@@ -160,7 +160,7 @@ class ConfigGistService {
       final backupJson = prefs.getString(_backupConfigsKey);
       if (backupJson != null && backupJson.isNotEmpty) {
         try {
-          final List<dynamic> rawList = jsonDecode(backupJson);
+          final List<dynamic> rawList = await compute(_parseJsonInBackground, backupJson);
           final List<String> backupConfigs = [];
           for (var e in rawList) {
             String c = e.toString();
