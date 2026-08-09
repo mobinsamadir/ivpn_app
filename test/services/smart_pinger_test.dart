@@ -218,4 +218,38 @@ void main() {
       expect(attemptsLaunched, 2);
     });
   });
+  group('SmartPinger Real Network (Optional)', () {
+    test('pingMultiple returns valid result for localhost', () async {
+      final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+      final port = server.port;
+
+      final result = await SmartPinger.pingMultiple(
+        endpoints: ['https://127.0.0.1:$port'],
+        requiredSuccesses: 1,
+        timeoutPerPing: const Duration(seconds: 1),
+      );
+
+      expect(result.isOverallSuccess, isTrue);
+      expect(result.successfulEndpoints, 1);
+      expect(result.failedEndpoints, 0);
+      expect(result.averageLatency, greaterThanOrEqualTo(0));
+      expect(result.recommendation, contains('Network Healthy'));
+
+      await server.close();
+    });
+
+    test('pingMultiple fails when no endpoints respond', () async {
+      final result = await SmartPinger.pingMultiple(
+        endpoints: ['https://192.0.2.1:9999'],
+        requiredSuccesses: 1,
+        timeoutPerPing: const Duration(milliseconds: 100),
+      );
+
+      expect(result.isOverallSuccess, isFalse);
+      expect(result.successfulEndpoints, 0);
+      expect(result.failedEndpoints, 1);
+      expect(result.averageLatency, equals(-1.0));
+      expect(result.recommendation, contains('Network Failure'));
+    });
+  });
 }

@@ -44,7 +44,7 @@ class ConfigGistService {
           .get(Uri.parse(_updateUrl))
           .timeout(const Duration(seconds: 10));
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = await compute(_parseJsonInBackground, response.body);
         // Robust parsing to prevent ANY crash
         final latestBuild =
             int.tryParse(data['version_code']?.toString() ?? '0') ?? 0;
