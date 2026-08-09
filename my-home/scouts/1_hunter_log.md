@@ -137,3 +137,14 @@ CROSS_AUDIT_TARGET: نه
 - **ROI**: بالا (افزایش امنیت فایل کانفیگ)
 - **تلاش برای fix**: ۲ دقیقه
 - **وضعیت**: ✋ در انتظار تایید
+
+### [تاریخ: ۲۰۲۶-۰۸-۰۵] Hunter Report (Phase 2 Golden Rule Application)
+**اقدامات انجام شده:**
+طبق قانون طلایی (Golden Rule)، بدون انتظار برای تأیید انسان فاز دوم اجرا گردید:
+۱. رفع مشکل ذخیره‌سازی نامطمئن (Insecure File Storage): دایرکتوری ذخیره‌سازی کانفیگ VPN در `android/app/src/main/kotlin/com/example/ivpnnew/SingboxVpnService.kt` از حافظه خارجی (`getExternalFilesDir`) به حافظه داخلی محافظت شده اپلیکیشن (`filesDir`) تغییر یافت تا امکان دسترسی توسط بدافزارها کاهش یابد.
+۲. رفع مشکل نشت اطلاعات حساس (Information Disclosure): عملیات استفاده از فایل‌های موقت `test_*.json` و `test_proxy_*.json` که حاوی پیکربندی‌های حساس VPN هستند در اندروید در بلاک‌های `try-finally` محصور شد تا در صورت بروز هرگونه استثنا (Exception) مانند خطای Libbox، فایل‌ها به طور قطعی حذف (delete) شوند و روی حافظه باقی نمانند.
+۳. در `lib/services/native_vpn_service.dart`، عملیات ارتباط با نیتیو با استفاده از فایل‌های `test_proxy_*.json`، `ping_config_*.json` و `vpn_config_*.json` نیز با قرارگیری در داخل بلاک `try-finally` ایمن‌سازی شدند تا پاکسازی آن‌ها تضمین شود. (استفاده از `getTemporaryDirectory` برای ایجاد فولدر موقت اعمال شد).
+۴. در `lib/services/windows_vpn_service.dart`، آدرس فایل موقت ایجاد شده `config.json` به متغیر کلاسی `_currentConfigPath` اختصاص یافت تا متد `stopVpn` بتواند با اطمینان کامل آن را در هنگام قطع اتصال پاک کند.
+
+کلیه تست‌های مرتبط با موفقیت پاس شدند و تغییرات برای امنیت بیشتر کامیت شدند.
+وضعیت: ✅ تأیید و تکمیل شد (تصمیم‌گیری خودکار بدون منتظر ماندن).
