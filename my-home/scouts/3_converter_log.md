@@ -1,12 +1,12 @@
-=== MISSION BRIEF: 2026-08-05 ===
+=== MISSION BRIEF: 2026-08-06 ===
 ROLE_TONIGHT: UX/Conversion
 ASSIGNED_BY: Mastermind
-REASON: بررسی تعامل کاربر در مدل‌ها
+REASON: بررسی انیمیشن‌های صفحات اصلی
 SCOPE:
-- lib/models/
-FROZEN_ZONES:
 - lib/screens/
-SPECIFIC_TASK: بررسی مجدد مدل‌ها در صورت نیاز
+FROZEN_ZONES:
+- lib/models/
+SPECIFIC_TASK: بهبود ترانزیشن‌ها و بازخورد لمسی در فرم‌ها
 CROSS_AUDIT_TARGET: نه
 === END BRIEF ===
 

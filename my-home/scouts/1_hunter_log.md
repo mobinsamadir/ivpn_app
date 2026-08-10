@@ -1,12 +1,13 @@
-=== MISSION BRIEF: 2026-08-05 ===
+=== MISSION BRIEF: 2026-08-06 ===
 ROLE_TONIGHT: Security
 ASSIGNED_BY: Mastermind
-REASON: بررسی امنیتی لایه سرویس‌ها
+REASON: بررسی امنیتی کدهای نیتیو دسکتاپ
 SCOPE:
-- lib/services/
+- macos/
+- linux/
 FROZEN_ZONES:
 - android/
-SPECIFIC_TASK: بررسی امنیتی و رفع مشکلات کانفیگ‌ها
+SPECIFIC_TASK: جستجوی نشت اطلاعات و آسیب‌پذیری‌های فایل سیستم
 CROSS_AUDIT_TARGET: نه
 === END BRIEF ===
 

@@ -1,12 +1,12 @@
-=== MISSION BRIEF: 2026-08-05 ===
+=== MISSION BRIEF: 2026-08-06 ===
 ROLE_TONIGHT: QA/Testing
 ASSIGNED_BY: Mastermind
-REASON: ادامه تست‌نویسی
+REASON: تست‌نویسی مستمر
 SCOPE:
 - test/
 FROZEN_ZONES:
 - lib/
-SPECIFIC_TASK: افزایش پوشش تست‌ها
+SPECIFIC_TASK: افزایش پوشش تست ویجت‌ها و سرویس‌های جدید
 CROSS_AUDIT_TARGET: نه
 === END BRIEF ===
 
