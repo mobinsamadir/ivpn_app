@@ -6,15 +6,16 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('BinaryManager Tests', () {
-    test('ensureBinary returns valid result on Linux/MacOS', () async {
-      // Just testing what it returns by default without overriding since Platform cannot be mocked easily.
-      // It throws UnsupportedError on Android, which might be running the test, or returns string.
+    test('ensureBinary handles different platforms correctly', () async {
       try {
         final result = await BinaryManager.ensureBinary();
-        expect(result, isNotNull);
+        if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+           expect(result, isNotEmpty);
+        }
       } catch (e) {
         if (Platform.isAndroid) {
           expect(e, isA<UnsupportedError>());
+          expect((e as UnsupportedError).message, contains("BinaryManager.ensureBinary() is not supported on Android."));
         } else {
           rethrow;
         }
