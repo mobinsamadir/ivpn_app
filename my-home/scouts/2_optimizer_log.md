@@ -440,6 +440,15 @@ Mastermind عزیز، مطابق با ماموریت امشب، کدهای `lib/
 همچنین سایر بخش‌های گزارش‌شده (از جمله `chart_utils.dart` و `base64_utils.dart`) در وضعیت کاملاً بهینه هستند و تغییراتی اعمال نشد.
 هیچ تغییر جدیدی در کدهای `lib/` صورت نگرفت تا پایداری و ثبات فعلی سامانه حفظ شود.
 وضعیت: ✅ تأیید و تکمیل شد (تصمیم‌گیری خودکار بدون تغییر کد).
+
+### [تاریخ: 2026-08-06] Optimizer Report (Phase 1 & 2 Golden Rule Application)
+**اقدامات انجام شده:**
+طبق قانون طلایی (Golden Rule) و مأموریت امشب (SCOPE: lib/widgets/)، بدون انتظار برای تأیید انسان فاز اول و دوم را بررسی و اجرا کردم.
+۱. در فایل `lib/widgets/universal_ad_widget.dart` برای مقداردهی اولیه `_videoController` و `_chewieController` از `setState` استفاده شده بود که باعث بازسازی کل ویجت می‌شد. با توجه به وجود `ValueNotifier` به نام `_isInitialized`، این مقداردهی بدون نیاز به `setState` و تنها با بروزرسانی ولیو نوتیفایر انجام شد که از رندرهای اضافی و افت فریم (Jitter/Rebuild) جلوگیری می‌کند.
+۲. سایر فایل‌های بخش `lib/widgets/` پیش‌تر با `ValueNotifier` و `AnimatedBuilder/AnimatedSwitcher` (با `Alignment.centerLeft` یا `Alignment.centerRight`) بهینه‌سازی شده بودند و هیچ تغییر دیگری نیاز نبود.
+
+تست‌ها پاس شدند. آماده پوش شدن.
+وضعیت: ✅ تأیید و تکمیل شد (تصمیم‌گیری خودکار بدون منتظر ماندن).
 ### [تاریخ: 2026-08-06] Optimizer Phase 1 & 2 Execution
 **اقدامات انجام شده:**
 طبق دستور امشب Mastermind و به عنوان نقش Performance Engineer، برای بررسی رندرینگ ویجت‌های اصلی (`lib/widgets/`) کدها را جستجو کردم تا `setState` های غیر ضروری را شناسایی و رفع کنم.
