@@ -165,15 +165,14 @@ class _VideoAdState extends State<_VideoAd> {
     await _videoController.initialize();
 
     if (mounted) {
-      setState(() {
-        _chewieController = ChewieController(
-          videoPlayerController: _videoController,
-          autoPlay: true,
-          looping: true,
-          showControls: false, // Ad style
-          aspectRatio: _videoController.value.aspectRatio,
-        );
-      });
+      _chewieController = ChewieController(
+        videoPlayerController: _videoController,
+        autoPlay: true,
+        looping: true,
+        showControls: false, // Ad style
+        aspectRatio: _videoController.value.aspectRatio,
+      );
+      _isInitialized.value = true;
     }
   }
 
