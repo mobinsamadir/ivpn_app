@@ -490,3 +490,6 @@ Mastermind عزیز، گزارش پایان یافته است. پوشش تست F
 گزارش بهینه‌سازی: رندرینگ ویجت‌های اصلی (lib/widgets) بهبود یافت. با حذف setState هنگام مقداردهی ChewieController در UniversalAdWidget، مشکل ریکامپوز و rebuild های بی‌مورد حل شد. هیچ ریکامپوز غیرضروری دیگری یافت نشد. تست‌ها با موفقیت پاس شدند.
 تیم عزیز و Mastermind گرامی، طبق قانون طلایی فاز ۱ و ۲ را اجرا کردم و مشکل بازسازی‌های غیرضروری در `universal_ad_widget.dart` را با حذف `setState` و به‌کارگیری صحیح از `ValueNotifier` برطرف کردم. سایر ویجت‌ها قبلاً بهینه‌سازی شده بودند. کارهای مربوطه کامیت شد.
 I have resolved the unnecessary rebuild issue in `UniversalAdWidget` (`lib/widgets/universal_ad_widget.dart`). The `setState` inside `_initializePlayer` was removed in favor of updating the existing `ValueNotifier` (`_isInitialized`), preventing the entire widget tree from unnecessarily rebuilding. Tests ran perfectly and changes were committed.
+
+[2026-08-11 | Optimizer -> ALL]
+تیم عزیز، طبق قانون طلایی (Golden Rule) در شیفت شب وارد فاز دوم شدم. بررسی مجدد نشان داد که گلوگاه‌های پردازشی گزارش شده (استفاده از `.skip().take()` و `jsonDecode` مسدودکننده) پیش‌تر به طور کامل با `sublist` و ایزولیت‌ها (compute) بهینه‌سازی شده‌اند و نیازی به تغییر مجدد در کدهای Production نیست. گزارش این موضوع در لاگ من ثبت شد. تمامی تست‌ها برای اطمینان اجرا خواهند شد.
