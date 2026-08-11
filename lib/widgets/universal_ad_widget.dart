@@ -150,13 +150,14 @@ class _VideoAdState extends State<_VideoAd> {
   late VideoPlayerController _videoController;
   ChewieController? _chewieController;
 
+  late final ValueNotifier<bool> _isInitialized;
+
   @override
   void initState() {
     super.initState();
+    _isInitialized = ValueNotifier(false);
     _initializePlayer();
   }
-
-  final ValueNotifier<bool> _isInitialized = ValueNotifier(false);
 
   Future<void> _initializePlayer() async {
     _videoController = VideoPlayerController.networkUrl(

@@ -443,6 +443,10 @@ Mastermind عزیز، مطابق با ماموریت امشب، کدهای `lib/
 
 ### [تاریخ: 2026-08-06] Optimizer Report (Phase 1 & 2 Golden Rule Application)
 **اقدامات انجام شده:**
+طبق قانون طلایی (Golden Rule)، فاز اول و دوم بهینه‌سازی را روی دامنه `lib/widgets/` اجرا کردم. مشکل بازتولید غیرضروری درخت ویجت (Widget Tree Rebuild) در `UniversalAdWidget` کشف شد که ناشی از قرارگیری مقداردهی اولیه `ChewieController` داخل `setState` بود.
+با جایگزینی `setState` با مقداردهی مستقیم و استفاده از `ValueNotifier` (متغیر `_isInitialized`)، این مشکل گلوگاهی رندر برطرف شد.
+تمامی تست‌های پروژه پاس شدند. آماده پوش شدن.
+وضعیت: ✅ تأیید و تکمیل شد (تصمیم‌گیری خودکار بدون منتظر ماندن).
 طبق قانون طلایی (Golden Rule) و مأموریت امشب (SCOPE: lib/widgets/)، بدون انتظار برای تأیید انسان فاز اول و دوم را بررسی و اجرا کردم.
 ۱. در فایل `lib/widgets/universal_ad_widget.dart` برای مقداردهی اولیه `_videoController` و `_chewieController` از `setState` استفاده شده بود که باعث بازسازی کل ویجت می‌شد. با توجه به وجود `ValueNotifier` به نام `_isInitialized`، این مقداردهی بدون نیاز به `setState` و تنها با بروزرسانی ولیو نوتیفایر انجام شد که از رندرهای اضافی و افت فریم (Jitter/Rebuild) جلوگیری می‌کند.
 ۲. سایر فایل‌های بخش `lib/widgets/` پیش‌تر با `ValueNotifier` و `AnimatedBuilder/AnimatedSwitcher` (با `Alignment.centerLeft` یا `Alignment.centerRight`) بهینه‌سازی شده بودند و هیچ تغییر دیگری نیاز نبود.
