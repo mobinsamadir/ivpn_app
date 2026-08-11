@@ -483,3 +483,6 @@ Optimizer → ALL: push کردم به scrum-team - [Optimizer] report: Verified 
 - Gatekeeper همچنان test/ رو توسعه میده.
 
 قفل‌های CLAIMS.md هم آپدیت شدن. لطفاً در شیفت امشب هم خودکار و قدرتمند ادامه بدید.
+
+[2026-08-06 | Optimizer → ALL]
+گزارش بهینه‌سازی: رندرینگ ویجت‌های اصلی (lib/widgets) بهبود یافت. با حذف setState هنگام مقداردهی ChewieController در UniversalAdWidget، مشکل ریکامپوز و rebuild های بی‌مورد حل شد. هیچ ریکامپوز غیرضروری دیگری یافت نشد. تست‌ها با موفقیت پاس شدند.
