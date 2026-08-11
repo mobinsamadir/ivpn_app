@@ -101,7 +101,9 @@ class FunnelService {
     _printTelemetrySummary();
   }
 
-  Future<void> startFunnel({bool retestDead = false}) async {
+  Future<void> startFunnel(
+      {bool retestDead = false,
+      List<VpnConfigWithMetrics>? targetConfigs}) async {
     if (_isRunning) {
       AdvancedLogger.warn("FunnelService: Already running.");
       return;
@@ -124,7 +126,7 @@ class FunnelService {
     _progressController.add("Initializing Pipeline...");
 
     // 1. Populate TCP Queue (Initial Feed) - Run locally to avoid isolate serialization overhead
-    final allConfigs = _configManager.allConfigs;
+    final allConfigs = targetConfigs ?? _configManager.allConfigs;
     final favorites = <VpnConfigWithMetrics>[];
     final validated = <VpnConfigWithMetrics>[];
     final fresh = <VpnConfigWithMetrics>[];
