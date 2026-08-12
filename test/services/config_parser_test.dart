@@ -93,4 +93,24 @@ Also trojan://config3;
       expect(results, contains('vmess://valid_config'));
     });
   });
+
+  group('Additional ConfigParser Tests', () {
+    test('parseConfigsInIsolate handles plain configs', () async {
+      final content = "vless://plain-config";
+      final result = await parseConfigsInIsolate(content);
+      expect(result, contains("vless://plain-config"));
+    });
+
+    test('parseConfigsInIsolate handles valid JSON configs', () async {
+      final content = '["vmess://json-config1", "vless://json-config2"]';
+      final result = await parseConfigsInIsolate(content);
+      expect(result, containsAll(["vmess://json-config1", "vless://json-config2"]));
+    });
+
+    test('parseConfigsInIsolate ignores malformed JSON elements', () async {
+      final content = '["vmess://json-config1", 123, {"invalid": true}]';
+      final result = await parseConfigsInIsolate(content);
+      expect(result, ["vmess://json-config1"]);
+    });
+  });
 }
