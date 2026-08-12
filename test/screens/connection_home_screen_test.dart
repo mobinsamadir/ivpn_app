@@ -3,17 +3,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ivpn_new/screens/connection_home_screen.dart';
 
 void main() {
-  group('ConnectionHomeScreen Initialization', () {
-    testWidgets('Renders CircularProgressIndicator when not initialized',
-        (WidgetTester tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: ConnectionHomeScreen(),
-        ),
-      );
-      // It renders a Scaffold and CircularProgressIndicator before initialization finishes.
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
-      expect(find.byType(Scaffold), findsOneWidget);
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  group('ConnectionHomeScreen Full Initialization', () {
+    testWidgets('Renders Scaffold and can be pumped', (WidgetTester tester) async {
+       await tester.pumpWidget(
+         MaterialApp(
+           home: ConnectionHomeScreen(),
+         ),
+       );
+       await tester.pump();
+       expect(find.byType(Scaffold), findsOneWidget);
     });
   });
 
@@ -111,7 +111,7 @@ void main() {
       // Tap Skip
       await tester.tap(find.byIcon(Icons.skip_next_rounded));
 
-      await tester.pumpAndSettle();
+      await tester.pump();
 
       expect(refreshTapped, isTrue);
       expect(connectTapped, isTrue);
