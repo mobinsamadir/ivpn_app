@@ -10,7 +10,7 @@ class MockConfigManager extends Mock implements ConfigManager {}
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  group('ConfigGistService Throttling', () {
+  group('ConfigGistService Tests', () {
     late ConfigGistService service;
     late MockConfigManager mockManager;
 
@@ -66,5 +66,6 @@ void main() {
           await service.fetchAndApplyConfigs(mockManager, force: false);
       expect(result, isFalse);
     });
+
   });
 }
