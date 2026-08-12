@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../utils/advanced_logger.dart';
+import '../widgets/scale_on_tap.dart';
 
 class LogViewerScreen extends StatefulWidget {
   const LogViewerScreen({super.key});
@@ -20,15 +21,25 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
         backgroundColor: Colors.black,
         foregroundColor: Colors.green,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.copy_all, color: Colors.green),
-            onPressed: _copyAllLogs,
-            tooltip: 'Copy All Logs',
+          Tooltip(
+            message: 'Copy All Logs',
+            child: ScaleOnTap(
+              onTap: _copyAllLogs,
+              child: const Padding(
+                padding: EdgeInsets.all(8.0),
+                child: Icon(Icons.copy_all, color: Colors.green),
+              ),
+            ),
           ),
-          IconButton(
-            icon: const Icon(Icons.delete_forever, color: Colors.red),
-            onPressed: _clearLogs,
-            tooltip: 'Clear Logs',
+          Tooltip(
+            message: 'Clear Logs',
+            child: ScaleOnTap(
+              onTap: _clearLogs,
+              child: const Padding(
+                padding: EdgeInsets.all(8.0),
+                child: Icon(Icons.delete_forever, color: Colors.red),
+              ),
+            ),
           ),
         ],
       ),
