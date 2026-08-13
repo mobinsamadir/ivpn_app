@@ -41,9 +41,7 @@ class _SplashScreenState extends State<SplashScreen>
     _progressController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 4), // Fallback visual duration
-    )..addListener(() {
-        setState(() {});
-      });
+    );
 
     // Start progress animation
     _progressController.forward();
@@ -220,12 +218,17 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(10),
-                    child: LinearProgressIndicator(
-                      value: _progressController.value,
-                      backgroundColor: Colors.transparent,
-                      valueColor: const AlwaysStoppedAnimation<Color>(
-                        Colors.greenAccent,
-                      ),
+                    child: AnimatedBuilder(
+                      animation: _progressController,
+                      builder: (context, child) {
+                        return LinearProgressIndicator(
+                          value: _progressController.value,
+                          backgroundColor: Colors.transparent,
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            Colors.greenAccent,
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ),
