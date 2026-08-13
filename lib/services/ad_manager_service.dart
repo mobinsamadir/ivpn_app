@@ -118,7 +118,8 @@ class AdManagerService {
       final prefs = await SharedPreferences.getInstance();
       final jsonString = prefs.getString(_storageKey);
       if (jsonString != null) {
-        final jsonMap = await compute<String, dynamic>(_parseJsonInIsolate, jsonString);
+        final jsonMap =
+            await compute<String, dynamic>(_parseJsonInIsolate, jsonString);
         final cachedConfig = AdConfig.fromJson(jsonMap);
         // Load global toggle from cache
         final int globalAds = jsonMap['global_ads_enabled'] as int? ?? 0;
@@ -150,7 +151,8 @@ class AdManagerService {
       if (response.statusCode == 200 && response.data != null) {
         dynamic data = response.data;
         if (data is String) {
-          data = await compute<String, dynamic>(_parseJsonInIsolate, data as String);
+          data = await compute<String, dynamic>(
+              _parseJsonInIsolate, data as String);
         }
 
         final remoteConfig = AdConfig.fromJson(data);
@@ -234,5 +236,5 @@ class AdManagerService {
   }
 }
 
-
-Map<String, dynamic> _parseJsonInIsolate(String jsonStr) => jsonDecode(jsonStr) as Map<String, dynamic>;
+Map<String, dynamic> _parseJsonInIsolate(String jsonStr) =>
+    jsonDecode(jsonStr) as Map<String, dynamic>;
