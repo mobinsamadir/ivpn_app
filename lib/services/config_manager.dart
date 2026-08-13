@@ -783,7 +783,6 @@ class ConfigManager extends ChangeNotifier {
     return jsonEncode(list);
   }
 
-
   static Future<List<VpnConfigWithMetrics>> _decodeConfigsInIsolate(
     String jsonStr,
   ) async {
