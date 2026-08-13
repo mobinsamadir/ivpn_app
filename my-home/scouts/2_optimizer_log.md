@@ -1,12 +1,12 @@
-=== MISSION BRIEF: 2026-08-06 ===
+=== MISSION BRIEF: 2026-08-07 ===
 ROLE_TONIGHT: Performance
 ASSIGNED_BY: Mastermind
-REASON: بررسی رندرینگ ویجت‌های اصلی
+REASON: شناسایی N+1 Queries و کندی پردازش لیست‌ها
 SCOPE:
-- lib/widgets/
+- lib/models/
 FROZEN_ZONES:
-- lib/utils/
-SPECIFIC_TASK: شناسایی ریکامپوز و Rebuild های بی‌مورد
+- lib/services/
+SPECIFIC_TASK: بررسی ساختارهای داده و بهینه‌سازی پردازش‌ها
 CROSS_AUDIT_TARGET: نه
 === END BRIEF ===
 
