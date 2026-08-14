@@ -120,7 +120,6 @@ class VpnConfigWithMetrics implements Comparable<VpnConfigWithMetrics> {
     baseScore += speedScore * 10.0;
 
     // 3. Ping Bonus
-    final cachedPing = currentPing;
     if (cachedPing > 0) {
       baseScore +=
           (2000 - cachedPing) / 10.0; // Lower ping gives slightly more points
