@@ -110,6 +110,9 @@ class VpnConfigWithMetrics implements Comparable<VpnConfigWithMetrics> {
 
   // Legacy Score (Deprecated usage but kept for backward compat if needed)
   double get score {
+    // Cache expensive getters to prevent O(N log N) bottlenecks during sorting
+    final int cachedPing = currentPing;
+
     // 1. Funnel Stage (0-3) - Biggest Factor (1000 points per stage)
     double baseScore = funnelStage * 1000.0;
 
