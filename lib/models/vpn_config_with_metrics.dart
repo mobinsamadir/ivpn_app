@@ -120,6 +120,7 @@ class VpnConfigWithMetrics implements Comparable<VpnConfigWithMetrics> {
     baseScore += speedScore * 10.0;
 
     // 3. Ping Bonus
+    final cachedPing = currentPing;
     if (cachedPing > 0) {
       baseScore +=
           (2000 - cachedPing) / 10.0; // Lower ping gives slightly more points
@@ -301,13 +302,12 @@ class VpnConfigWithMetrics implements Comparable<VpnConfigWithMetrics> {
 
   @override
   int compareTo(VpnConfigWithMetrics other) {
-    // Cache expensive getters to prevent O(N log N) bottlenecks during sorting
-    final int myCachedPing = currentPing;
-    final int otherCachedPing = other.currentPing;
+    final cachedMyPing = currentPing;
+    final cachedOtherPing = other.currentPing;
 
     // 1. Alive/Verified (Funnel > 0 OR Ping > 0)
-    bool amAlive = funnelStage > 0 || myCachedPing > 0;
-    bool otherAlive = other.funnelStage > 0 || otherCachedPing > 0;
+    bool amAlive = funnelStage > 0 || cachedMyPing > 0;
+    bool otherAlive = other.funnelStage > 0 || cachedOtherPing > 0;
 
     if (amAlive != otherAlive) {
       return amAlive ? -1 : 1; // Alive comes first
@@ -321,8 +321,8 @@ class VpnConfigWithMetrics implements Comparable<VpnConfigWithMetrics> {
       if (speedScore != other.speedScore) {
         return other.speedScore.compareTo(speedScore); // Descending
       }
-      int myPing = (myCachedPing <= 0) ? 999999 : myCachedPing;
-      int otherPing = (otherCachedPing <= 0) ? 999999 : otherCachedPing;
+      int myPing = (cachedMyPing <= 0) ? 999999 : cachedMyPing;
+      int otherPing = (cachedOtherPing <= 0) ? 999999 : cachedOtherPing;
       return myPing.compareTo(otherPing); // Ascending (Lower is better)
     }
 

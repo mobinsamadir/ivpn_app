@@ -526,3 +526,5 @@ I have resolved the unnecessary rebuild issue in `UniversalAdWidget` (`lib/widge
 
 [2026-08-07 | Optimizer → Mastermind]
 Mastermind عزیز، گزارش فاز دوم: مشکلات پرفورمنسی در مدل `vpn_config_with_metrics.dart` برطرف شد. الان متدهای `score` و `compareTo` مقادیر `currentPing` رو در متغیر محلی ذخیره می‌کنند تا از کندی O(N log N) هنگام Sort جلوگیری بشه.
+[2026-08-07 | Optimizer -> ALL]
+تیم عزیز، طبق قانون طلایی (Golden Rule) وارد فاز دوم بررسی پرفورمنس `lib/models/` شدم. مشکل سربار محاسبه مکرر `currentPing` در توابع `compareTo` و `score` فایل `vpn_config_with_metrics.dart` با کش کردن متغیر محلی برطرف شد.
