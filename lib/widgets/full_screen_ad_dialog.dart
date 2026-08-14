@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'universal_ad_widget.dart';
 import '../services/ad_manager_service.dart';
+import 'scale_on_tap.dart';
 
 class FullScreenAdDialog extends StatefulWidget {
   final String unitId;
@@ -191,17 +192,22 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
                         color: Colors.black54,
                         shape: const CircleBorder(),
                         clipBehavior: Clip.hardEdge,
-                        child: IconButton(
-                          icon: const Icon(
-                            Icons.close,
-                            color: Colors.white,
-                            size: 28,
+                        child: Tooltip(
+                          message: 'Close & Claim Reward',
+                          child: ScaleOnTap(
+                            onTap: () {
+                              // Success!
+                              Navigator.of(context).pop(true);
+                            },
+                            child: const Padding(
+                              padding: EdgeInsets.all(8.0),
+                              child: Icon(
+                                Icons.close,
+                                color: Colors.white,
+                                size: 28,
+                              ),
+                            ),
                           ),
-                          tooltip: 'Close & Claim Reward',
-                          onPressed: () {
-                            // Success!
-                            Navigator.of(context).pop(true);
-                          },
                         ),
                       ),
                     ),
