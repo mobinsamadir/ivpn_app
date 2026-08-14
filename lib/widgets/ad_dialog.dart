@@ -88,9 +88,15 @@ class _AdDialogState extends State<AdDialog> {
                   valueListenable: _canCloseNotifier,
                   builder: (context, canClose, child) {
                     if (canClose) {
-                      return IconButton(
-                        icon: const Icon(Icons.close, color: Colors.grey),
-                        onPressed: () => Navigator.of(context).pop(true),
+                      return Tooltip(
+                        message: 'Close',
+                        child: ScaleOnTap(
+                          onTap: () => Navigator.of(context).pop(true),
+                          child: const Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: Icon(Icons.close, color: Colors.grey),
+                          ),
+                        ),
                       );
                     }
                     return const SizedBox.shrink();

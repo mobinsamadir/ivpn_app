@@ -395,46 +395,63 @@ class _ConfigActions extends StatelessWidget {
     return Column(
       children: [
         // Latency Test button
-        IconButton(
-          icon: const Icon(
-            Icons.network_check,
-            size: 20,
-            color: Colors.blueAccent,
+        Tooltip(
+          message: 'Latency Test',
+          child: ScaleOnTap(
+            onTap: onTestLatency,
+            child: const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Icon(
+                Icons.network_check,
+                size: 20,
+                color: Colors.blueAccent,
+              ),
+            ),
           ),
-          onPressed: onTestLatency,
-          tooltip: 'Latency Test',
-          splashRadius: 20,
         ),
 
         // Speed Test button
-        IconButton(
-          icon: const Icon(Icons.speed, size: 20, color: Colors.greenAccent),
-          onPressed: onTestSpeed,
-          tooltip: 'Test Speed',
-          splashRadius: 20,
+        Tooltip(
+          message: 'Test Speed',
+          child: ScaleOnTap(
+            onTap: onTestSpeed,
+            child: const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Icon(Icons.speed, size: 20, color: Colors.greenAccent),
+            ),
+          ),
         ),
 
         // Favorite button
-        IconButton(
-          icon: Icon(
-            config.isFavorite ? Icons.star_rounded : Icons.star_outline_rounded,
-            size: 20,
-            color: config.isFavorite ? Colors.amber : Colors.grey[500],
+        Tooltip(
+          message: 'Toggle Favorite',
+          child: ScaleOnTap(
+            onTap: onToggleFavorite,
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Icon(
+                config.isFavorite ? Icons.star_rounded : Icons.star_outline_rounded,
+                size: 20,
+                color: config.isFavorite ? Colors.amber : Colors.grey[500],
+              ),
+            ),
           ),
-          onPressed: onToggleFavorite,
-          splashRadius: 20,
         ),
 
         // Delete button
-        IconButton(
-          icon: const Icon(
-            Icons.delete_outline,
-            size: 20,
-            color: Colors.redAccent,
+        Tooltip(
+          message: 'Delete Server',
+          child: ScaleOnTap(
+            onTap: onDelete,
+            child: const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Icon(
+                Icons.delete_outline,
+                size: 20,
+                color: Colors.redAccent,
+              ),
+            ),
           ),
-          onPressed: onDelete,
-          tooltip: 'Delete Server',
-          splashRadius: 20,
         ),
 
         // Selection indicator
