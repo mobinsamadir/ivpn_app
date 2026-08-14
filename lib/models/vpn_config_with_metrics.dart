@@ -110,6 +110,9 @@ class VpnConfigWithMetrics implements Comparable<VpnConfigWithMetrics> {
 
   // Legacy Score (Deprecated usage but kept for backward compat if needed)
   double get score {
+    // Cache expensive getters to prevent O(N log N) bottlenecks during sorting
+    final int cachedPing = currentPing;
+
     // 1. Funnel Stage (0-3) - Biggest Factor (1000 points per stage)
     double baseScore = funnelStage * 1000.0;
 
@@ -117,9 +120,10 @@ class VpnConfigWithMetrics implements Comparable<VpnConfigWithMetrics> {
     baseScore += speedScore * 10.0;
 
     // 3. Ping Bonus
-    if (currentPing > 0) {
+    final cachedPing = currentPing;
+    if (cachedPing > 0) {
       baseScore +=
-          (2000 - currentPing) / 10.0; // Lower ping gives slightly more points
+          (2000 - cachedPing) / 10.0; // Lower ping gives slightly more points
     } else {
       // 4. PURGATORY BONUS: Not Verified (-1 Ping), but has History
       if (lastSuccessfulConnectionTime > 0) {
@@ -298,9 +302,12 @@ class VpnConfigWithMetrics implements Comparable<VpnConfigWithMetrics> {
 
   @override
   int compareTo(VpnConfigWithMetrics other) {
+    final cachedMyPing = currentPing;
+    final cachedOtherPing = other.currentPing;
+
     // 1. Alive/Verified (Funnel > 0 OR Ping > 0)
-    bool amAlive = funnelStage > 0 || currentPing > 0;
-    bool otherAlive = other.funnelStage > 0 || other.currentPing > 0;
+    bool amAlive = funnelStage > 0 || cachedMyPing > 0;
+    bool otherAlive = other.funnelStage > 0 || cachedOtherPing > 0;
 
     if (amAlive != otherAlive) {
       return amAlive ? -1 : 1; // Alive comes first
@@ -314,8 +321,8 @@ class VpnConfigWithMetrics implements Comparable<VpnConfigWithMetrics> {
       if (speedScore != other.speedScore) {
         return other.speedScore.compareTo(speedScore); // Descending
       }
-      int myPing = (currentPing <= 0) ? 999999 : currentPing;
-      int otherPing = (other.currentPing <= 0) ? 999999 : other.currentPing;
+      int myPing = (cachedMyPing <= 0) ? 999999 : cachedMyPing;
+      int otherPing = (cachedOtherPing <= 0) ? 999999 : cachedOtherPing;
       return myPing.compareTo(otherPing); // Ascending (Lower is better)
     }
 
