@@ -13,9 +13,9 @@ on:
   #     - 'LICENSE'
   #     - '.gitignore'
 
-  # 2. RUN AT SPECIFIC HOURS (e.g., 21:00 to 02:00 UTC)
-  # schedule:
-  #   - cron: '0 21,22,23,0,1,2 * * *'
+  # 2. RUN AT SPECIFIC HOURS (Scrum Master time - 18:30, 19:30, 20:30 UTC)
+  schedule:
+    - cron: '30 18,19,20 * * *'
 
   # 3. RUN MANUALLY (Always enabled)
   workflow_dispatch:
