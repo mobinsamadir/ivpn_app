@@ -15,7 +15,7 @@ on:
 
   # 2. RUN AT SPECIFIC HOURS (Scrum Master time - 18:30, 19:30, 20:30 UTC)
   schedule:
-    - cron: '30 18,19,20 * * *'
+    - cron: '0 5 * * *'
 
   # 3. RUN MANUALLY (Always enabled)
   workflow_dispatch:

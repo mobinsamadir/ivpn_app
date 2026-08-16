@@ -1,12 +1,15 @@
-=== MISSION BRIEF: 2026-08-07 ===
+=== MISSION BRIEF: 2026-08-08 ===
 ROLE_TONIGHT: QA/Testing
 ASSIGNED_BY: Mastermind
-REASON: تست‌نویسی مستمر
+REASON: تست‌نویسی برای کلاس‌های مدیریت مدل داده و تست‌های امنیتی شبکه
+
 SCOPE:
-- test/
+- test/models/
+
 FROZEN_ZONES:
 - lib/
-SPECIFIC_TASK: افزایش پوشش تست ویجت‌ها و سرویس‌های جدید
+
+SPECIFIC_TASK: نه
 CROSS_AUDIT_TARGET: نه
 === END BRIEF ===
 
