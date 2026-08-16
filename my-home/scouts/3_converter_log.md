@@ -1,12 +1,15 @@
-=== MISSION BRIEF: 2026-08-07 ===
+=== MISSION BRIEF: 2026-08-08 ===
 ROLE_TONIGHT: UX/Conversion
 ASSIGNED_BY: Mastermind
-REASON: بررسی انیمیشن‌های صفحات اصلی
+REASON: بهبود انیمیشن‌ها و جریان کاربر در صفحات اصلی
+
 SCOPE:
-- lib/widgets/
+- lib/screens/
+
 FROZEN_ZONES:
-- lib/models/
-SPECIFIC_TASK: بهبود ترانزیشن‌ها و بازخورد لمسی در فرم‌ها
+- lib/services/
+
+SPECIFIC_TASK: نه
 CROSS_AUDIT_TARGET: نه
 === END BRIEF ===
 

@@ -1,12 +1,15 @@
-=== MISSION BRIEF: 2026-08-07 ===
+=== MISSION BRIEF: 2026-08-08 ===
 ROLE_TONIGHT: Performance
 ASSIGNED_BY: Mastermind
-REASON: شناسایی N+1 Queries و کندی پردازش لیست‌ها
+REASON: بهبود پرفورمنس پردازش‌های پس‌زمینه در کدهای نیتیو اندروید
+
 SCOPE:
-- lib/models/
+- android/app/src/main/kotlin/
+
 FROZEN_ZONES:
-- lib/services/
-SPECIFIC_TASK: بررسی ساختارهای داده و بهینه‌سازی پردازش‌ها
+- lib/
+
+SPECIFIC_TASK: نه
 CROSS_AUDIT_TARGET: نه
 === END BRIEF ===
 
