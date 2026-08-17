@@ -1,13 +1,13 @@
-=== MISSION BRIEF: 2026-08-08 ===
+=== MISSION BRIEF: 2026-08-09 ===
 ROLE_TONIGHT: Performance
 ASSIGNED_BY: Mastermind
-REASON: بهبود پرفورمنس پردازش‌های پس‌زمینه در کدهای نیتیو اندروید
+REASON: Optimize core services and network operations.
 
 SCOPE:
-- android/app/src/main/kotlin/
+- lib/services/
 
 FROZEN_ZONES:
-- lib/
+- android/
 
 SPECIFIC_TASK: نه
 CROSS_AUDIT_TARGET: نه
