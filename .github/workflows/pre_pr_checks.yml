@@ -6,14 +6,14 @@ on:
   # ==============================================================================
 
   # 1. RUN ON EVERY PR (Uncomment below to enable)
-  # pull_request:
-  #   branches:
-  #     - main
-  #   paths-ignore:
-  #     - '**.md'
-  #     - 'docs/**'
-  #     - 'LICENSE'
-  #     - '.gitignore'
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
 
   # 2. RUN AT SPECIFIC HOURS (Scrum Master time - 18:30, 19:30, 20:30 UTC)
   schedule:
@@ -28,6 +28,7 @@ concurrency:
 
 jobs:
   validate-and-build:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.actor == 'mastermind'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.0

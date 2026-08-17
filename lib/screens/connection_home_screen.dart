@@ -968,7 +968,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                           onTap: _showSmartCleanupDialog,
                           child: const Padding(
                             padding: EdgeInsets.all(8.0),
-                            child: Icon(Icons.delete_sweep, color: Colors.redAccent),
+                            child: Icon(Icons.delete_sweep,
+                                color: Colors.redAccent),
                           ),
                         ),
                       ),

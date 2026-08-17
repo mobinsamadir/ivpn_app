@@ -430,7 +430,9 @@ class _ConfigActions extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.all(8.0),
               child: Icon(
-                config.isFavorite ? Icons.star_rounded : Icons.star_outline_rounded,
+                config.isFavorite
+                    ? Icons.star_rounded
+                    : Icons.star_outline_rounded,
                 size: 20,
                 color: config.isFavorite ? Colors.amber : Colors.grey[500],
               ),
