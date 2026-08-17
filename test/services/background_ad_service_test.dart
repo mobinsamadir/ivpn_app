@@ -1,9 +1,7 @@
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ivpn_new/services/background_ad_service.dart';
-import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
 
 class DummyWebViewPlatform extends WebViewPlatform {
@@ -48,20 +46,21 @@ void main() {
   });
 
   group('BackgroundAdService Tests', () {
-    testWidgets('BackgroundAdService renders child and initializes without error on Windows',
+    testWidgets(
+        'BackgroundAdService renders child and initializes without error on Windows',
         (WidgetTester tester) async {
-        debugDefaultTargetPlatformOverride = TargetPlatform.windows;
-        await tester.pumpWidget(
-          const MaterialApp(
-            home: BackgroundAdService(
-              child: Text('Test Child Text'),
-            ),
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: BackgroundAdService(
+            child: Text('Test Child Text'),
           ),
-        );
+        ),
+      );
 
-        expect(find.text('Test Child Text'), findsOneWidget);
-        await tester.pumpAndSettle();
-        debugDefaultTargetPlatformOverride = null;
+      expect(find.text('Test Child Text'), findsOneWidget);
+      await tester.pumpAndSettle();
+      debugDefaultTargetPlatformOverride = null;
     });
   });
 }

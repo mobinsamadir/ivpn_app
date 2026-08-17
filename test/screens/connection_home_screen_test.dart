@@ -6,14 +6,15 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('ConnectionHomeScreen Full Initialization', () {
-    testWidgets('Renders Scaffold and can be pumped', (WidgetTester tester) async {
-       await tester.pumpWidget(
-         MaterialApp(
-           home: ConnectionHomeScreen(),
-         ),
-       );
-       await tester.pump();
-       expect(find.byType(Scaffold), findsOneWidget);
+    testWidgets('Renders Scaffold and can be pumped',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ConnectionHomeScreen(),
+        ),
+      );
+      await tester.pump();
+      expect(find.byType(Scaffold), findsOneWidget);
     });
   });
 

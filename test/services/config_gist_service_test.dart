@@ -66,6 +66,5 @@ void main() {
           await service.fetchAndApplyConfigs(mockManager, force: false);
       expect(result, isFalse);
     });
-
   });
 }

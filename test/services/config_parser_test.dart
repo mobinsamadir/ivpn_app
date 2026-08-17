@@ -104,7 +104,8 @@ Also trojan://config3;
     test('parseConfigsInIsolate handles valid JSON configs', () async {
       final content = '["vmess://json-config1", "vless://json-config2"]';
       final result = await parseConfigsInIsolate(content);
-      expect(result, containsAll(["vmess://json-config1", "vless://json-config2"]));
+      expect(result,
+          containsAll(["vmess://json-config1", "vless://json-config2"]));
     });
 
     test('parseConfigsInIsolate ignores malformed JSON elements', () async {

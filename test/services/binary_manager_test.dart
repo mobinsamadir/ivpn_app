@@ -10,12 +10,15 @@ void main() {
       try {
         final result = await BinaryManager.ensureBinary();
         if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-           expect(result, isNotEmpty);
+          expect(result, isNotEmpty);
         }
       } catch (e) {
         if (Platform.isAndroid) {
           expect(e, isA<UnsupportedError>());
-          expect((e as UnsupportedError).message, contains("BinaryManager.ensureBinary() is not supported on Android."));
+          expect(
+              (e as UnsupportedError).message,
+              contains(
+                  "BinaryManager.ensureBinary() is not supported on Android."));
         } else {
           rethrow;
         }

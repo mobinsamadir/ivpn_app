@@ -152,7 +152,7 @@ class AdManagerService {
         dynamic data = response.data;
         if (data is String) {
           data = await compute<String, dynamic>(
-              _parseJsonInIsolate, data as String);
+              _parseJsonInIsolate, data);
         }
 
         final remoteConfig = AdConfig.fromJson(data);
