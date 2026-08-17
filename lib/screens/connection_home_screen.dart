@@ -490,7 +490,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
               onTap: () => Navigator.pop(context, true),
               child: IgnorePointer(
                 child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context, true),
+                  onPressed: () {},
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,
                   ),
@@ -675,29 +675,45 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
           ),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.greenAccent),
-            onPressed: _refreshConfigsManual,
-            tooltip: 'Force Refresh',
+          Tooltip(
+            message: 'Force Refresh',
+            child: ScaleOnTap(
+              onTap: _refreshConfigsManual,
+              child: const Padding(
+                padding: EdgeInsets.all(8.0),
+                child: Icon(Icons.refresh, color: Colors.greenAccent),
+              ),
+            ),
           ),
-          IconButton(
-            icon: const Icon(Icons.receipt_long, color: Colors.amber),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const LogViewerScreen()),
-              );
-            },
-            tooltip: 'View Logs',
+          Tooltip(
+            message: 'View Logs',
+            child: ScaleOnTap(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LogViewerScreen()),
+                );
+              },
+              child: const Padding(
+                padding: EdgeInsets.all(8.0),
+                child: Icon(Icons.receipt_long, color: Colors.amber),
+              ),
+            ),
           ),
-          IconButton(
-            icon: const Icon(Icons.settings, color: Colors.white),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SettingsScreen()),
-              );
-            },
+          Tooltip(
+            message: 'Settings',
+            child: ScaleOnTap(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                );
+              },
+              child: const Padding(
+                padding: EdgeInsets.all(8.0),
+                child: Icon(Icons.settings, color: Colors.white),
+              ),
+            ),
           ),
         ],
       ),
@@ -886,15 +902,21 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                                       ),
                                     ),
                                   ),
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.stop,
-                                      color: Colors.redAccent,
+                                  Tooltip(
+                                    message: 'Stop Test',
+                                    child: ScaleOnTap(
+                                      onTap: () {
+                                        _funnelService.stop();
+                                        _showToast("Test Stopped");
+                                      },
+                                      child: const Padding(
+                                        padding: EdgeInsets.all(8.0),
+                                        child: Icon(
+                                          Icons.stop,
+                                          color: Colors.redAccent,
+                                        ),
+                                      ),
                                     ),
-                                    onPressed: () {
-                                      _funnelService.stop();
-                                      _showToast("Test Stopped");
-                                    },
                                   ),
                                 ],
                               ),
@@ -930,20 +952,25 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                         ),
                       ),
                       const Spacer(),
-                      IconButton(
-                        icon: const Icon(Icons.speed, color: Colors.blueAccent),
-                        onPressed: _runSmartAutoTest,
-                        tooltip: 'Test All Connections (Funnel)',
-                        splashRadius: 20,
-                      ),
-                      IconButton(
-                        icon: const Icon(
-                          Icons.delete_sweep,
-                          color: Colors.redAccent,
+                      Tooltip(
+                        message: 'Test All Connections (Funnel)',
+                        child: ScaleOnTap(
+                          onTap: _runSmartAutoTest,
+                          child: const Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: Icon(Icons.speed, color: Colors.blueAccent),
+                          ),
                         ),
-                        onPressed: _showSmartCleanupDialog,
-                        tooltip: 'Cleanup Configs',
-                        splashRadius: 20,
+                      ),
+                      Tooltip(
+                        message: 'Cleanup Configs',
+                        child: ScaleOnTap(
+                          onTap: _showSmartCleanupDialog,
+                          child: const Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: Icon(Icons.delete_sweep, color: Colors.redAccent),
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -1349,7 +1376,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blueAccent,
                   ),
-                  onPressed: handleAdd,
+                  onPressed: () {},
                   child: const Text(
                     'Add',
                     style: TextStyle(color: Colors.white),
@@ -1675,16 +1702,21 @@ class _SubscriptionCardState extends State<_SubscriptionCard>
                     ),
                   ],
                 ),
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blueAccent,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
+                child: ScaleOnTap(
+                  onTap: widget.onAddTime,
+                  child: IgnorePointer(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blueAccent,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                      onPressed: () {},
+                      child: const Text('🎁 Add Time'),
                     ),
                   ),
-                  onPressed: widget.onAddTime,
-                  child: const Text('🎁 Add Time'),
                 ),
               ),
             );
