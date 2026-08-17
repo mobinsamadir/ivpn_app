@@ -1,13 +1,14 @@
-=== MISSION BRIEF: 2026-08-08 ===
+=== MISSION BRIEF: 2026-08-09 ===
 ROLE_TONIGHT: Security
 ASSIGNED_BY: Mastermind
-REASON: بررسی تخصصی API و ارتباطات شبکه در لایه سرویس‌ها
+REASON: Review security and integrity of data models and data transfer objects.
 
 SCOPE:
-- lib/services/
+- lib/models/
 
 FROZEN_ZONES:
-- lib/models/
+- lib/services/
+- lib/widgets/
 
 SPECIFIC_TASK: نه
 CROSS_AUDIT_TARGET: نه
