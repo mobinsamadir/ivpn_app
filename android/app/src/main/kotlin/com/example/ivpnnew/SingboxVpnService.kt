@@ -175,9 +175,6 @@ class SingboxVpnService :
                         logObj.put("level", "error")
                     }
 
-                    val testConfigStr = json.toString()
-                    val testConfigFile = File(tempDir, "test_proxy_${System.currentTimeMillis()}.json")
-                    testConfigFile.writeText(testConfigStr)
 
                     try {
                         // SAFE CALL to Libbox - pass JSON content string
@@ -196,7 +193,7 @@ class SingboxVpnService :
                             }
 
                         try {
-                            server?.startOrReloadService(testConfigStr, null)
+                            server?.startOrReloadService(json.toString(), null)
                             testServer = server
                         } catch (e: Throwable) {
                             server?.close()
@@ -208,9 +205,7 @@ class SingboxVpnService :
 
                         result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(socksPort) } }
                     } finally {
-                        if (testConfigFile.exists()) {
-                            testConfigFile.delete()
-                        }
+                        // Removed file cleanup as no file is written
                     }
                 } catch (e: Throwable) {
                     e.printStackTrace()
@@ -272,8 +267,6 @@ class SingboxVpnService :
                         return@withContext
                     }
 
-                    val testConfigFile = File(tempDir, "test_${System.currentTimeMillis()}.json")
-                    testConfigFile.writeText(json.toString())
 
                     try {
                         closeTestServerUnlocked()
@@ -334,9 +327,7 @@ class SingboxVpnService :
                             result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
                         }
                     } finally {
-                        if (testConfigFile.exists()) {
-                            testConfigFile.delete()
-                        }
+                        // Removed file cleanup as no file is written
                     }
                 } catch (e: Throwable) {
                     result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
@@ -413,7 +404,6 @@ class SingboxVpnService :
 
                 val fd = vpnInterface!!.fd
                 val configDir = getExternalFilesDir(null) ?: filesDir
-                val configFile = File(configDir, "config.json")
 
                 val jsonObject = JSONObject(configJson)
                 if (jsonObject.has("inbounds")) {
