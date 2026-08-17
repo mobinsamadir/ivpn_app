@@ -176,42 +176,34 @@ class SingboxVpnService :
                     }
 
                     val testConfigStr = json.toString()
-                    val testConfigFile = File(tempDir, "test_proxy_${System.currentTimeMillis()}.json")
-                    testConfigFile.writeText(testConfigStr)
 
-                    try {
-                        // SAFE CALL to Libbox - pass JSON content string
-                        val server =
-                            try {
-                                val options = io.nekohasekai.libbox.SetupOptions()
-                                options.setBasePath(tempDir.absolutePath)
-                                options.setWorkingPath(tempDir.absolutePath)
-                                options.setTempPath(tempDir.absolutePath)
-                                Libbox.setup(options)
-                                Libbox.newCommandServer(StubCommandServerHandler(), StubPlatformInterface())
-                            } catch (e: Throwable) {
-                                e.printStackTrace()
-                                result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
-                                return@withContext
-                            }
-
+                    // SAFE CALL to Libbox - pass JSON content string directly
+                    val server =
                         try {
-                            server?.startOrReloadService(testConfigStr, null)
-                            testServer = server
+                            val options = io.nekohasekai.libbox.SetupOptions()
+                            options.setBasePath(tempDir.absolutePath)
+                            options.setWorkingPath(tempDir.absolutePath)
+                            options.setTempPath(tempDir.absolutePath)
+                            Libbox.setup(options)
+                            Libbox.newCommandServer(StubCommandServerHandler(), StubPlatformInterface())
                         } catch (e: Throwable) {
-                            server?.close()
                             e.printStackTrace()
                             result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
                             return@withContext
                         }
-                        delay(200)
 
-                        result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(socksPort) } }
-                    } finally {
-                        if (testConfigFile.exists()) {
-                            testConfigFile.delete()
-                        }
+                    try {
+                        server?.startOrReloadService(testConfigStr, null)
+                        testServer = server
+                    } catch (e: Throwable) {
+                        server?.close()
+                        e.printStackTrace()
+                        result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
+                        return@withContext
                     }
+                    delay(200)
+
+                    result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(socksPort) } }
                 } catch (e: Throwable) {
                     e.printStackTrace()
                     result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-4) } }
@@ -272,71 +264,62 @@ class SingboxVpnService :
                         return@withContext
                     }
 
-                    val testConfigFile = File(tempDir, "test_${System.currentTimeMillis()}.json")
-                    testConfigFile.writeText(json.toString())
+                    closeTestServerUnlocked()
 
-                    try {
-                        closeTestServerUnlocked()
-
-                        // SAFE CALL - pass JSON content string
-                        val newTestServer =
-                            try {
-                                val options = io.nekohasekai.libbox.SetupOptions()
-                                options.setBasePath(tempDir.absolutePath)
-                                options.setWorkingPath(tempDir.absolutePath)
-                                options.setTempPath(tempDir.absolutePath)
-                                Libbox.setup(options)
-                                Libbox.newCommandServer(StubCommandServerHandler(), StubPlatformInterface())
-                            } catch (e: Throwable) {
-                                e.printStackTrace()
-                                MainActivity.sendVpnStatus("ERROR: TEST_START_FAILED - ${e.message}")
-                                result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
-                                return@withContext
-                            }
-
+                    // SAFE CALL - pass JSON content string directly
+                    val newTestServer =
                         try {
-                            newTestServer?.startOrReloadService(json.toString(), null)
-                            testServer = newTestServer
+                            val options = io.nekohasekai.libbox.SetupOptions()
+                            options.setBasePath(tempDir.absolutePath)
+                            options.setWorkingPath(tempDir.absolutePath)
+                            options.setTempPath(tempDir.absolutePath)
+                            Libbox.setup(options)
+                            Libbox.newCommandServer(StubCommandServerHandler(), StubPlatformInterface())
                         } catch (e: Throwable) {
-                            newTestServer?.close()
                             e.printStackTrace()
                             MainActivity.sendVpnStatus("ERROR: TEST_START_FAILED - ${e.message}")
                             result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
                             return@withContext
                         }
-                        delay(500)
 
-                        val client =
-                            OkHttpClient
-                                .Builder()
-                                .connectTimeout(3, TimeUnit.SECONDS)
-                                .readTimeout(3, TimeUnit.SECONDS)
-                                .proxy(Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", socksPort)))
-                                .build()
+                    try {
+                        newTestServer?.startOrReloadService(json.toString(), null)
+                        testServer = newTestServer
+                    } catch (e: Throwable) {
+                        newTestServer?.close()
+                        e.printStackTrace()
+                        MainActivity.sendVpnStatus("ERROR: TEST_START_FAILED - ${e.message}")
+                        result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
+                        return@withContext
+                    }
+                    delay(500)
 
-                        val request =
-                            Request
-                                .Builder()
-                                .url("http://www.google.com/generate_204")
-                                .head()
-                                .build()
+                    val client =
+                        OkHttpClient
+                            .Builder()
+                            .connectTimeout(3, TimeUnit.SECONDS)
+                            .readTimeout(3, TimeUnit.SECONDS)
+                            .proxy(Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", socksPort)))
+                            .build()
 
-                        val startTime = System.currentTimeMillis()
-                        val response = client.newCall(request).execute()
-                        val endTime = System.currentTimeMillis()
+                    val request =
+                        Request
+                            .Builder()
+                            .url("https://www.google.com/generate_204")
+                            .head()
+                            .build()
 
-                        response.close()
+                    val startTime = System.currentTimeMillis()
+                    val response = client.newCall(request).execute()
+                    val endTime = System.currentTimeMillis()
 
-                        if (response.isSuccessful || response.code == 204) {
-                            val ping = (endTime - startTime).toInt()
-                            result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(ping) } }
-                        } else {
-                            result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
-                        }
-                    } finally {
-                        if (testConfigFile.exists()) {
-                            testConfigFile.delete()
-                        }
+                    response.close()
+
+                    if (response.isSuccessful || response.code == 204) {
+                        val ping = (endTime - startTime).toInt()
+                        result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(ping) } }
+                    } else {
+                        result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
                     }
                 } catch (e: Throwable) {
                     result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
