@@ -111,3 +111,14 @@ CROSS_AUDIT_TARGET: نه
 با بررسی دقیق کدهای پروژه، تایید شد که مشکلات مربوط به نبود `ScaleOnTap` و مسائل accessibility کیبورد و حالت disabled نیتیو برای دکمه‌های دیالوگ در `lib/widgets/update_dialog.dart` و `lib/widgets/ad_explanation_dialog.dart` و `lib/widgets/ad_dialog.dart` از پیش برطرف شده‌اند.
 لذا سیستم در حال حاضر از عملکرد بهینه‌ای برخوردار است. هیچ تغییر جدیدی در کدهای Production صورت نگرفت تا پایداری فعلی حفظ شود.
 وضعیت: ✅ تأیید و تکمیل شد (تصمیم‌گیری خودکار بدون تغییر کد).
+### [تاریخ: 2026-08-08] Converter Report (Phase 1 & 2 Golden Rule Application)
+**اقدامات انجام شده:**
+طبق قانون طلایی (Golden Rule) و ماموریت امشب (SCOPE: lib/screens/) جهت بهبود انیمیشن‌ها و جریان کاربر، وارد فاز اول و دوم شدم.
+با بررسی فایل‌های موجود در `lib/screens/`، مشکلاتی در عدم استفاده از `ScaleOnTap` برای دکمه‌های دیالوگ و سایر دکمه‌های آیکون پیدا شد:
+۱. در فایل `lib/screens/connection_home_screen.dart` تمامی `IconButton` ها و `ElevatedButton` ها با ویجت `ScaleOnTap` جایگزین و بروزرسانی شدند.
+۲. در فایل `lib/screens/splash_screen.dart` دکمه Retry که `ElevatedButton` بود با `ScaleOnTap` پوشش داده شد.
+۳. در فایل `lib/screens/settings_screen.dart` دکمه‌های Open Settings با `ScaleOnTap` همراه شدند.
+۴. در دکمه‌هایی که دارای `IgnorePointer` بودند، `onPressed: () {}` جایگزین شد تا تداخل عملکرد کلیک و ScaleOnTap برطرف شود و قابلیت دسترسی حفظ شود.
+
+تمامی تست‌ها با موفقیت ران و پاس شدند. کدها اعمال و تغییرات ثبت شدند.
+وضعیت: ✅ تأیید و تکمیل شد (بهینه‌سازی رابط کاربری اعمال شد).

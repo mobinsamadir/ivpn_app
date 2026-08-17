@@ -197,7 +197,7 @@ class _SplashScreenState extends State<SplashScreen>
                   onTap: _initializeApp,
                   child: IgnorePointer(
                     child: ElevatedButton.icon(
-                      onPressed: _initializeApp,
+                      onPressed: () {},
                       icon: const Icon(Icons.refresh),
                       label: const Text('Retry'),
                       style: ElevatedButton.styleFrom(
