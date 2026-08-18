@@ -584,6 +584,12 @@ Mastermind عزیز، مطابق با ماموریت امشب، کدهای `lib/
 با بررسی دقیق کدهای نیتیو مشخص شد که در فایل `SingboxVpnService.kt`، هنگام تنظیمات و تست پروکسی، فایل‌های موقت (temporary files) با محتوای پیکربندی (JSON) بر روی دیسک ایجاد و بلافاصله پس از اتمام تست یا در بلوک `finally` پاک می‌شدند. از آنجا که کتابخانه زیرین (Libbox) مستقیماً قادر به دریافت پیکربندی به صورت رشته (String) از طریق متدهای `startOrReloadService` می‌باشد، نوشتن این فایل‌های موقت بر روی دیسک علاوه بر کاهش پرفورمنس به دلیل سربار I/O، یک خطر امنیتی (Information Disclosure) را نیز به همراه داشت.
 لذا لاجیک ساخت و حذف فایل‌های `testConfigFile` و `configFile` حذف گردید و کدهای Production مستقیماً از متغیرهای String استفاده می‌کنند. این تغییر سربار I/O را به طور کامل از روی Threadهای مربوطه برداشت.
 وضعیت: ✅ تأیید و تکمیل شد (بهینه‌سازی با موفقیت اعمال شد).
+### [تاریخ: 2026-08-09] Optimizer Report (Phase 2 Golden Rule Application)
+**اقدامات انجام شده:**
+طبق قانون طلایی (Golden Rule) و ماموریت Mastermind برای بهبود پرفورمنس پردازش‌های پس‌زمینه (`lib/services/`)، وارد فاز دوم (Phase 2) شدم.
+با بررسی دقیق مشخص شد در `lib/services/background_ad_service.dart` هنگام مقداردهی Controllerهای مربوط به Popunder و Social Bar (وب‌ویوها) در `initState`، کل ویجت از طریق `setState` از نو ساخته می‌شد که باعث Rebuildهای مکرر و بیهوده می‌گردید.
+برای حل این مشکل از `ValueNotifier` و `ValueListenableBuilder` استفاده کردم تا تنها قسمت‌های مربوطه آپدیت شوند و Rebuild سراسری رخ ندهد.
+وضعیت: ✅ تأیید و تکمیل شد (بهینه‌سازی با موفقیت اعمال شد).
 
 ### [تاریخ: 2026-08-09] Optimizer Report (Phase 2 Golden Rule Application) - Final Audit
 **اقدامات انجام شده:**

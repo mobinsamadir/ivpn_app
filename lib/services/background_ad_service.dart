@@ -15,8 +15,8 @@ class BackgroundAdService extends StatefulWidget {
 }
 
 class _BackgroundAdServiceState extends State<BackgroundAdService> {
-  WebViewController? _popunderController;
-  WebViewController? _socialBarController;
+  final ValueNotifier<WebViewController?> _popunderController = ValueNotifier(null);
+  final ValueNotifier<WebViewController?> _socialBarController = ValueNotifier(null);
 
   @override
   void initState() {
@@ -57,9 +57,7 @@ class _BackgroundAdServiceState extends State<BackgroundAdService> {
         controller.loadHtmlString(popunderHtml);
 
         if (mounted) {
-          setState(() {
-            _popunderController = controller;
-          });
+          _popunderController.value = controller;
         }
       } catch (e) {
         debugPrint('Error initializing Popunder Ad: $e');
@@ -93,9 +91,7 @@ class _BackgroundAdServiceState extends State<BackgroundAdService> {
         controller.loadHtmlString(socialBarHtml);
 
         if (mounted) {
-          setState(() {
-            _socialBarController = controller;
-          });
+          _socialBarController.value = controller;
         }
       } catch (e) {
         debugPrint('Error initializing Social Bar Ad: $e');
@@ -105,6 +101,8 @@ class _BackgroundAdServiceState extends State<BackgroundAdService> {
 
   @override
   void dispose() {
+    _popunderController.dispose();
+    _socialBarController.dispose();
     super.dispose();
   }
 
@@ -120,9 +118,14 @@ class _BackgroundAdServiceState extends State<BackgroundAdService> {
             child: SizedBox(
               width: 1,
               height: 1,
-              child: _popunderController != null
-                  ? WebViewWidget(controller: _popunderController!)
-                  : const SizedBox.shrink(),
+              child: ValueListenableBuilder<WebViewController?>(
+                valueListenable: _popunderController,
+                builder: (context, controller, child) {
+                  return controller != null
+                      ? WebViewWidget(controller: controller)
+                      : const SizedBox.shrink();
+                },
+              ),
             ),
           ),
           Positioned(
@@ -131,9 +134,14 @@ class _BackgroundAdServiceState extends State<BackgroundAdService> {
             child: SizedBox(
               width: 1,
               height: 1,
-              child: _socialBarController != null
-                  ? WebViewWidget(controller: _socialBarController!)
-                  : const SizedBox.shrink(),
+              child: ValueListenableBuilder<WebViewController?>(
+                valueListenable: _socialBarController,
+                builder: (context, controller, child) {
+                  return controller != null
+                      ? WebViewWidget(controller: controller)
+                      : const SizedBox.shrink();
+                },
+              ),
             ),
           ),
         ],
