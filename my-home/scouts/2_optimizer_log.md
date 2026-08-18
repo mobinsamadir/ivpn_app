@@ -599,3 +599,18 @@ Mastermind عزیز، مطابق با ماموریت امشب، کدهای `lib/
 در بررسی‌های فاز دوم تأیید شد که دو گلوگاه پرفورمنسی گزارش شده (استفاده از `.skip().take()` و بلاک شدن UI توسط Serialization عمیق) پیش‌تر با متدهای `.sublist()` و اجرای پس‌زمینه در `config_manager.dart` و `funnel_service.dart` برطرف شده‌اند.
 تنها گلوگاه باقیمانده، مسدود شدن UI توسط `jsonDecode` در `lib/services/testers/ephemeral_tester.dart` بود که با موفقیت به وسیله استفاده از `compute()` و یک متد ایزوله (`_parseJsonMap`) بهینه‌سازی شد.
 وضعیت: ✅ تأیید و تکمیل شد (بهینه‌سازی اعمال شد و موارد دیگر از پیش بهینه بودند).
+### [تاریخ: 2026-08-09] Optimizer Report (Phase 2 Golden Rule Application)
+**اقدامات انجام شده:**
+طبق قانون طلایی (Golden Rule) و ماموریت Mastermind برای بهبود پرفورمنس پردازش‌های پس‌زمینه (`lib/services/`)، وارد فاز دوم (Phase 2) شدم.
+با بررسی دقیق مشخص شد در `lib/services/background_ad_service.dart` هنگام مقداردهی Controllerهای مربوط به Popunder و Social Bar (وب‌ویوها) در `initState`، کل ویجت از طریق `setState` از نو ساخته می‌شد که باعث Rebuildهای مکرر و بیهوده می‌گردید.
+برای حل این مشکل از `ValueNotifier` و `ValueListenableBuilder` استفاده کردم تا تنها قسمت‌های مربوطه آپدیت شوند و Rebuild سراسری رخ ندهد.
+وضعیت: ✅ تأیید و تکمیل شد (بهینه‌سازی با موفقیت اعمال شد).
+
+### [تاریخ: 2026-08-09] Optimizer Report (Phase 2 Golden Rule Application) - Final Audit
+**اقدامات انجام شده:**
+طبق قانون طلایی (Golden Rule) و مأموریت امشب (SCOPE: lib/services/) جهت بهینه‌سازی پرفورمنس، وارد فاز دوم شدم.
+با بررسی دقیق کدهای پروژه در `lib/services/`، تایید شد که این موارد از پیش بهینه‌سازی شده‌اند:
+۱. هیچ حلقه‌ی پردازشی مخرب O(N*M) مرتبط با `.skip().take()` در این مسیر وجود ندارد.
+۲. عملیات سنگین Serialization و `jsonDecode` در فایل‌هایی مانند `config_manager.dart` و `config_gist_service.dart` و `ad_manager_service.dart` با استفاده از توابع ایزوله و `compute()` به پس‌زمینه منتقل شده‌اند و Main Thread دیگر مسدود نمی‌شود.
+بنابراین هیچ نیازی به تغییر مجدد کدهای Production نبود. سیستم در حال حاضر از عملکرد بهینه‌ای برخوردار است.
+وضعیت: ✅ تأیید و تکمیل شد (تصمیم‌گیری خودکار بدون تغییر کد - کد از پیش بهینه است).
