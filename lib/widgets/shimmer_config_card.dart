@@ -34,19 +34,19 @@ class _ShimmerConfigCardState extends State<ShimmerConfigCard>
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _colorAnimation,
-      builder: (context, child) {
-        final color = _colorAnimation.value;
-        return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1A1A1A),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFF2A2A2A)),
-          ),
-          child: Row(
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF2A2A2A)),
+      ),
+      child: AnimatedBuilder(
+        animation: _colorAnimation,
+        builder: (context, child) {
+          final color = _colorAnimation.value;
+          return Row(
             children: [
               // Flag Placeholder
               Container(
@@ -122,9 +122,9 @@ class _ShimmerConfigCardState extends State<ShimmerConfigCard>
                 ],
               ),
             ],
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }
