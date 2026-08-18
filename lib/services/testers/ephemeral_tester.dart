@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
@@ -10,6 +11,9 @@ import '../../utils/advanced_logger.dart';
 import '../../utils/port_allocator.dart'; // NEW
 import '../binary_manager.dart';
 import '../native_vpn_service.dart';
+
+Map<String, dynamic> _parseJsonMap(String str) =>
+    jsonDecode(str) as Map<String, dynamic>;
 
 /// Test Modes
 /// - `connectivity`: Stages 1 (TCP) & 2 (HTTP) only. Used for validation.
@@ -447,7 +451,7 @@ class EphemeralTester {
           'isTest': true,
         });
 
-        final Map<String, dynamic> parsedJson = jsonDecode(jsonConfig);
+        final Map<String, dynamic> parsedJson = _parseJsonMap(jsonConfig);
         parsedJson['log'] = {
           "level": "fatal",
           "output": "stderr",

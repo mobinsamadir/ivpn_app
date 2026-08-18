@@ -1,9 +1,13 @@
 import 'dart:convert';
+
 import 'dart:math';
 import 'package:flutter/foundation.dart'; // For kDebugMode
 import '../utils/advanced_logger.dart';
 
 import '../utils/base64_utils.dart';
+
+Map<String, dynamic> _parseJsonMap(String str) =>
+    jsonDecode(str) as Map<String, dynamic>;
 
 class SingboxConfigGenerator {
   // Ports
@@ -108,7 +112,7 @@ class SingboxConfigGenerator {
     final String decoded = Base64Utils.safeDecode(link.substring(8));
     if (decoded.isEmpty) throw FormatException("Invalid VMess Base64");
 
-    final Map<String, dynamic> data = jsonDecode(decoded);
+    final Map<String, dynamic> data = _parseJsonMap(decoded);
 
     final Map<String, dynamic> outbound = {
       "type": "vmess",
@@ -202,7 +206,7 @@ class SingboxConfigGenerator {
           try {
             final decoded = Base64Utils.safeDecode(possibleBase64);
             if (decoded.startsWith('{')) {
-              final json = jsonDecode(decoded);
+              final json = _parseJsonMap(decoded);
               // Extract from JSON
               host = json['add'];
               port = int.tryParse(json['port']?.toString() ?? '443') ?? 443;
@@ -444,7 +448,7 @@ class SingboxConfigGenerator {
         if (decoded.isEmpty) return null;
 
         try {
-          final Map<String, dynamic> data = jsonDecode(decoded);
+          final Map<String, dynamic> data = _parseJsonMap(decoded);
           return {
             'host': data['add'],
             'port': int.tryParse(data['port']?.toString() ?? '443') ?? 443,
