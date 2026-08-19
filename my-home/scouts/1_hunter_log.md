@@ -12,6 +12,11 @@ FROZEN_ZONES:
 
 SPECIFIC_TASK: نه
 CROSS_AUDIT_TARGET: نه
+
+
+OPERATIONAL RULES:
+1. Hierarchical Reading: Read `MASTER_PLAN.md` first for high-level context. Dive into detailed logs or source code ONLY when deep context is needed for a specific task. Do not shorten or delete detailed logs.
+2. Standby Trigger: Standby is only reached when project score >= 90/100 AND zero blind spots remain.
 === END BRIEF ===
 
 --- تاریخچه گزارش‌ها ---
