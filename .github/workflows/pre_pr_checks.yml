@@ -1,19 +1,22 @@
 name: Pre-PR Checks
 
 on:
+  schedule:
+    - cron: "0 5 * * *"
+
   # ==============================================================================
   # 🚦 TRIGGER OPTIONS (Optimize for GitHub Free Minutes)
   # ==============================================================================
 
   # 1. RUN ON EVERY PR (Uncomment below to enable)
-  pull_request:
-    branches:
-      - main
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - 'LICENSE'
-      - '.gitignore'
+  # pull_request:
+  # branches:
+  # - main
+  # paths-ignore:
+  # - '**.md'
+  # - 'docs/**'
+  # - 'LICENSE'
+  # - '.gitignore'
 
 
 concurrency:
