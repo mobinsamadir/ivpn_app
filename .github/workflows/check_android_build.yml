@@ -13,10 +13,6 @@ on:
       - 'LICENSE'
       - '.gitignore'
 
-  # 2. RUN AT SPECIFIC HOURS (Scrum Master time - 18:30, 19:30, 20:30 UTC)
-  schedule:
-    - cron: '0 5 * * *'
-
   # 3. RUN MANUALLY (Always enabled)
   workflow_dispatch:
 concurrency:
@@ -24,7 +20,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   build-check:
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.actor == 'mastermind'
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.actor == 'mastermind')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.0
