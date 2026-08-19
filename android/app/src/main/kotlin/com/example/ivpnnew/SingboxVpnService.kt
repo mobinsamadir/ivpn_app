@@ -175,7 +175,6 @@ class SingboxVpnService :
                         logObj.put("level", "error")
                     }
 
-
                     try {
                         // SAFE CALL to Libbox - pass JSON content string
                         val server =
@@ -266,7 +265,6 @@ class SingboxVpnService :
                         result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
                         return@withContext
                     }
-
 
                     try {
                         closeTestServerUnlocked()

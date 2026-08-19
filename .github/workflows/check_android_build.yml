@@ -6,21 +6,19 @@ on:
   # ==============================================================================
 
   # 1. RUN ON PUSH (Uncomment below to enable)
-  push:
+  pull_request:
     paths-ignore:
       - '**.md'
       - 'docs/**'
       - 'LICENSE'
       - '.gitignore'
 
-  # 3. RUN MANUALLY (Always enabled)
-  workflow_dispatch:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   build-check:
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.actor == 'mastermind')
+    if: github.event_name == 'pull_request' && github.actor == 'mastermind'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.0

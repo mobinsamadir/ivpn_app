@@ -15,8 +15,10 @@ class BackgroundAdService extends StatefulWidget {
 }
 
 class _BackgroundAdServiceState extends State<BackgroundAdService> {
-  final ValueNotifier<WebViewController?> _popunderController = ValueNotifier(null);
-  final ValueNotifier<WebViewController?> _socialBarController = ValueNotifier(null);
+  final ValueNotifier<WebViewController?> _popunderController =
+      ValueNotifier(null);
+  final ValueNotifier<WebViewController?> _socialBarController =
+      ValueNotifier(null);
 
   @override
   void initState() {
