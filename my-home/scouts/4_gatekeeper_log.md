@@ -1,26 +1,16 @@
-=== MISSION BRIEF: 2026-08-09 ===
-ROLE_TONIGHT: QA/Testing
+=== MISSION BRIEF: 2026-08-10 ===
+ROLE_TONIGHT: Gatekeeper
 ASSIGNED_BY: Mastermind
-REASON: Expand test coverage for UI widgets and identify integration flaws.
+REASON: Ensure integration stability.
 
 SCOPE:
-- test/widgets/
+- integration_test/
 
 FROZEN_ZONES:
-- lib/
+- lib/screens/
 
-SPECIFIC_TASK: نه
-CROSS_AUDIT_TARGET: نه
-
-
-OPERATIONAL RULES:
-1. Hierarchical Reading: Read `MASTER_PLAN.md` first for high-level context. Dive into detailed logs or source code ONLY when deep context is needed for a specific task. Do not shorten or delete detailed logs.
-2. Standby Trigger: Standby is only reached when project score >= 90/100 AND zero blind spots remain.
-=== END BRIEF ===
-
---- تاریخچه گزارش‌ها ---
-
-[شروع]
+** دستور:**
+پوشش تست برای ویجت‌ها کامل شد و کار بی‌نظیر بود. مأموریت امشب (2026-08-10) شما: افزایش تست‌های integration برای کل پروسه کانکت شدن VPN در پوشه `integration_test/` است. مطمئن شو کل جریان کانکت شدن از UI تا سرویس‌ها به درستی تست شود.
 
 ### [تاریخ: 2026-07-13] Gatekeeper Report
 

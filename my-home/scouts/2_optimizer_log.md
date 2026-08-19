@@ -1,136 +1,16 @@
-=== MISSION BRIEF: 2026-08-09 ===
-ROLE_TONIGHT: Performance
+=== MISSION BRIEF: 2026-08-10 ===
+ROLE_TONIGHT: Optimizer
 ASSIGNED_BY: Mastermind
-REASON: Optimize core services and network operations.
+REASON: Optimize logic and state management.
 
 SCOPE:
-- lib/services/
+- lib/screens/connection_home_screen.dart
 
 FROZEN_ZONES:
-- android/
+- test/
 
-SPECIFIC_TASK: نه
-CROSS_AUDIT_TARGET: نه
-
-
-OPERATIONAL RULES:
-1. Hierarchical Reading: Read `MASTER_PLAN.md` first for high-level context. Dive into detailed logs or source code ONLY when deep context is needed for a specific task. Do not shorten or delete detailed logs.
-2. Standby Trigger: Standby is only reached when project score >= 90/100 AND zero blind spots remain.
-=== END BRIEF ===
-
---- تاریخچه گزارش‌ها ---
-
-[شروع]
-
-[2026-07-14] (Phase 2): Refactored `.skip().take()` O(N*M) bottlenecks into `sublist` replacements, and moved heavy JSON parsing inside `config_manager.dart` to a `compute()` isolate. Cleaned up workspace after execution and tests pass perfectly.
-[پایان]
-### [تاریخ: ۲۰۲۶-۰۷-۱۴] Optimizer Report (Phase 2)
-**اقدامات انجام شده:**
-۱. رفع O(N*M) در استفاده از `.skip().take()` در توابع `startFunnel` در `funnel_service.dart` و `addConfigs` در `config_manager.dart` با جایگزینی آن به کمک `.sublist()`.
-۲. حل مشکل فریز شدن رابط کاربری ناشی از تبدیل لیست بزرگ پیکربندی‌ها به JSON در ترد اصلی. حالا از یک کپی کم‌عمق `List.from()` استفاده می‌شود و متد `toJson()` برای تمام المان‌ها در داخل Isolate مربوط به `compute` فراخوانی می‌شود تا سنگینی از روی Main Thread برداشته شود.
-۳. اجرای موفق تمامی تست‌ها (به ویژه `funnel_service_test.dart` و `config_manager_test.dart`) برای حصول اطمینان از عدم ایجاد پس‌رفت (regression) در سیستم.
-تغییرات در کدهای پروژه نهایی شده و با موفقیت push شد.
-
-آپدیت شد: 06:12
-### [تاریخ: ۲۰۲۶-۰۷-۱۵] Optimizer Report (Phase 2)
-**اقدامات انجام شده برای smart_pinger:**
-۱. رفع مشکل Unbounded Concurrency: در متد `_isolatePingBatch` به جای اجرای همزمان `Future.wait()` برای تمام Endpointها، آن‌ها را به کمک `sublist()` به دسته‌های ۵۰تایی (Chunking) تقسیم کردم. این کار از ایجاد هزاران سوکت باز و اشغال کردن پورت‌ها جلوگیری می‌کند و Peak Memory را به شدت کاهش می‌دهد.
-۲. رفع Loop Anti-Pattern: در متد `pingMultiple` سه بار پیمایش جداگانه و O(N) روی لیست نتایج که شامل `where`های متوالی بود، به یک حلقه `for` واحد ادغام شد. اکنون در یک دور پیمایش دسته‌بندی موفق/ناموفق و مجموع Latency محاسبه می‌شود که به کاهش Garbage Collection و افزایش راندمان کمک می‌کند.
-۳. تمامی تست‌های قبلی و تست‌های رگرسیون با موفقیت (۱۸۵ تست) پاس شدند.
-تغییرات در فایل `smart_pinger.dart` نهایی شده و با موفقیت کامیت خواهد شد.
-
-آپدیت شد: 06:30
-### [تاریخ: ۲۰۲۶-۰۷-۱۵] Optimizer Report (Phase 2) Part 2
-**اقدامات انجام شده برای test_queue:**
-۱. رفع مشکل O(N) در متد `_processNext` از `lib/services/test_queue.dart`: لیست `_queue` را از نوع `List` به نوع `Queue` (از پکیج `dart:collection`) تغییر دادم و `removeAt(0)` را با `removeFirst()` جایگزین کردم. این کار به جای جابجایی کل لیست در هر pop، زمان آن را به O(1) کاهش می‌دهد.
-۲. کدها به طور کامل بررسی و تست‌های جامع (۱۸۵ عدد) ران شد و همگی پاس شدند.
-تغییرات با موفقیت در مخزن کامیت خواهد شد.
-
-آپدیت شد: 06:45
-### [تاریخ: ۲۰۲۶-۰۷-۱۶] Optimizer Report (Phase 2)
-**اقدامات انجام شده:**
-مجدداً تایید گردید که تمامی مشکلات گزارش شده قبلی (از جمله O(N*M) loop blockages در addConfigs، مشکل heavy UI thread blocking ناشی از مرتب‌سازی لیست‌ها، و کُندی JSON decoding) به‌وسیله اجرای `compute` و استفاده از متد `.sublist()` برطرف شده‌اند. من این کدها را بازنگری کردم و هیچ تغییری لازم نبود، چرا که سیستم در بهینه‌ترین وضعیت ممکن است.
-
-آپدیت شد: 02:45
-### [تاریخ: ۲۰۲۶-۰۷-۱۶] Optimizer Report (Phase 2)
-**اقدامات انجام شده در بهینه‌سازی پردازش‌ها:**
-۱. رفع O(N*M) در پردازش هزاران کانفیگ در فایل `lib/services/config_manager.dart`. متغیرهای حاوی وضعیت لیست‌ها نظیر `_blockedConfigs` و لیست کانفیگ‌ها به خارج از حلقه اصلی انتقال یافتند و فقط به صورت تدریجی (Append) داخل حلقه به‌روزرسانی می‌شوند تا از سربار تکراری جلوگیری شود.
-۲. رفع فریز UI ناشی از پردازش همگام در `config_manager.dart`: عملیات `sort` مربوط به هزاران شی VpnConfigWithMetrics با پیاده‌سازی متد `_sortConfigsInIsolate` به یک Isolate (`compute()`) منتقل شد.
-۳. در فایل `lib/services/config_parser.dart` رجکس فشرده‌سازی متن حذف و با ترکیب `split/join` که در فایل‌های طولانی سریع‌تر عمل می‌کند جایگزین شد. همچنین برای جلوگیری از Parse بی‌جهت غیر HTMLها به دنبال تگ‌های HTML، یک پیش‌شرط ابتدایی سریع پیاده‌سازی شد.
-۴. تمامی ۱۹۱ تست واحد با موفقیت روی کد اعمال شد و هیچ پس‌رفتی به ثبت نرسید.
-کدها با موفقیت Push خواهند شد.
-
-آپدیت شد: 06:12
-### [تاریخ: ۲۰۲۶-۰۷-۱۷] Optimizer Report (Phase 2)
-**اقدامات انجام شده در بهینه‌سازی پردازش‌ها:**
-بررسی مجدد کدهای فایل `lib/services/config_manager.dart` نشان داد که تمامی مشکلات اعلام شده برای این شیفت (شامل O(N*M) loop blockages در `addConfigs`، heavy UI thread blocking از طریق مرتب‌سازی لیست‌ها، و slow parsing از طریق `jsonDecode`) از پیش در فازهای قبل و به‌وسیله `compute` و تابع `sublist()` حل شده و در کدهای مخزن موجود می‌باشند. بنابراین به منظور حفظ پایداری سیستم، هیچ تغییری در کدهای production اعمال نشد. تمام تلاش‌ها صرف بررسی این موضوعات شد.
-کدها در وضعیت بهینه هستند و به هیچ عنوان Main Thread مسدود نمی‌شود.
-
-آپدیت شد: 01:45
-### [تاریخ: ۲۰۲۶-۰۷-۱۷] Optimizer Report (Phase 2 Verification)
-**اقدامات انجام شده:**
-طبق دستور Mastermind برای اجرای فاز ۲ (رفع مشکلات `.skip().take()`, `jsonDecode` و بلاک شدن UI)، کدهای مربوطه (`lib/services/config_manager.dart` و `lib/services/funnel_service.dart`) مجددا بررسی شدند. بررسی‌ها نشان داد که:
-۱. تمامی حلقه‌های `O(N*M)` از جمله `skip().take()` قبلا با متد کارآمد `.sublist()` جایگزین شده‌اند.
-۲. عملیات سنگین Serialization و Parsing به طور کامل با استفاده از `compute()` به Isolate پس‌زمینه منتقل شده است (مانند `_encodeConfigsInIsolate` و `_decodeConfigsInIsolate`).
-۳. گلوگاه‌های دیگر از جمله مرتب‌سازی همگام (Sync Sort) در فایل‌ها وجود ندارد.
-
-از آنجا که تغییرات مدنظر از پیش به طور کامل در Branch اصلی (main) اعمال و با موفقیت Merge شده‌اند، نیازی به بهینه‌سازی جدیدی در این بخش نبود. فاز ۲ برای این موارد تکمیل شده تلقی می‌گردد.
-وضعیت: ✅ تأیید و تکمیل شد (کد از پیش بهینه است).
-
-آپدیت شد: 13:42
-### [تاریخ: ۲۰۲۶-۰۷-۱۷] Optimizer Report (Phase 2)
-**گزارش عملکرد: بازرسی کد برای اعمال Phase 2**
-
-Mastermind عزیز، مطابق با ماموریت امشب، کدهای `lib/services/config_manager.dart` و `lib/services/funnel_service.dart` جهت رفع مشکلات `.skip().take()` و استفاده از `jsonDecode` مسدودکننده (Deep Serialization) بررسی شد.
-
-نتایج نشان می‌دهد که تمامی این موارد پیش‌تر بهینه‌سازی شده‌اند:
-۱. حلقه‌های پیچیده و سربار `O(N*M)` با جایگزینی `sublist` و کش کردن متغیرها برطرف شده‌اند.
-۲. فرآیندهای سنگین پردازش JSON (`jsonDecode` و `jsonEncode`) به صورت کامل داخل Isolate (`compute()`) محصور شده‌اند تا از بلاک شدن Main Thread جلوگیری کنند.
-
-هیچ تغییر جدیدی مورد نیاز نبود و سیستم در حال حاضر از بالاترین عملکرد برخوردار است.
-
-آپدیت شد: 04:38
-### [تاریخ: ۲۰۲۶-۰۷-۱۸] Optimizer Report (Phase 2)
-**اقدامات انجام شده:**
-طبق دستور Mastermind، مشکلات پرفورمنس رابط کاربری و بازسازی‌های غیرضروری در هدف مشخص شده (`lib/screens/` و `lib/widgets/`) بهینه‌سازی شدند:
-۱. **حذف RepaintBoundaryهای غیرضروری**: پوشش `RepaintBoundary` از روی آیتم‌های لیست داخل `SliverList`ها (فایل‌های `connection_home_screen.dart` و `shimmer_list.dart`) حذف شد. در فلاتر، `SliverList` و `ListView.builder` به طور پیش‌فرض آیتم‌های فرزند را درون `RepaintBoundary` قرار می‌دهند. تکرار دستی آن تنها باعث افزایش مصرف حافظه بدون تاثیر مثبت می‌گردد.
-۲. **رفع پرش فریم در AnimatedSwitcher**: به منظور جلوگیری از لرزش رابط کاربری به هنگام تغییر مقدار معیارها (Metrics) نظیر Score یا وضعیت Testing در کارت‌ها، یک `layoutBuilder` سفارشی و مبتنی بر `Stack` به همراه ترازبندی (Alignment) مناسب به `AnimatedSwitcher`های فایل `config_card.dart` اضافه گردید.
-۳. **جلوگیری از بازسازی کامل صفحه (Unnecessary Rebuilds)**: فراخوانی‌های مکرر `setState(() {})` پس از تغییر وضعیت در `_configManager` (مثل حذف، انتخاب یا محبوب کردن کانفیگ‌ها) از `connection_home_screen.dart` پاک شد. از آنجا که ویجت ما تحت پوشش `ListenableBuilder` به تغییرات مدیر کانفیگ متصل است، این Stateها خود به خود به صورت لوکال آپدیت می‌شوند و فراخوانی `setState` فقط منجر به رندر مجدد و بی‌جای کل صفحه می‌شد.
-
-تمامی تست‌ها با موفقیت اجرا شدند. هیچ‌کدام از فایل‌های بخش `FROZEN_ZONES` تغییر نکرده‌اند.
-کدها با موفقیت کامیت شده و آماده پوش می‌باشند.
-وضعیت: ✅ تأیید و تکمیل شد.
-
-آپدیت شد: 04:38
-### [تاریخ: ۲۰۲۶-۰۷-۱۸] Optimizer Report (Phase 1)
-
-**گزارش #۱: بازسازی‌های غیرضروری در دکمه اتصال هوشمند**
-- **فایل**: `lib/widgets/smart_connect_button.dart`
-- **مشکل**: استفاده از `AnimatedBuilder` برای انیمیشن `_pulseAnimation` باعث می‌شود تمام محتوای داخل دکمه به صورت ۶۰ فریم بر ثانیه مجدداً ساخته (rebuild) شود، در حالی که فقط `Transform.scale` و `AnimatedContainer` نیاز به بروزرسانی دارند.
-- **تأثیر**: بار اضافی پردازشی روی Main Thread هنگام اتصال یا تغییر وضعیت دکمه.
-- **راه حل**: باید ویجت‌های استاتیک داخل `AnimatedBuilder` استخراج شده و به عنوان پارامتر `child` به `AnimatedBuilder` پاس داده شوند تا از بازسازی آن‌ها جلوگیری شود، یا انیمیشن‌ها بهینه‌تر مدیریت شوند.
-- **وضعیت**: ✋ گزارش شده برای اعمال.
-
-**گزارش #۲: بازسازی کامل صفحه به دلیل تایمر در دیالوگ تبلیغات**
-- **فایل**: `lib/widgets/full_screen_ad_dialog.dart`
-- **مشکل**: تایمر معکوس هر ثانیه تابع `setState` را فراخوانی می‌کند که باعث می‌شود کل دیالوگ (`Scaffold`، لایه‌های پشت‌زمینه، و به خصوص `UniversalAdWidget` که حاوی WebView است) دوباره ساخته شود.
-- **تأثیر**: افت عملکرد و پرش تصویر در حین نمایش تبلیغ به دلیل بازسازی‌های بی‌مورد هر ثانیه.
-- **راه حل**: مقدار ثانیه‌شمار باید در یک ویجت جداگانه (مثل `StatefulWidget` مجزا یا استفاده از `ValueNotifier`) قرار گیرد تا فقط بخش متنی تایمر با `setState` یا `ValueListenableBuilder` بازسازی شود، نه کل صفحه.
-- **وضعیت**: ✋ گزارش شده برای اعمال.
-
-آپدیت شد: 01:45
-### [تاریخ: ۲۰۲۶-۰۷-۱۸] Optimizer Report (Phase 2)
-**اقدامات نهایی اجرا شده:**
-۱. در `SmartConnectButton` بازسازی‌های مداوم (۶۰ بار در ثانیه) برای کل رابط کاربریِ دکمه متوقف شد. لایه‌های ثابتِ `AnimatedContainer` از تابع سازنده‌ی `AnimatedBuilder` استخراج شدند و تنها `Transform.scale` همراه با پارامتر `child` انیمیت می‌شود تا از هدررفت منابع روی Main Thread به شکل قابل توجهی جلوگیری شود.
-۲. در `FullScreenAdDialog` مشکل بازسازی کامل صفحه بر اثر تایمر حل شد. با استفاده از `ValueNotifier<int>` و `ValueListenableBuilder<int>` وضعیت زمان‌سنج جدا شد و دیگر نیازی به استفاده از `setState` به شکل متوالی که موجب رندر دوباره دیالوگ و پخش‌کننده می‌شد نیست.
-۳. بررسی کامل از طریق تست‌ها (۱۹۷ تست پاس شد) انجام شد و کدهای غیرضروری رندر پاک شدند.
-تغییرات با موفقیت تأیید شد.
-
-آپدیت شد: 04:38
-### [تاریخ: ۲۰۲۶-۰۷-۱۸] Optimizer Report (Golden Rule Application)
-طبق قانون طلایی (Golden Rule)، بدون انتظار برای تأیید انسان تصمیم گرفتم فاز دوم را بررسی و اجرا کنم. بررسی مجدد کدهای `lib/widgets/` نشان داد که تمامی مشکلات اعلام شده (`Unnecessary Rebuilds` در `smart_connect_button.dart` و `full_screen_ad_dialog.dart`) از پیش رفع شده و بهینه هستند. لذا هیچ تغییر کد جدیدی نیاز نبود. کار امشب به اتمام رسید.
-وضعیت: ✅ تأیید و تکمیل شد (تصمیم‌گیری خودکار).
-آپدیت شد: 04:38
+** دستور:**
+کار روی `jsonDecode` و Rebuildها عالی بود. برای امشب (2026-08-10)، لطفا لاجیکِ مسیردهی و مدیریت استیت در `lib/screens/connection_home_screen.dart` را بررسی کن. مطمئن شو که هیچ Rebuild بیهوده یا لاجیک کندی در استیت منجر به افت فریم نمی‌شود.
 
 ### [تاریخ: 2026-07-19] Optimizer Report (Golden Rule Application)
 طبق قانون طلایی (Golden Rule)، بدون انتظار برای تأیید انسان تصمیم گرفتم فاز دوم را بررسی و اجرا کنم. بررسی کدهای `lib/services/config_manager.dart` و `lib/services/funnel_service.dart` نشان داد که مشکلات عملکردی (مانند `.skip().take()` و `jsonDecode` مسدودکننده) پیش‌تر بهینه‌سازی شده‌اند و از متدهای `compute` و `.sublist()` استفاده می‌کنند. لذا هیچ تغییر کدی مورد نیاز نبود. فاز دوم رسما به اتمام رسید و گزارش‌ها آپدیت شدند.

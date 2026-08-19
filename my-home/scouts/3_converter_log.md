@@ -1,31 +1,16 @@
-=== MISSION BRIEF: 2026-08-09 ===
-ROLE_TONIGHT: UX/Conversion
+=== MISSION BRIEF: 2026-08-10 ===
+ROLE_TONIGHT: Converter
 ASSIGNED_BY: Mastermind
-REASON: Improve widget animations and ensure consistent UI feedback.
+REASON: Improve list animations and loading states.
 
 SCOPE:
-- lib/widgets/
+- lib/screens/config_list_screen.dart
 
 FROZEN_ZONES:
-- lib/screens/
+- test/
 
-SPECIFIC_TASK: نه
-CROSS_AUDIT_TARGET: نه
-
-
-OPERATIONAL RULES:
-1. Hierarchical Reading: Read `MASTER_PLAN.md` first for high-level context. Dive into detailed logs or source code ONLY when deep context is needed for a specific task. Do not shorten or delete detailed logs.
-2. Standby Trigger: Standby is only reached when project score >= 90/100 AND zero blind spots remain.
-=== END BRIEF ===
-
---- تاریخچه گزارش‌ها ---
-
-[شروع]
-
-
---- تاریخچه گزارش‌ها ---
-
-[شروع]
+** دستور:**
+اجرای `ScaleOnTap` و بهینه‌سازی Rebuild ها عالی بود. برای شیفت امشب (2026-08-10)، بهبود انیمیشن و وضعیت لودینگ لیست در `lib/screens/config_list_screen.dart` را بررسی کن تا حس مدرن‌تری به کاربر منتقل شود.
 
 ### [تاریخ: ۲۰۲۶-۰۷-۱۳] Converter Report
 
