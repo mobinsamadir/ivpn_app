@@ -451,7 +451,7 @@ class EphemeralTester {
           'isTest': true,
         });
 
-        final Map<String, dynamic> parsedJson = _parseJsonMap(jsonConfig);
+        final Map<String, dynamic> parsedJson = await compute(_parseJsonMap, jsonConfig);
         parsedJson['log'] = {
           "level": "fatal",
           "output": "stderr",
