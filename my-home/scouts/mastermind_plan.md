@@ -1,24 +1,7 @@
-# 🌙 خلاصه شب 2026-08-06
+=== MISSION BRIEF: 2026-08-10 ===
+ROLE_TONIGHT: Mastermind
+ASSIGNED_BY: Human
+REASON: Oversee and orchestrate Scrum.
 
-## ✅ دستاوردهای امشب (توسط تیم اسکاوت طبق Golden Rule)
-- در بررسی امنیتی توسط Hunter، مشکل امنیتی فایل‌های موقت و کانفیگ‌ها در اندروید با اضافه شدن try-finally رفع شد.
-- در بررسی پرفورمنس توسط Optimizer، مقداردهی اولیه ChewieController در UniversalAdWidget بدون setState انجام شد که باعث کاهش ریکامپوز غیرضروری گردید.
-- در بررسی UX توسط Converter، دکمه‌های IconButton در log_viewer_screen.dart به ScaleOnTap ارتقاء یافتند.
-- در تست‌های شبانه توسط Gatekeeper، پوشش تست برای funnel_service.dart به طرز چشمگیری بهبود یافت.
-
-## 🔴 پیشنهادات اصلی امشب (برای شیفت 2026-08-07)
-- **Hunter**: بررسی امنیت لاگ‌ها و Storage در `lib/utils/`
-- **Optimizer**: شناسایی N+1 Queries و لیست‌های کند در `lib/models/`
-- **Converter**: بهینه‌سازی انیمیشن‌های اصلی در `lib/widgets/`
-- **Gatekeeper**: افزایش پوشش تست ویجت‌های مرکزی
-
-## ⚠️ تضادها یا نیاز به بحث
-- هیچ تضادی گزارش نشد.
-
----
-
-## ✋ منتظر تایید شما
-**دستوری برای شب بعد:**
-```
-*** تخصیص‌ها را تایید می‌کنم.
-```
+**دستور:**
+شیفت جدید (2026-08-10) با اهداف و Lockهای جدید آغاز شد. منتظر گزارش‌های جدید هستم.

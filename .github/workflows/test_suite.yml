@@ -1,14 +1,17 @@
 name: Test Suite
 
 on:
+  schedule:
+    - cron: "0 5 * * *"
+
   # ==============================================================================
   # 🚦 TRIGGER OPTIONS
   # ==============================================================================
 
   # 1. RUN ON EVERY PR (Uncomment below to enable)
-  pull_request:
-    branches:
-      - main
+  # pull_request:
+  # branches:
+  # - main
 
 
 concurrency:
