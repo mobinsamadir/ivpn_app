@@ -15,8 +15,6 @@ on:
       - 'LICENSE'
       - '.gitignore'
 
-  # 3. RUN MANUALLY (Always enabled)
-  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -24,7 +22,7 @@ concurrency:
 
 jobs:
   validate-and-build:
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.actor == 'mastermind')
+    if: github.event_name == 'pull_request' && github.actor == 'mastermind'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.0

@@ -7,15 +7,13 @@ on:
   # ==============================================================================
 
   # 1. RUN ON PUSH (Uncomment below to enable)
-  push:
+  pull_request:
     paths-ignore:
       - '**.md'
       - 'docs/**'
       - 'LICENSE'
       - '.gitignore'
 
-  # 3. RUN MANUALLY (Always enabled)
-  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -26,7 +24,7 @@ permissions:
 
 jobs:
   changes:
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.actor == 'mastermind')
+    if: github.event_name == 'pull_request' && github.actor == 'mastermind'
     runs-on: ubuntu-latest
     outputs:
       android: ${{ steps.filter.outputs.android }}
@@ -52,7 +50,7 @@ jobs:
 
   build-windows:
     needs: changes
-    if: (github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.actor == 'mastermind')) && (needs.changes.outputs.windows == 'true' || github.event_name == 'workflow_dispatch')
+    if: github.event_name == 'pull_request' && github.actor == 'mastermind' && needs.changes.outputs.windows == 'true'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7.0.0
@@ -111,7 +109,7 @@ jobs:
 
   build-android:
     needs: changes
-    if: (github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.actor == 'mastermind')) && (needs.changes.outputs.android == 'true' || github.event_name == 'workflow_dispatch')
+    if: github.event_name == 'pull_request' && github.actor == 'mastermind' && needs.changes.outputs.android == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.0
