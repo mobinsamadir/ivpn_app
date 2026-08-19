@@ -1,6 +1,7 @@
 name: Pre-PR Checks
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: "0 5 * * *"
 
@@ -10,8 +11,10 @@ on:
 
   # 1. RUN ON EVERY PR (Uncomment below to enable)
   # pull_request:
-  # branches:
-  # - main
+  #   branches:
+  #     - main
+  #     - master
+  #     - develop
   # paths-ignore:
   # - '**.md'
   # - 'docs/**'

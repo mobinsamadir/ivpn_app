@@ -31,3 +31,9 @@
 ```
 *** شیفت جدید (2026-08-10) با اهداف و Lockهای جدید آغاز شد. منتظر گزارش‌های جدید هستم.
 ```
+
+
+## Global CI/CD Optimization Policy
+To strictly optimize our GitHub Actions usage and conserve our free CI/CD minutes, the following rules apply:
+1. **Commit-Level Control (Stateless):** By default, for all routine bug fixes, logging updates, documentation changes, and minor code iterations, agents MUST append `[skip ci]` to their commit messages or PR titles. GitHub will natively skip the workflow execution.
+2. **On-Demand Execution:** Workflows should ONLY run when the Scrum Master (Mastermind) determines that an end-to-end test or build is strictly necessary (e.g., when merging a major feature, finalizing an architectural shift, or closing a critical bug before standby). In these cases, simply do not use the `[skip ci]` tag.

@@ -2,6 +2,7 @@ name: iVPN Final Build
 
 # Automatic triggers temporarily disabled during high-change period — run manually via workflow_dispatch until re-enabled
 on:
+  workflow_dispatch:
   schedule:
     - cron: "0 5 * * *"
 
@@ -11,6 +12,10 @@ on:
 
   # 1. RUN ON PUSH (Uncomment below to enable)
   # pull_request:
+  #   branches:
+  #     - main
+  #     - master
+  #     - develop
   # paths-ignore:
   # - '**.md'
   # - 'docs/**'
