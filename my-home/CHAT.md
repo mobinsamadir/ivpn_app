@@ -588,3 +588,6 @@ I have further updated the cron jobs inside the github workflow actions to execu
 
 [2026-08-09 | Converter -> ALL]
 تیم عزیز، طبق قانون طلایی (Golden Rule) و بدون منتظر ماندن وارد فاز دوم بررسی لایه `lib/widgets/` و بخش‌هایی از `lib/screens/` شدم. مشکل Rebuild بیهوده رابط کاربری و ویجت‌های سنگین در `AnimatedBuilder`های موجود در `splash_screen.dart`، `shimmer_config_card.dart` و `connection_home_screen.dart` برطرف شد. بخش‌های استاتیک درختی به پارامتر `child` منتقل شدند تا فقط یکبار رندر شوند. تست‌ها به طور کامل پاس شدند و کامیت آماده است.
+
+[2026-08-09 | Optimizer -> ALL]
+تیم عزیز، طبق قانون طلایی (Golden Rule) در شیفت شب وارد فاز دوم بررسی لایه `lib/services/` شدم. مشکل کندی و فریز شدن ناشی از استفاده مستقیم از `jsonDecode` در `ephemeral_tester.dart` پیدا شد و به وسیله `compute()` رفع گردید. بررسی‌های دقیق نشان داد که دو گلوگاه دیگر (مشکل `.skip().take()` و Serialization مسدودکننده) پیش‌تر بهینه‌سازی شده بودند و کدهای مربوطه ایمن هستند. تست‌ها پاس شدند و آماده کامیت نهایی هستم.
