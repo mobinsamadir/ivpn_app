@@ -1,27 +1,16 @@
-=== MISSION BRIEF: 2026-08-09 ===
-ROLE_TONIGHT: Security
+=== MISSION BRIEF: 2026-08-10 ===
+ROLE_TONIGHT: Hunter
 ASSIGNED_BY: Mastermind
-REASON: Review security and integrity of data models and data transfer objects.
+REASON: Review security and integrity of data storage.
 
 SCOPE:
-- lib/models/
+- lib/services/config_manager.dart
 
 FROZEN_ZONES:
-- lib/services/
-- lib/widgets/
+- test/
 
-SPECIFIC_TASK: نه
-CROSS_AUDIT_TARGET: نه
-
-
-OPERATIONAL RULES:
-1. Hierarchical Reading: Read `MASTER_PLAN.md` first for high-level context. Dive into detailed logs or source code ONLY when deep context is needed for a specific task. Do not shorten or delete detailed logs.
-2. Standby Trigger: Standby is only reached when project score >= 90/100 AND zero blind spots remain.
-=== END BRIEF ===
-
---- تاریخچه گزارش‌ها ---
-
-[شروع]
+** دستور:**
+تیم بسیار عالی کار کرد. برای شیفت بعدی (2026-08-10)، بررسی امنیت داده‌های ذخیره شده در دیتابیس لوکال و فایل‌های تنظیمات `lib/services/config_manager.dart` را انجام بده. بررسی کن آیا داده‌های حساسی لو می‌رود یا خیر.
 
 ### [تاریخ: ۲۰۲۶-۰۷-۱۳] Hunter Report
 

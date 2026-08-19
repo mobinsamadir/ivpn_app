@@ -10,9 +10,9 @@
 
 | فایل | مالک شب | وضعیت | تا کی |
 |------|---------|-------|-------|
-| lib/models/ | Hunter | 🔒 Lock | تا صبح 2026-08-09 |
-| lib/services/ | Optimizer | 🔒 Lock | تا صبح 2026-08-09 |
-| lib/widgets/ | Converter | 🔒 Lock | تا صبح 2026-08-09 |
-| test/widgets/ | Gatekeeper | 🔒 Lock | تا صبح 2026-08-09 |
+| lib/services/config_manager.dart | Hunter | 🔒 Lock | تا صبح 2026-08-10 |
+| lib/screens/connection_home_screen.dart | Optimizer | 🔒 Lock | تا صبح 2026-08-10 |
+| lib/screens/config_list_screen.dart | Converter | 🔒 Lock | تا صبح 2026-08-10 |
+| integration_test/ | Gatekeeper | 🔒 Lock | تا صبح 2026-08-10 |
 
 (ترتیب: شب اول Hunter، بعد Optimizer، بعد Converter، بعد Gatekeeper)
