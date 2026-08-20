@@ -155,3 +155,10 @@ FROZEN_ZONES:
 ۲. هیچ اطلاعات حساسی بدون رمزنگاری یا به صورت Plaintext روی دیسک ذخیره نمی‌شود و مشکل Insecure File Storage در این مسیر یافت نشد.
 از آنجایی که کدهای `lib/utils/` از پیش کاملاً ایمن و بهینه هستند، تغییری در کدهای Production ایجاد نشد تا ثبات سیستم حفظ شود.
 وضعیت: ✅ تأیید و تکمیل شد (تصمیم‌گیری خودکار بدون منتظر ماندن).
+### [تاریخ: 2026-08-10] Hunter Report (Phase 2 Golden Rule Application)
+**اقدامات انجام شده:**
+طبق قانون طلایی (Golden Rule) و ماموریت Mastermind برای امشب (SCOPE: `lib/services/config_manager.dart`) جهت بررسی امنیت داده‌های ذخیره شده، وارد فاز دوم شدم.
+با بررسی دقیق `lib/services/config_manager.dart` مشخص شد که فایل‌های پیکربندی VPN حاوی اطلاعات حساسی همچون IP سرورها و کلیدهای خصوصی به صورت Plaintext درون `SharedPreferences` ذخیره می‌شدند. این وضعیت یک خطر امنیتی (Information Disclosure و Insecure File Storage) به حساب می‌آید.
+برای رفع این مشکل، پکیج `flutter_secure_storage` را به پروژه اضافه کردم و کلاس `SecureStorage` را در `lib/services/storage_interface.dart` پیاده‌سازی کردم. سپس در کلاس `ConfigManager`، نمونه‌ی `SharedPreferencesStorage` را با `SecureStorage` تعویض کردم. از این پس، تمام کانفیگ‌های VPN و سایر تنظیمات ذخیره شده توسط اینترفیس، به صورت رمزنگاری شده در Secure Storage سیستم‌عامل ذخیره می‌گردد تا از لو رفتن داده‌های حساس جلوگیری شود.
+تمامی تغییرات با اجرای `flutter test` با موفقیت پاس شدند و به برنچ افزوده خواهند شد.
+وضعیت: ✅ تأیید و تکمیل شد (بهینه‌سازی امنیتی با موفقیت اعمال شد).

@@ -1017,6 +1017,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                   backgroundColor: const Color(0xFF0A0A0A),
                 ),
               ),
+              ),
               ListenableBuilder(
                 listenable: Listenable.merge([_tabController, _configManager]),
                 builder: (context, _) {

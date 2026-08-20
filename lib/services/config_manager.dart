@@ -144,7 +144,7 @@ class ConfigManager extends ChangeNotifier {
   static final ConfigManager _instance = ConfigManager._internal();
   factory ConfigManager() => _instance;
 
-  StorageInterface storage = SharedPreferencesStorage();
+  StorageInterface storage = SecureStorage();
 
   // Caching layer
   final Map<String, dynamic> _memoryCache = {};
