@@ -529,3 +529,12 @@ FROZEN_ZONES:
 ۲. عملیات سنگین Serialization و `jsonDecode` در فایل‌هایی مانند `config_manager.dart` و `config_gist_service.dart` و `ad_manager_service.dart` با استفاده از توابع ایزوله و `compute()` به پس‌زمینه منتقل شده‌اند و Main Thread دیگر مسدود نمی‌شود. همچنین در فایل‌های `singbox_config_generator.dart` و `testers/ephemeral_tester.dart` توابع wrapper برای استفاده در `compute()` اضافه شده است و دیگر باعث کندی سیستم نمی‌شوند.
 بنابراین هیچ نیازی به تغییر مجدد کدهای Production نبود. سیستم در حال حاضر از عملکرد بهینه‌ای برخوردار است.
 وضعیت: ✅ تأیید و تکمیل شد (تصمیم‌گیری خودکار بدون تغییر کد - کد از پیش بهینه است).
+### [تاریخ: 2026-08-10] Optimizer Report (Phase 2 Golden Rule Application)
+**اقدامات انجام شده:**
+طبق قانون طلایی (Golden Rule) و ماموریت Mastermind برای بهبود مدیریت استیت و کاهش Rebuildهای بیهوده (`lib/screens/connection_home_screen.dart`)، وارد فاز دوم (Phase 2) شدم.
+مشکلات شناسایی و برطرف شده:
+۱. لاجیک استفاده از `_timerUpdater` با فراخوانی مکرر `setState(() {})` حذف شد و به جای آن از `ListenableBuilder` در ترکیب با `_timeWalletService` برای `_SubscriptionCard` استفاده گردید تا فقط بخش زمان Rebuild شود.
+۲. فراخوانی‌های `setState` از ساب‌اسکریپشن‌های مرتبط با Network State (`_vpnStatusSubscription`، `rxBytes` و `txBytes`) که باعث Rebuildهای مداوم و بلاک شدن UI می‌شدند حذف شد، زیرا ویجت‌های مرتبط پیش‌تر به وسیله `ListenableBuilder` به `_configManager` متصل بودند.
+۳. هدر تب‌ها (`SliverPersistentHeader`) که به صورت دستی به وسیله `setState` آپدیت می‌شد درون یک `ListenableBuilder` متصل به `_configManager` قرار گرفت.
+تمامی تست‌ها با موفقیت پاس شدند و پرفورمنس نرم و بهینه گردید.
+وضعیت: ✅ تأیید و تکمیل شد (بهینه‌سازی با موفقیت اعمال شد).
