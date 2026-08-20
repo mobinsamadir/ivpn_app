@@ -270,9 +270,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
       }
     });
 
-    _timerUpdater = Timer.periodic(const Duration(minutes: 1), (timer) {
-      if (mounted) setState(() {});
-    });
+
 
     // Start ping monitoring for auto-switch
     _startPingMonitoring();
@@ -404,7 +402,6 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
 
   void _onTimeChanged() {
     if (mounted) {
-      setState(() {});
       // Enforced disconnection UI alert
       if (!_timeWalletService.hasTime && _configManager.isConnected) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -748,10 +745,13 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                   child: Column(
                     children: [
                       const SizedBox(height: 8),
-                      _SubscriptionCard(
-                        hasTime: _timeWalletService.hasTime,
-                        remainingSeconds: _timeWalletService.remainingSeconds,
-                        onAddTime: _showAdSequence,
+                      ListenableBuilder(
+                        listenable: _timeWalletService,
+                        builder: (context, _) => _SubscriptionCard(
+                          hasTime: _timeWalletService.hasTime,
+                          remainingSeconds: _timeWalletService.remainingSeconds,
+                          onAddTime: _showAdSequence,
+                        ),
                       ),
                       const SizedBox(height: 16),
                       Padding(
@@ -1020,11 +1020,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                   backgroundColor: const Color(0xFF0A0A0A),
                 ),
               ),
-              AnimatedBuilder(
-                animation: _tabController,
-                builder: (context, _) => ListenableBuilder(
-                  listenable: _configManager,
-                  builder: (context, _) {
+              ListenableBuilder(
+                listenable: Listenable.merge([_tabController, _configManager]),
+                builder: (context, _) {
                     List<VpnConfigWithMetrics> configs;
                     switch (_tabController.index) {
                       case 1:
@@ -1117,7 +1115,6 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                       }, childCount: configs.length),
                     );
                   },
-                ),
               ),
               const SliverToBoxAdapter(child: SizedBox(height: 20)),
             ],

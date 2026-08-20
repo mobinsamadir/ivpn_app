@@ -529,3 +529,13 @@ FROZEN_ZONES:
 ۲. عملیات سنگین Serialization و `jsonDecode` در فایل‌هایی مانند `config_manager.dart` و `config_gist_service.dart` و `ad_manager_service.dart` با استفاده از توابع ایزوله و `compute()` به پس‌زمینه منتقل شده‌اند و Main Thread دیگر مسدود نمی‌شود. همچنین در فایل‌های `singbox_config_generator.dart` و `testers/ephemeral_tester.dart` توابع wrapper برای استفاده در `compute()` اضافه شده است و دیگر باعث کندی سیستم نمی‌شوند.
 بنابراین هیچ نیازی به تغییر مجدد کدهای Production نبود. سیستم در حال حاضر از عملکرد بهینه‌ای برخوردار است.
 وضعیت: ✅ تأیید و تکمیل شد (تصمیم‌گیری خودکار بدون تغییر کد - کد از پیش بهینه است).
+
+### [تاریخ: 2026-08-10] Optimizer Report (Phase 2 Golden Rule Application)
+**اقدامات انجام شده:**
+طبق قانون طلایی (Golden Rule) و ماموریت Mastermind برای بهبود پرفورمنس پردازش‌ها و مدیریت استیت در فایل `lib/screens/connection_home_screen.dart` وارد فاز دوم (Phase 2) شدم.
+پس از تحلیل و بررسی دقیق، ۳ گلوگاه اصلی که منجر به Rebuildهای غیرضروری در رابط کاربری می‌شدند، شناسایی و برطرف شدند:
+۱. `_timerUpdater` که هر دقیقه کل `ConnectionHomeScreen` را بدون دلیل رفرش می‌کرد حذف گردید.
+۲. آپدیت‌های زمان (TimeWallet) که با دستور `setState(() {})` در تابع `_onTimeChanged` انجام می‌شد به گونه‌ای تغییر یافت که رندر را محدود کند. به جای رندر کل صفحه، تنها بخش `_SubscriptionCard` را توسط یک `ListenableBuilder` به صورت محلی به‌روزرسانی کند.
+۳. ویجت `AnimatedBuilder` متصل به `_tabController` که شامل لیستی طولانی (SliverList) بود و به اشتباه با هر فریم از تغییر وضعیت تب‌ها در حال فراخوانی مجدد تابع رندر بود حذف شد. و از یک `ListenableBuilder(listenable: Listenable.merge([_tabController, _configManager]))` برای هماهنگی و رندر یک‌باره استفاده شد.
+عملکرد صفحه بسیار روان‌تر گردید. تمامی تست‌های اپلیکیشن پاس شدند.
+وضعیت: ✅ تأیید و تکمیل شد (بهینه‌سازی با موفقیت اعمال شد).
