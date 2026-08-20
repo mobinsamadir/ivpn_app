@@ -1017,12 +1017,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                   backgroundColor: const Color(0xFF0A0A0A),
                 ),
               ),
-              ),
-              AnimatedBuilder(
-                animation: _tabController,
-                builder: (context, _) => ListenableBuilder(
-                  listenable: _configManager,
-                  builder: (context, _) {
+              ListenableBuilder(
+                listenable: Listenable.merge([_tabController, _configManager]),
+                builder: (context, _) {
                     List<VpnConfigWithMetrics> configs;
                     switch (_tabController.index) {
                       case 1:
@@ -1115,7 +1112,6 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                       }, childCount: configs.length),
                     );
                   },
-                ),
               ),
               const SliverToBoxAdapter(child: SizedBox(height: 20)),
             ],
