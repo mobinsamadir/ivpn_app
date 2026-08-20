@@ -3,7 +3,10 @@ import 'package:ivpn_new/services/config_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ivpn_new/services/storage_interface.dart';
 
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
 void main() {
+  FlutterSecureStorage.setMockInitialValues({});
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() async {
@@ -37,8 +40,8 @@ void main() {
       // before asserting on SharedPreferences.
       await Future.delayed(const Duration(milliseconds: 2000));
 
-      final prefs = await SharedPreferences.getInstance();
-      final savedString = prefs.getString('vpn_configs');
+      final storage = const FlutterSecureStorage();
+      final savedString = await storage.read(key: 'vpn_configs');
       expect(savedString, isNotNull);
       expect(savedString!.contains('Test Config'), isTrue);
     });
@@ -122,8 +125,8 @@ void main() {
         manager.splitTunnelingPackages = packages;
 
         await Future.delayed(const Duration(milliseconds: 50));
-        final prefs = await SharedPreferences.getInstance();
-        final savedJson = prefs.getString('split_tunneling_packages');
+        final storage = const FlutterSecureStorage();
+        final savedJson = await storage.read(key: 'split_tunneling_packages');
         expect(savedJson, '["com.example.app","com.example.game"]');
       });
 

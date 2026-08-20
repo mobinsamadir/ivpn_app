@@ -3,7 +3,10 @@ import 'package:ivpn_new/services/config_manager.dart';
 import 'package:ivpn_new/models/vpn_config_with_metrics.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // Needed for mocking prefs
 
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
 void main() {
+  FlutterSecureStorage.setMockInitialValues({});
   TestWidgetsFlutterBinding
       .ensureInitialized(); // Initialize binding for SharedPreferences
 
