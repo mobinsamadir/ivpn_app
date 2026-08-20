@@ -529,3 +529,9 @@ FROZEN_ZONES:
 ۲. عملیات سنگین Serialization و `jsonDecode` در فایل‌هایی مانند `config_manager.dart` و `config_gist_service.dart` و `ad_manager_service.dart` با استفاده از توابع ایزوله و `compute()` به پس‌زمینه منتقل شده‌اند و Main Thread دیگر مسدود نمی‌شود. همچنین در فایل‌های `singbox_config_generator.dart` و `testers/ephemeral_tester.dart` توابع wrapper برای استفاده در `compute()` اضافه شده است و دیگر باعث کندی سیستم نمی‌شوند.
 بنابراین هیچ نیازی به تغییر مجدد کدهای Production نبود. سیستم در حال حاضر از عملکرد بهینه‌ای برخوردار است.
 وضعیت: ✅ تأیید و تکمیل شد (تصمیم‌گیری خودکار بدون تغییر کد - کد از پیش بهینه است).
+### [تاریخ: 2026-08-10] Optimizer Report (Phase 2 Golden Rule Application)
+**اقدامات انجام شده:**
+طبق قانون طلایی (Golden Rule) و ماموریت Mastermind برای امشب (SCOPE: lib/screens/connection_home_screen.dart)، وارد فاز دوم (Phase 2) شدم.
+مشکل Rebuild بیهوده رابط کاربری مربوط به تایمرهای سراسری برطرف گردید تا پرفورمنس بهتر و انیمیشن‌ها روان‌تر شوند. `_timerUpdater` که هر یک دقیقه یک بار باعث Rebuild کل صفحه می‌شد (Global setState) حذف شد. ویجت‌هایی مثل `_SubscriptionCard` که به تایمر وابسته بودند با استفاده از `ListenableBuilder` مستقیماً به وضعیت `_timeWalletService` متصل شدند تا فقط خودشان Rebuild شوند.
+علاوه بر این، لاجیک به روزرسانی متغیرهای وضعیت بدون ایجاد کندی یا مسدودسازی مدیریت شد. این بهینه‌سازی از افت فریم جلوگیری می‌کند.
+وضعیت: ✅ تأیید و تکمیل شد (بهینه‌سازی با موفقیت اعمال شد).

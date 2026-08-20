@@ -65,7 +65,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   bool _autoTestOnStartup = true;
   bool _autoRefreshOnStartup = true;
   bool _isFetching = false;
-  Timer? _timerUpdater;
+
   final Set<String> _activeTestIds = {};
 
   // Connection Control
@@ -135,7 +135,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
 
     // AccessManager Listener
     _timeWalletService.init().then((_) {
-      if (mounted) setState(() {});
+      // Rebuild handled by ListenableBuilder
     });
     _timeWalletService.addListener(_onTimeChanged);
 
@@ -165,14 +165,12 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
         '[ConnectionHomeScreen] Received VPN status update: $status',
       );
       if (mounted) {
-        setState(() {
-          _lastNativeStatus = status;
-          // Update the connection status in ConfigManager to reflect the actual VPN status
-          _configManager.setConnected(
-            status == 'CONNECTED',
-            status: _getConnectionStatusMessage(status),
-          );
-        });
+        _lastNativeStatus = status;
+        // Update the connection status in ConfigManager to reflect the actual VPN status
+        _configManager.setConnected(
+          status == 'CONNECTED',
+          status: _getConnectionStatusMessage(status),
+        );
 
         if (status == 'DISCONNECTED' ||
             status.contains('Administrator privileges required') ||
@@ -192,10 +190,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
             }
           }
 
-          setState(() {
-            _rxBytes = 0;
-            _txBytes = 0;
-          });
+          _rxBytes = 0;
+          _txBytes = 0;
           if (!_configManager.userInitiatedDisconnect &&
               !_configManager.isConnectionCancelled) {
             final now = DateTime.now();
@@ -270,9 +266,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
       }
     });
 
-    _timerUpdater = Timer.periodic(const Duration(minutes: 1), (timer) {
-      if (mounted) setState(() {});
-    });
+
 
     // Start ping monitoring for auto-switch
     _startPingMonitoring();
@@ -292,7 +286,6 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     _statsSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _timeWalletService.removeListener(_onTimeChanged);
-    _timerUpdater?.cancel();
     _pingMonitorTimer?.cancel();
     _testProgress.dispose();
     _tabController.dispose();
@@ -404,7 +397,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
 
   void _onTimeChanged() {
     if (mounted) {
-      setState(() {});
+      // Rebuild handled by ListenableBuilder
       // Enforced disconnection UI alert
       if (!_timeWalletService.hasTime && _configManager.isConnected) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -748,10 +741,13 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                   child: Column(
                     children: [
                       const SizedBox(height: 8),
-                      _SubscriptionCard(
-                        hasTime: _timeWalletService.hasTime,
-                        remainingSeconds: _timeWalletService.remainingSeconds,
-                        onAddTime: _showAdSequence,
+                      ListenableBuilder(
+                        listenable: _timeWalletService,
+                        builder: (context, _) => _SubscriptionCard(
+                          hasTime: _timeWalletService.hasTime,
+                          remainingSeconds: _timeWalletService.remainingSeconds,
+                          onAddTime: _showAdSequence,
+                        ),
                       ),
                       const SizedBox(height: 16),
                       Padding(
