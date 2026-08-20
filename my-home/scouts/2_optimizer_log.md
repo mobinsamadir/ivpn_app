@@ -538,4 +538,12 @@ FROZEN_ZONES:
 ۲. آپدیت‌های زمان (TimeWallet) که با دستور `setState(() {})` در تابع `_onTimeChanged` انجام می‌شد به گونه‌ای تغییر یافت که رندر را محدود کند. به جای رندر کل صفحه، تنها بخش `_SubscriptionCard` را توسط یک `ListenableBuilder` به صورت محلی به‌روزرسانی کند.
 ۳. ویجت `AnimatedBuilder` متصل به `_tabController` که شامل لیستی طولانی (SliverList) بود و به اشتباه با هر فریم از تغییر وضعیت تب‌ها در حال فراخوانی مجدد تابع رندر بود حذف شد. و از یک `ListenableBuilder(listenable: Listenable.merge([_tabController, _configManager]))` برای هماهنگی و رندر یک‌باره استفاده شد.
 عملکرد صفحه بسیار روان‌تر گردید. تمامی تست‌های اپلیکیشن پاس شدند.
+### [تاریخ: 2026-08-10] Optimizer Report (Phase 2 Golden Rule Application)
+**اقدامات انجام شده:**
+طبق قانون طلایی (Golden Rule) و ماموریت Mastermind برای بهبود مدیریت استیت و کاهش Rebuildهای بیهوده (`lib/screens/connection_home_screen.dart`)، وارد فاز دوم (Phase 2) شدم.
+مشکلات شناسایی و برطرف شده:
+۱. لاجیک استفاده از `_timerUpdater` با فراخوانی مکرر `setState(() {})` حذف شد و به جای آن از `ListenableBuilder` در ترکیب با `_timeWalletService` برای `_SubscriptionCard` استفاده گردید تا فقط بخش زمان Rebuild شود.
+۲. فراخوانی‌های `setState` از ساب‌اسکریپشن‌های مرتبط با Network State (`_vpnStatusSubscription`، `rxBytes` و `txBytes`) که باعث Rebuildهای مداوم و بلاک شدن UI می‌شدند حذف شد، زیرا ویجت‌های مرتبط پیش‌تر به وسیله `ListenableBuilder` به `_configManager` متصل بودند.
+۳. هدر تب‌ها (`SliverPersistentHeader`) که به صورت دستی به وسیله `setState` آپدیت می‌شد درون یک `ListenableBuilder` متصل به `_configManager` قرار گرفت.
+تمامی تست‌ها با موفقیت پاس شدند و پرفورمنس نرم و بهینه گردید.
 وضعیت: ✅ تأیید و تکمیل شد (بهینه‌سازی با موفقیت اعمال شد).

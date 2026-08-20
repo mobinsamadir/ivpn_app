@@ -65,7 +65,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   bool _autoTestOnStartup = true;
   bool _autoRefreshOnStartup = true;
   bool _isFetching = false;
-  Timer? _timerUpdater;
+
   final Set<String> _activeTestIds = {};
 
   // Connection Control
@@ -135,7 +135,6 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
 
     // AccessManager Listener
     _timeWalletService.init().then((_) {
-      if (mounted) setState(() {});
     });
     _timeWalletService.addListener(_onTimeChanged);
 
@@ -165,14 +164,12 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
         '[ConnectionHomeScreen] Received VPN status update: $status',
       );
       if (mounted) {
-        setState(() {
-          _lastNativeStatus = status;
-          // Update the connection status in ConfigManager to reflect the actual VPN status
-          _configManager.setConnected(
-            status == 'CONNECTED',
-            status: _getConnectionStatusMessage(status),
-          );
-        });
+        _lastNativeStatus = status;
+        // Update the connection status in ConfigManager to reflect the actual VPN status
+        _configManager.setConnected(
+          status == 'CONNECTED',
+          status: _getConnectionStatusMessage(status),
+        );
 
         if (status == 'DISCONNECTED' ||
             status.contains('Administrator privileges required') ||
@@ -192,10 +189,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
             }
           }
 
-          setState(() {
-            _rxBytes = 0;
-            _txBytes = 0;
-          });
+          _rxBytes = 0;
+          _txBytes = 0;
           if (!_configManager.userInitiatedDisconnect &&
               !_configManager.isConnectionCancelled) {
             final now = DateTime.now();
@@ -290,7 +285,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     _statsSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _timeWalletService.removeListener(_onTimeChanged);
-    _timerUpdater?.cancel();
+
     _pingMonitorTimer?.cancel();
     _testProgress.dispose();
     _tabController.dispose();
@@ -977,9 +972,11 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                   ),
                 ),
               ),
-              SliverPersistentHeader(
-                pinned: true,
-                delegate: SliverTabBarDelegate(
+              ListenableBuilder(
+                listenable: _configManager,
+                builder: (context, _) => SliverPersistentHeader(
+                  pinned: true,
+                  delegate: SliverTabBarDelegate(
                   TabBar(
                     controller: _tabController,
                     indicator: BoxDecoration(
@@ -1322,7 +1319,6 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
         );
         if (added > 0) {
           _showToast("Server added successfully!");
-          setState(() {});
         } else {
           _showToast("Failed to add server. Invalid format or already exists.");
         }
