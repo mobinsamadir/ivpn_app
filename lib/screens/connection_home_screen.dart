@@ -82,7 +82,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   }
 
   String _lastNativeStatus = "DISCONNECTED";
-  bool _isAdmin = true;
+  final ValueNotifier<bool> _isAdmin = ValueNotifier<bool>(true);
 
   // NEW: Auto-switch throttle and limits
   int _consecutiveFailures = 0;
@@ -176,7 +176,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
             status.contains('Administrator')) {
           if (status.contains('Administrator privileges required') ||
               status.contains('Administrator')) {
-            if (mounted && _isAdmin) setState(() => _isAdmin = false);
+            _isAdmin.value = false;
             _configManager.userInitiatedDisconnect =
                 true; // Stop auto-switching
             if (mounted) {
@@ -273,7 +273,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     // Check admin status for UI banner
     if (Platform.isWindows) {
       _nativeVpnService.isAdmin().then((val) {
-        if (mounted && _isAdmin != val) setState(() => _isAdmin = val);
+        if (mounted) _isAdmin.value = val;
       });
     }
   }
@@ -288,6 +288,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
 
     _pingMonitorTimer?.cancel();
     _testProgress.dispose();
+    _isFetching.dispose();
+    _activeTestIds.dispose();
+    _isAdmin.dispose();
     _tabController.dispose();
     super.dispose();
   }
@@ -622,9 +625,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     try {
       await _loadPreferences();
       if (!_isInitialized) {
-        setState(() {
-          _isInitialized = true;
-        });
+        _isInitialized = true;
+        if (mounted) setState(() {});
       }
       AdvancedLogger.info('[HomeScreen] Initialized successfully');
 
@@ -726,7 +728,11 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
             cacheExtent: 1000,
             slivers: [
               // 1. Banner for Admin Warning (Windows only)
-              if (Platform.isWindows) _AdminWarningBanner(isAdmin: _isAdmin),
+              if (Platform.isWindows)
+                ValueListenableBuilder<bool>(
+                  valueListenable: _isAdmin,
+                  builder: (context, isAdmin, _) => _AdminWarningBanner(isAdmin: isAdmin),
+                ),
               const SliverToBoxAdapter(child: _AdBannerSection()),
               SliverToBoxAdapter(
                 child: Padding(
@@ -765,14 +771,15 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                                 ),
                               ],
                             ),
-                            Switch(
-                              value: _configManager.isAutoSwitchEnabled,
+                            ListenableBuilder(
+                              listenable: _configManager,
+                              builder: (context, _) => Switch(
+                                value: _configManager.isAutoSwitchEnabled,
                               activeThumbColor: Colors.blueAccent,
                               onChanged: (val) {
-                                setState(() {
-                                  _configManager.isAutoSwitchEnabled = val;
-                                });
-                              },
+                                _configManager.isAutoSwitchEnabled = val;
+                                },
+                              ),
                             ),
                           ],
                         ),
@@ -806,18 +813,19 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                           builder: (context, activeTestIds, _) => _SelectedConfigView(
                             config: _configManager.selectedConfig,
                             activeTestIds: activeTestIds,
-                          onRunSingleTest: _runSingleTest,
-                          onToggleFavorite: (id) async {
-                            await _configManager.toggleFavorite(id);
-                          },
-                          onDelete: (config) async {
-                            final confirm = await _showDeleteConfirmationDialog(
-                              config,
-                            );
-                            if (confirm && mounted) {
-                              await _configManager.deleteConfig(config.id);
-                            }
-                          },
+                            onRunSingleTest: _runSingleTest,
+                            onToggleFavorite: (id) async {
+                              await _configManager.toggleFavorite(id);
+                            },
+                            onDelete: (config) async {
+                              final confirm = await _showDeleteConfirmationDialog(
+                                config,
+                              );
+                              if (confirm && mounted) {
+                                await _configManager.deleteConfig(config.id);
+                              }
+                            },
+                          ),
                         ),
                         ),
                       ),
@@ -1172,10 +1180,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
       // 1. SMART WAIT LOOP
       // If we have no valid configs yet, wait for the Funnel
       if (_configManager.validatedConfigs.isEmpty) {
-        setState(
-          () =>
-              _configManager.setConnected(false, status: 'Testing servers...'),
-        );
+        _configManager.setConnected(false, status: 'Testing servers...');
 
         // Start Funnel if not running
         _funnelService.startFunnel(retestDead: false); // Prioritize fresh ones
@@ -1212,11 +1217,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   Future<void> _runSingleTest(VpnConfigWithMetrics config) async {
     if (_isNativeOperationInProgress) return;
     try {
-      if (mounted) {
-        final newSet = Set<String>.from(_activeTestIds.value);
-        newSet.add(config.id);
-        _activeTestIds.value = newSet;
-      }
+      if (mounted) _activeTestIds.value = {..._activeTestIds.value, config.id};
       _showToast('Testing ${config.name}...');
       final result = await _ephemeralTester.runTest(config);
       await _configManager.updateConfigDirectly(result);
@@ -1224,11 +1225,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     } catch (e) {
       _showToast('Test failed: $e');
     } finally {
-      if (mounted) {
-        final newSet = Set<String>.from(_activeTestIds.value);
-        newSet.remove(config.id);
-        _activeTestIds.value = newSet;
-      }
+      if (mounted) _activeTestIds.value = {..._activeTestIds.value}..remove(config.id);
     }
   }
 
