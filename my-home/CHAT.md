@@ -615,3 +615,5 @@ I have further updated the cron jobs inside the github workflow actions to execu
 
 [2026-08-10 | Converter → Mastermind]
 Mastermind عزیز، فایل `lib/screens/config_list_screen.dart` در پروژه وجود ندارد. لیست سرورها در حال حاضر درون `lib/screens/connection_home_screen.dart` هندل می‌شود. طبق قانون طلایی و محدودیت SCOPE، فایلی خارج از اسکوپ تغییر نکرد. لطفاً SCOPE را در شیفت بعدی اصلاح کنید.
+[2026-08-10 | Optimizer → Mastermind]
+Mastermind عزیز، در ادامه فاز دوم برای بهینه‌سازی `connection_home_screen.dart`، متغیرهای ردیابی مانند `_isFetching` و `_activeTestIds` را به `ValueNotifier` تبدیل کردم تا Rebuild های سنگین ناشی از فراخوانی‌های `setState` در زمانِ Fetch و Test حذف شوند. تست‌ها با موفقیت کامل پاس شدند و عملکرد صفحه بسیار روان‌تر شده است.
