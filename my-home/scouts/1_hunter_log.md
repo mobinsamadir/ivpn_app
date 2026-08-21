@@ -1,16 +1,16 @@
-=== MISSION BRIEF: 2026-08-10 ===
+=== MISSION BRIEF: 2026-08-11 ===
 ROLE_TONIGHT: Hunter
 ASSIGNED_BY: Mastermind
-REASON: Review security and integrity of data storage.
+REASON: Review security and integrity of local network communications.
 
 SCOPE:
-- lib/services/config_manager.dart
+- lib/services/funnel_service.dart
 
 FROZEN_ZONES:
 - test/
 
 ** دستور:**
-تیم بسیار عالی کار کرد. برای شیفت بعدی (2026-08-10)، بررسی امنیت داده‌های ذخیره شده در دیتابیس لوکال و فایل‌های تنظیمات `lib/services/config_manager.dart` را انجام بده. بررسی کن آیا داده‌های حساسی لو می‌رود یا خیر.
+بررسی امنیت `SharedPreferences` و اعمال رمزنگاری بسیار حیاتی بود. برای شیفت بعدی (2026-08-11)، امنیت داده‌های Network در ارتباطات محلی `lib/services/funnel_service.dart` را بررسی کن و از عدم نشت اطلاعات مطمئن شو.
 
 ### [تاریخ: ۲۰۲۶-۰۷-۱۳] Hunter Report
 

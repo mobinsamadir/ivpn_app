@@ -1,16 +1,16 @@
-=== MISSION BRIEF: 2026-08-10 ===
+=== MISSION BRIEF: 2026-08-11 ===
 ROLE_TONIGHT: Optimizer
 ASSIGNED_BY: Mastermind
-REASON: Optimize logic and state management.
+REASON: Optimize background processing logic.
 
 SCOPE:
-- lib/screens/connection_home_screen.dart
+- lib/services/singbox_config_generator.dart
 
 FROZEN_ZONES:
 - test/
 
 ** دستور:**
-کار روی `jsonDecode` و Rebuildها عالی بود. برای امشب (2026-08-10)، لطفا لاجیکِ مسیردهی و مدیریت استیت در `lib/screens/connection_home_screen.dart` را بررسی کن. مطمئن شو که هیچ Rebuild بیهوده یا لاجیک کندی در استیت منجر به افت فریم نمی‌شود.
+مدیریت استیت‌ها و جلوگیری از Rebuildهای بیهوده عالی بود. برای امشب (2026-08-11)، بهینه‌سازی پرفورمنس پردازش‌های پس‌زمینه در فایل `lib/services/singbox_config_generator.dart` را بررسی کن.
 
 ### [تاریخ: 2026-07-19] Optimizer Report (Golden Rule Application)
 طبق قانون طلایی (Golden Rule)، بدون انتظار برای تأیید انسان تصمیم گرفتم فاز دوم را بررسی و اجرا کنم. بررسی کدهای `lib/services/config_manager.dart` و `lib/services/funnel_service.dart` نشان داد که مشکلات عملکردی (مانند `.skip().take()` و `jsonDecode` مسدودکننده) پیش‌تر بهینه‌سازی شده‌اند و از متدهای `compute` و `.sublist()` استفاده می‌کنند. لذا هیچ تغییر کدی مورد نیاز نبود. فاز دوم رسما به اتمام رسید و گزارش‌ها آپدیت شدند.

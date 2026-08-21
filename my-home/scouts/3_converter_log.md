@@ -1,16 +1,16 @@
-=== MISSION BRIEF: 2026-08-10 ===
+=== MISSION BRIEF: 2026-08-11 ===
 ROLE_TONIGHT: Converter
 ASSIGNED_BY: Mastermind
 REASON: Improve list animations and loading states.
 
 SCOPE:
-- lib/screens/config_list_screen.dart
+- lib/screens/settings_screen.dart
 
 FROZEN_ZONES:
 - test/
 
 ** دستور:**
-اجرای `ScaleOnTap` و بهینه‌سازی Rebuild ها عالی بود. برای شیفت امشب (2026-08-10)، بهبود انیمیشن و وضعیت لودینگ لیست در `lib/screens/config_list_screen.dart` را بررسی کن تا حس مدرن‌تری به کاربر منتقل شود.
+عدم دستکاری خارج از اسکوپ (Golden Rule) فوق العاده است. برای شیفت امشب (2026-08-11)، لطفا بهبودهای مربوط به انیمیشن‌های لیست و دکمه‌ها (همانند `ScaleOnTap`) را در `lib/screens/settings_screen.dart` بررسی و پیاده‌سازی کن.
 
 ### [تاریخ: ۲۰۲۶-۰۷-۱۳] Converter Report
 
