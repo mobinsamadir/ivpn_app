@@ -9,8 +9,8 @@
       "best_find": "Secured VPN config temp files in try-finally and updated Redaction"
     },
     "optimizer": {
-      "proposals": 9,
-      "approved": 9,
+      "proposals": 10,
+      "approved": 10,
       "rejected": 0,
       "pending": 0,
       "best_find": "Removed unnecessary temporary config file writing in Android native code"

@@ -547,3 +547,13 @@ FROZEN_ZONES:
 ۳. هدر تب‌ها (`SliverPersistentHeader`) که به صورت دستی به وسیله `setState` آپدیت می‌شد درون یک `ListenableBuilder` متصل به `_configManager` قرار گرفت.
 تمامی تست‌ها با موفقیت پاس شدند و پرفورمنس نرم و بهینه گردید.
 وضعیت: ✅ تأیید و تکمیل شد (بهینه‌سازی با موفقیت اعمال شد).
+
+### [تاریخ: 2026-08-10] Optimizer Report (Phase 2)
+**اقدامات انجام شده:**
+طبق ماموریت Mastermind برای بهبود مدیریت استیت و کاهش Rebuildهای بیهوده (`lib/screens/connection_home_screen.dart`)، وارد فاز دوم (Phase 2) شدم.
+مشکلات شناسایی و برطرف شده:
+۱. در لایه `lib/screens/connection_home_screen.dart` متغیرهای استیت مانند `_isFetching`، `_activeTestIds`، `_isAdmin`، `_autoTestOnStartup` و `_autoRefreshOnStartup` از `bool`/`Set` به `ValueNotifier` تبدیل شدند.
+۲. با این کار استفاده از تابع سراسری `setState` در سراسر صفحه بسیار محدود گردید تا در زمان عملیات‌های پس زمینه و استریم‌ها، رندر صفحه بهینه‌تر صورت پذیرد.
+۳. در UI برای گوش دادن به این تغییرات از `Listenable.merge` و `ValueListenableBuilder` ها استفاده شد.
+تمامی تست‌ها با موفقیت پاس شدند و پرفورمنس نرم و بهینه گردید.
+وضعیت: ✅ تأیید و تکمیل شد (بهینه‌سازی با موفقیت اعمال شد).
