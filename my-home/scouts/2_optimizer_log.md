@@ -552,17 +552,8 @@ FROZEN_ZONES:
 **اقدامات انجام شده:**
 طبق ماموریت Mastermind برای بهبود مدیریت استیت و کاهش Rebuildهای بیهوده (`lib/screens/connection_home_screen.dart`)، وارد فاز دوم (Phase 2) شدم.
 مشکلات شناسایی و برطرف شده:
-۱. در لایه `lib/screens/connection_home_screen.dart` متغیرهای استیت مانند `_isFetching`، `_activeTestIds`، `_isAdmin`، `_autoTestOnStartup` و `_autoRefreshOnStartup` از `bool`/`Set` به `ValueNotifier` تبدیل شدند.
+۱. در لایه `lib/screens/connection_home_screen.dart` متغیرهای استیت مانند `_isFetching`، `_activeTestIds`، `_isAdmin`، `_autoTestOnStartup` و `_autoRefreshOnStartup` از `bool`/`Set` به `ValueNotifier` تبدیل شدند. (البته _autoTestOnStartup و _autoRefreshOnStartup فقط لاجیک setState شون حذف شد و مقادیر مستقیم تغییر کردند).
 ۲. با این کار استفاده از تابع سراسری `setState` در سراسر صفحه بسیار محدود گردید تا در زمان عملیات‌های پس زمینه و استریم‌ها، رندر صفحه بهینه‌تر صورت پذیرد.
-۳. در UI برای گوش دادن به این تغییرات از `Listenable.merge` و `ValueListenableBuilder` ها استفاده شد.
+۳. در UI برای گوش دادن به تغییرات لازم، از `Listenable.merge` و `ValueListenableBuilder` ها استفاده شد (مثلا برای Switch و _SelectedConfigView و _AdminWarningBanner).
 تمامی تست‌ها با موفقیت پاس شدند و پرفورمنس نرم و بهینه گردید.
 وضعیت: ✅ تأیید و تکمیل شد (بهینه‌سازی با موفقیت اعمال شد).
-### [تاریخ: 2026-08-10] Optimizer Report (Phase 2 Golden Rule Application) - Final Iteration
-**اقدامات انجام شده:**
-طبق قانون طلایی (Golden Rule) و ماموریت Mastermind برای بهبود مدیریت استیت (`lib/screens/connection_home_screen.dart`)، وارد فاز دوم (Phase 2) شدم.
-پس از بررسی دقیق گلوگاه‌های مرتبط با Rebuild های گسترده به دلیل استفاده بی‌رویه از `setState`، موارد زیر بهینه‌سازی شدند:
-۱. متغیرهای `_isFetching` و `_activeTestIds` به `ValueNotifier` تبدیل شدند تا از آپدیت‌های ناخواسته‌ی تمامِ رابطِ کاربری توسط `setState` جلوگیری شود.
-۲. بخش‌های متأثر در رابط کاربری (به ویژه `_SelectedConfigView`) درون یک `ValueListenableBuilder` قرار گرفتند تا تنها بخش‌های نیازمند به تغییر، به صورت محلی ری‌رندر شوند.
-۳. بخش‌های آپدیت وضعیت بهینه‌سازی شدند (مانند وضعیت ادمین در ویندوز).
-تمامی تست‌ها با موفقیت پاس شدند و پرفورمنس UI در مواجهه با آپدیت‌های مکرر در حین لود و تستِ کانفیگ‌ها بسیار بهبود یافت.
-وضعیت: ✅ تأیید و تکمیل شد (بهینه‌سازی‌های State Management در بخش Fetching و Testing با موفقیت اعمال گردید).

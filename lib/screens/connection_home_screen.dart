@@ -612,10 +612,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   Future<void> _loadPreferences() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      setState(() {
-        _autoTestOnStartup = prefs.getBool('autoTestOnStartup') ?? true;
-        _autoRefreshOnStartup = prefs.getBool('autoRefreshOnStartup') ?? true;
-      });
+      _autoTestOnStartup = prefs.getBool('autoTestOnStartup') ?? true;
+      _autoRefreshOnStartup = prefs.getBool('autoRefreshOnStartup') ?? true;
     } catch (e) {
       AdvancedLogger.error('Failed to load preferences: $e');
     }
@@ -625,8 +623,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     try {
       await _loadPreferences();
       if (!_isInitialized) {
-        _isInitialized = true;
-        if (mounted) setState(() {});
+        setState(() {
+          _isInitialized = true;
+        });
       }
       AdvancedLogger.info('[HomeScreen] Initialized successfully');
 
@@ -808,25 +807,21 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                       const SizedBox(height: 30),
                       ListenableBuilder(
                         listenable: _configManager,
-                        builder: (context, _) => ValueListenableBuilder<Set<String>>(
-                          valueListenable: _activeTestIds,
-                          builder: (context, activeTestIds, _) => _SelectedConfigView(
-                            config: _configManager.selectedConfig,
-                            activeTestIds: activeTestIds,
-                            onRunSingleTest: _runSingleTest,
-                            onToggleFavorite: (id) async {
-                              await _configManager.toggleFavorite(id);
-                            },
-                            onDelete: (config) async {
-                              final confirm = await _showDeleteConfirmationDialog(
-                                config,
-                              );
-                              if (confirm && mounted) {
-                                await _configManager.deleteConfig(config.id);
-                              }
-                            },
-                          ),
-                        ),
+                        builder: (context, _) => _SelectedConfigView(
+                          config: _configManager.selectedConfig,
+                          activeTestIds: _activeTestIds.value,
+                          onRunSingleTest: _runSingleTest,
+                          onToggleFavorite: (id) async {
+                            await _configManager.toggleFavorite(id);
+                          },
+                          onDelete: (config) async {
+                            final confirm = await _showDeleteConfirmationDialog(
+                              config,
+                            );
+                            if (confirm && mounted) {
+                              await _configManager.deleteConfig(config.id);
+                            }
+                          },
                         ),
                       ),
                       const SizedBox(height: 25),
@@ -834,15 +829,11 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                         autoTestOnStartup: _autoTestOnStartup,
                         autoRefreshOnStartup: _autoRefreshOnStartup,
                         onAutoTestChanged: (val) {
-                          setState(() {
-                            _autoTestOnStartup = val;
-                          });
+                          _autoTestOnStartup = val;
                           _savePreferences();
                         },
                         onAutoRefreshChanged: (val) {
-                          setState(() {
-                            _autoRefreshOnStartup = val;
-                          });
+                          _autoRefreshOnStartup = val;
                           _savePreferences();
                         },
                       ),
