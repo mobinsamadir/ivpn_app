@@ -64,9 +64,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   bool _isInitialized = false;
   bool _autoTestOnStartup = true;
   bool _autoRefreshOnStartup = true;
-  bool _isFetching = false;
+  final ValueNotifier<bool> _isFetching = ValueNotifier<bool>(false);
 
-  final Set<String> _activeTestIds = {};
+  final ValueNotifier<Set<String>> _activeTestIds = ValueNotifier<Set<String>>({});
 
   // Connection Control
   // CRITICAL FIX: Debounce Auto-Switch
@@ -76,8 +76,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     final status = _configManager.connectionStatus.toLowerCase();
     return status.contains('disconnecting') ||
         status.contains('testing') ||
-        _activeTestIds.isNotEmpty ||
-        _isFetching ||
+        _activeTestIds.value.isNotEmpty ||
+        _isFetching.value ||
         _isSwitching;
   }
 
@@ -176,7 +176,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
             status.contains('Administrator')) {
           if (status.contains('Administrator privileges required') ||
               status.contains('Administrator')) {
-            _isAdmin = false;
+            if (mounted && _isAdmin) setState(() => _isAdmin = false);
             _configManager.userInitiatedDisconnect =
                 true; // Stop auto-switching
             if (mounted) {
@@ -273,7 +273,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     // Check admin status for UI banner
     if (Platform.isWindows) {
       _nativeVpnService.isAdmin().then((val) {
-        if (mounted) setState(() => _isAdmin = val);
+        if (mounted && _isAdmin != val) setState(() => _isAdmin = val);
       });
     }
   }
@@ -523,17 +523,13 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
 
   Future<void> _initAppSequence() async {
     if (!mounted) return;
-    setState(() {
-      _isFetching = true;
-    });
+    _isFetching.value = true;
 
     final bool hasInternet = await _connectivityService.hasInternet();
 
     if (!hasInternet) {
       if (mounted) {
-        setState(() {
-          _isFetching = false;
-        });
+        _isFetching.value = false;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text("No Internet Connection. Testing Aborted."),
@@ -565,9 +561,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
       AdvancedLogger.warn("[HomeScreen] Config fetch failed: $e");
     } finally {
       if (mounted) {
-        setState(() {
-          _isFetching = false;
-        });
+        _isFetching.value = false;
       }
     }
 
@@ -807,9 +801,11 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                       const SizedBox(height: 30),
                       ListenableBuilder(
                         listenable: _configManager,
-                        builder: (context, _) => _SelectedConfigView(
-                          config: _configManager.selectedConfig,
-                          activeTestIds: _activeTestIds,
+                        builder: (context, _) => ValueListenableBuilder<Set<String>>(
+                          valueListenable: _activeTestIds,
+                          builder: (context, activeTestIds, _) => _SelectedConfigView(
+                            config: _configManager.selectedConfig,
+                            activeTestIds: activeTestIds,
                           onRunSingleTest: _runSingleTest,
                           onToggleFavorite: (id) async {
                             await _configManager.toggleFavorite(id);
@@ -822,6 +818,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                               await _configManager.deleteConfig(config.id);
                             }
                           },
+                        ),
                         ),
                       ),
                       const SizedBox(height: 25),
@@ -1019,7 +1016,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
               ),
               ),
               ListenableBuilder(
-                listenable: Listenable.merge([_tabController, _configManager]),
+                listenable: Listenable.merge([_tabController, _configManager, _isFetching, _activeTestIds]),
                 builder: (context, _) {
                     List<VpnConfigWithMetrics> configs;
                     switch (_tabController.index) {
@@ -1035,7 +1032,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                     }
 
                     if (configs.isEmpty) {
-                      if (_isFetching) {
+                      if (_isFetching.value) {
                         return SliverList(
                           delegate: SliverChildBuilderDelegate(
                             (context, index) => const ShimmerConfigCard(),
@@ -1078,7 +1075,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                           config: config,
                           isSelected:
                               _configManager.selectedConfig?.id == config.id,
-                          isTesting: _activeTestIds.contains(config.id),
+                          isTesting: _activeTestIds.value.contains(config.id),
                           onTap: () async {
                             _configManager.selectConfig(config);
 
@@ -1135,8 +1132,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     // Now check if other operations are in progress (testing, fetching, switching)
     if (status.contains('disconnecting') ||
         status.contains('testing') ||
-        _activeTestIds.isNotEmpty ||
-        _isFetching ||
+        _activeTestIds.value.isNotEmpty ||
+        _isFetching.value ||
         _isSwitching) {
       return;
     }
@@ -1215,7 +1212,11 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   Future<void> _runSingleTest(VpnConfigWithMetrics config) async {
     if (_isNativeOperationInProgress) return;
     try {
-      if (mounted) setState(() => _activeTestIds.add(config.id));
+      if (mounted) {
+        final newSet = Set<String>.from(_activeTestIds.value);
+        newSet.add(config.id);
+        _activeTestIds.value = newSet;
+      }
       _showToast('Testing ${config.name}...');
       final result = await _ephemeralTester.runTest(config);
       await _configManager.updateConfigDirectly(result);
@@ -1223,7 +1224,11 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     } catch (e) {
       _showToast('Test failed: $e');
     } finally {
-      if (mounted) setState(() => _activeTestIds.remove(config.id));
+      if (mounted) {
+        final newSet = Set<String>.from(_activeTestIds.value);
+        newSet.remove(config.id);
+        _activeTestIds.value = newSet;
+      }
     }
   }
 
@@ -1231,9 +1236,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     if (!mounted) return;
     if (_isNativeOperationInProgress) return;
     _showToast('Refreshing configs...');
-    setState(() {
-      _isFetching = true;
-    });
+    _isFetching.value = true;
     try {
       await _configGistService.fetchAndApplyConfigs(
         _configManager,
@@ -1244,9 +1247,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
       _showToast('Failed to refresh configs: $e');
     } finally {
       if (mounted) {
-        setState(() {
-          _isFetching = false;
-        });
+        _isFetching.value = false;
       }
     }
   }
