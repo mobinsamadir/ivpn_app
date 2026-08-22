@@ -210,13 +210,13 @@ class FunnelService {
   }
 
   void _printTelemetrySummary() {
-    debugPrint("--- [TELEMETRY] FUNNEL RUN SUMMARY ---");
-    debugPrint("Total Tested: $_totalConfigs");
-    debugPrint("Total Passed TCP: $_tcpPassed");
-    debugPrint("Total Passed HTTP: $_httpPassed");
-    debugPrint("Total Passed Speed: $_speedFinished");
-    debugPrint("Total Failed: $_totalFailed");
-    debugPrint("--------------------------------------");
+    AdvancedLogger.debug("--- [TELEMETRY] FUNNEL RUN SUMMARY ---");
+    AdvancedLogger.debug("Total Tested: $_totalConfigs");
+    AdvancedLogger.debug("Total Passed TCP: $_tcpPassed");
+    AdvancedLogger.debug("Total Passed HTTP: $_httpPassed");
+    AdvancedLogger.debug("Total Passed Speed: $_speedFinished");
+    AdvancedLogger.debug("Total Failed: $_totalFailed");
+    AdvancedLogger.debug("--------------------------------------");
   }
 
   void _startUiThrottle() {
@@ -314,14 +314,14 @@ class FunnelService {
         } else {
           // Failed TCP - Mark Dead
           _totalFailed++;
-          debugPrint(
+          AdvancedLogger.debug(
             "[TELEMETRY] ${config.name} | LastPassedStage: 0 | PingDuration: N/A | ExactException: TCP Connect Timeout",
           );
           await _configManager.markFailure(config.id);
         }
       } catch (e) {
         _totalFailed++;
-        debugPrint(
+        AdvancedLogger.debug(
           "[TELEMETRY] ${config.name} | LastPassedStage: 0 | PingDuration: N/A | ExactException: $e",
         );
         AdvancedLogger.warn("TCP Worker Error: $e");
@@ -356,7 +356,7 @@ class FunnelService {
         if (result.funnelStage >= 2) {
           // Success (2 or 3)
           _httpPassed++;
-          debugPrint(
+          AdvancedLogger.debug(
             "[TELEMETRY] ${config.name} | LastPassedStage: 2 | PingDuration: ${result.currentPing} | ExactException: None",
           );
 
@@ -367,14 +367,14 @@ class FunnelService {
           _speedQueue.add(result);
         } else {
           _totalFailed++;
-          debugPrint(
+          AdvancedLogger.debug(
             "[TELEMETRY] ${config.name} | LastPassedStage: 1 | PingDuration: ${result.currentPing} | ExactException: HTTP Failed (No 204)",
           );
           await _configManager.markFailure(config.id);
         }
       } catch (e) {
         _totalFailed++;
-        debugPrint(
+        AdvancedLogger.debug(
           "[TELEMETRY] ${config.name} | LastPassedStage: 1 | PingDuration: N/A | ExactException: $e",
         );
         AdvancedLogger.warn("HTTP Worker Error: $e");
