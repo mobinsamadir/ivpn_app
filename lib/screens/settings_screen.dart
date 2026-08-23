@@ -63,9 +63,14 @@ class _SettingsScreenState extends State<SettingsScreen>
           '3. Find "iVPN" and select "Don\'t optimize"',
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+          ScaleOnTap(
+            onTap: () => Navigator.pop(context, false),
+            child: IgnorePointer(
+              child: TextButton(
+                onPressed: () {},
+                child: const Text('Cancel'),
+              ),
+            ),
           ),
           ScaleOnTap(
             onTap: () => Navigator.pop(context, true),
