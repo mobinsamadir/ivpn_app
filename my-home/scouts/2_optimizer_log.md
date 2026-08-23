@@ -583,3 +583,7 @@ FROZEN_ZONES:
 ### [تاریخ: 2026-08-11] Optimizer Report (Phase 2 Golden Rule Application) - Correction
 **اقدامات انجام شده:**
 پس از بررسی مجدد مشخص شد که استفاده از `compute()` برای `jsonDecode` در داخل حلقه‌ها (مثل `singbox_config_generator.dart`) سربار بسیار بالایی برای ساخت Isolate ایجاد می‌کند که منجر به افت پرفورمنس می‌شود. از آنجایی که حجم داده در این بخش‌ها کم است، فراخوانی مستقیم `jsonDecode` بسیار بهینه‌تر است. بنابراین تمامی تغییرات غیرضروری برگردانده شدند و تأیید می‌شود که کدهای `lib/services/` در حال حاضر در بهینه‌ترین حالت ممکن قرار دارند و نیازی به تغییر ندارند.
+### [تاریخ: ۲۰۲۶-۰۸-۲۳] Optimizer Report (Phase 2) - Final Audit
+**اقدامات انجام شده:**
+طبق دستور جدید، Abandoned `compute()` and wrapper methods. Retained inline synchronous `jsonDecode` as it is the most performant approach for small payloads inside loops, avoiding Isolate overhead.
+وضعیت: ✅ تأیید و تکمیل شد (بهینه‌سازی با موفقیت اعمال شد).

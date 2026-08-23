@@ -6,8 +6,6 @@ import '../utils/advanced_logger.dart';
 
 import '../utils/base64_utils.dart';
 
-Map<String, dynamic> _parseJsonMap(String str) => jsonDecode(str) as Map<String, dynamic>;
-
 class SingboxConfigGenerator {
   // Ports
   static const int localSocksPort = 10808;
@@ -112,7 +110,7 @@ class SingboxConfigGenerator {
     if (decoded.isEmpty) throw FormatException("Invalid VMess Base64");
 
     final Map<String, dynamic> data =
-        _parseJsonMap(decoded);
+        jsonDecode(decoded);
 
     final Map<String, dynamic> outbound = {
       "type": "vmess",
@@ -206,7 +204,7 @@ class SingboxConfigGenerator {
           try {
             final decoded = Base64Utils.safeDecode(possibleBase64);
             if (decoded.startsWith('{')) {
-              final json = _parseJsonMap(decoded);
+              final json = jsonDecode(decoded);
               // Extract from JSON
               host = json['add'];
               port = int.tryParse(json['port']?.toString() ?? '443') ?? 443;
@@ -449,7 +447,7 @@ class SingboxConfigGenerator {
 
         try {
           final Map<String, dynamic> data =
-              _parseJsonMap(decoded);
+              jsonDecode(decoded);
           return {
             'host': data['add'],
             'port': int.tryParse(data['port']?.toString() ?? '443') ?? 443,
