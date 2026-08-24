@@ -110,7 +110,7 @@ class SingboxConfigGenerator {
     if (decoded.isEmpty) throw FormatException("Invalid VMess Base64");
 
     final Map<String, dynamic> data =
-        jsonDecode(decoded);
+        _parseJsonMap(decoded);
 
     final Map<String, dynamic> outbound = {
       "type": "vmess",
@@ -204,7 +204,7 @@ class SingboxConfigGenerator {
           try {
             final decoded = Base64Utils.safeDecode(possibleBase64);
             if (decoded.startsWith('{')) {
-              final json = jsonDecode(decoded);
+              final json = _parseJsonMap(decoded);
               // Extract from JSON
               host = json['add'];
               port = int.tryParse(json['port']?.toString() ?? '443') ?? 443;
@@ -447,7 +447,7 @@ class SingboxConfigGenerator {
 
         try {
           final Map<String, dynamic> data =
-              jsonDecode(decoded);
+              _parseJsonMap(decoded);
           return {
             'host': data['add'],
             'port': int.tryParse(data['port']?.toString() ?? '443') ?? 443,
@@ -788,5 +788,9 @@ class SingboxConfigGenerator {
     };
 
     return jsonEncode(config);
+  }
+
+  static Map<String, dynamic> _parseJsonMap(String jsonStr) {
+    return jsonDecode(jsonStr) as Map<String, dynamic>;
   }
 }
