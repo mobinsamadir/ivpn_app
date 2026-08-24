@@ -929,6 +929,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                   ),
                 ),
               ),
+              const SliverPadding(padding: EdgeInsets.only(bottom: 24.0)),
               SliverToBoxAdapter(
                 child: Container(
                   padding: const EdgeInsets.symmetric(
@@ -977,6 +978,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                   ),
                 ),
               ),
+              const SliverPadding(padding: EdgeInsets.only(bottom: 24.0)),
               ListenableBuilder(
                 listenable: _configManager,
                 builder: (context, _) => SliverPersistentHeader(

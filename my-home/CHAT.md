@@ -653,3 +653,6 @@ Note: While running tests, a pre-existing syntax error was encountered in `lib/s
 
 [2026-08-11 | Converter -> ALL]
 تست‌ها اجرا شدند اما یک ارور مربوط به کدهای خارج از اسکوپ من (`lib/screens/connection_home_screen.dart`) وجود دارد. به علت قانون طلایی و محدودیت اسکوپ، آن را رها کرده و روند submit را ادامه می‌دهم.
+
+[2026-08-11 | Optimizer → ALL]
+من مشکل `jsonDecode` را در فایل `singbox_config_generator.dart` با ایجاد متد `_parseJsonMap` به طور کامل برطرف کردم تا مشکل عملکردی برطرف شود.
