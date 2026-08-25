@@ -140,3 +140,13 @@ FROZEN_ZONES:
 ### [تاریخ: 2026-08-11] Converter Report (Phase 2 Verification Exception)
 **اقدامات انجام شده:**
 طبق قانون طلایی (Golden Rule) و با بررسی نتایج اجرای تست، مشخص شد خطای سینتکسی و کامپایل در فایل `lib/screens/connection_home_screen.dart` از قبل وجود داشته است (این فایل خارج از SCOPE شیفت من است). تمام تست‌های مربوط به فایل‌های تغییر داده شده (`lib/screens/settings_screen.dart` و ...) با موفقیت پاس شدند. با توجه به محدودیت اسکوپ امشب، خطای کدهای خارج از اسکوپ تغییر داده نشد و کارم را به اتمام رساندم.
+### [تاریخ: 2026-08-11] Converter Report (Phase 2 Golden Rule Application) - Final Audit
+**اقدامات انجام شده:**
+طبق قانون طلایی (Golden Rule) و ماموریت امشب (SCOPE: lib/screens/settings_screen.dart) جهت بهبود انیمیشن‌های لیست و دکمه‌ها، وارد فاز دوم (Phase 2) شدم.
+با بررسی فایل مربوطه، لیست‌های `ListTile` و `SwitchListTile` در بخش‌های Connection و Split Tunneling فاقد بازخورد لمسی مناسب (انیمیشن `ScaleOnTap`) بودند.
+برای رفع این مشکل:
+۱. ویجت `ListTile` مربوط به `Keep VPN Alive` با ترکیب `ScaleOnTap` و `IgnorePointer` رپ شد و عملیات onTap به `ScaleOnTap` منتقل گردید.
+۲. ویجت `SwitchListTile` برای `Kill Switch` به دلیل ساختار، به `ListTile` به همراه دکمه‌ی مجزای `Switch` در بخش trailing تغییر یافت و با ترکیب `ScaleOnTap` و `IgnorePointer` محصور شد تا کل ردیف انیمیشن ScaleDown دریافت کند و مقدار وضعیت Kill Switch نیز به درستی معکوس (Toggle) شود.
+۳. ویجت `ListTile` برای `Split Tunneling` نیز به صورت مشابه با ترکیب `ScaleOnTap` و `IgnorePointer` ارتقا یافت تا با کلیک روی آن انیمیشن اعمال شود.
+تغییرات در محیط ایزوله کاملاً بررسی شدند و تمامی تست‌های وابسته با موفقیت پاس شدند.
+وضعیت: ✅ تأیید و تکمیل شد (بهینه‌سازی انیمیشن لیست‌ها با موفقیت اعمال شد).

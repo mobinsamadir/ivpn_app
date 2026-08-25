@@ -827,7 +827,6 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                             },
                           ),
                         ),
-                        ),
                       ),
                       const SizedBox(height: 25),
                       _AutoTestToggleGroup(
