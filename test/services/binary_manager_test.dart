@@ -6,23 +6,44 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('BinaryManager Tests', () {
-    test('ensureBinary handles different platforms correctly', () async {
+    setUp(() {
+      BinaryManager.debugIsWindows = null;
+      BinaryManager.debugIsAndroid = null;
+    });
+
+    test('ensureBinary handles fallback (Linux/MacOS) correctly', () async {
+      BinaryManager.debugIsWindows = false;
+      BinaryManager.debugIsAndroid = false;
+
+      final result = await BinaryManager.ensureBinary();
+      expect(result, 'sing-box');
+    });
+
+    test('ensureBinary throws UnsupportedError on Android', () async {
+      BinaryManager.debugIsWindows = false;
+      BinaryManager.debugIsAndroid = true;
+
       try {
-        final result = await BinaryManager.ensureBinary();
-        if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-          expect(result, isNotEmpty);
-        }
+        await BinaryManager.ensureBinary();
+        fail('Should have thrown UnsupportedError on Android');
       } catch (e) {
-        if (Platform.isAndroid) {
-          expect(e, isA<UnsupportedError>());
-          expect(
-              (e as UnsupportedError).message,
-              contains(
-                  "BinaryManager.ensureBinary() is not supported on Android."));
-        } else {
-          rethrow;
-        }
+        expect(e, isA<UnsupportedError>());
+        expect(
+            (e as UnsupportedError).message,
+            contains(
+                "BinaryManager.ensureBinary() is not supported on Android."));
       }
+    });
+
+    test('ensureBinary on Windows calls WindowsVpnService.getExecutablePath', () async {
+      BinaryManager.debugIsWindows = true;
+      BinaryManager.debugIsAndroid = false;
+
+      final result = await BinaryManager.ensureBinary();
+      // On non-Windows OS, we can't fully mock getExecutablePath since it's static and checks Directory.current
+      // But it should return a String that ends with sing-box.exe based on its implementation
+      expect(result, isA<String>());
+      expect(result, endsWith('sing-box.exe'));
     });
   });
 }
