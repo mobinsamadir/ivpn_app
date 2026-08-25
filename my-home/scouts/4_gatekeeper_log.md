@@ -386,3 +386,16 @@ FROZEN_ZONES:
 تست `integration_test/vpn_lifecycle_test.dart` مجددا بهینه‌سازی شد. برای دور زدن نیازمندی به پلتفرم‌های Native، متد چنل‌های `NativeVpnService` با دقت Mock شدند تا صرفاً واکنش‌های UI (تغییر از CONNECT به CONNECTING) تست شود. با توجه به محدودیت‌های محیط (عدم وجود gtk+-3.0)، اجرای تست‌ها به pipeline CI واگذار شد که وابستگی‌های GUI لینوکس را دارد. تست اکنون برای اجرا در CI آماده است.
 
 وضعیت: ✅ تأیید و در ریپازیتوری کامیت شد.
+
+### [تاریخ: 2026-08-11] Gatekeeper Report (Phase 2 Golden Rule Application) - BinaryManager
+**اقدامات انجام شده:**
+طبق قانون طلایی (Golden Rule)، بدون انتظار برای تأیید انسان فاز دوم برای نوشتن Unit Test کامل فایل `binary_manager.dart` در `test/services/binary_manager_test.dart` اجرا گردید:
+
+۱. با افزودن `@visibleForTesting` متغیرهای استاتیک (`debugIsWindows` و `debugIsAndroid`) به کلاس `BinaryManager` امکان تست کردن مسیرهای پلتفرم‌های مختلف فراهم شد.
+۲. در فایل `test/services/binary_manager_test.dart` تست‌هایی جهت پوشش رفتار بر روی Windows (فراخوانی WindowsVpnService)، Android (پرتاب خطای UnsupportedError) و سیستم‌عامل‌های دیگر (fallback برای لینوکس/مک) نوشته شد.
+۳. اجرای تست به درستی انجام شد و این فایل اکنون تحت پوشش کامل تست است و کاوریج آن ارتقا یافت.
+
+**نتیجه‌گیری:**
+تست‌های مربوط به `BinaryManager` با موفقیت نوشته و اجرا گردید.
+
+وضعیت: ✅ تأیید و تکمیل شد (تصمیم‌گیری خودکار بدون نیاز به تغییر منطق کدهای اصلی در Production).
