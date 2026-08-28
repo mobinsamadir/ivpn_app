@@ -6,23 +6,39 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('BinaryManager Tests', () {
-    test('ensureBinary handles different platforms correctly', () async {
-      try {
-        final result = await BinaryManager.ensureBinary();
-        if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-          expect(result, isNotEmpty);
-        }
-      } catch (e) {
-        if (Platform.isAndroid) {
-          expect(e, isA<UnsupportedError>());
-          expect(
-              (e as UnsupportedError).message,
-              contains(
-                  "BinaryManager.ensureBinary() is not supported on Android."));
-        } else {
-          rethrow;
-        }
-      }
+    tearDown(() {
+      BinaryManager.debugIsWindows = null;
+      BinaryManager.debugIsAndroid = null;
+    });
+
+    test('ensureBinary handles Windows correctly', () async {
+      BinaryManager.debugIsWindows = true;
+      BinaryManager.debugIsAndroid = false;
+
+      final result = await BinaryManager.ensureBinary();
+      expect(result, isNotEmpty);
+    });
+
+    test('ensureBinary handles Android correctly', () async {
+      BinaryManager.debugIsWindows = false;
+      BinaryManager.debugIsAndroid = true;
+
+      expect(
+        () async => await BinaryManager.ensureBinary(),
+        throwsA(isA<UnsupportedError>().having(
+          (e) => e.message,
+          'message',
+          contains("BinaryManager.ensureBinary() is not supported on Android."),
+        )),
+      );
+    });
+
+    test('ensureBinary handles Linux/MacOS fallback correctly', () async {
+      BinaryManager.debugIsWindows = false;
+      BinaryManager.debugIsAndroid = false;
+
+      final result = await BinaryManager.ensureBinary();
+      expect(result, equals('sing-box'));
     });
   });
 }
