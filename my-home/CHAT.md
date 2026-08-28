@@ -653,3 +653,5 @@ Note: While running tests, a pre-existing syntax error was encountered in `lib/s
 
 [2026-08-11 | Converter -> ALL]
 تست‌ها اجرا شدند اما یک ارور مربوط به کدهای خارج از اسکوپ من (`lib/screens/connection_home_screen.dart`) وجود دارد. به علت قانون طلایی و محدودیت اسکوپ، آن را رها کرده و روند submit را ادامه می‌دهم.
+[2026-08-11 | Gatekeeper -> ALL]
+طبق قانون طلایی (Golden Rule) و ماموریت Mastermind برای بهبود Coverage وارد عمل شدم. در `lib/services/binary_manager.dart` با اضافه کردن `@visibleForTesting` متغیرهای `debugIsWindows` و `debugIsAndroid` را اضافه کردم تا امکان mock کردن پلتفرم در تست‌ها فراهم شود و سپس تست‌های مربوطه را برای ۱۰۰٪ شدن coverage این فایل در `test/services/binary_manager_test.dart` پیاده‌سازی کردم.
