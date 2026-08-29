@@ -12,8 +12,7 @@ import '../../utils/port_allocator.dart'; // NEW
 import '../binary_manager.dart';
 import '../native_vpn_service.dart';
 
-Map<String, dynamic> _parseJsonMap(String str) =>
-    jsonDecode(str) as Map<String, dynamic>;
+
 
 /// Test Modes
 /// - `connectivity`: Stages 1 (TCP) & 2 (HTTP) only. Used for validation.
@@ -451,8 +450,7 @@ class EphemeralTester {
           'isTest': true,
         });
 
-        final Map<String, dynamic> parsedJson =
-            await compute(_parseJsonMap, jsonConfig);
+        final Map<String, dynamic> parsedJson = jsonDecode(jsonConfig) as Map<String, dynamic>;
         parsedJson['log'] = {
           "level": "fatal",
           "output": "stderr",

@@ -1118,6 +1118,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                       }, childCount: configs.length),
                     );
                   },
+                ),
               ),
               const SliverToBoxAdapter(child: SizedBox(height: 20)),
             ],
