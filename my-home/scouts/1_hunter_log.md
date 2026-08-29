@@ -1,16 +1,14 @@
-=== MISSION BRIEF: 2026-08-11 ===
-ROLE_TONIGHT: Hunter
+=== MISSION BRIEF: 2026-08-12 ===
+ROLE_TONIGHT: Security
 ASSIGNED_BY: Mastermind
-REASON: Review security and integrity of local network communications.
+REASON: Check ephemeral tester for potential information leaks.
 
 SCOPE:
-- lib/services/funnel_service.dart
+- lib/services/ephemeral_tester.dart
 
 FROZEN_ZONES:
 - test/
 
-** دستور:**
-بررسی امنیت `SharedPreferences` و اعمال رمزنگاری بسیار حیاتی بود. برای شیفت بعدی (2026-08-11)، امنیت داده‌های Network در ارتباطات محلی `lib/services/funnel_service.dart` را بررسی کن و از عدم نشت اطلاعات مطمئن شو.
 
 ### [تاریخ: ۲۰۲۶-۰۷-۱۳] Hunter Report
 
