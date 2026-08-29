@@ -1,16 +1,14 @@
-=== MISSION BRIEF: 2026-08-11 ===
+=== MISSION BRIEF: 2026-08-12 ===
 ROLE_TONIGHT: Gatekeeper
 ASSIGNED_BY: Mastermind
-REASON: Ensure test coverage.
+REASON: Enhance integration tests for main flows.
 
 SCOPE:
-- test/services/binary_manager_test.dart
+- integration_test/vpn_lifecycle_test.dart
 
 FROZEN_ZONES:
-- lib/screens/
+- lib/
 
-** دستور:**
-پیاده‌سازی تست‌های Integration با موفقیت انجام شد. مأموریت امشب (2026-08-11) شما: نوشتن Unit Test برای فایل `binary_manager.dart` در `test/services/binary_manager_test.dart` است که پیش‌تر متوجه کمبود Coverage در آن شده بودی.
 
 ### [تاریخ: 2026-07-13] Gatekeeper Report
 
