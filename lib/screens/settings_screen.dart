@@ -111,32 +111,37 @@ class _SettingsScreenState extends State<SettingsScreen>
               ),
             ),
           ),
-          ListTile(
-            leading: Icon(
-              _isBatteryOptimizationIgnored
-                  ? Icons.shield
-                  : Icons.battery_alert,
-              color:
-                  _isBatteryOptimizationIgnored ? Colors.green : Colors.orange,
-            ),
-            title: const Text('Keep VPN Alive'),
-            subtitle: Text(
-              _isBatteryOptimizationIgnored
-                  ? 'Optimizations disabled (Stable)'
-                  : 'Prevent background kills (Recommended)',
-              style: TextStyle(
-                color: _isBatteryOptimizationIgnored
-                    ? Colors.green
-                    : Colors.orange,
-                fontSize: 12,
-              ),
-            ),
-            trailing: _isBatteryOptimizationIgnored
-                ? const Icon(Icons.check_circle, color: Colors.green)
-                : const Icon(Icons.arrow_forward_ios, size: 16),
+          ScaleOnTap(
             onTap: _isBatteryOptimizationIgnored
                 ? null
                 : _requestBatteryOptimization,
+            child: IgnorePointer(
+              child: ListTile(
+                leading: Icon(
+                  _isBatteryOptimizationIgnored
+                      ? Icons.shield
+                      : Icons.battery_alert,
+                  color:
+                      _isBatteryOptimizationIgnored ? Colors.green : Colors.orange,
+                ),
+                title: const Text('Keep VPN Alive'),
+                subtitle: Text(
+                  _isBatteryOptimizationIgnored
+                      ? 'Optimizations disabled (Stable)'
+                      : 'Prevent background kills (Recommended)',
+                  style: TextStyle(
+                    color: _isBatteryOptimizationIgnored
+                        ? Colors.green
+                        : Colors.orange,
+                    fontSize: 12,
+                  ),
+                ),
+                trailing: _isBatteryOptimizationIgnored
+                    ? const Icon(Icons.check_circle, color: Colors.green)
+                    : const Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: () {},
+              ),
+            ),
           ),
           SwitchListTile(
             title: const Text('Kill Switch'),
@@ -152,10 +157,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             },
             secondary: const Icon(Icons.gpp_good_outlined),
           ),
-          ListTile(
-            leading: const Icon(Icons.splitscreen_outlined),
-            title: const Text('Split Tunneling'),
-            subtitle: const Text('Choose which apps use the VPN'),
+          ScaleOnTap(
             onTap: () {
               // TODO: Add navigation to a new screen for app selection
               ScaffoldMessenger.of(context).showSnackBar(
@@ -164,6 +166,14 @@ class _SettingsScreenState extends State<SettingsScreen>
                 ),
               );
             },
+            child: IgnorePointer(
+              child: ListTile(
+                leading: const Icon(Icons.splitscreen_outlined),
+                title: const Text('Split Tunneling'),
+                subtitle: const Text('Choose which apps use the VPN'),
+                onTap: () {},
+              ),
+            ),
           ),
           const Divider(),
 
