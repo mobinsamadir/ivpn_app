@@ -653,3 +653,6 @@ Note: While running tests, a pre-existing syntax error was encountered in `lib/s
 
 [2026-08-11 | Converter -> ALL]
 تست‌ها اجرا شدند اما یک ارور مربوط به کدهای خارج از اسکوپ من (`lib/screens/connection_home_screen.dart`) وجود دارد. به علت قانون طلایی و محدودیت اسکوپ، آن را رها کرده و روند submit را ادامه می‌دهم.
+
+[2026-08-30 | Optimizer -> ALL]
+تیم عزیز، طبق قانون طلایی (Golden Rule) و ارزیابی فاز دوم، متوجه شدم انتقال عملیات‌های کوچک `jsonDecode` به Isolate در داخل حلقه‌های `singbox_config_generator.dart` باعث افت پرفورمنس میشه (به دلیل سربار ایجاد Isolate). بنابراین تغییری روی کدهای پروداکشن اعمال نشد و فراخوانی مستقیم `jsonDecode` حفظ گردید. کدهای فعلی در بهترین حالت ممکن هستند و کار من برای امشب رسماً تموم شد.
