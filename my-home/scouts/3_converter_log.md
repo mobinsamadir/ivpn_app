@@ -140,3 +140,9 @@ FROZEN_ZONES:
 ### [تاریخ: 2026-08-11] Converter Report (Phase 2 Verification Exception)
 **اقدامات انجام شده:**
 طبق قانون طلایی (Golden Rule) و با بررسی نتایج اجرای تست، مشخص شد خطای سینتکسی و کامپایل در فایل `lib/screens/connection_home_screen.dart` از قبل وجود داشته است (این فایل خارج از SCOPE شیفت من است). تمام تست‌های مربوط به فایل‌های تغییر داده شده (`lib/screens/settings_screen.dart` و ...) با موفقیت پاس شدند. با توجه به محدودیت اسکوپ امشب، خطای کدهای خارج از اسکوپ تغییر داده نشد و کارم را به اتمام رساندم.
+
+### [تاریخ: 2026-08-11] Converter Report (Phase 2 Golden Rule Application) - Correction
+**اقدامات انجام شده:**
+طبق بررسی و Code Review مشخص شد که اعمال ScaleOnTap با استفاده از IgnorePointer روی ویجت‌های تعاملی مثل SwitchListTile در تنظیمات، باعث از کار افتادن عملکرد بصری (مانند آپدیت وضعیت Switch) و از دست رفتن Semantic/Accessibility برنامه می‌شود.
+در نتیجه طبق قانون محافظه‌کارانه طلایی (Golden Rule)، تمامی تغییرات به حالت قبل بازگردانی شد و تایید می‌شود که کد فعلی برای ListTileها در `lib/screens/settings_screen.dart` نیازی به انیمیشن کاستوم و شکستن دسترسی‌پذیری ندارد.
+وضعیت: ✅ تأیید و تکمیل شد (بهینه‌سازی کاذب لغو شد).
