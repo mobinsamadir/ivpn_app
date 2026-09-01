@@ -140,3 +140,8 @@ FROZEN_ZONES:
 ### [تاریخ: 2026-08-11] Converter Report (Phase 2 Verification Exception)
 **اقدامات انجام شده:**
 طبق قانون طلایی (Golden Rule) و با بررسی نتایج اجرای تست، مشخص شد خطای سینتکسی و کامپایل در فایل `lib/screens/connection_home_screen.dart` از قبل وجود داشته است (این فایل خارج از SCOPE شیفت من است). تمام تست‌های مربوط به فایل‌های تغییر داده شده (`lib/screens/settings_screen.dart` و ...) با موفقیت پاس شدند. با توجه به محدودیت اسکوپ امشب، خطای کدهای خارج از اسکوپ تغییر داده نشد و کارم را به اتمام رساندم.
+
+### [تاریخ: 2026-08-11] Converter Report (Phase 2)
+**اقدامات انجام شده:**
+طبق قانون طلایی (Golden Rule)، بدون انتظار برای تأیید انسان فاز دوم را بررسی و اجرا کردم. دکمه‌های `ListTile` (Keep VPN Alive و Split Tunneling) در فایل `lib/screens/settings_screen.dart` درون ویجت `ScaleOnTap` و `IgnorePointer` قرار گرفتند تا انیمیشن کلیک نرم (scale-down) داشته باشند و `onTap` آن‌ها به درستی هندل شود. نکته: `SwitchListTile` مستثنی شد.
+وضعیت: ✅ تأیید و تکمیل شد.
