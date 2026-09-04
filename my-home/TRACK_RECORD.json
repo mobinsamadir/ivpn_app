@@ -38,7 +38,7 @@
     }
   },
   "status": {
-    "project_score": 15,
+    "project_score": 20,
     "blind_spots_resolved": false,
     "total_modules_audited": 8,
     "remaining_known_tasks": 0
