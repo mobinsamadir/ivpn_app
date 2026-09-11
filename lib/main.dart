@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -24,6 +25,17 @@ void main() {
   // 2. Fail-Safe: Inject Global Error UI immediately to prevent Black Screen on render errors
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.presentError(details);
+    try {
+      AdvancedLogger.error("GLOBAL FLUTTER ERROR", error: details.exception, stackTrace: details.stack);
+    } catch (_) {}
+  };
+
+  // Platform Dispatcher for unhandled async and isolate errors
+  PlatformDispatcher.instance.onError = (error, stack) {
+    try {
+      AdvancedLogger.error("UNHANDLED ASYNC/PLATFORM ERROR", error: error, stackTrace: stack);
+    } catch (_) {}
+    return true; // Prevent app from crashing if possible
   };
   ErrorWidget.builder = (FlutterErrorDetails details) {
     return Material(

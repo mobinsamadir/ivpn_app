@@ -37,6 +37,29 @@ class AdvancedLogger {
       }
       _logFile = logFile;
 
+      // Perform log file rotation (Keep max 5 files)
+      try {
+        final dir = _logFile!.parent;
+        if (dir.existsSync()) {
+          final prefix = Platform.isWindows ? 'iVPN_debug_log' : 'vpn_log_';
+          final files = dir.listSync().whereType<File>().where((f) => p.basename(f.path).startsWith(prefix)).toList();
+          if (files.length >= 5) {
+            // Sort by modified time (oldest first)
+            files.sort((a, b) => a.statSync().modified.compareTo(b.statSync().modified));
+            // Delete oldest files until we have 4 left (so adding current makes it 5)
+            final toDeleteCount = files.length - 4;
+            for (var i = 0; i < toDeleteCount; i++) {
+              try {
+                files[i].deleteSync();
+              } catch (_) {}
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('Failed to rotate logs: $e');
+      }
+
+
       // Write initial marker
       await _writeEntry({
         'level': 'INFO',
