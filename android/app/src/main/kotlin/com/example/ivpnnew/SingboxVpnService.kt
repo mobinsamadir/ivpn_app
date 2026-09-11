@@ -56,20 +56,23 @@ class SingboxVpnService :
         const val ACTION_STOP = "stop"
 
         var isVpnRunning = false
+        var isLibboxSetup = false
         val nativeCallMutex = Mutex()
         private var testServer: io.nekohasekai.libbox.CommandServer? = null
 
         private suspend fun closeTestServerUnlocked() {
-            if (testServer != null) {
+            val serverToClose = testServer
+            testServer = null
+            if (serverToClose != null) {
                 try {
                     android.util.Log.d("NativeVpnLifecycle", "Closing existing testServer...")
-                    testServer?.close()
-                    testServer = null
+                    serverToClose.close()
                     android.util.Log.d("NativeVpnLifecycle", "testServer successfully closed.")
-                    delay(100) // Ensure OS cleans up socket/goroutine
                 } catch (e: Throwable) {
                     android.util.Log.e("NativeVpnLifecycle", "Error closing testServer: ${e.message}")
                     e.printStackTrace()
+                } finally {
+                    delay(300) // Give Go garbage collector and OS socket release more time
                 }
             }
         }
@@ -179,11 +182,14 @@ class SingboxVpnService :
                         // SAFE CALL to Libbox - pass JSON content string
                         val server =
                             try {
-                                val options = io.nekohasekai.libbox.SetupOptions()
-                                options.setBasePath(tempDir.absolutePath)
-                                options.setWorkingPath(tempDir.absolutePath)
-                                options.setTempPath(tempDir.absolutePath)
-                                Libbox.setup(options)
+                                if (!isLibboxSetup) {
+                                    val options = io.nekohasekai.libbox.SetupOptions()
+                                    options.setBasePath(tempDir.absolutePath)
+                                    options.setWorkingPath(tempDir.absolutePath)
+                                    options.setTempPath(tempDir.absolutePath)
+                                    Libbox.setup(options)
+                                    isLibboxSetup = true
+                                }
                                 Libbox.newCommandServer(StubCommandServerHandler(), StubPlatformInterface())
                             } catch (e: Throwable) {
                                 e.printStackTrace()
@@ -191,11 +197,16 @@ class SingboxVpnService :
                                 return@withContext
                             }
 
+                        if (server == null) {
+                            result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
+                            return@withContext
+                        }
+
                         try {
-                            server?.startOrReloadService(json.toString(), null)
+                            server.startOrReloadService(json.toString(), null)
                             testServer = server
                         } catch (e: Throwable) {
-                            server?.close()
+                            try { server.close() } catch (ignored: Throwable) {}
                             e.printStackTrace()
                             result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
                             return@withContext
@@ -272,11 +283,14 @@ class SingboxVpnService :
                         // SAFE CALL - pass JSON content string
                         val newTestServer =
                             try {
-                                val options = io.nekohasekai.libbox.SetupOptions()
-                                options.setBasePath(tempDir.absolutePath)
-                                options.setWorkingPath(tempDir.absolutePath)
-                                options.setTempPath(tempDir.absolutePath)
-                                Libbox.setup(options)
+                                if (!isLibboxSetup) {
+                                    val options = io.nekohasekai.libbox.SetupOptions()
+                                    options.setBasePath(tempDir.absolutePath)
+                                    options.setWorkingPath(tempDir.absolutePath)
+                                    options.setTempPath(tempDir.absolutePath)
+                                    Libbox.setup(options)
+                                    isLibboxSetup = true
+                                }
                                 Libbox.newCommandServer(StubCommandServerHandler(), StubPlatformInterface())
                             } catch (e: Throwable) {
                                 e.printStackTrace()
@@ -285,11 +299,16 @@ class SingboxVpnService :
                                 return@withContext
                             }
 
+                        if (newTestServer == null) {
+                            result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
+                            return@withContext
+                        }
+
                         try {
-                            newTestServer?.startOrReloadService(json.toString(), null)
+                            newTestServer.startOrReloadService(json.toString(), null)
                             testServer = newTestServer
                         } catch (e: Throwable) {
-                            newTestServer?.close()
+                            try { newTestServer.close() } catch (ignored: Throwable) {}
                             e.printStackTrace()
                             MainActivity.sendVpnStatus("ERROR: TEST_START_FAILED - ${e.message}")
                             result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
