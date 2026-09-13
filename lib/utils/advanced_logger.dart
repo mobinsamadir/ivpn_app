@@ -29,6 +29,14 @@ class AdvancedLogger {
       if (Platform.isWindows) {
         final exePath = Platform.resolvedExecutable;
         logFile = File(p.join(p.dirname(exePath), 'iVPN_debug_log.txt'));
+      } else if (Platform.isAndroid) {
+        final directory = await getExternalStorageDirectory();
+        final logDir = Directory(p.join(directory?.path ?? '', 'logs'));
+        if (!logDir.existsSync()) {
+          logDir.createSync(recursive: true);
+        }
+        final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-').split('.')[0];
+        logFile = File(p.join(logDir.path, 'vpn_log_$timestamp.jsonl'));
       } else {
         final directory = await getApplicationDocumentsDirectory();
         final timestamp =
@@ -154,6 +162,10 @@ class AdvancedLogger {
   /// Get the current log file path
   static Future<String> getLogPath() async {
     if (_logFile != null) return _logFile!.path;
+    if (Platform.isAndroid) {
+      final directory = await getExternalStorageDirectory();
+      return p.join(directory?.path ?? '', 'logs');
+    }
     final directory = await getApplicationDocumentsDirectory();
     return p.join(directory.path, 'vpn_logs');
   }
@@ -253,8 +265,8 @@ class AdvancedLogger {
     // Add to file buffer
     _buffer.add(jsonEncode(entry));
 
-    // Flush if buffer is full
-    if (_buffer.length >= _bufferSize) {
+    // Flush immediately for errors or if buffer is full to prevent log loss on crash
+    if (level == LogLevel.error || _buffer.length >= _bufferSize) {
       _flush();
     }
   }
