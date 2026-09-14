@@ -104,6 +104,12 @@ class MainActivity : FlutterActivity() {
             scope.launch(Dispatchers.IO) {
                 try {
                     when (call.method) {
+                                                "hasVpnPermission" -> {
+                            withContext(Dispatchers.Main) {
+                                val intent = VpnService.prepare(this@MainActivity)
+                                result.success(intent == null) // If null, permission is already granted
+                            }
+                        }
                         "startVpn" -> {
                             val config = call.argument<String>("config")
                             withContext(Dispatchers.Main) {

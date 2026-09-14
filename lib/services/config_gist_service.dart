@@ -91,6 +91,7 @@ class ConfigGistService {
     ConfigManager manager, {
     bool force = false,
   }) async {
+    try {
     final prefs = await SharedPreferences.getInstance();
     final lastFetchTs = prefs.getInt(_lastFetchKey) ?? 0;
     final lastFetch = DateTime.fromMillisecondsSinceEpoch(lastFetchTs);
@@ -198,6 +199,10 @@ class ConfigGistService {
         }
       }
       return false; // Total failure
+    }
+    } catch (e, stackTrace) {
+      AdvancedLogger.error("[ConfigGistService] Unhandled exception in fetchAndApplyConfigs: $e\n$stackTrace");
+      return false;
     }
   }
 

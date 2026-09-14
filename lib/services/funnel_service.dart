@@ -122,16 +122,8 @@ class FunnelService {
     );
 
     // Check permission before spinning up concurrent testers
-    try {
-      final nativeService = NativeVpnService();
-      bool hasPermission = await nativeService.requestVpnPermission();
-      if (!hasPermission) {
-        AdvancedLogger.warn("FunnelService: Delaying pipeline to wait for VPN permission...");
-        await Future.delayed(const Duration(seconds: 2));
-      }
-    } catch (e) {
-      AdvancedLogger.warn("FunnelService: Failed to request permission: $e");
-    }
+    // Removed preemptive requestVpnPermission here to avoid blocking UI at startup.
+    // It will be requested when the user actually tries to connect.
 
     // Start UI Throttle Timer (500ms)
     _startUiThrottle();
