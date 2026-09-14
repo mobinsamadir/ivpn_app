@@ -332,12 +332,12 @@ class FunnelService {
           );
           await _configManager.markFailure(config.id);
         }
-      } catch (e) {
+      } catch (e, stackTrace) {
         _totalFailed++;
         AdvancedLogger.debug(
           "[TELEMETRY] ${config.name} | LastPassedStage: 0 | PingDuration: N/A | ExactException: $e",
         );
-        AdvancedLogger.warn("TCP Worker Error: $e");
+        AdvancedLogger.warn("TCP Worker Error for ${config.name}: $e\nStack trace:\n$stackTrace");
       } finally {
         _activeTcpWorkers--;
       }
