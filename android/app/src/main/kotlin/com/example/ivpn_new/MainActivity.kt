@@ -125,7 +125,9 @@ class MainActivity : FlutterActivity() {
                         "testConfig" -> {
                             val config = call.argument<String>("config")
                             withContext(Dispatchers.Main) {
-                                if (android.net.VpnService.prepare(this@MainActivity) != null) {
+                                val intent = android.net.VpnService.prepare(this@MainActivity)
+                                if (intent != null) {
+                                    startActivityForResult(intent, vpnRequestCode)
                                     result.error("PERMISSION_DENIED", "VPN Permission not granted yet", null)
                                     return@withContext
                                 }
@@ -137,16 +139,29 @@ class MainActivity : FlutterActivity() {
                             }
                         }
                         "startTestProxy" -> {
+                            android.util.Log.i("MainActivity", "startTestProxy invoked")
                             val config = call.argument<String>("config")
                             withContext(Dispatchers.Main) {
-                                if (android.net.VpnService.prepare(this@MainActivity) != null) {
-                                    result.error("PERMISSION_DENIED", "VPN Permission not granted yet", null)
+                                val intent = android.net.VpnService.prepare(this@MainActivity)
+                                if (intent != null) {
+                                    android.util.Log.w("MainActivity", "startTestProxy: Permission needed, launching intent")
+                                    // Normally we can't await the result easily here without breaking the MethodChannel flow.
+                                    // So we launch the intent for the user, and immediately return PERMISSION_DENIED.
+                                    // The Dart layer will catch this, wait, and retry (or abort the current test and user taps test again).
+                                    startActivityForResult(intent, vpnRequestCode)
+                                    result.error("PERMISSION_DENIED", "VPN Permission not granted yet. Requested from user.", null)
                                     return@withContext
                                 }
                             }
                             if (config != null && config.isNotBlank()) {
-                                SingboxVpnService.startTestProxy(config, cacheDir, result)
+                                try {
+                                    SingboxVpnService.startTestProxy(config, cacheDir, result)
+                                } catch (e: Exception) {
+                                    android.util.Log.e("MainActivity", "Native crash in startTestProxy: ${e.message}", e)
+                                    result.error("NATIVE_CRASH", "Native crash in startTestProxy: ${e.message}", null)
+                                }
                             } else {
+                                android.util.Log.e("MainActivity", "startTestProxy failed: INVALID_CONFIG")
                                 result.error("INVALID_CONFIG", "Config string is null or empty", null)
                             }
                         }
