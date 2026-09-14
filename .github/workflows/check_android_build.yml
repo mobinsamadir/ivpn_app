@@ -10,11 +10,11 @@ on:
   # ==============================================================================
 
   # 1. RUN ON PUSH (Uncomment below to enable)
-  # pull_request:
-  #   branches:
-  #     - main
-  #     - master
-  #     - develop
+  pull_request:
+    branches:
+      - main
+      - master
+      - develop
   # paths-ignore:
   # - '**.md'
   # - 'docs/**'
@@ -26,7 +26,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   build-check:
-    if: github.event_name == 'pull_request' && github.actor == 'mastermind'
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.0
