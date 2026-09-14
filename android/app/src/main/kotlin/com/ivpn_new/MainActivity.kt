@@ -1,4 +1,4 @@
-package com.example.ivpnnew
+package com.ivpn_new
 
 import android.app.Activity
 import android.content.Intent
@@ -124,14 +124,21 @@ class MainActivity : FlutterActivity() {
                         }
                         "testConfig" -> {
                             val config = call.argument<String>("config")
-                            withContext(Dispatchers.Main) {
+                            val permissionNeeded = withContext(Dispatchers.Main) {
                                 val intent = android.net.VpnService.prepare(this@MainActivity)
                                 if (intent != null) {
                                     startActivityForResult(intent, vpnRequestCode)
                                     result.error("PERMISSION_DENIED", "VPN Permission not granted yet", null)
-                                    return@withContext
+                                    true
+                                } else {
+                                    false
                                 }
                             }
+
+                            if (permissionNeeded) {
+                                return@launch
+                            }
+
                             if (config != null && config.isNotBlank()) {
                                 SingboxVpnService.measurePing(config, cacheDir, result)
                             } else {
@@ -141,7 +148,7 @@ class MainActivity : FlutterActivity() {
                         "startTestProxy" -> {
                             android.util.Log.i("MainActivity", "startTestProxy invoked")
                             val config = call.argument<String>("config")
-                            withContext(Dispatchers.Main) {
+                            val permissionNeeded = withContext(Dispatchers.Main) {
                                 val intent = android.net.VpnService.prepare(this@MainActivity)
                                 if (intent != null) {
                                     android.util.Log.w("MainActivity", "startTestProxy: Permission needed, launching intent")
@@ -150,9 +157,16 @@ class MainActivity : FlutterActivity() {
                                     // The Dart layer will catch this, wait, and retry (or abort the current test and user taps test again).
                                     startActivityForResult(intent, vpnRequestCode)
                                     result.error("PERMISSION_DENIED", "VPN Permission not granted yet. Requested from user.", null)
-                                    return@withContext
+                                    true
+                                } else {
+                                    false
                                 }
                             }
+
+                            if (permissionNeeded) {
+                                return@launch
+                            }
+
                             if (config != null && config.isNotBlank()) {
                                 try {
                                     SingboxVpnService.startTestProxy(config, cacheDir, result)
