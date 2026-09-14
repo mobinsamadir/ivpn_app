@@ -36,12 +36,12 @@ class AdvancedLogger {
           logDir.createSync(recursive: true);
         }
         final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-').split('.')[0];
-        logFile = File(p.join(logDir.path, 'vpn_log_$timestamp.jsonl'));
+        logFile = File(p.join(logDir.path, 'vpn_log_$timestamp.txt'));
       } else {
         final directory = await getApplicationDocumentsDirectory();
         final timestamp =
             DateTime.now().toIso8601String().replaceAll(':', '-').split('.')[0];
-        logFile = File(p.join(directory.path, 'vpn_log_$timestamp.jsonl'));
+        logFile = File(p.join(directory.path, 'vpn_log_$timestamp.txt'));
       }
       _logFile = logFile;
 
