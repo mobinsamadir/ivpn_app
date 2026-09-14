@@ -91,10 +91,9 @@ class _SplashScreenState extends State<SplashScreen>
       FunnelService().startFunnel();
       AdManagerService().initialize();
 
+      // Optimistic Startup removed to prevent auto-connect
       final timeWallet = TimeWalletService();
       await timeWallet.init();
-
-      // Optimistic Startup removed to prevent auto-connect
       if (true) {
         int waitLoops = 0;
         while (configManager.validatedConfigs.isEmpty && waitLoops < 10) {
