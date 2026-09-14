@@ -1,3 +1,4 @@
+import 'native_vpn_service.dart';
 import 'dart:async';
 import 'dart:io';
 import 'dart:math';
@@ -119,6 +120,18 @@ class FunnelService {
     AdvancedLogger.info(
       "FunnelService: Starting Pipeline (RetestDead: $retestDead)",
     );
+
+    // Check permission before spinning up concurrent testers
+    try {
+      final nativeService = NativeVpnService();
+      bool hasPermission = await nativeService.requestVpnPermission();
+      if (!hasPermission) {
+        AdvancedLogger.warn("FunnelService: Delaying pipeline to wait for VPN permission...");
+        await Future.delayed(const Duration(seconds: 2));
+      }
+    } catch (e) {
+      AdvancedLogger.warn("FunnelService: Failed to request permission: $e");
+    }
 
     // Start UI Throttle Timer (500ms)
     _startUiThrottle();
