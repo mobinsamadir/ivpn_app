@@ -1218,11 +1218,23 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     try {
       if (mounted) _activeTestIds.value = {..._activeTestIds.value, config.id};
       _showToast('Testing ${config.name}...');
+      
+      final nativeService = NativeVpnService();
+      bool hasPermission = await nativeService.requestVpnPermission();
+      if (!hasPermission) {
+        _showToast('Waiting for VPN permission...');
+        await Future.delayed(const Duration(seconds: 2));
+      }
+
       final result = await _ephemeralTester.runTest(config);
       await _configManager.updateConfigDirectly(result);
       _showToast('Test complete. Stage: ${result.funnelStage}');
     } catch (e) {
-      _showToast('Test failed: $e');
+      if (e.toString().contains('PERMISSION_DENIED')) {
+         _showToast('VPN Permission Denied.');
+      } else {
+         _showToast('Test failed: $e');
+      }
     } finally {
       if (mounted) _activeTestIds.value = {..._activeTestIds.value}..remove(config.id);
     }
