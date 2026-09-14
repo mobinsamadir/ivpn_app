@@ -1161,6 +1161,12 @@ class ConfigManager extends ChangeNotifier {
           );
 
           if (testResult.funnelStage < 2 || testResult.currentPing == -1) {
+            if (testResult.failureReason != null && testResult.failureReason!.contains('VPN Permission Required')) {
+              AdvancedLogger.error("VPN permission required. Aborting pre-flight checks.");
+              setConnected(false, status: 'Disconnected');
+              return;
+            }
+
             if (testResult.lastFailedStage != null &&
                 (testResult.lastFailedStage!.contains("Init") ||
                     testResult.lastFailedStage!.contains("Stage1_ProxyInit"))) {
