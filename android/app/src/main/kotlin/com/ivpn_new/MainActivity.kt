@@ -58,6 +58,9 @@ class MainActivity : FlutterActivity() {
     private val vpnRequestCode = 0x0F
     private var pendingConfig: String? = null
     private var pendingVpnResult: MethodChannel.Result? = null
+    private var pendingTestProxyResult: MethodChannel.Result? = null
+    private var pendingMeasurePingResult: MethodChannel.Result? = null
+    private var pendingAction: String? = null
 
     // Scope for launching coroutines on the Main thread
     private val scope = CoroutineScope(Dispatchers.Main)
@@ -130,59 +133,46 @@ class MainActivity : FlutterActivity() {
                         }
                         "testConfig" -> {
                             val config = call.argument<String>("config")
-                            val permissionNeeded = withContext(Dispatchers.Main) {
+                            withContext(Dispatchers.Main) {
                                 val intent = android.net.VpnService.prepare(this@MainActivity)
                                 if (intent != null) {
+                                    pendingConfig = config
+                                    pendingMeasurePingResult = result
+                                    pendingAction = "testConfig"
                                     startActivityForResult(intent, vpnRequestCode)
-                                    result.error("PERMISSION_DENIED", "VPN Permission not granted yet", null)
-                                    true
                                 } else {
-                                    false
+                                    if (config != null && config.isNotBlank()) {
+                                        SingboxVpnService.measurePing(config, cacheDir, result)
+                                    } else {
+                                        result.error("INVALID_CONFIG", "Config string is null or empty", null)
+                                    }
                                 }
-                            }
-
-                            if (permissionNeeded) {
-                                return@launch
-                            }
-
-                            if (config != null && config.isNotBlank()) {
-                                SingboxVpnService.measurePing(config, cacheDir, result)
-                            } else {
-                                result.error("INVALID_CONFIG", "Config string is null or empty", null)
                             }
                         }
                         "startTestProxy" -> {
                             android.util.Log.i("MainActivity", "startTestProxy invoked")
                             val config = call.argument<String>("config")
-                            val permissionNeeded = withContext(Dispatchers.Main) {
+                            withContext(Dispatchers.Main) {
                                 val intent = android.net.VpnService.prepare(this@MainActivity)
                                 if (intent != null) {
                                     android.util.Log.w("MainActivity", "startTestProxy: Permission needed, launching intent")
-                                    // Normally we can't await the result easily here without breaking the MethodChannel flow.
-                                    // So we launch the intent for the user, and immediately return PERMISSION_DENIED.
-                                    // The Dart layer will catch this, wait, and retry (or abort the current test and user taps test again).
+                                    pendingConfig = config
+                                    pendingTestProxyResult = result
+                                    pendingAction = "startTestProxy"
                                     startActivityForResult(intent, vpnRequestCode)
-                                    result.error("PERMISSION_DENIED", "VPN Permission not granted yet. Requested from user.", null)
-                                    true
                                 } else {
-                                    false
+                                    if (config != null && config.isNotBlank()) {
+                                        try {
+                                            SingboxVpnService.startTestProxy(config, cacheDir, result)
+                                        } catch (e: Exception) {
+                                            android.util.Log.e("MainActivity", "Native crash in startTestProxy: ${e.message}", e)
+                                            result.error("NATIVE_CRASH", "Native crash in startTestProxy: ${e.message}", null)
+                                        }
+                                    } else {
+                                        android.util.Log.e("MainActivity", "startTestProxy failed: INVALID_CONFIG")
+                                        result.error("INVALID_CONFIG", "Config string is null or empty", null)
+                                    }
                                 }
-                            }
-
-                            if (permissionNeeded) {
-                                return@launch
-                            }
-
-                            if (config != null && config.isNotBlank()) {
-                                try {
-                                    SingboxVpnService.startTestProxy(config, cacheDir, result)
-                                } catch (e: Exception) {
-                                    android.util.Log.e("MainActivity", "Native crash in startTestProxy: ${e.message}", e)
-                                    result.error("NATIVE_CRASH", "Native crash in startTestProxy: ${e.message}", null)
-                                }
-                            } else {
-                                android.util.Log.e("MainActivity", "startTestProxy failed: INVALID_CONFIG")
-                                result.error("INVALID_CONFIG", "Config string is null or empty", null)
                             }
                         }
                         "stopTestProxy" -> {
@@ -233,24 +223,63 @@ class MainActivity : FlutterActivity() {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == vpnRequestCode) {
             if (resultCode == Activity.RESULT_OK && pendingConfig != null) {
-                val serviceIntent =
-                    Intent(this, SingboxVpnService::class.java).apply {
-                        putExtra("action", SingboxVpnService.ACTION_START)
-                        putExtra("config", pendingConfig)
+                when (pendingAction) {
+                    "testConfig" -> {
+                            val config = call.argument<String>("config")
+                            withContext(Dispatchers.Main) {
+                                val intent = android.net.VpnService.prepare(this@MainActivity)
+                                if (intent != null) {
+                                    pendingConfig = config
+                                    pendingMeasurePingResult = result
+                                    pendingAction = "testConfig"
+                                    startActivityForResult(intent, vpnRequestCode)
+                                } else {
+                                    if (config != null && config.isNotBlank()) {
+                                        SingboxVpnService.measurePing(config, cacheDir, result)
+                                    } else {
+                                        result.error("INVALID_CONFIG", "Config string is null or empty", null)
+                                    }
+                                }
+                            }
+                        }
+                        "startTestProxy" -> {
+                        try {
+                            SingboxVpnService.startTestProxy(pendingConfig!!, cacheDir, pendingTestProxyResult)
+                        } catch (e: Exception) {
+                            android.util.Log.e("MainActivity", "Native crash in startTestProxy: ${e.message}", e)
+                            pendingTestProxyResult?.error("NATIVE_CRASH", "Native crash in startTestProxy: ${e.message}", null)
+                        }
+                        pendingTestProxyResult = null
                     }
+                    else -> {
+                        // Default startVpn behavior
+                        val serviceIntent =
+                            Intent(this, SingboxVpnService::class.java).apply {
+                                putExtra("action", SingboxVpnService.ACTION_START)
+                                putExtra("config", pendingConfig)
+                            }
 
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    startForegroundService(serviceIntent)
-                } else {
-                    startService(serviceIntent)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            startForegroundService(serviceIntent)
+                        } else {
+                            startService(serviceIntent)
+                        }
+                        pendingVpnResult?.success(null)
+                    }
                 }
-                pendingVpnResult?.success(null)
             } else {
                 val details = mapOf("permanentlyDenied" to false)
-                pendingVpnResult?.error("VPN_PERMISSION_DENIED", "VPN permission was denied by the user.", details)
+                when (pendingAction) {
+                    "testConfig" -> pendingMeasurePingResult?.error("VPN_PERMISSION_DENIED", "VPN permission was denied by the user.", details)
+                    "startTestProxy" -> pendingTestProxyResult?.error("VPN_PERMISSION_DENIED", "VPN permission was denied by the user.", details)
+                    else -> pendingVpnResult?.error("VPN_PERMISSION_DENIED", "VPN permission was denied by the user.", details)
+                }
+                pendingMeasurePingResult = null
+                pendingTestProxyResult = null
+                pendingVpnResult = null
             }
             pendingConfig = null
-            pendingVpnResult = null
+            pendingAction = null
         }
     }
 
