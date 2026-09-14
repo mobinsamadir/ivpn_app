@@ -140,6 +140,25 @@ class NativeVpnService {
     }
   }
 
+
+  /// Explicitly asks for VPN permission if not granted yet.
+  Future<bool> requestVpnPermission() async {
+    if (Platform.isWindows) return true;
+    try {
+      // testConfig triggers the intent on MainActivity if missing
+      await _methodChannel.invokeMethod('testConfig', {'config': '{}'});
+      return true;
+    } on PlatformException catch (e) {
+      if (e.code == 'PERMISSION_DENIED') {
+        AdvancedLogger.warn("VPN Permission requested from user.");
+        return false;
+      }
+      return true;
+    } catch (_) {
+      return true;
+    }
+  }
+
   // --- NEW: Granular Test Control ---
 
   /// Starts a lightweight Sing-box proxy for testing.
@@ -191,10 +210,8 @@ class NativeVpnService {
       }
     } on PlatformException catch (e) {
       if (e.code == 'PERMISSION_DENIED') {
-        AdvancedLogger.warn(
-          "VPN Permission not granted. Skipping proxy start.",
-        );
-        return -1;
+        AdvancedLogger.error("VPN Permission not granted yet.");
+        throw Exception("PERMISSION_DENIED");
       }
       AdvancedLogger.error("Failed to start test proxy: $e");
       return -1;
