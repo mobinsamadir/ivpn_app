@@ -263,7 +263,12 @@ class EphemeralTester {
           proxyPort = await nativeService.startTestProxy(jsonConfig);
         } catch (e) {
           proxyPort = -1;
-          AdvancedLogger.error("Native Start Exception: $e");
+          if (e.toString().contains('PERMISSION_DENIED')) {
+            AdvancedLogger.error("VPN Permission Denied during Test Initialization. Skipping test.");
+            throw Exception("PERMISSION_DENIED");
+          } else {
+            AdvancedLogger.error("Native Start Exception: $e");
+          }
         }
 
         AdvancedLogger.warn(
@@ -367,7 +372,12 @@ class EphemeralTester {
           client.close();
         }
       } catch (e) {
-        errorMsg = e.toString();
+        if (e.toString().contains('PERMISSION_DENIED')) {
+          AdvancedLogger.error('[TESTER] Aborting test completely due to missing VPN permission.');
+          errorMsg = 'VPN Permission Required';
+        } else {
+          errorMsg = e.toString();
+        }
       } finally {
         await nativeService.stopTestProxy();
         if (listenPort > 0) PortAllocator().release(listenPort);
