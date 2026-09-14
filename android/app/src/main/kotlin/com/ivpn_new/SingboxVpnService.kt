@@ -72,7 +72,7 @@ class SingboxVpnService :
                     android.util.Log.e("NativeVpnLifecycle", "Error closing testServer: ${e.message}")
                     e.printStackTrace()
                 } finally {
-                    delay(300) // Give Go garbage collector and OS socket release more time
+                    delay(1000) // CRITICAL: Increased delay to allow Go GC and socket release to finish, preventing SIGABRT/SIGSEGV
                 }
             }
         }
@@ -193,11 +193,13 @@ class SingboxVpnService :
                                 Libbox.newCommandServer(StubCommandServerHandler(), StubPlatformInterface())
                             } catch (e: Throwable) {
                                 e.printStackTrace()
+                                android.util.Log.e("NativeVpnLifecycle", "Libbox setup/newCommandServer failed: ${e.message}")
                                 result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
                                 return@withContext
                             }
 
                         if (server == null) {
+                            android.util.Log.e("NativeVpnLifecycle", "Libbox.newCommandServer returned null")
                             result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
                             return@withContext
                         }
@@ -208,6 +210,7 @@ class SingboxVpnService :
                         } catch (e: Throwable) {
                             try { server.close() } catch (ignored: Throwable) {}
                             e.printStackTrace()
+                            android.util.Log.e("NativeVpnLifecycle", "server.startOrReloadService failed: ${e.message}")
                             result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
                             return@withContext
                         }
@@ -281,125 +284,25 @@ class SingboxVpnService :
                         closeTestServerUnlocked()
 
                         // SAFE CALL - pass JSON content string
-                        val newTestServer =
-                            try {
-                                if (!isLibboxSetup) {
-                                    val options = io.nekohasekai.libbox.SetupOptions()
-                                    options.setBasePath(tempDir.absolutePath)
-                                    options.setWorkingPath(tempDir.absolutePath)
-                                    options.setTempPath(tempDir.absolutePath)
-                                    Libbox.setup(options)
-                                    isLibboxSetup = true
-                                }
-                                Libbox.newCommandServer(StubCommandServerHandler(), StubPlatformInterface())
-                            } catch (e: Throwable) {
-                                e.printStackTrace()
-                                MainActivity.sendVpnStatus("ERROR: TEST_START_FAILED - ${e.message}")
-                                result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
-                                return@withContext
-                            }
-
-                        if (newTestServer == null) {
-                            result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
-                            return@withContext
-                        }
-
-                        try {
-                            newTestServer.startOrReloadService(json.toString(), null)
-                            testServer = newTestServer
-                        } catch (e: Throwable) {
-                            try { newTestServer.close() } catch (ignored: Throwable) {}
-                            e.printStackTrace()
-                            MainActivity.sendVpnStatus("ERROR: TEST_START_FAILED - ${e.message}")
-                            result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
-                            return@withContext
-                        }
-                        delay(500)
-
-                        val client =
-                            OkHttpClient
-                                .Builder()
-                                .connectTimeout(3, TimeUnit.SECONDS)
-                                .readTimeout(3, TimeUnit.SECONDS)
-                                .proxy(Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", socksPort)))
-                                .build()
-
-                        val request =
-                            Request
-                                .Builder()
-                                .url("http://www.google.com/generate_204")
-                                .head()
-                                .build()
-
-                        val startTime = System.currentTimeMillis()
-                        val response = client.newCall(request).execute()
-                        val endTime = System.currentTimeMillis()
-
-                        response.close()
-
-                        if (response.isSuccessful || response.code == 204) {
-                            val ping = (endTime - startTime).toInt()
-                            result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(ping) } }
-                        } else {
-                            result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
-                        }
-                    } finally {
-                        // Removed file cleanup as no file is written
-                    }
-                } catch (e: Throwable) {
-                    result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
-                } finally {
-                    // test server close handled normally
-                }
-            }
-        }
-    }
-
-    override fun autoDetectInterfaceControl(fd: Int) {
-        this.protect(fd)
-    }
-
-    override fun onStartCommand(
-        intent: Intent?,
-        flags: Int,
-        startId: Int,
-    ): Int {
-        val action = intent?.getStringExtra("action")
-        val config = intent?.getStringExtra("config")
-
-        serviceScope.launch {
-            if (action == ACTION_START && config != null) {
-                startVpn(config)
-            } else if (action == ACTION_STOP) {
-                stopVpn()
-            }
-        }
-
-        return START_NOT_STICKY
-    }
-
-    private suspend fun startVpn(rawInput: String) {
-        nativeCallMutex.withLock {
-            if (isVpnRunning) return
-
-            isVpnRunning = true
-
-            createNotificationChannel()
-            startForeground(VPN_NOTIFICATION_ID, createNotification())
-
-            try {
-                // Wait for any running test to finish closing before starting main VPN
-                closeTestServerUnlocked()
-
-                // STRICT VALIDATION
-                val configJson: String
                 try {
-                    configJson = getValidJsonConfig(rawInput, true)
-                    if (configJson.isNullOrBlank()) {
-                        throw IllegalArgumentException("Config string is null or empty")
+                    val options = io.nekohasekai.libbox.SetupOptions()
+                    options.setBasePath(configDir.absolutePath)
+                    options.setWorkingPath(configDir.absolutePath)
+                    options.setTempPath(configDir.absolutePath)
+                    Libbox.setup(options)
+                    val newMainServer = Libbox.newCommandServer(StubCommandServerHandler(), this@SingboxVpnService)
+                    if (newMainServer == null) {
+                        android.util.Log.e("NativeVpnLifecycle", "Libbox.newCommandServer returned null for mainServer")
+                        MainActivity.sendVpnStatus("ERROR: START_FAILED - Server initialization failed")
+                        stopVpnInternal()
+                        return
                     }
+                    newMainServer.startOrReloadService(jsonObject.toString(), null)
+                    mainServer = newMainServer
                 } catch (e: Throwable) {
-                    MainActivity.sendVpnStatus("ERROR: CONFIG_ERROR - ${e.message}")
+                    e.printStackTrace()
+                    android.util.Log.e("NativeVpnLifecycle", "StartOrReloadService Error: ${e.message}")
+                    MainActivity.sendVpnStatus("ERROR: START_FAILED - ${e.message}")
                     stopVpnInternal()
                     return
                 }
@@ -440,8 +343,15 @@ class SingboxVpnService :
                     options.setWorkingPath(configDir.absolutePath)
                     options.setTempPath(configDir.absolutePath)
                     Libbox.setup(options)
-                    mainServer = Libbox.newCommandServer(StubCommandServerHandler(), this@SingboxVpnService)
-                    mainServer?.startOrReloadService(jsonObject.toString(), null)
+                    val newMainServer = Libbox.newCommandServer(StubCommandServerHandler(), this@SingboxVpnService)
+                    if (newMainServer == null) {
+                        android.util.Log.e("NativeVpnLifecycle", "Libbox.newCommandServer returned null for mainServer")
+                        MainActivity.sendVpnStatus("ERROR: START_FAILED - Server initialization failed")
+                        stopVpnInternal()
+                        return
+                    }
+                    newMainServer.startOrReloadService(jsonObject.toString(), null)
+                    mainServer = newMainServer
                 } catch (e: Throwable) {
                     e.printStackTrace()
                     android.util.Log.e("NativeVpnLifecycle", "StartOrReloadService Error: ${e.message}")
