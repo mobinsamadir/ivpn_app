@@ -219,30 +219,33 @@ class MainActivity : FlutterActivity() {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == vpnRequestCode) {
             if (resultCode == Activity.RESULT_OK && pendingConfig != null) {
+                val config = pendingConfig!!
                 when (pendingAction) {
                     "testConfig" -> {
+                        val result = pendingMeasurePingResult
                         scope.launch(Dispatchers.IO) {
-                            SingboxVpnService.measurePing(pendingConfig!!, cacheDir, pendingMeasurePingResult)
-                            pendingMeasurePingResult = null
+                            SingboxVpnService.measurePing(config, cacheDir, result)
                         }
+                        pendingMeasurePingResult = null
                     }
                     "startTestProxy" -> {
+                        val result = pendingTestProxyResult
                         scope.launch(Dispatchers.IO) {
                             try {
-                                SingboxVpnService.startTestProxy(pendingConfig!!, cacheDir, pendingTestProxyResult)
+                                SingboxVpnService.startTestProxy(config, cacheDir, result)
                             } catch (e: Exception) {
                                 android.util.Log.e("MainActivity", "Native crash in startTestProxy: ${e.message}", e)
-                                pendingTestProxyResult?.error("NATIVE_CRASH", "Native crash in startTestProxy: ${e.message}", null)
+                                result?.error("NATIVE_CRASH", "Native crash in startTestProxy: ${e.message}", null)
                             }
-                            pendingTestProxyResult = null
                         }
+                        pendingTestProxyResult = null
                     }
                     else -> {
                         // Default startVpn behavior
                         val serviceIntent =
                             Intent(this, SingboxVpnService::class.java).apply {
                                 putExtra("action", SingboxVpnService.ACTION_START)
-                                putExtra("config", pendingConfig)
+                                putExtra("config", config)
                             }
 
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
