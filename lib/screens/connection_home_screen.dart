@@ -1227,6 +1227,10 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
       }
 
       final result = await _ephemeralTester.runTest(config);
+      if (result.failureReason != null && result.failureReason!.contains('VPN Permission Required')) {
+        _showToast('VPN Permission Required.');
+        return;
+      }
       await _configManager.updateConfigDirectly(result);
       _showToast('Test complete. Stage: ${result.funnelStage}');
     } catch (e) {

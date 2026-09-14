@@ -133,45 +133,41 @@ class MainActivity : FlutterActivity() {
                         }
                         "testConfig" -> {
                             val config = call.argument<String>("config")
-                            withContext(Dispatchers.Main) {
-                                val intent = android.net.VpnService.prepare(this@MainActivity)
-                                if (intent != null) {
-                                    pendingConfig = config
-                                    pendingMeasurePingResult = result
-                                    pendingAction = "testConfig"
-                                    startActivityForResult(intent, vpnRequestCode)
+                            val intent = withContext(Dispatchers.Main) { android.net.VpnService.prepare(this@MainActivity) }
+                            if (intent != null) {
+                                pendingConfig = config
+                                pendingMeasurePingResult = result
+                                pendingAction = "testConfig"
+                                withContext(Dispatchers.Main) { startActivityForResult(intent, vpnRequestCode) }
+                            } else {
+                                if (config != null && config.isNotBlank()) {
+                                    SingboxVpnService.measurePing(config, cacheDir, result)
                                 } else {
-                                    if (config != null && config.isNotBlank()) {
-                                        SingboxVpnService.measurePing(config, cacheDir, result)
-                                    } else {
-                                        result.error("INVALID_CONFIG", "Config string is null or empty", null)
-                                    }
+                                    result.error("INVALID_CONFIG", "Config string is null or empty", null)
                                 }
                             }
                         }
                         "startTestProxy" -> {
                             android.util.Log.i("MainActivity", "startTestProxy invoked")
                             val config = call.argument<String>("config")
-                            withContext(Dispatchers.Main) {
-                                val intent = android.net.VpnService.prepare(this@MainActivity)
-                                if (intent != null) {
-                                    android.util.Log.w("MainActivity", "startTestProxy: Permission needed, launching intent")
-                                    pendingConfig = config
-                                    pendingTestProxyResult = result
-                                    pendingAction = "startTestProxy"
-                                    startActivityForResult(intent, vpnRequestCode)
-                                } else {
-                                    if (config != null && config.isNotBlank()) {
-                                        try {
-                                            SingboxVpnService.startTestProxy(config, cacheDir, result)
-                                        } catch (e: Exception) {
-                                            android.util.Log.e("MainActivity", "Native crash in startTestProxy: ${e.message}", e)
-                                            result.error("NATIVE_CRASH", "Native crash in startTestProxy: ${e.message}", null)
-                                        }
-                                    } else {
-                                        android.util.Log.e("MainActivity", "startTestProxy failed: INVALID_CONFIG")
-                                        result.error("INVALID_CONFIG", "Config string is null or empty", null)
+                            val intent = withContext(Dispatchers.Main) { android.net.VpnService.prepare(this@MainActivity) }
+                            if (intent != null) {
+                                android.util.Log.w("MainActivity", "startTestProxy: Permission needed, launching intent")
+                                pendingConfig = config
+                                pendingTestProxyResult = result
+                                pendingAction = "startTestProxy"
+                                withContext(Dispatchers.Main) { startActivityForResult(intent, vpnRequestCode) }
+                            } else {
+                                if (config != null && config.isNotBlank()) {
+                                    try {
+                                        SingboxVpnService.startTestProxy(config, cacheDir, result)
+                                    } catch (e: Exception) {
+                                        android.util.Log.e("MainActivity", "Native crash in startTestProxy: ${e.message}", e)
+                                        result.error("NATIVE_CRASH", "Native crash in startTestProxy: ${e.message}", null)
                                     }
+                                } else {
+                                    android.util.Log.e("MainActivity", "startTestProxy failed: INVALID_CONFIG")
+                                    result.error("INVALID_CONFIG", "Config string is null or empty", null)
                                 }
                             }
                         }
@@ -225,31 +221,21 @@ class MainActivity : FlutterActivity() {
             if (resultCode == Activity.RESULT_OK && pendingConfig != null) {
                 when (pendingAction) {
                     "testConfig" -> {
-                            val config = call.argument<String>("config")
-                            withContext(Dispatchers.Main) {
-                                val intent = android.net.VpnService.prepare(this@MainActivity)
-                                if (intent != null) {
-                                    pendingConfig = config
-                                    pendingMeasurePingResult = result
-                                    pendingAction = "testConfig"
-                                    startActivityForResult(intent, vpnRequestCode)
-                                } else {
-                                    if (config != null && config.isNotBlank()) {
-                                        SingboxVpnService.measurePing(config, cacheDir, result)
-                                    } else {
-                                        result.error("INVALID_CONFIG", "Config string is null or empty", null)
-                                    }
-                                }
+                        scope.launch(Dispatchers.IO) {
+                            SingboxVpnService.measurePing(pendingConfig!!, cacheDir, pendingMeasurePingResult)
+                            pendingMeasurePingResult = null
+                        }
+                    }
+                    "startTestProxy" -> {
+                        scope.launch(Dispatchers.IO) {
+                            try {
+                                SingboxVpnService.startTestProxy(pendingConfig!!, cacheDir, pendingTestProxyResult)
+                            } catch (e: Exception) {
+                                android.util.Log.e("MainActivity", "Native crash in startTestProxy: ${e.message}", e)
+                                pendingTestProxyResult?.error("NATIVE_CRASH", "Native crash in startTestProxy: ${e.message}", null)
                             }
+                            pendingTestProxyResult = null
                         }
-                        "startTestProxy" -> {
-                        try {
-                            SingboxVpnService.startTestProxy(pendingConfig!!, cacheDir, pendingTestProxyResult)
-                        } catch (e: Exception) {
-                            android.util.Log.e("MainActivity", "Native crash in startTestProxy: ${e.message}", e)
-                            pendingTestProxyResult?.error("NATIVE_CRASH", "Native crash in startTestProxy: ${e.message}", null)
-                        }
-                        pendingTestProxyResult = null
                     }
                     else -> {
                         // Default startVpn behavior

@@ -90,7 +90,13 @@ class _SplashScreenState extends State<SplashScreen>
         },
       );
 
-      FunnelService().startFunnel();
+      // Only auto-start funnel if VPN permission is already granted
+      final hasVpnPerm = await NativeVpnService().hasVpnPermission();
+      if (hasVpnPerm) {
+          FunnelService().startFunnel();
+      } else {
+          AdvancedLogger.info("[Splash] VPN Permission not granted yet, skipping auto funnel start to avoid premature prompt.");
+      }
       AdManagerService().initialize();
 
       final timeWallet = TimeWalletService();
@@ -98,7 +104,7 @@ class _SplashScreenState extends State<SplashScreen>
 
       bool skipWait = false;
       // Check VPN permission without triggering prompt
-      final hasVpnPerm = await NativeVpnService().hasVpnPermission();
+
 
       if (timeWallet.hasTime &&
           configManager.isAutoSwitchEnabled &&

@@ -377,7 +377,12 @@ class FunnelService {
           );
           await _configManager.markFailure(config.id);
         }
-      } catch (e) {
+            } catch (e) {
+        if (e.toString().contains('PERMISSION_DENIED') || e.toString().contains('VPN Permission Required')) {
+          AdvancedLogger.error("FunnelService: Aborting completely due to missing VPN permission.");
+          stop();
+          break;
+        }
         _totalFailed++;
         AdvancedLogger.debug(
           "[TELEMETRY] ${config.name} | LastPassedStage: 1 | PingDuration: N/A | ExactException: $e",
