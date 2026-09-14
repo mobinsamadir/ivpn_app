@@ -141,6 +141,20 @@ class NativeVpnService {
   }
 
 
+  /// Checks if VPN permission is granted WITHOUT triggering the OS prompt.
+  Future<bool> hasVpnPermission() async {
+    if (Platform.isWindows) return true;
+    try {
+      final bool hasPerm = await _methodChannel.invokeMethod('hasVpnPermission') ?? false;
+      return hasPerm;
+    } catch (e) {
+      // If method is not implemented on native side, default to true
+      // (which acts like legacy behavior) or false based on safety.
+      // Safest is to return true and let requestVpnPermission handle it.
+      return true;
+    }
+  }
+
   /// Explicitly asks for VPN permission if not granted yet.
   Future<bool> requestVpnPermission() async {
     if (Platform.isWindows) return true;
