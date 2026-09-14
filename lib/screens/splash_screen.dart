@@ -94,18 +94,8 @@ class _SplashScreenState extends State<SplashScreen>
       final timeWallet = TimeWalletService();
       await timeWallet.init();
 
-      bool skipWait = false;
-      if (timeWallet.hasTime &&
-          configManager.isAutoSwitchEnabled &&
-          configManager.validatedConfigs.isNotEmpty) {
-        skipWait = true;
-        AdvancedLogger.info(
-          "[Splash] Optimistic Startup enabled. Bypassing funnel wait.",
-        );
-        configManager.connectWithSmartFailover();
-      }
-
-      if (!skipWait) {
+      // Optimistic Startup removed to prevent auto-connect
+      if (true) {
         int waitLoops = 0;
         while (configManager.validatedConfigs.isEmpty && waitLoops < 10) {
           await Future.delayed(const Duration(seconds: 1));
