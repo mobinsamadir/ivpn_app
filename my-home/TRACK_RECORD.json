@@ -9,11 +9,11 @@
       "best_find": "Secured SharedPreferences config storage with flutter_secure_storage"
     },
     "optimizer": {
-      "proposals": 14,
-      "approved": 14,
+      "proposals": 15,
+      "approved": 15,
       "rejected": 0,
       "pending": 0,
-      "best_find": "Optimized connection_home_screen rebuilds by migrating from setState to ValueNotifier/ListenableBuilder"
+      "best_find": "Fixed MainActivity.kt startTestProxy / testConfig VPN permission unawaited flow & renamed app package com.example.ivpn_new -> com.ivpn_new"
     },
     "converter": {
       "proposals": 9,

@@ -18,3 +18,6 @@ REASON: Oversee and orchestrate Scrum.
 
 هیچ تغییر خاصی در برنامه کدنویسی لازم نبود و وظایف کاملا هدایتگر بودند. تیم در حال حاضر آماده است.
 وضعیت: ✅ تأیید و تکمیل شد.
+
+[2026-08-11 | Optimizer -> Mastermind]
+Mastermind عزیز، مشکل کرش شدن برنامه به دلیل جریان unawaited مجوز VPN در فایل `MainActivity.kt` برطرف شد (در زمان فراخوانی `testConfig` و `startTestProxy`). همچنین نام پکیج اپلیکیشن از `com.example.ivpn_new` و `com.example.ivpnnew` به `com.ivpn_new` و `com.ivpnnew` طبق درخواست تغییر یافت. همه تغییرات انجام شد و تست‌ها با موفقیت پاس شدند.

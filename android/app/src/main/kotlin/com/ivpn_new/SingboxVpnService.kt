@@ -1,4 +1,4 @@
-package com.example.ivpnnew
+package com.ivpn_new
 
 import android.app.Notification
 import android.app.NotificationChannel
