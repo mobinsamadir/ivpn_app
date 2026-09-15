@@ -12,9 +12,7 @@ on:
   # 1. RUN ON PUSH (Uncomment below to enable)
   pull_request:
     branches:
-      - main
-      - master
-      - develop
+      - '**'
   # paths-ignore:
   # - '**.md'
   # - 'docs/**'

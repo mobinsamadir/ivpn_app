@@ -80,8 +80,7 @@ void main() {
           },
         );
 
-        await AdvancedLogger.init().timeout(const Duration(seconds: 2));
-        AdvancedLogger.info("Application starting...");
+AdvancedLogger.info("Application starting...");
       } catch (e) {
         debugPrint("Logger initialization warning: $e");
       }

@@ -223,9 +223,23 @@ class EphemeralTester {
           ping: -1,
         );
       }
-
       // STAGE 2 & 3: Native Proxy (Serialized)
+      if (!(await NativeVpnService().hasVpnPermission())) {
+        AdvancedLogger.error("[EphemeralTester] Missing VPN Permission. Aborting Stage 2/3 for ${config.id}.");
+        return config.copyWith(
+          funnelStage: 0,
+          failureReason: 'VPN Permission Required',
+          lastFailedStage: "Permission_Check",
+          failureCount: config.failureCount + 1,
+          lastTestedAt: DateTime.now(),
+          ping: -1,
+        );
+      }
+
       await _androidSemaphore.acquire();
+      AdvancedLogger.debug('[LIFECYCLE] [${config.id}] Acquired Android Semaphore');
+
+      AdvancedLogger.debug('[LIFECYCLE] [${config.id}] Acquired Android Semaphore');
 
       final nativeService = NativeVpnService();
       int proxyPort = -1;
@@ -381,6 +395,7 @@ class EphemeralTester {
       } finally {
         await nativeService.stopTestProxy();
         if (listenPort > 0) PortAllocator().release(listenPort);
+        AdvancedLogger.debug('[LIFECYCLE] [${config.id}] Released Android Semaphore');
         _androidSemaphore.release();
       }
 

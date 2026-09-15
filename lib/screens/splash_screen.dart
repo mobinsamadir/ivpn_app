@@ -89,33 +89,10 @@ class _SplashScreenState extends State<SplashScreen>
           AdvancedLogger.error("ConfigManager.init timed out!");
         },
       );
-
-      // Only auto-start funnel if VPN permission is already granted
-      final hasVpnPerm = await NativeVpnService().hasVpnPermission();
-      if (hasVpnPerm) {
-          FunnelService().startFunnel();
-      } else {
-          AdvancedLogger.info("[Splash] VPN Permission not granted yet, skipping auto funnel start to avoid premature prompt.");
-      }
       AdManagerService().initialize();
 
       final timeWallet = TimeWalletService();
-      await timeWallet.init();
-
-      bool skipWait = false;
-      // Check VPN permission without triggering prompt
-
-
-      if (timeWallet.hasTime &&
-          configManager.isAutoSwitchEnabled &&
-          configManager.validatedConfigs.isNotEmpty &&
-          hasVpnPerm) {
-        skipWait = true;
-        AdvancedLogger.info(
-          "[Splash] Optimistic Startup enabled. Bypassing funnel wait.",
-        );
-        configManager.connectWithSmartFailover();
-      }
+      await timeWallet.init();      bool skipWait = false;
 
       if (!skipWait) {
         int waitLoops = 0;

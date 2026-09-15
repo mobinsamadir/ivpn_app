@@ -65,9 +65,9 @@ class SingboxVpnService :
             testServer = null
             if (serverToClose != null) {
                 try {
-                    android.util.Log.d("NativeVpnLifecycle", "Closing existing testServer...")
+                    android.util.Log.d("NativeVpnLifecycle", "[LIFECYCLE] STOP_STARTED: Closing existing testServer...")
                     serverToClose.close()
-                    android.util.Log.d("NativeVpnLifecycle", "testServer successfully closed.")
+                    android.util.Log.d("NativeVpnLifecycle", "[LIFECYCLE] DISPOSED: testServer successfully closed.")
                 } catch (e: Throwable) {
                     android.util.Log.e("NativeVpnLifecycle", "Error closing testServer: ${e.message}")
                     e.printStackTrace()
@@ -112,13 +112,14 @@ class SingboxVpnService :
 
         // --- NEW: Granular Control for Dart-driven Testing ---
         suspend fun startTestProxy(
+            testId: String = "unknown",
             rawInput: String,
             tempDir: File,
             result: MethodChannel.Result?,
         ) = withContext(Dispatchers.IO) {
             nativeCallMutex.withLock {
                 if (isVpnRunning) {
-                    println("❌ [Native] Cannot start Test Proxy: VPN is running")
+                    android.util.Log.e("NativeLifecycle", "[LIFECYCLE][$testId] ERROR: Cannot start Test Proxy: VPN is running")
                     result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
                     return@withContext
                 }
@@ -281,6 +282,7 @@ class SingboxVpnService :
                         closeTestServerUnlocked()
 
                         // SAFE CALL - pass JSON content string
+                        android.util.Log.d("NativeVpnLifecycle", "[LIFECYCLE] CREATE_STARTED")
                         val newTestServer =
                             try {
                                 if (!isLibboxSetup) {
@@ -305,7 +307,9 @@ class SingboxVpnService :
                         }
 
                         try {
+                            android.util.Log.d("NativeVpnLifecycle", "[LIFECYCLE] START_STARTED")
                             newTestServer.startOrReloadService(json.toString(), null)
+                            android.util.Log.d("NativeVpnLifecycle", "[LIFECYCLE] RUNNING")
                             testServer = newTestServer
                         } catch (e: Throwable) {
                             try { newTestServer.close() } catch (ignored: Throwable) {}

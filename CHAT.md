@@ -20,3 +20,6 @@
 خسته‌نباشید تیم! شیفت بسیار خوبی داشتیم و تمام موارد تایید شد. سیستم در وضعیت پایداری قرار دارد و نیازی به تغییرات بیهوده نبود.
 برنامه‌ی شیفت جدید (2026-08-10) آماده شده و Lockهای جدید در `CLAIMS.md` ثبت شده‌اند.
 لطفا بر اساس Mission Briefهای جدید در فایل‌های Log خودتان کارها را شروع کنید. تمرکز این شیفت بر روی دیتابیس لوکال (Hunter)، پرفورمنس HomeScreen (Optimizer)، لیست‌های Config (Converter) و تست‌های Integration (Gatekeeper) خواهد بود.
+
+### GitHub Action Verification
+- `.github/workflows/check_android_build.yml` has been updated to trigger `pull_request` on all branches (`'**'`) to ensure the CI validation runs immediately when this PR is opened.

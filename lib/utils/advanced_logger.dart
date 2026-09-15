@@ -15,6 +15,7 @@ class AdvancedLogger {
   static const int _bufferSize = 50; // Flush if buffer reaches 50
   static LogLevel _minLevel = LogLevel.debug;
   static Timer? _flushTimer;
+  static bool _isInitialized = false;
 
   // Memory buffering for in-app viewing
   static final Queue<String> _logHistory = Queue<String>();
@@ -22,8 +23,11 @@ class AdvancedLogger {
   static const int _maxLogEntries = 1000; // Keep last 1000 log entries
 
   /// Initialize the logger
+
   static Future<void> init({LogLevel minLevel = LogLevel.debug}) async {
+    if (_isInitialized) return;
     _minLevel = minLevel;
+
     try {
       File logFile;
       if (Platform.isWindows) {
@@ -84,6 +88,7 @@ class AdvancedLogger {
       _flushTimer = Timer.periodic(const Duration(seconds: 5), (_) => _flush());
 
       debugPrint('✅ AdvancedLogger initialized: ${_logFile!.path}');
+      _isInitialized = true;
     } catch (e) {
       debugPrint('❌ Failed to initialize AdvancedLogger: $e');
     }

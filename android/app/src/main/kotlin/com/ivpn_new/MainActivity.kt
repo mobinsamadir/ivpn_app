@@ -109,7 +109,7 @@ class MainActivity : FlutterActivity() {
                     when (call.method) {
                                                 "hasVpnPermission" -> {
                             withContext(Dispatchers.Main) {
-                                val intent = VpnService.prepare(this@MainActivity)
+                                val intent = withContext(Dispatchers.Main) { android.net.VpnService.prepare(this@MainActivity) }
                                 result.success(intent == null) // If null, permission is already granted
                             }
                         }
@@ -160,7 +160,7 @@ class MainActivity : FlutterActivity() {
                             } else {
                                 if (config != null && config.isNotBlank()) {
                                     try {
-                                        SingboxVpnService.startTestProxy(config, cacheDir, result)
+                                        SingboxVpnService.startTestProxy(testId = "dart_proxy_test", rawInput = config, tempDir = cacheDir, result = result)
                                     } catch (e: Exception) {
                                         android.util.Log.e("MainActivity", "Native crash in startTestProxy: ${e.message}", e)
                                         result.error("NATIVE_CRASH", "Native crash in startTestProxy: ${e.message}", null)
@@ -232,7 +232,7 @@ class MainActivity : FlutterActivity() {
                         val result = pendingTestProxyResult
                         scope.launch(Dispatchers.IO) {
                             try {
-                                SingboxVpnService.startTestProxy(config, cacheDir, result)
+                                SingboxVpnService.startTestProxy(testId = "dart_proxy_test", rawInput = config, tempDir = cacheDir, result = result)
                             } catch (e: Exception) {
                                 android.util.Log.e("MainActivity", "Native crash in startTestProxy: ${e.message}", e)
                                 result?.error("NATIVE_CRASH", "Native crash in startTestProxy: ${e.message}", null)
