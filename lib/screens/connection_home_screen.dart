@@ -71,6 +71,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   // Connection Control
   // CRITICAL FIX: Debounce Auto-Switch
   bool _isSwitching = false;
+  String _connectionFlowState = "idle"; // idle, requesting_permission, connecting
   // Native Operation check
   bool get _isNativeOperationInProgress {
     final status = _configManager.connectionStatus.toLowerCase();
@@ -577,25 +578,6 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     if (_autoRefreshOnStartup) {
       AdvancedLogger.info("[HomeScreen] Triggering Auto-Refresh on startup...");
       await _refreshConfigsManual();
-    }
-
-    // Auto Test if configs exist
-    // Smart Startup: Skip auto-test if we already have enough good configs
-    final bool haveEnoughValid = _configManager.validatedConfigs.length >= 5;
-
-    if (!haveEnoughValid &&
-        _configManager.allConfigs.isNotEmpty &&
-        _autoTestOnStartup &&
-        !_configManager.isConnected &&
-        mounted) {
-      AdvancedLogger.info(
-        "[HomeScreen] Triggering Auto-Test (Need valid configs)...",
-      );
-      _runFunnelTest();
-    } else if (haveEnoughValid) {
-      AdvancedLogger.info(
-        "[HomeScreen] Smart Startup: Skipping Auto-Test (Have ${_configManager.validatedConfigs.length} valid configs).",
-      );
     }
   }
 
@@ -1127,12 +1109,18 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   }
 
   // --- LOGIC METHODS ---
-
   Future<void> _handleConnection() async {
+    if (_connectionFlowState != 'idle') {
+      AdvancedLogger.warn("[ConnectionHomeScreen] Ignoring connect tap: currently $_connectionFlowState");
+      return;
+    }
+
     // Check if user wants to disconnect or cancel connecting
     final status = _configManager.connectionStatus.toLowerCase();
     if (_configManager.isConnected || status.contains('connecting')) {
+      _connectionFlowState = 'disconnecting';
       await _configManager.stopAllOperations();
+      _connectionFlowState = 'idle';
       return;
     }
 
@@ -1146,6 +1134,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     }
 
     try {
+      _connectionFlowState = 'requesting_permission';
+
       // Network Check
       if (!await _connectivityService.hasInternet()) {
         if (!mounted) return;
@@ -1155,9 +1145,26 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
             backgroundColor: Colors.redAccent,
           ),
         );
+        _connectionFlowState = 'idle';
         return;
       }
 
+      _configManager.setConnected(false, status: 'Checking permissions...');
+
+      // **CRITICAL INVARIANT: EXPLICIT VPN PERMISSION CHECK HERE**
+      bool hasPermission = await _nativeVpnService.hasVpnPermission();
+      if (!hasPermission) {
+        _configManager.setConnected(false, status: 'Waiting for permission...');
+        hasPermission = await _nativeVpnService.requestVpnPermission();
+        if (!hasPermission) {
+           _configManager.setConnected(false, status: 'Permission Denied');
+           _showToast("VPN Permission is required to connect or test servers.");
+           _connectionFlowState = 'idle';
+           return;
+        }
+      }
+
+      _connectionFlowState = 'connecting';
       _configManager.setConnected(false, status: 'Connecting...');
 
       // Access Check
@@ -1166,6 +1173,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
         await _showAdSequence();
         if (!access.hasTime) {
           _configManager.setConnected(false, status: 'Disconnected');
+          _connectionFlowState = 'idle';
           return;
         }
       }
@@ -1173,6 +1181,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
       if (_configManager.allConfigs.isEmpty) {
         _showToast("No configurations available. Please refresh.");
         _configManager.setConnected(false, status: 'Disconnected');
+        _connectionFlowState = 'idle';
         return;
       }
 
@@ -1181,7 +1190,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
       if (_configManager.validatedConfigs.isEmpty) {
         _configManager.setConnected(false, status: 'Testing servers...');
 
-        // Start Funnel if not running
+        // Start Funnel ONLY if we reach here and have permission
         _funnelService.startFunnel(retestDead: false); // Prioritize fresh ones
 
         int waits = 0;
@@ -1191,6 +1200,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
           await Future.delayed(const Duration(seconds: 1));
           waits++;
         }
+
 
         if (_configManager.isConnectionCancelled) {
           _configManager.setConnected(false, status: 'Disconnected');
@@ -1210,6 +1220,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
       AdvancedLogger.error('Connection failed: $e');
       _configManager.setConnected(false, status: 'Failed');
       _showToast('Connection failed. Please try again.');
+    } finally {
+      if (_connectionFlowState != 'disconnecting') _connectionFlowState = 'idle';
     }
   }
 

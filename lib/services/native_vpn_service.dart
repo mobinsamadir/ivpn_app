@@ -154,24 +154,31 @@ class NativeVpnService {
       return true;
     }
   }
-
   /// Explicitly asks for VPN permission if not granted yet.
   Future<bool> requestVpnPermission() async {
     if (Platform.isWindows) return true;
     try {
-      // testConfig triggers the intent on MainActivity if missing
+      AdvancedLogger.info("[NativeVpnService] Explicitly requesting VPN Permission...");
+      // testConfig on MainActivity triggers prepare() and waits for onActivityResult
+      // If it throws PERMISSION_DENIED, the user denied it.
       await _methodChannel.invokeMethod('testConfig', {'config': '{}'});
       return true;
     } on PlatformException catch (e) {
       if (e.code == 'PERMISSION_DENIED') {
-        AdvancedLogger.warn("VPN Permission requested from user.");
+        AdvancedLogger.warn("VPN Permission was denied by the user.");
         return false;
       }
-      return true;
+      if (e.code == 'INVALID_CONFIG') {
+        // MainActivity testConfig might complain about empty config if permission is ALREADY granted.
+        // That means we have permission!
+        return true;
+      }
+      return false;
     } catch (_) {
-      return true;
+      return false;
     }
   }
+
 
   // --- NEW: Granular Test Control ---
 

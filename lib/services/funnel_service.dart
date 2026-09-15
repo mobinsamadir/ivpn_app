@@ -65,7 +65,7 @@ class FunnelService {
   static int get _maxTcpWorkers =>
       Platform.isWindows ? 2 : _getDynamicWorkerCount(6);
   static int get _maxHttpWorkers =>
-      Platform.isWindows ? 2 : _getDynamicWorkerCount(3);
+      Platform.isAndroid ? 1 : (Platform.isWindows ? 2 : _getDynamicWorkerCount(3));
   static int get _maxSpeedWorkers => 1;
 
   // State
@@ -120,10 +120,14 @@ class FunnelService {
     AdvancedLogger.info(
       "FunnelService: Starting Pipeline (RetestDead: $retestDead)",
     );
+    // CRITICAL GUARD: Ensure we have permission before running any funnel tests
+    final hasPerm = await NativeVpnService().hasVpnPermission();
+    if (!hasPerm && Platform.isAndroid) {
+      AdvancedLogger.error("FunnelService: Aborting startFunnel due to missing VPN permission.");
+      _isRunning = false;
+      return;
+    }
 
-    // Check permission before spinning up concurrent testers
-    // Removed preemptive requestVpnPermission here to avoid blocking UI at startup.
-    // It will be requested when the user actually tries to connect.
 
     // Start UI Throttle Timer (500ms)
     _startUiThrottle();
