@@ -66,7 +66,7 @@ class SingboxVpnService :
             if (serverToClose != null) {
                 try {
                     android.util.Log.d("NativeVpnLifecycle", "[LIFECYCLE] STOP_STARTED: Closing existing testServer...")
-                    serverToClose.serviceStop()
+                    // serverToClose.serviceStop()
                     serverToClose.close()
                     android.util.Log.d("NativeVpnLifecycle", "[LIFECYCLE] DISPOSED: testServer successfully closed.")
                 } catch (e: Throwable) {
@@ -613,7 +613,7 @@ class StubCommandServerHandler : io.nekohasekai.libbox.CommandServerHandler {
 
     override fun serviceReload() {}
 
-    override fun serviceStop() {}
+    // override fun serviceStop() {}
 
     override fun setSystemProxyEnabled(enabled: Boolean) {}
 
