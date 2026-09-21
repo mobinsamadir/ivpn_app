@@ -66,7 +66,7 @@ class SingboxVpnService :
             if (serverToClose != null) {
                 try {
                     android.util.Log.d("NativeVpnLifecycle", "[LIFECYCLE] STOP_STARTED: Closing existing testServer...")
-                    serverToClose.serviceStop()
+                    // serverToClose.serviceStop()
                     serverToClose.close()
                     android.util.Log.d("NativeVpnLifecycle", "[LIFECYCLE] DISPOSED: testServer successfully closed.")
                 } catch (e: Throwable) {
@@ -205,7 +205,7 @@ class SingboxVpnService :
                         }
 
                         try {
-                            server.startOrReloadService(json.toString(), io.nekohasekai.libbox.StartOptions())
+                            server.startOrReloadService(json.toString(), null)
                             testServer = server
                         } catch (e: Throwable) {
                             try { server.close() } catch (ignored: Throwable) {}
@@ -309,7 +309,7 @@ class SingboxVpnService :
 
                         try {
                             android.util.Log.d("NativeVpnLifecycle", "[LIFECYCLE] START_STARTED")
-                            newTestServer.startOrReloadService(json.toString(), io.nekohasekai.libbox.StartOptions())
+                            newTestServer.startOrReloadService(json.toString(), null)
                             android.util.Log.d("NativeVpnLifecycle", "[LIFECYCLE] RUNNING")
                             testServer = newTestServer
                         } catch (e: Throwable) {
@@ -446,7 +446,7 @@ class SingboxVpnService :
                     options.setTempPath(configDir.absolutePath)
                     Libbox.setup(options)
                     mainServer = Libbox.newCommandServer(StubCommandServerHandler(), this@SingboxVpnService)
-                    mainServer?.startOrReloadService(jsonObject.toString(), io.nekohasekai.libbox.StartOptions())
+                    mainServer?.startOrReloadService(jsonObject.toString(), null)
                 } catch (e: Throwable) {
                     e.printStackTrace()
                     android.util.Log.e("NativeVpnLifecycle", "StartOrReloadService Error: ${e.message}")
