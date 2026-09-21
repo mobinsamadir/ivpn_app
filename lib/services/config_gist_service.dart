@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html_parser;
@@ -200,6 +202,12 @@ class ConfigGistService {
       }
       return false; // Total failure
     }
+    } on TimeoutException catch (e, stackTrace) {
+      AdvancedLogger.error("[ConfigGistService] Timeout in fetchAndApplyConfigs: $e\n$stackTrace");
+      return false;
+    } on SocketException catch (e, stackTrace) {
+      AdvancedLogger.error("[ConfigGistService] Network error in fetchAndApplyConfigs: $e\n$stackTrace");
+      return false;
     } catch (e, stackTrace) {
       AdvancedLogger.error("[ConfigGistService] Unhandled exception in fetchAndApplyConfigs: $e\n$stackTrace");
       return false;
@@ -253,6 +261,12 @@ class ConfigGistService {
       }
 
       return content;
+    } on TimeoutException catch (e) {
+      AdvancedLogger.warn("Timeout fetching from $url: $e");
+      return null;
+    } on SocketException catch (e) {
+      AdvancedLogger.warn("SocketException (Network Error) fetching from $url: $e");
+      return null;
     } catch (e) {
       AdvancedLogger.warn("Fetch failed for $url: $e");
       return null;
