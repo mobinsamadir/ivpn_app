@@ -613,7 +613,7 @@ class StubCommandServerHandler : io.nekohasekai.libbox.CommandServerHandler {
 
     override fun serviceReload() {}
 
-    // override fun serviceStop() {}
+    override fun serviceStop() {}
 
     override fun setSystemProxyEnabled(enabled: Boolean) {}
 
