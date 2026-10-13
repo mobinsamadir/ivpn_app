@@ -679,7 +679,6 @@ class SingboxConfigGenerator {
     return [
       proxyOutbound,
       {"type": "direct", "tag": "direct"},
-      {"type": "dns", "tag": "dns-out"},
       {"type": "block", "tag": "block"},
     ];
   }
@@ -733,7 +732,7 @@ class SingboxConfigGenerator {
       return {
         "auto_detect_interface": true,
         "rules": [
-          {"protocol": "dns", "outbound": "dns-out"},
+          {"protocol": "dns", "action": "hijack-dns"},
           {"ip_is_private": true, "outbound": "direct"},
           if (splitTunnelingPackages.isNotEmpty)
             {"package_name": splitTunnelingPackages, "outbound": "direct"},

@@ -7,7 +7,6 @@ import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html_parser;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../utils/advanced_logger.dart';
 import '../widgets/update_dialog.dart';
 import 'config_manager.dart';
@@ -27,6 +26,8 @@ class ConfigGistService {
   static const Duration _fetchInterval = Duration(hours: 24);
   static const String _updateUrl =
       'https://gist.githubusercontent.com/mobinsamadir/1f91132e6d919d2dec5085a90c47ed4a/raw/7a8a456296fdf33ad4dd4d7a447dbfce0e966adb/version.json';
+  static const String _repoUpdateUrl =
+      'https://raw.githubusercontent.com/mobinsamadir/ivpn_app/main/assets/version.json';
 
   // Mirrors List (GitHub -> Gist -> MyFiles -> Drive API)
   static const List<String> _mirrors = [
@@ -42,30 +43,43 @@ class ConfigGistService {
         "[UpdateCheck] Checking for updates... Current Build: $currentBuild",
       );
 
-      final response = await http
-          .get(Uri.parse(_updateUrl))
-          .timeout(const Duration(seconds: 10));
-      if (response.statusCode == 200) {
-        final data = await compute(_parseJsonInIsolate, response.body);
-        // Robust parsing to prevent ANY crash
+      String? responseBody;
+      try {
+        final response = await http
+            .get(Uri.parse(_updateUrl))
+            .timeout(const Duration(seconds: 5));
+        if (response.statusCode == 200) {
+          responseBody = response.body;
+        }
+      } catch (e) {
+        AdvancedLogger.warn("[UpdateCheck] Primary Gist failed ($e), trying repo version.json mirror...");
+      }
+
+      if (responseBody == null) {
+        try {
+          final repoResponse = await http
+              .get(Uri.parse(_repoUpdateUrl))
+              .timeout(const Duration(seconds: 5));
+          if (repoResponse.statusCode == 200) {
+            responseBody = repoResponse.body;
+          }
+        } catch (e) {
+          AdvancedLogger.warn("[UpdateCheck] Repo mirror also failed: $e");
+        }
+      }
+
+      if (responseBody != null) {
+        final data = await compute(_parseJsonInIsolate, responseBody);
         final latestBuild =
             int.tryParse(data['version_code']?.toString() ?? '0') ?? 0;
         final version = data['version']?.toString() ?? 'Unknown';
         final notes = data['release_notes']?.toString() ??
             'Bug fixes and performance improvements.';
-        // FIX: Handle missing URL gracefully to prevent crash
         final downloadUrl = data['url']?.toString() ?? '';
 
-        if (downloadUrl.isEmpty) {
-          AdvancedLogger.warn(
-            "[UpdateCheck] Update aborted: Download URL is missing.",
-          );
-          return;
-        }
+        AdvancedLogger.info("[UpdateCheck] Current Build: $currentBuild | Remote Build: $latestBuild");
 
-        AdvancedLogger.info("[UpdateCheck] Remote Build: $latestBuild");
-
-        if (latestBuild > currentBuild) {
+        if (latestBuild > currentBuild && downloadUrl.isNotEmpty) {
           if (context.mounted) {
             showDialog(
               context: context,
@@ -73,12 +87,7 @@ class ConfigGistService {
               builder: (ctx) => UpdateDialog(
                 version: version,
                 releaseNotes: notes,
-                onUpdate: () {
-                  launchUrl(
-                    Uri.parse(downloadUrl),
-                    mode: LaunchMode.externalApplication,
-                  );
-                },
+                downloadUrl: downloadUrl,
               ),
             );
           }

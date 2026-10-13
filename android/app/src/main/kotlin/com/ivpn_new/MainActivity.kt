@@ -175,6 +175,36 @@ class MainActivity : FlutterActivity() {
                             SingboxVpnService.stopTestProxy()
                             result.success(null)
                         }
+                        "installApk" -> {
+                            val filePath = call.argument<String>("filePath")
+                            withContext(Dispatchers.Main) {
+                                if (filePath != null) {
+                                    try {
+                                        val file = java.io.File(filePath)
+                                        if (file.exists()) {
+                                            val uri = androidx.core.content.FileProvider.getUriForFile(
+                                                this@MainActivity,
+                                                "${applicationContext.packageName}.fileProvider",
+                                                file
+                                            )
+                                            val installIntent = Intent(Intent.ACTION_VIEW).apply {
+                                                setDataAndType(uri, "application/vnd.android.package-archive")
+                                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                            }
+                                            startActivity(installIntent)
+                                            result.success(true)
+                                        } else {
+                                            result.error("FILE_NOT_FOUND", "APK file does not exist", null)
+                                        }
+                                    } catch (e: Exception) {
+                                        result.error("INSTALL_ERROR", e.message, null)
+                                    }
+                                } else {
+                                    result.error("INVALID_PATH", "filePath is null", null)
+                                }
+                            }
+                        }
                         else -> {
                             result.notImplemented()
                         }

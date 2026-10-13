@@ -1,6 +1,9 @@
-name: Manual Android Build
+name: Android Build & Release
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:

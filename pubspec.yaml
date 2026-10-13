@@ -1,6 +1,6 @@
 name: ivpn_new
 description: iVPN Client - High Performance VPN
-version: 1.0.1+1
+version: 1.0.2+1002
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -87,6 +87,7 @@ flutter:
     - assets/geosite.db
     - assets/html/
     - assets/ad_config.json
+    - assets/version.json
 
 
 dependency_overrides:

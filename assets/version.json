@@ -1,0 +1,6 @@
+{
+  "version": "1.0.2",
+  "version_code": 1002,
+  "release_notes": "• Fix native VPN connection and proxy protocol\n• Fix server speed and HTTP testing pipeline\n• Enhance in-app updates and download system\n• UI and stability optimizations",
+  "url": "https://github.com/mobinsamadir/ivpn_app/releases/latest"
+}

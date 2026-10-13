@@ -145,7 +145,8 @@ class FunnelService {
     final now = DateTime.now();
 
     for (final c in allConfigs) {
-      if (!retestDead && c.lastTestedAt != null) {
+      // Do not skip if config has never been tested (c.lastTestedAt == null)
+      if (!retestDead && c.lastTestedAt != null && c.failureCount >= 3) {
         final hoursSinceTested = now.difference(c.lastTestedAt!).inHours;
         if (hoursSinceTested < 2) continue;
       }
@@ -169,7 +170,8 @@ class FunnelService {
     favorites.sort(compareScore);
     validated.sort(compareScore);
 
-    final all = [...favorites, ...validated, ...fresh, ...softFail];
+    // PRIORITY ORDER: Validated first, then fresh/untested, then soft-failures, then favorites
+    final all = [...validated, ...fresh, ...favorites, ...softFail];
     if (retestDead) {
       all.addAll(dead);
     }

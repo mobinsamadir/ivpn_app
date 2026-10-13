@@ -651,7 +651,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
         backgroundColor: const Color(0xFF0A0A0A),
         elevation: 0,
         title: const Text(
-          'V2Ray',
+          'iVPN',
           style: TextStyle(
             color: Colors.white,
             fontSize: 24,
@@ -1210,12 +1210,11 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
 
         int waits = 0;
         while (_configManager.validatedConfigs.isEmpty &&
-            waits < 15 &&
+            waits < 35 &&
             !_configManager.isConnectionCancelled) {
           await Future.delayed(const Duration(seconds: 1));
           waits++;
         }
-
 
         if (_configManager.isConnectionCancelled) {
           _configManager.setConnected(false, status: 'Disconnected');

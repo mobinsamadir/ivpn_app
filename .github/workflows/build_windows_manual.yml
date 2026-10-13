@@ -1,6 +1,9 @@
-name: Manual Windows Build
+name: Windows Build & Release
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
