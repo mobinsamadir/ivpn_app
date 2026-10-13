@@ -17,6 +17,7 @@ import io.nekohasekai.libbox.Libbox
 import io.nekohasekai.libbox.LocalDNSTransport
 import io.nekohasekai.libbox.NetworkInterface
 import io.nekohasekai.libbox.NetworkInterfaceIterator
+import io.nekohasekai.libbox.OverrideOptions
 import io.nekohasekai.libbox.PlatformInterface
 import io.nekohasekai.libbox.StringIterator
 import io.nekohasekai.libbox.TunOptions
@@ -205,7 +206,7 @@ class SingboxVpnService :
                         }
 
                         try {
-                            server.startOrReloadService(json.toString(), null)
+                            server.startOrReloadService(json.toString(), OverrideOptions())
                             testServer = server
                         } catch (e: Throwable) {
                             try { server.close() } catch (ignored: Throwable) {}
@@ -309,7 +310,7 @@ class SingboxVpnService :
 
                         try {
                             android.util.Log.d("NativeVpnLifecycle", "[LIFECYCLE] START_STARTED")
-                            newTestServer.startOrReloadService(json.toString(), null)
+                            newTestServer.startOrReloadService(json.toString(), OverrideOptions())
                             android.util.Log.d("NativeVpnLifecycle", "[LIFECYCLE] RUNNING")
                             testServer = newTestServer
                         } catch (e: Throwable) {
@@ -446,7 +447,7 @@ class SingboxVpnService :
                     options.setTempPath(configDir.absolutePath)
                     Libbox.setup(options)
                     mainServer = Libbox.newCommandServer(StubCommandServerHandler(), this@SingboxVpnService)
-                    mainServer?.startOrReloadService(jsonObject.toString(), null)
+                    mainServer?.startOrReloadService(jsonObject.toString(), OverrideOptions())
                 } catch (e: Throwable) {
                     e.printStackTrace()
                     android.util.Log.e("NativeVpnLifecycle", "StartOrReloadService Error: ${e.message}")

@@ -82,6 +82,15 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
         _isSwitching;
   }
 
+  bool _wasVpnConnected = false;
+
+  bool get _isConnectingToVpn {
+    final status = _configManager.connectionStatus.toLowerCase();
+    return _connectionFlowState == 'connecting' ||
+        _connectionFlowState == 'requesting_permission' ||
+        status.contains('connecting');
+  }
+
   String _lastNativeStatus = "DISCONNECTED";
   final ValueNotifier<bool> _isAdmin = ValueNotifier<bool>(true);
 
@@ -192,7 +201,11 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
 
           _rxBytes = 0;
           _txBytes = 0;
-          if (!_configManager.userInitiatedDisconnect &&
+          final wasConnected = _wasVpnConnected;
+          _wasVpnConnected = false;
+
+          if (wasConnected &&
+              !_configManager.userInitiatedDisconnect &&
               !_configManager.isConnectionCancelled) {
             final now = DateTime.now();
             if (_lastAutoSwitchAttempt != null &&
@@ -246,6 +259,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
 
         // NEW: Post-Connect Logic (Anti-Censorship)
         if (status == 'CONNECTED') {
+          _wasVpnConnected = true;
           _consecutiveFailures = 0; // Reset on success
 
           AdvancedLogger.info(
@@ -779,7 +793,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                             const SizedBox(height: 12),
                             _ConnectButton(
                               isConnected: _configManager.isConnected,
-                              isConnecting: _isNativeOperationInProgress,
+                              isConnecting: _isConnectingToVpn,
                               onRefresh: _refreshConfigsManual,
                               onConnect: _handleConnection,
                               onSkip: _skipServer,
@@ -1119,6 +1133,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     final status = _configManager.connectionStatus.toLowerCase();
     if (_configManager.isConnected || status.contains('connecting')) {
       _connectionFlowState = 'disconnecting';
+      _wasVpnConnected = false;
       await _configManager.stopAllOperations();
       _connectionFlowState = 'idle';
       return;

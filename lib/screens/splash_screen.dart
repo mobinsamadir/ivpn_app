@@ -6,8 +6,6 @@ import '../services/config_manager.dart';
 import '../services/time_wallet_service.dart';
 import '../utils/advanced_logger.dart';
 import '../services/ad_manager_service.dart';
-import '../services/funnel_service.dart';
-import '../services/native_vpn_service.dart';
 
 import 'connection_home_screen.dart';
 import '../widgets/scale_on_tap.dart';

@@ -63,7 +63,7 @@ class FunnelService {
   // Limits
 
   static int get _maxTcpWorkers =>
-      Platform.isWindows ? 2 : _getDynamicWorkerCount(6);
+      Platform.isWindows ? 2 : _getDynamicWorkerCount(4);
   static int get _maxHttpWorkers =>
       Platform.isAndroid ? 1 : (Platform.isWindows ? 2 : _getDynamicWorkerCount(3));
   static int get _maxSpeedWorkers => 1;
@@ -91,6 +91,7 @@ class FunnelService {
     _tcpQueue.clear();
     _httpQueue.clear();
     _speedQueue.clear();
+    _cachedServerDetails.clear();
 
     // Kill any zombie processes (Windows)
     if (!Platform.isAndroid) {
@@ -292,8 +293,8 @@ class FunnelService {
         // STAGE 1: TCP Connect (Raw Dart Socket)
         bool passed = false;
 
-        // Use Cached Details to avoid Main Thread Parsing
-        final details = _cachedServerDetails[config.id];
+        // Use Cached Details and remove from cache to free memory immediately
+        final details = _cachedServerDetails.remove(config.id);
 
         if (details != null && details['host'] != null) {
           final host = details['host'] as String;
@@ -341,6 +342,7 @@ class FunnelService {
   }
 
   Future<void> _httpWorker() async {
+    int consecutiveHttpFailures = 0;
     while (_isRunning && !_stopRequested) {
       // Yield to event loop to prevent ANR/OOM on Android
       await Future.delayed(const Duration(milliseconds: 50));
@@ -363,6 +365,7 @@ class FunnelService {
         );
 
         if (result.funnelStage >= 2) {
+          consecutiveHttpFailures = 0;
           // Success (2 or 3)
           _httpPassed++;
           AdvancedLogger.debug(
@@ -375,18 +378,20 @@ class FunnelService {
           // Promote to Speed Queue
           _speedQueue.add(result);
         } else {
+          consecutiveHttpFailures++;
           _totalFailed++;
           AdvancedLogger.debug(
             "[TELEMETRY] ${config.name} | LastPassedStage: 1 | PingDuration: ${result.currentPing} | ExactException: HTTP Failed (No 204)",
           );
           await _configManager.markFailure(config.id);
         }
-            } catch (e) {
+      } catch (e) {
         if (e.toString().contains('PERMISSION_DENIED') || e.toString().contains('VPN Permission Required')) {
           AdvancedLogger.error("FunnelService: Aborting completely due to missing VPN permission.");
           stop();
           break;
         }
+        consecutiveHttpFailures++;
         _totalFailed++;
         AdvancedLogger.debug(
           "[TELEMETRY] ${config.name} | LastPassedStage: 1 | PingDuration: N/A | ExactException: $e",
@@ -394,6 +399,15 @@ class FunnelService {
         AdvancedLogger.warn("HTTP Worker Error: $e");
       } finally {
         _activeHttpWorkers--;
+      }
+
+      // Circuit Breaker: If 10 consecutive servers fail completely, pause testing to protect CPU/battery
+      if (consecutiveHttpFailures >= 10 && _httpQueue.length > 5) {
+        AdvancedLogger.warn(
+          "FunnelService: Circuit breaker triggered due to 10 consecutive HTTP failures. Aborting pipeline to preserve resources.",
+        );
+        stop();
+        break;
       }
     }
   }
