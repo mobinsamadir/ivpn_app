@@ -304,7 +304,8 @@ class EphemeralTester {
           // Constraint 3: Isolated SSL Bypass
           // removed insecure TLS bypass — all test targets use public CA-signed certs, traffic only tunneled via local Sing-box proxy, not TLS-terminated
 
-          client.findProxy = (uri) => "SOCKS5 127.0.0.1:$proxyPort";
+          // HTTP proxy configured on httpPort (listenPort + 1)
+          client.findProxy = (uri) => "PROXY 127.0.0.1:$httpPort";
           client.connectionTimeout = const Duration(seconds: 5);
 
           // Test HTTP (Stage 2) with Retry for HandshakeException

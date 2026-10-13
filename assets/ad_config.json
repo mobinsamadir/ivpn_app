@@ -1,0 +1,28 @@
+{
+  "config_version": "v1",
+  "global_ads_enabled": 1,
+  "ads": {
+    "home_banner_top": {
+      "is_enabled": true,
+      "type": "webview",
+      "media_source": "<!DOCTYPE html><html><head><meta name='viewport' content='width=device-width, initial-scale=1.0'><style>html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: transparent; overflow: hidden; display: flex; justify-content: center; align-items: center; } iframe { border: none; width: 100%; height: 100%; overflow: hidden; display: block; }</style></head><body><iframe data-aa='2426527' src='https://acceptable.a-ads.com/2426527/?size=Adaptive'></iframe></body></html>",
+      "target_url": "",
+      "height_factor": 0.15
+    },
+    "home_banner_bottom": {
+      "is_enabled": true,
+      "type": "webview",
+      "media_source": "<!DOCTYPE html><html><head><meta name='viewport' content='width=device-width, initial-scale=1.0'><style>html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: transparent; overflow: hidden; display: flex; justify-content: center; align-items: center; } iframe { border: none; width: 100%; height: 100%; overflow: hidden; display: block; }</style></head><body><iframe data-aa='2426527' src='https://acceptable.a-ads.com/2426527/?size=Adaptive'></iframe></body></html>",
+      "target_url": "",
+      "height_factor": 0.15
+    },
+    "reward_ad": {
+      "is_enabled": true,
+      "type": "webview",
+      "media_source": "<!DOCTYPE html><html><head><meta name='viewport' content='width=device-width, initial-scale=1.0'><style>html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: transparent; overflow: hidden; display: flex; justify-content: center; align-items: center; } iframe { border: none; width: 100%; height: 100%; overflow: hidden; display: block; }</style></head><body><iframe data-aa='2426527' src='https://acceptable.a-ads.com/2426527/?size=Adaptive'></iframe></body></html>",
+      "target_url": "",
+      "timer_seconds": 10,
+      "can_skip": false
+    }
+  }
+}

@@ -86,6 +86,7 @@ flutter:
     - assets/geoip.db
     - assets/geosite.db
     - assets/html/
+    - assets/ad_config.json
 
 
 dependency_overrides:

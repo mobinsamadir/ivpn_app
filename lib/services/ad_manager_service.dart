@@ -4,13 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import '../models/ad_config.dart';
 import '../utils/advanced_logger.dart';
 import '../widgets/full_screen_ad_dialog.dart';
 
 // Global toggle for Ads (True = Ads Enabled, False = Ads Disabled / Premium Free Mode)
-// Now driven by remote configuration `global_ads_enabled`
-bool kEnableAds = false;
+// Driven by configuration `global_ads_enabled` (defaults to true)
+bool kEnableAds = true;
 
 class AdManagerService {
   static final AdManagerService _instance = AdManagerService._internal();
@@ -21,12 +22,16 @@ class AdManagerService {
     null,
   );
 
-  // Base64 Encoded Ad Config URL
+  // Primary URL (Gist)
   static final String _adUrl = utf8.decode(
     base64.decode(
       'aHR0cHM6Ly9naXN0LmdpdGh1YnVzZXJjb250ZW50LmNvbS9tb2JpbnNhbWFkaXIvMDM3Y2RhYjhiODcxM2UxYzVhNTJkODE1NTM5ZjU2MzgvcmF3LzA4NjgzM2E5N2QyMzZkOWNmNTdkNDI3YzQ2YzIyNjg5MDQyNDRhN2UvYWRfY29uZmlnLmpzb24=',
     ),
   );
+
+  // Fallback Mirror (Direct from Repository)
+  static const String _adMirrorUrl =
+      'https://raw.githubusercontent.com/mobinsamadir/ivpn_app/main/assets/ad_config.json';
 
   static const String _storageKey = "ad_config_cache";
 
@@ -37,21 +42,20 @@ class AdManagerService {
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    html, body { margin: 0; padding: 0; width: 100%; height: 100%; background-color: transparent !important; }
-    body { display: flex; justify-content: center; align-items: center; }
-    iframe { border: none; width: 100%; height: 100%; overflow: hidden; }
+    html, body { margin: 0; padding: 0; width: 100%; height: 100%; background-color: transparent !important; overflow: hidden; display: flex; justify-content: center; align-items: center; }
+    iframe { border: none; width: 100%; height: 100%; overflow: hidden; display: block; }
   </style>
 </head>
 <body>
-  <iframe src="https://acceptable.a-ads.com/2426527/?size=Adaptive"></iframe>
+  <iframe data-aa="2426527" src="https://acceptable.a-ads.com/2426527/?size=Adaptive"></iframe>
 </body>
 </html>
 """;
 
-  // Construct the JSON structure
+  // Construct the JSON structure with ads enabled by default
   static final Map<String, dynamic> _defaultFallbackMap = {
     "config_version": "fallback_v1",
-    "global_ads_enabled": 0,
+    "global_ads_enabled": 1,
     "ads": {
       "home_banner_top": {
         "isEnabled": true,
@@ -102,15 +106,31 @@ class AdManagerService {
       AdvancedLogger.error("[AdManager] Failed to load default config: $e");
     }
 
-    // 2. Layer 2: Load from Cache
+    // 2. Layer 2: Load from bundled assets if available
+    await _loadFromAsset();
+
+    // 3. Layer 3: Load from Cache
     await _loadFromCache();
 
-    // 3. Layer 3: Network Fetch Removed from Startup
+    // 4. Layer 4: Network Fetch Removed from Startup
     // Only fetchLatestAds() will call network, triggered post-connect.
 
-    // 4. Monitoring removed here. Managed by global ConfigManager hook.
-
     _initialized = true;
+  }
+
+  Future<void> _loadFromAsset() async {
+    try {
+      final assetJson = await rootBundle.loadString('assets/ad_config.json');
+      final jsonMap =
+          await compute<String, dynamic>(_parseJsonInIsolate, assetJson);
+      final assetConfig = AdConfig.fromJson(jsonMap);
+      final int globalAds = jsonMap['global_ads_enabled'] as int? ?? 1;
+      kEnableAds = (globalAds == 1);
+      configNotifier.value = assetConfig;
+      AdvancedLogger.info("[AdManager] Loaded bundled asset config.");
+    } catch (e) {
+      AdvancedLogger.debug("[AdManager] Asset ad config not loaded: $e");
+    }
   }
 
   Future<void> _loadFromCache() async {
@@ -121,8 +141,8 @@ class AdManagerService {
         final jsonMap =
             await compute<String, dynamic>(_parseJsonInIsolate, jsonString);
         final cachedConfig = AdConfig.fromJson(jsonMap);
-        // Load global toggle from cache
-        final int globalAds = jsonMap['global_ads_enabled'] as int? ?? 0;
+        // Load global toggle from cache (defaults to 1 = ON)
+        final int globalAds = jsonMap['global_ads_enabled'] as int? ?? 1;
         kEnableAds = (globalAds == 1);
 
         configNotifier.value = cachedConfig;
@@ -138,7 +158,13 @@ class AdManagerService {
   Future<void> fetchLatestAds() async {
     AdvancedLogger.info("[AdManager] Requesting: $_adUrl");
     try {
-      final response = await _dio.get(_adUrl);
+      Response? response;
+      try {
+        response = await _dio.get(_adUrl);
+      } catch (primaryErr) {
+        AdvancedLogger.warn("[AdManager] Primary ad source failed: $primaryErr. Trying mirror: $_adMirrorUrl");
+        response = await _dio.get(_adMirrorUrl);
+      }
 
       AdvancedLogger.info("[AdManager] HTTP Status: ${response.statusCode}");
       if (response.data != null) {
@@ -155,8 +181,8 @@ class AdManagerService {
         }
 
         final remoteConfig = AdConfig.fromJson(data);
-        // Handle global_ads_enabled: 1 = ON, 0 = OFF (Fallback to false if missing or 0)
-        final int globalAds = data['global_ads_enabled'] as int? ?? 0;
+        // Handle global_ads_enabled: 1 = ON, 0 = OFF (Fallback to 1 if missing in json)
+        final int globalAds = data['global_ads_enabled'] as int? ?? 1;
         kEnableAds = (globalAds == 1);
 
         configNotifier.value = remoteConfig;

@@ -252,7 +252,13 @@ class FunnelService {
           _activeSpeedWorkers == 0) {
         // Debounce completion
         Future.delayed(const Duration(seconds: 2), () {
-          if (_tcpQueue.isEmpty && _activeTcpWorkers == 0 && _isRunning) {
+          if (_tcpQueue.isEmpty &&
+              _httpQueue.isEmpty &&
+              _speedQueue.isEmpty &&
+              _activeTcpWorkers == 0 &&
+              _activeHttpWorkers == 0 &&
+              _activeSpeedWorkers == 0 &&
+              _isRunning) {
             stop();
             _progressController.add("Completed");
             _printTelemetrySummary();
@@ -342,7 +348,6 @@ class FunnelService {
   }
 
   Future<void> _httpWorker() async {
-    int consecutiveHttpFailures = 0;
     while (_isRunning && !_stopRequested) {
       // Yield to event loop to prevent ANR/OOM on Android
       await Future.delayed(const Duration(milliseconds: 50));
@@ -365,7 +370,6 @@ class FunnelService {
         );
 
         if (result.funnelStage >= 2) {
-          consecutiveHttpFailures = 0;
           // Success (2 or 3)
           _httpPassed++;
           AdvancedLogger.debug(
@@ -378,7 +382,6 @@ class FunnelService {
           // Promote to Speed Queue
           _speedQueue.add(result);
         } else {
-          consecutiveHttpFailures++;
           _totalFailed++;
           AdvancedLogger.debug(
             "[TELEMETRY] ${config.name} | LastPassedStage: 1 | PingDuration: ${result.currentPing} | ExactException: HTTP Failed (No 204)",
@@ -391,7 +394,6 @@ class FunnelService {
           stop();
           break;
         }
-        consecutiveHttpFailures++;
         _totalFailed++;
         AdvancedLogger.debug(
           "[TELEMETRY] ${config.name} | LastPassedStage: 1 | PingDuration: N/A | ExactException: $e",
@@ -399,15 +401,6 @@ class FunnelService {
         AdvancedLogger.warn("HTTP Worker Error: $e");
       } finally {
         _activeHttpWorkers--;
-      }
-
-      // Circuit Breaker: If 10 consecutive servers fail completely, pause testing to protect CPU/battery
-      if (consecutiveHttpFailures >= 10 && _httpQueue.length > 5) {
-        AdvancedLogger.warn(
-          "FunnelService: Circuit breaker triggered due to 10 consecutive HTTP failures. Aborting pipeline to preserve resources.",
-        );
-        stop();
-        break;
       }
     }
   }
