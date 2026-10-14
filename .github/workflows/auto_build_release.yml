@@ -129,16 +129,29 @@ jobs:
           cd android/app/libs
           sha256sum --strict --check ../../../tool/aar_checksums.txt
 
-      - name: Build APK (Split Per ABI)
+      - name: Build APK (Universal & Split Per ABI)
         run: |
           yes | flutter doctor --android-licenses || true
+          flutter build apk --release
           flutter build apk --split-per-abi --release
+
+      - name: Rename APKs to iVPN
+        run: |
+          cd build/app/outputs/flutter-apk/
+          for f in app-*.apk; do
+            if [ -f "$f" ]; then
+              new_name=$(echo "$f" | sed 's/^app-/iVPN-/')
+              mv "$f" "$new_name"
+              echo "Renamed $f -> $new_name"
+            fi
+          done
+          ls -la
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: android-apks
-          path: build/app/outputs/flutter-apk/*.apk
+          path: build/app/outputs/flutter-apk/iVPN-*.apk
           retention-days: 1
 
   build-windows:

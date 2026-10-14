@@ -96,18 +96,31 @@ jobs:
           cd android/app/libs
           sha256sum --strict --check ../../../tool/aar_checksums.txt
 
-      - name: Build APK
+      - name: Build APK (Universal & Split Per ABI)
         run: |
           flutter pub get
           yes | flutter doctor --android-licenses || true
+          flutter build apk --release
           flutter build apk --split-per-abi --release
+
+      - name: Rename APKs to iVPN
+        run: |
+          cd build/app/outputs/flutter-apk/
+          for f in app-*.apk; do
+            if [ -f "$f" ]; then
+              new_name=$(echo "$f" | sed 's/^app-/iVPN-/')
+              mv "$f" "$new_name"
+              echo "Renamed $f -> $new_name"
+            fi
+          done
+          ls -la
 
       - name: Create Release and Upload APK
         uses: softprops/action-gh-release@v3.0.1
         with:
           tag_name: android-manual-${{ github.run_number }}
           name: Manual Android Build ${{ github.run_number }}
-          files: build/app/outputs/flutter-apk/*.apk
+          files: build/app/outputs/flutter-apk/iVPN-*.apk
           draft: false
           prerelease: false
         env:

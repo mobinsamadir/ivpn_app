@@ -45,26 +45,27 @@ class ConfigGistService {
 
       String? responseBody;
       try {
-        final response = await http
-            .get(Uri.parse(_updateUrl))
+        final cacheBuster = DateTime.now().millisecondsSinceEpoch;
+        final repoResponse = await http
+            .get(Uri.parse('$_repoUpdateUrl?t=$cacheBuster'))
             .timeout(const Duration(seconds: 5));
-        if (response.statusCode == 200) {
-          responseBody = response.body;
+        if (repoResponse.statusCode == 200) {
+          responseBody = repoResponse.body;
         }
       } catch (e) {
-        AdvancedLogger.warn("[UpdateCheck] Primary Gist failed ($e), trying repo version.json mirror...");
+        AdvancedLogger.warn("[UpdateCheck] Repo version.json check failed: $e");
       }
 
       if (responseBody == null) {
         try {
-          final repoResponse = await http
-              .get(Uri.parse(_repoUpdateUrl))
+          final response = await http
+              .get(Uri.parse(_updateUrl))
               .timeout(const Duration(seconds: 5));
-          if (repoResponse.statusCode == 200) {
-            responseBody = repoResponse.body;
+          if (response.statusCode == 200) {
+            responseBody = response.body;
           }
         } catch (e) {
-          AdvancedLogger.warn("[UpdateCheck] Repo mirror also failed: $e");
+          AdvancedLogger.warn("[UpdateCheck] Fallback Gist also failed ($e)");
         }
       }
 
@@ -75,11 +76,20 @@ class ConfigGistService {
         final version = data['version']?.toString() ?? 'Unknown';
         final notes = data['release_notes']?.toString() ??
             'Bug fixes and performance improvements.';
-        final downloadUrl = data['url']?.toString() ?? '';
+        var downloadUrl = data['url']?.toString() ?? '';
 
-        AdvancedLogger.info("[UpdateCheck] Current Build: $currentBuild | Remote Build: $latestBuild");
+        if (downloadUrl.isEmpty || downloadUrl.endsWith('/latest')) {
+          downloadUrl =
+              'https://github.com/mobinsamadir/ivpn_app/releases/latest/download/iVPN-release.apk';
+        }
 
-        if (latestBuild > currentBuild && downloadUrl.isNotEmpty) {
+        final isNewerByBuild = latestBuild > currentBuild;
+        final isNewerByVersion = _isVersionNewer(version, info.version);
+
+        AdvancedLogger.info(
+            "[UpdateCheck] Local: ${info.version}+$currentBuild | Remote: $version+$latestBuild | Update Available: ${isNewerByBuild || isNewerByVersion}");
+
+        if ((isNewerByBuild || isNewerByVersion) && downloadUrl.isNotEmpty) {
           if (context.mounted) {
             showDialog(
               context: context,
@@ -96,6 +106,22 @@ class ConfigGistService {
     } catch (e) {
       AdvancedLogger.warn("[UpdateCheck] Failed: $e");
     }
+  }
+
+  static bool _isVersionNewer(String remote, String local) {
+    try {
+      final rParts =
+          remote.split('.').map((p) => int.tryParse(p) ?? 0).toList();
+      final lParts =
+          local.split('.').map((p) => int.tryParse(p) ?? 0).toList();
+      for (int i = 0; i < 3; i++) {
+        final r = i < rParts.length ? rParts[i] : 0;
+        final l = i < lParts.length ? lParts[i] : 0;
+        if (r > l) return true;
+        if (r < l) return false;
+      }
+    } catch (_) {}
+    return false;
   }
 
   Future<bool> fetchAndApplyConfigs(

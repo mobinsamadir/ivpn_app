@@ -1,6 +1,6 @@
 {
-  "version": "1.0.2",
-  "version_code": 1002,
-  "release_notes": "• Fix native VPN connection and proxy protocol\n• Fix server speed and HTTP testing pipeline\n• Enhance in-app updates and download system\n• UI and stability optimizations",
-  "url": "https://github.com/mobinsamadir/ivpn_app/releases/latest"
+  "version": "1.0.3",
+  "version_code": 1003,
+  "release_notes": "• رفع کامل کرش هنگام تست و بررسی کانفیگ‌ها\n• اجرای سریع و بدون توقف صفحه اسپلش ابتدایی\n• اصلاح نام فایل‌های نصبی اندروید به iVPN\n• ارتقای سیستم دانلود و نصب مستقیم درون‌برنامه‌ای",
+  "url": "https://github.com/mobinsamadir/ivpn_app/releases/latest/download/iVPN-release.apk"
 }

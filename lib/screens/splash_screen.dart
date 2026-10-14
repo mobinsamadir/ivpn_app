@@ -90,15 +90,7 @@ class _SplashScreenState extends State<SplashScreen>
       AdManagerService().initialize();
 
       final timeWallet = TimeWalletService();
-      await timeWallet.init();      bool skipWait = false;
-
-      if (!skipWait) {
-        int waitLoops = 0;
-        while (configManager.validatedConfigs.isEmpty && waitLoops < 10) {
-          await Future.delayed(const Duration(seconds: 1));
-          waitLoops++;
-        }
-      }
+      await timeWallet.init();
 
       await minSplashFuture;
 

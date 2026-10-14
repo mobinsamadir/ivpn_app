@@ -725,7 +725,8 @@ class SingboxConfigGenerator {
             "network": ["tcp", "udp"],
           },
         ],
-        "auto_detect_interface": true,
+        "find_process": false,
+        "auto_detect_interface": false,
         "final": "proxy",
       };
     } else {

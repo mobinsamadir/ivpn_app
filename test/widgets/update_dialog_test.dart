@@ -17,6 +17,7 @@ void main() {
             body: UpdateDialog(
               version: version,
               releaseNotes: releaseNotes,
+              downloadUrl: 'https://example.com/app.apk',
               onUpdate: () {
                 onUpdateCalled = true;
               },
@@ -57,6 +58,7 @@ void main() {
                   builder: (ctx) => UpdateDialog(
                     version: '1.0.0',
                     releaseNotes: 'notes',
+                    downloadUrl: 'https://example.com/app.apk',
                     onUpdate: () {},
                   ),
                 );

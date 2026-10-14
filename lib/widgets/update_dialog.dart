@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'scale_on_tap.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../utils/advanced_logger.dart';
 
@@ -12,12 +11,14 @@ class UpdateDialog extends StatefulWidget {
   final String version;
   final String releaseNotes;
   final String downloadUrl;
+  final VoidCallback? onUpdate;
 
   const UpdateDialog({
     super.key,
     required this.version,
     required this.releaseNotes,
     required this.downloadUrl,
+    this.onUpdate,
   });
 
   @override
@@ -31,6 +32,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
   String _statusText = '';
 
   Future<void> _startUpdate() async {
+    widget.onUpdate?.call();
     if (widget.downloadUrl.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Download URL is not available')),
@@ -60,7 +62,12 @@ class _UpdateDialogState extends State<UpdateDialog> {
         await file.delete();
       }
 
-      final dio = Dio();
+      final dio = Dio(
+        BaseOptions(
+          followRedirects: true,
+          validateStatus: (status) => status != null && status < 400,
+        ),
+      );
       await dio.download(
         widget.downloadUrl,
         savePath,
@@ -74,6 +81,10 @@ class _UpdateDialogState extends State<UpdateDialog> {
           }
         },
       );
+
+      if (await file.length() < 1024 * 1024) {
+        throw Exception('Downloaded file size is too small to be a valid APK');
+      }
 
       if (!mounted) return;
 
@@ -239,35 +250,29 @@ class _UpdateDialogState extends State<UpdateDialog> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  ScaleOnTap(
-                    onTap: () => Navigator.of(context).pop(),
-                    child: TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text(
-                        'Later',
-                        style: TextStyle(color: Colors.grey),
-                      ),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text(
+                      'Later',
+                      style: TextStyle(color: Colors.grey),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  ScaleOnTap(
-                    onTap: _startUpdate,
-                    child: ElevatedButton.icon(
-                      onPressed: _startUpdate,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blueAccent,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12,
-                        ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: _startUpdate,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueAccent,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      icon: const Icon(Icons.download, size: 18),
-                      label: const Text('Download & Install'),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
                     ),
+                    icon: const Icon(Icons.download, size: 18),
+                    label: const Text('Update Now'),
                   ),
                 ],
               ),

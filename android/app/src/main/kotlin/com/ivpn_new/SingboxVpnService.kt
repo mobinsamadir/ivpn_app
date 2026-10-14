@@ -588,7 +588,9 @@ class StubPlatformInterface : PlatformInterface {
         sourcePort: Int,
         destinationAddress: String?,
         destinationPort: Int,
-    ): io.nekohasekai.libbox.ConnectionOwner? = null
+    ): io.nekohasekai.libbox.ConnectionOwner? {
+        throw Exception("Connection owner not found")
+    }
 
     override fun getInterfaces(): NetworkInterfaceIterator = StubNetworkInterfaceIterator()
 
