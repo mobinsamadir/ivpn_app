@@ -2,6 +2,7 @@ package com.ivpn_new
 
 import android.app.Activity
 import android.content.Intent
+import android.net.Uri
 import android.net.VpnService
 import android.os.Build
 import android.os.Handler
@@ -181,23 +182,41 @@ class MainActivity : FlutterActivity() {
                                 if (filePath != null) {
                                     try {
                                         val file = java.io.File(filePath)
-                                        if (file.exists()) {
-                                            val uri = androidx.core.content.FileProvider.getUriForFile(
-                                                this@MainActivity,
-                                                "${applicationContext.packageName}.fileProvider",
-                                                file
-                                            )
-                                            val installIntent = Intent(Intent.ACTION_VIEW).apply {
-                                                setDataAndType(uri, "application/vnd.android.package-archive")
-                                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                            }
-                                            startActivity(installIntent)
-                                            result.success(true)
-                                        } else {
+                                        if (!file.exists()) {
                                             result.error("FILE_NOT_FOUND", "APK file does not exist", null)
+                                            return@withContext
                                         }
+
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                            if (!packageManager.canRequestPackageInstalls()) {
+                                                try {
+                                                    val settingsIntent = Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                                                        data = Uri.parse("package:$packageName")
+                                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                                    }
+                                                    startActivity(settingsIntent)
+                                                } catch (se: Exception) {
+                                                    android.util.Log.w("MainActivity", "Could not open package settings: ${se.message}")
+                                                }
+                                                result.error("PERMISSION_REQUIRED", "Permission required to install unknown apps", null)
+                                                return@withContext
+                                            }
+                                        }
+
+                                        val uri = androidx.core.content.FileProvider.getUriForFile(
+                                            this@MainActivity,
+                                            "${applicationContext.packageName}.fileProvider",
+                                            file
+                                        )
+                                        val installIntent = Intent(Intent.ACTION_VIEW).apply {
+                                            setDataAndType(uri, "application/vnd.android.package-archive")
+                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        }
+                                        startActivity(installIntent)
+                                        result.success(true)
                                     } catch (e: Exception) {
+                                        android.util.Log.e("MainActivity", "Install APK error: ${e.message}", e)
                                         result.error("INSTALL_ERROR", e.message, null)
                                     }
                                 } else {

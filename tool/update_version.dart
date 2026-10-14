@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 void main() async {
@@ -7,21 +8,35 @@ void main() async {
     exit(1);
   }
 
+  // Read version and build code from assets/version.json if available
+  final versionJsonFile = File('assets/version.json');
+  String version = '1.0.4';
+  int versionCode = 1004;
+
+  if (versionJsonFile.existsSync()) {
+    try {
+      final json = jsonDecode(await versionJsonFile.readAsString());
+      if (json['version'] != null) {
+        version = json['version'].toString().trim();
+      }
+      if (json['version_code'] != null) {
+        versionCode = int.tryParse(json['version_code'].toString()) ?? versionCode;
+      }
+      print('Loaded version config from assets/version.json: $version+$versionCode');
+    } catch (e) {
+      print('Warning: Failed to parse assets/version.json: $e');
+    }
+  }
+
+  final newVersion = '$version+$versionCode';
+
   final lines = await pubspecFile.readAsLines();
   final newLines = <String>[];
   bool updated = false;
 
-  // Generate timestamp-based build number (Unix timestamp)
-  // This ensures every build is "newer" than the last one.
-  final timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-
-  // We keep the semantic version 1.0.0 but update the build number
-  // Format: 1.0.0+<timestamp>
-  final newVersion = '1.0.0+$timestamp';
-
   for (var line in lines) {
     if (line.trim().startsWith('version:')) {
-      print('Updating version to: $newVersion');
+      print('Updating pubspec.yaml version to: $newVersion');
       newLines.add('version: $newVersion');
       updated = true;
     } else {

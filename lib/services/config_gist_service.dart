@@ -83,13 +83,15 @@ class ConfigGistService {
               'https://github.com/mobinsamadir/ivpn_app/releases/latest/download/iVPN-release.apk';
         }
 
-        final isNewerByBuild = latestBuild > currentBuild;
         final isNewerByVersion = _isVersionNewer(version, info.version);
+        final isSameVersion = version == info.version;
+        final isNewerByBuild = isSameVersion && (latestBuild > currentBuild);
+        final updateAvailable = isNewerByVersion || isNewerByBuild;
 
         AdvancedLogger.info(
-            "[UpdateCheck] Local: ${info.version}+$currentBuild | Remote: $version+$latestBuild | Update Available: ${isNewerByBuild || isNewerByVersion}");
+            "[UpdateCheck] Local: ${info.version}+$currentBuild | Remote: $version+$latestBuild | Update Available: $updateAvailable");
 
-        if ((isNewerByBuild || isNewerByVersion) && downloadUrl.isNotEmpty) {
+        if (updateAvailable && downloadUrl.isNotEmpty) {
           if (context.mounted) {
             showDialog(
               context: context,

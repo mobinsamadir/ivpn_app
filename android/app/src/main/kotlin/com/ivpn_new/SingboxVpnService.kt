@@ -373,6 +373,15 @@ class SingboxVpnService :
         val action = intent?.getStringExtra("action")
         val config = intent?.getStringExtra("config")
 
+        if (action == ACTION_START) {
+            try {
+                createNotificationChannel()
+                startForeground(VPN_NOTIFICATION_ID, createNotification())
+            } catch (e: Throwable) {
+                android.util.Log.e("NativeVpnLifecycle", "Error starting foreground synchronously: ${e.message}")
+            }
+        }
+
         serviceScope.launch {
             if (action == ACTION_START && config != null) {
                 startVpn(config)
@@ -390,8 +399,10 @@ class SingboxVpnService :
 
             isVpnRunning = true
 
-            createNotificationChannel()
-            startForeground(VPN_NOTIFICATION_ID, createNotification())
+            try {
+                createNotificationChannel()
+                startForeground(VPN_NOTIFICATION_ID, createNotification())
+            } catch (ignored: Throwable) {}
 
             try {
                 // Wait for any running test to finish closing before starting main VPN
