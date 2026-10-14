@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'dart:io';
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -20,6 +21,20 @@ class ConfigGistService {
   static final _spiderXRegex = RegExp(r'"spider_x":\s*("[^"]*"|[^,{}]+),?');
   factory ConfigGistService() => _instance;
   ConfigGistService._internal();
+
+  static String telegramSupport = 'iVPN_support';
+
+  static Future<String> getTelegramSupport() async {
+    try {
+      final jsonStr = await rootBundle.loadString('assets/version.json');
+      final data = jsonDecode(jsonStr);
+      if (data['telegram_support'] != null &&
+          data['telegram_support'].toString().trim().isNotEmpty) {
+        telegramSupport = data['telegram_support'].toString().trim();
+      }
+    } catch (_) {}
+    return telegramSupport;
+  }
 
   static const String _lastFetchKey = 'last_config_fetch_timestamp';
   static const String _backupConfigsKey = 'gist_backup_configs';
@@ -71,6 +86,10 @@ class ConfigGistService {
 
       if (responseBody != null) {
         final data = await compute(_parseJsonInIsolate, responseBody);
+        if (data['telegram_support'] != null &&
+            data['telegram_support'].toString().trim().isNotEmpty) {
+          telegramSupport = data['telegram_support'].toString().trim();
+        }
         final latestBuild =
             int.tryParse(data['version_code']?.toString() ?? '0') ?? 0;
         final version = data['version']?.toString() ?? 'Unknown';

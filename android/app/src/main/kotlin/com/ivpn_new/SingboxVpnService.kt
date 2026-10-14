@@ -436,21 +436,9 @@ class SingboxVpnService :
                     return
                 }
 
-                val fd = vpnInterface!!.fd
                 val configDir = getExternalFilesDir(null) ?: filesDir
 
-                val jsonObject = JSONObject(configJson)
-                if (jsonObject.has("inbounds")) {
-                    val inbounds = jsonObject.getJSONArray("inbounds")
-                    for (i in 0 until inbounds.length()) {
-                        val inbound = inbounds.getJSONObject(i)
-                        if (inbound.optString("type") == "tun") {
-                            inbound.put("file_descriptor", fd)
-                        }
-                    }
-                }
-
-                // SAFE CALL - pass JSON content string
+                // SAFE CALL - pass JSON content string directly without invalid file_descriptor injection
                 try {
                     val options = io.nekohasekai.libbox.SetupOptions()
                     options.setBasePath(configDir.absolutePath)
@@ -458,7 +446,7 @@ class SingboxVpnService :
                     options.setTempPath(configDir.absolutePath)
                     Libbox.setup(options)
                     mainServer = Libbox.newCommandServer(StubCommandServerHandler(), this@SingboxVpnService)
-                    mainServer?.startOrReloadService(jsonObject.toString(), OverrideOptions())
+                    mainServer?.startOrReloadService(configJson, OverrideOptions())
                 } catch (e: Throwable) {
                     e.printStackTrace()
                     android.util.Log.e("NativeVpnLifecycle", "StartOrReloadService Error: ${e.message}")
@@ -538,6 +526,17 @@ class SingboxVpnService :
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .build()
+    }
+
+    override fun openTun(options: TunOptions): Int {
+        val fd = vpnInterface?.fd ?: -1
+        android.util.Log.d("NativeVpnLifecycle", "openTun called by libbox: returning fd $fd")
+        return fd
+    }
+
+    override fun autoDetectInterfaceControl(fd: Int) {
+        val ok = protect(fd)
+        android.util.Log.d("NativeVpnLifecycle", "autoDetectInterfaceControl: protect($fd) -> $ok")
     }
 
     override fun onRevoke() {

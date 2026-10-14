@@ -19,7 +19,7 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
-  String _statusMessage = 'در حال آماده‌سازی...';
+  String _statusMessage = 'Preparing...';
   bool _hasError = false;
   String? _errorMessage;
 
@@ -28,10 +28,10 @@ class _SplashScreenState extends State<SplashScreen>
   int _messageIndex = 0;
 
   final List<String> _loadingMessages = [
-    'در حال آماده‌سازی...',
-    'در حال بارگذاری کانفیگ‌ها...',
-    'در حال بررسی سرورها...',
-    'آماده‌سازی اتصال...',
+    'Preparing...',
+    'Loading servers...',
+    'Checking network...',
+    'Readying connection...',
   ];
 
   @override
@@ -231,9 +231,8 @@ class _SplashScreenState extends State<SplashScreen>
                     style: const TextStyle(
                       color: Colors.white70,
                       fontSize: 16,
-                      fontFamily: 'Vazirmatn',
+                      fontWeight: FontWeight.w500,
                     ),
-                    textDirection: TextDirection.rtl,
                   ),
                 ),
               ],

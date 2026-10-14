@@ -498,10 +498,9 @@ class _ConfigActions extends StatelessWidget {
 
 Color getPingColor(int ping) {
   if (ping < 0) return Colors.grey; // Timeout
-  if (ping <= 500) return Colors.green[700]!;
-  if (ping <= 1000) return Colors.lightGreen; // Good
-  if (ping <= 2000) return Colors.orange; // Fair
-  return Colors.red; // Poor
+  if (ping <= 450) return const Color(0xFF00E676); // Excellent for Iran
+  if (ping <= 1000) return const Color(0xFFFFB300); // Good / Fair
+  return const Color(0xFFFF5252); // Poor (> 1000)
 }
 
 Color getTierColor(int tier) {

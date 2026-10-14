@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 // Explicit import for compute
 import 'dart:async';
@@ -192,7 +193,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('نیاز به دسترسی ادمین (Run as Administrator)'),
+                  content: Text('Run as Administrator is required'),
                   backgroundColor: Colors.red,
                 ),
               );
@@ -225,7 +226,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text(
-                      'اتصال مکرراً قطع شد. سوییچ خودکار متوقف شد.',
+                      'Connection dropped repeatedly. Auto-switch stopped.',
                     ),
                     backgroundColor: Colors.orange,
                   ),
@@ -248,7 +249,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                 });
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('هیچ کانفیگ معتبری یافت نشد')),
+                  const SnackBar(content: Text('No valid configuration found')),
                 );
               }
             }
@@ -593,6 +594,12 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
       AdvancedLogger.info("[HomeScreen] Triggering Auto-Refresh on startup...");
       await _refreshConfigsManual();
     }
+
+    // Auto Test on startup if enabled
+    if (_autoTestOnStartup) {
+      AdvancedLogger.info("[HomeScreen] Triggering Auto-Test on startup...");
+      await _runSmartAutoTest();
+    }
   }
 
   Future<void> _runSmartAutoTest() async {
@@ -744,42 +751,70 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                           onAddTime: _showAdSequence,
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16.0,
-                          vertical: 8.0,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(Icons.autorenew, color: Colors.blueAccent),
-                                const SizedBox(width: 8),
-                                const Text(
-                                  'Auto Switch',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                      const SizedBox(height: 12),
+                      Center(
+                        child: ListenableBuilder(
+                          listenable: _configManager,
+                          builder: (context, _) => ScaleOnTap(
+                            onTap: () {
+                              _configManager.isAutoSwitchEnabled =
+                                  !_configManager.isAutoSwitchEnabled;
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _configManager.isAutoSwitchEnabled
+                                    ? Colors.blueAccent.withValues(alpha: 0.15)
+                                    : const Color(0xFF1A1A1A),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: _configManager.isAutoSwitchEnabled
+                                      ? Colors.blueAccent.withValues(alpha: 0.5)
+                                      : Colors.white12,
                                 ),
-                              ],
-                            ),
-                            ListenableBuilder(
-                              listenable: _configManager,
-                              builder: (context, _) => Switch(
-                                value: _configManager.isAutoSwitchEnabled,
-                              activeThumbColor: Colors.blueAccent,
-                              onChanged: (val) {
-                                _configManager.isAutoSwitchEnabled = val;
-                                },
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.autorenew_rounded,
+                                    size: 16,
+                                    color: _configManager.isAutoSwitchEnabled
+                                        ? Colors.blueAccent
+                                        : Colors.grey,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Auto Switch',
+                                    style: TextStyle(
+                                      color: _configManager.isAutoSwitchEnabled
+                                          ? Colors.white
+                                          : Colors.grey,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: _configManager.isAutoSwitchEnabled
+                                          ? const Color(0xFF00E676)
+                                          : Colors.grey,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
+                          ),
                         ),
                       ),
+                      const SizedBox(height: 10),
                       ListenableBuilder(
                         listenable: _configManager,
                         builder: (context, _) => Column(
@@ -798,10 +833,25 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                               onConnect: _handleConnection,
                               onSkip: _skipServer,
                             ),
+                            ValueListenableBuilder<VpnConfigWithMetrics?>(
+                              valueListenable:
+                                  _funnelService.bestDiscoveredConfigNotifier,
+                              builder: (context, bestConfig, _) {
+                                if (bestConfig == null ||
+                                    _configManager.isConnected) {
+                                  return const SizedBox.shrink();
+                                }
+                                return _QuickConnectSuggestionCard(
+                                  config: bestConfig,
+                                  onQuickConnect: () =>
+                                      _quickConnectToConfig(bestConfig),
+                                );
+                              },
+                            ),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 30),
+                      const SizedBox(height: 20),
                       ListenableBuilder(
                         listenable: _configManager,
                         builder: (context, _) => ValueListenableBuilder<Set<String>>(
@@ -824,24 +874,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                           ),
                         ),
                       ),
-                      const SizedBox(height: 25),
-                      _AutoTestToggleGroup(
-                        autoTestOnStartup: _autoTestOnStartup,
-                        autoRefreshOnStartup: _autoRefreshOnStartup,
-                        onAutoTestChanged: (val) {
-                          setState(() {
-                            _autoTestOnStartup = val;
-                          });
-                          _savePreferences();
-                        },
-                        onAutoRefreshChanged: (val) {
-                          setState(() {
-                            _autoRefreshOnStartup = val;
-                          });
-                          _savePreferences();
-                        },
-                      ),
-                      const SizedBox(height: 30),
+                      const SizedBox(height: 16),
                     ],
                   ),
                 ),
@@ -1217,11 +1250,20 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
         _funnelService.startFunnel(retestDead: false); // Prioritize fresh ones
 
         int waits = 0;
-        while (_configManager.validatedConfigs.isEmpty &&
-            waits < 35 &&
-            !_configManager.isConnectionCancelled) {
+        // Wait up to 10 seconds for initial discovery, giving time to find low ping candidates
+        while (waits < 10 && !_configManager.isConnectionCancelled) {
           await Future.delayed(const Duration(seconds: 1));
           waits++;
+          if (_configManager.validatedConfigs.isNotEmpty) {
+            final lowestPing = _configManager.validatedConfigs
+                .map((c) => c.currentPing)
+                .where((p) => p > 0)
+                .fold<int>(9999, (prev, elem) => elem < prev ? elem : prev);
+            // If we found a low ping server (<180ms) or 3+ options, or 6 seconds passed, proceed
+            if (lowestPing < 180 || _configManager.validatedConfigs.length >= 3 || waits >= 6) {
+              break;
+            }
+          }
         }
 
         if (_configManager.isConnectionCancelled) {
@@ -1245,6 +1287,24 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
       AdvancedLogger.error('Connection failed: $e');
       _configManager.setConnected(false, status: 'Failed');
       _showToast('Connection failed. Please try again.');
+    } finally {
+      if (_connectionFlowState != 'disconnecting') _connectionFlowState = 'idle';
+    }
+  }
+
+  Future<void> _quickConnectToConfig(VpnConfigWithMetrics config) async {
+    if (_isNativeOperationInProgress || _connectionFlowState != 'idle') return;
+    try {
+      AdvancedLogger.info(
+        "[HomeScreen] Quick Connect triggered to ${config.name} (${config.currentPing}ms)",
+      );
+      await _funnelService.stop();
+      _configManager.selectConfig(config);
+      _connectionFlowState = 'connecting';
+      _configManager.setConnected(false, status: 'Connecting to ${config.name}...');
+      await _configManager.connectWithSmartFailover();
+    } catch (e) {
+      AdvancedLogger.error("Quick Connect failed: $e");
     } finally {
       if (_connectionFlowState != 'disconnecting') _connectionFlowState = 'idle';
     }
@@ -1633,11 +1693,6 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     );
   }
 
-  Future<void> _savePreferences() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('autoTestOnStartup', _autoTestOnStartup);
-    await prefs.setBool('autoRefreshOnStartup', _autoRefreshOnStartup);
-  }
 
   void _showSmartCleanupDialog() {
     showModalBottomSheet(
@@ -1658,25 +1713,23 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                   color: Colors.redAccent,
                 ),
                 title: const Text(
-                  'حذف همه کانفیگ‌ها',
+                  'Delete All Servers',
                   style: TextStyle(
                     color: Colors.white,
-                    fontFamily: 'Vazirmatn',
                   ),
                 ),
                 onTap: () async {
                   Navigator.pop(ctx);
                   await _configManager.clearAllData();
-                  _showToast("همه کانفیگ‌ها حذف شدند");
+                  _showToast("All servers deleted");
                 },
               ),
               ListTile(
                 leading: const Icon(Icons.wifi_off, color: Colors.orangeAccent),
                 title: const Text(
-                  'حذف کانفیگ‌های غیرقابل دسترس',
+                  'Delete Inactive Servers',
                   style: TextStyle(
                     color: Colors.white,
-                    fontFamily: 'Vazirmatn',
                   ),
                 ),
                 onTap: () async {
@@ -1684,7 +1737,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                   final removed = await _configManager.removeConfigs(
                     dead: true,
                   );
-                  _showToast("$removed کانفیگ غیرقابل دسترس حذف شد");
+                  _showToast("$removed inactive servers deleted");
                 },
               ),
               ListTile(
@@ -1693,10 +1746,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                   color: Colors.yellowAccent,
                 ),
                 title: const Text(
-                  'حذف کانفیگ‌های ضعیف',
+                  'Delete Slow Servers',
                   style: TextStyle(
                     color: Colors.white,
-                    fontFamily: 'Vazirmatn',
                   ),
                 ),
                 onTap: () async {
@@ -1704,16 +1756,15 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                   final removed = await _configManager.removeConfigs(
                     weak: true,
                   );
-                  _showToast("$removed کانفیگ ضعیف حذف شد");
+                  _showToast("$removed slow servers deleted");
                 },
               ),
               ListTile(
                 leading: const Icon(Icons.speed, color: Colors.blueAccent),
                 title: const Text(
-                  'حذف کانفیگ‌های بدون تست سرعت',
+                  'Delete Untested Servers',
                   style: TextStyle(
                     color: Colors.white,
-                    fontFamily: 'Vazirmatn',
                   ),
                 ),
                 onTap: () async {
@@ -1721,17 +1772,16 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                   final removed = await _configManager.removeConfigs(
                     untestedSpeed: true,
                   );
-                  _showToast("$removed کانفیگ بدون تست سرعت حذف شد");
+                  _showToast("$removed untested servers deleted");
                 },
               ),
               const Divider(color: Colors.white24),
               ListTile(
                 leading: const Icon(Icons.close, color: Colors.grey),
                 title: const Text(
-                  'لغو',
+                  'Cancel',
                   style: TextStyle(
                     color: Colors.white,
-                    fontFamily: 'Vazirmatn',
                   ),
                 ),
                 onTap: () => Navigator.pop(ctx),
@@ -1913,58 +1963,163 @@ class _SubscriptionCardState extends State<_SubscriptionCard>
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.white10),
       ),
-      child: ListTile(
-        leading: const Icon(
-          Icons.workspace_premium,
-          color: Colors.amber,
-          size: 32,
-        ),
-        title: const Text(
-          'Free Plan',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        subtitle: Text(
-          widget.hasTime
-              ? '${(widget.remainingSeconds ~/ 3600)}h ${((widget.remainingSeconds % 3600) ~/ 60)}m remaining'
-              : 'No active plan',
-          style: const TextStyle(color: Colors.grey),
-        ),
-        trailing: AnimatedBuilder(
-          animation: _pulseController,
-          builder: (context, child) {
-            return Transform.scale(
-              scale: _scaleAnimation.value,
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.blueAccent.withValues(alpha: 0.6),
-                      blurRadius: _glowAnimation.value + 4.0,
-                      spreadRadius: _glowAnimation.value / 2,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.workspace_premium,
+                color: Colors.amber,
+                size: 32,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Free Plan',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      widget.hasTime
+                          ? '${(widget.remainingSeconds ~/ 3600)}h ${((widget.remainingSeconds % 3600) ~/ 60)}m remaining'
+                          : 'No active plan',
+                      style: const TextStyle(color: Colors.grey, fontSize: 12),
                     ),
                   ],
                 ),
-                child: ScaleOnTap(
-                  onTap: widget.onAddTime,
-                  child: IgnorePointer(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blueAccent,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
+              ),
+              AnimatedBuilder(
+                animation: _pulseController,
+                builder: (context, child) {
+                  return Transform.scale(
+                    scale: _scaleAnimation.value,
+                    child: ScaleOnTap(
+                      onTap: widget.onAddTime,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 7,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                          ),
                           borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.blueAccent.withValues(alpha: 0.5),
+                              blurRadius: _glowAnimation.value + 4.0,
+                              spreadRadius: _glowAnimation.value / 2,
+                            ),
+                          ],
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.play_circle_fill,
+                              size: 15,
+                              color: Colors.white,
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              '+1 Hour',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      onPressed: () {},
-                      child: const Text('🎁 Add Time'),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          // VIP Subscription Button linked to Telegram Support
+          ScaleOnTap(
+            onTap: () async {
+              final tg = await ConfigGistService.getTelegramSupport();
+              final url = Uri.parse('https://t.me/$tg');
+              if (await canLaunchUrl(url)) {
+                await launchUrl(url, mode: LaunchMode.externalApplication);
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFD97706), Color(0xFFF59E0B)],
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.amber.withValues(alpha: 0.25),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: const [
+                      Icon(Icons.star_rounded, color: Colors.white, size: 20),
+                      SizedBox(width: 6),
+                      Text(
+                        'Buy VIP Dedicated Config',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.black26,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Row(
+                      children: [
+                        Text(
+                          'Telegram Support',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        SizedBox(width: 4),
+                        Icon(
+                          Icons.send_rounded,
+                          color: Colors.white,
+                          size: 12,
+                        ),
+                      ],
                     ),
                   ),
-                ),
+                ],
               ),
-            );
-          },
-        ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -2011,7 +2166,7 @@ class _ConnectionStatus extends StatelessWidget {
             layoutBuilder:
                 (Widget? currentChild, List<Widget> previousChildren) {
               return Stack(
-                alignment: Alignment.centerLeft,
+                alignment: Alignment.center,
                 children: <Widget>[
                   ...previousChildren,
                   if (currentChild != null) currentChild,
@@ -2073,6 +2228,14 @@ class _ConnectButton extends StatelessWidget {
   final VoidCallback onConnect;
   final VoidCallback onSkip;
 
+  // Grayscale matrix for disconnected state
+  static const List<double> _grayscaleMatrix = [
+    0.2126, 0.7152, 0.0722, 0, 0,
+    0.2126, 0.7152, 0.0722, 0, 0,
+    0.2126, 0.7152, 0.0722, 0, 0,
+    0,      0,      0,      0.65, 0,
+  ];
+
   const _ConnectButton({
     required this.isConnected,
     required this.isConnecting,
@@ -2083,83 +2246,59 @@ class _ConnectButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      alignment: Alignment.center,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        // Refresh Button (Left Side)
-        Positioned(
-          left: 30,
-          child: Column(
-            children: [
-              Tooltip(
-                message: 'Refresh Servers',
-                child: ScaleOnTap(
-                  onTap: onRefresh,
-                  child: Container(
-                    padding: const EdgeInsets.all(8.0),
-                    decoration: BoxDecoration(
-                      color: Colors.blueAccent.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.refresh_rounded,
-                      size: 32,
-                      color: Colors.blueAccent,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                "Refresh",
-                style: TextStyle(color: Colors.grey, fontSize: 10),
-              ),
-            ],
-          ),
-        ),
-
-        // Main Connect Button
+        // Main Branded Circular Button
         Center(
           child: ScaleOnTap(
             onTap: onConnect,
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 400),
               curve: Curves.easeInOut,
-              width: 180,
-              height: 180,
+              width: 175,
+              height: 175,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: LinearGradient(
                   colors: isConnected
                       ? [
-                          const Color(0xFF11998E),
-                          const Color(0xFF38EF7D),
-                        ] // Green/Teal
+                          const Color(0xFF0D9488),
+                          const Color(0xFF10B981),
+                        ] // Emerald Green
                       : (isConnecting
                           ? [
-                              const Color(0xFFF2994A),
-                              const Color(0xFFF2C94C),
-                            ] // Orange/Yellow
+                              const Color(0xFFD97706),
+                              const Color(0xFFF59E0B),
+                            ] // Vibrant Amber
                           : [
-                              const Color(0xFF4A5568),
-                              const Color(0xFF2D3748),
-                            ]), // Dark Grey
+                              const Color(0xFF262D3D),
+                              const Color(0xFF161A22),
+                            ]), // Metallic Gunmetal
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
+                ),
+                border: Border.all(
+                  color: isConnected
+                      ? const Color(0xFF34D399)
+                      : (isConnecting
+                          ? const Color(0xFFFBBF24)
+                          : const Color(0xFF3B4459)),
+                  width: 2.5,
                 ),
                 boxShadow: [
                   BoxShadow(
                     color: (isConnected
-                            ? const Color(0xFF38EF7D)
+                            ? const Color(0xFF10B981)
                             : (isConnecting
-                                ? const Color(0xFFF2994A)
+                                ? const Color(0xFFF59E0B)
                                 : Colors.black))
                         .withValues(
-                      alpha: isConnected || isConnecting ? 0.5 : 0.3,
+                      alpha: isConnected || isConnecting ? 0.45 : 0.35,
                     ),
-                    blurRadius: isConnected || isConnecting ? 25 : 15,
-                    spreadRadius: isConnected || isConnecting ? 8 : 2,
-                    offset: const Offset(0, 8),
+                    blurRadius: isConnected || isConnecting ? 28 : 14,
+                    spreadRadius: isConnected || isConnecting ? 6 : 2,
+                    offset: const Offset(0, 6),
                   ),
                 ],
               ),
@@ -2167,60 +2306,82 @@ class _ConnectButton extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   AnimatedSwitcher(
-                    layoutBuilder:
-                        (Widget? currentChild, List<Widget> previousChildren) {
-                      return Stack(
-                        alignment: Alignment.center,
-                        children: <Widget>[
-                          ...previousChildren,
-                          if (currentChild != null) currentChild,
-                        ],
-                      );
-                    },
-                    duration: const Duration(milliseconds: 300),
-                    child: isConnecting
-                        ? const SizedBox(
-                            key: ValueKey('connecting_spinner'),
-                            width: 50,
-                            height: 50,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 3,
+                    duration: const Duration(milliseconds: 350),
+                    child: isConnected
+                        ? Container(
+                            key: const ValueKey('logo_connected'),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF00E676)
+                                      .withValues(alpha: 0.5),
+                                  blurRadius: 18,
+                                  spreadRadius: 2,
+                                ),
+                              ],
+                            ),
+                            child: Image.asset(
+                              'assets/icon.png',
+                              width: 68,
+                              height: 68,
+                              fit: BoxFit.contain,
                             ),
                           )
-                        : const Icon(
-                            Icons.power_settings_new,
-                            key: ValueKey('connect_icon'),
-                            size: 60,
-                            color: Colors.white,
-                          ),
+                        : (isConnecting
+                            ? Stack(
+                                key: const ValueKey('logo_connecting'),
+                                alignment: Alignment.center,
+                                children: [
+                                  const SizedBox(
+                                    width: 76,
+                                    height: 76,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.amberAccent,
+                                      strokeWidth: 3.5,
+                                    ),
+                                  ),
+                                  Image.asset(
+                                    'assets/icon.png',
+                                    width: 50,
+                                    height: 50,
+                                    fit: BoxFit.contain,
+                                  ),
+                                ],
+                              )
+                            : ColorFiltered(
+                                key: const ValueKey('logo_disconnected'),
+                                colorFilter: const ColorFilter.matrix(
+                                  _grayscaleMatrix,
+                                ),
+                                child: Image.asset(
+                                  'assets/icon.png',
+                                  width: 62,
+                                  height: 62,
+                                  fit: BoxFit.contain,
+                                ),
+                              )),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   AnimatedSwitcher(
-                    layoutBuilder:
-                        (Widget? currentChild, List<Widget> previousChildren) {
-                      return Stack(
-                        alignment: Alignment.center,
-                        children: <Widget>[
-                          ...previousChildren,
-                          if (currentChild != null) currentChild,
-                        ],
-                      );
-                    },
                     duration: const Duration(milliseconds: 300),
                     child: Text(
                       isConnected
                           ? 'CONNECTED'
-                          : (isConnecting ? 'CONNECTING' : 'CONNECT'),
+                          : (isConnecting ? 'CONNECTING...' : 'CONNECT'),
                       key: ValueKey(
                         isConnected
                             ? 'CONNECTED'
-                            : (isConnecting ? 'CONNECTING' : 'CONNECT'),
+                            : (isConnecting ? 'CONNECTING...' : 'CONNECT'),
                       ),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
+                      style: TextStyle(
+                        color: isConnected
+                            ? Colors.white
+                            : (isConnecting
+                                ? Colors.amberAccent
+                                : Colors.grey.shade300),
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
                         letterSpacing: 1.5,
                       ),
                     ),
@@ -2231,33 +2392,70 @@ class _ConnectButton extends StatelessWidget {
           ),
         ),
 
-        // Skip Button (Right Side)
-        Positioned(
-          right: 30,
-          child: Column(
+        const SizedBox(height: 14),
+
+        // Centered Glassmorphic Action Capsule (Refresh Configs & Skip)
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+          decoration: BoxDecoration(
+            color: const Color(0xFF161A22).withValues(alpha: 0.9),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.08),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Tooltip(
-                message: 'Next Server',
-                child: ScaleOnTap(
-                  onTap: onSkip,
-                  child: Container(
-                    padding: const EdgeInsets.all(8.0),
-                    decoration: BoxDecoration(
-                      color: Colors.blueAccent.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.skip_next_rounded,
-                      size: 32,
+              ScaleOnTap(
+                onTap: onRefresh,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    const Icon(
+                      Icons.refresh_rounded,
+                      size: 17,
                       color: Colors.blueAccent,
                     ),
-                  ),
+                    const SizedBox(width: 6),
+                    const Text(
+                      "Refresh Servers",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 4),
-              const Text(
-                "Skip",
-                style: TextStyle(color: Colors.grey, fontSize: 10),
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 12),
+                height: 15,
+                width: 1,
+                color: Colors.white24,
+              ),
+              ScaleOnTap(
+                onTap: onSkip,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Icon(
+                      Icons.skip_next_rounded,
+                      size: 17,
+                      color: Colors.amberAccent,
+                    ),
+                    SizedBox(width: 6),
+                    Text(
+                      "Next Server",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -2302,42 +2500,152 @@ class _SelectedConfigView extends StatelessWidget {
   }
 }
 
-class _AutoTestToggleGroup extends StatelessWidget {
-  final bool autoTestOnStartup;
-  final bool autoRefreshOnStartup;
-  final ValueChanged<bool> onAutoTestChanged;
-  final ValueChanged<bool> onAutoRefreshChanged;
+class _QuickConnectSuggestionCard extends StatelessWidget {
+  final VpnConfigWithMetrics config;
+  final VoidCallback onQuickConnect;
 
-  const _AutoTestToggleGroup({
-    required this.autoTestOnStartup,
-    required this.autoRefreshOnStartup,
-    required this.onAutoTestChanged,
-    required this.onAutoRefreshChanged,
+  const _QuickConnectSuggestionCard({
+    required this.config,
+    required this.onQuickConnect,
   });
+
+  Color _getPingColor(int ping) {
+    if (ping <= 0) return Colors.grey;
+    if (ping <= 450) return const Color(0xFF00E676); // Excellent for Iran
+    if (ping <= 1000) return const Color(0xFFFFB300); // Good / Fair
+    return const Color(0xFFFF5252); // Poor (> 1000)
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        SwitchListTile(
-          title: const Text(
-            'Auto-Test on Startup',
-            style: TextStyle(color: Colors.white),
+    final pingColor = _getPingColor(config.currentPing);
+    return Padding(
+      padding: const EdgeInsets.only(top: 14.0),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-          value: autoTestOnStartup,
-          activeThumbColor: Colors.blueAccent,
-          onChanged: onAutoTestChanged,
-        ),
-        SwitchListTile(
-          title: const Text(
-            'Auto-Refresh on Startup',
-            style: TextStyle(color: Colors.white),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Colors.blueAccent.withValues(alpha: 0.4),
+            width: 1.5,
           ),
-          value: autoRefreshOnStartup,
-          activeThumbColor: Colors.blueAccent,
-          onChanged: onAutoRefreshChanged,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.blueAccent.withValues(alpha: 0.12),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-      ],
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.blueAccent.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.bolt,
+                    color: Colors.amberAccent,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'Fast Server Found!',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: pingColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: pingColor.withValues(alpha: 0.5)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.speed, size: 14, color: pingColor),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${config.currentPing} ms',
+                        style: TextStyle(
+                          color: pingColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              config.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: Colors.grey.shade300,
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Connect immediately or wait for other servers to finish testing.',
+              style: TextStyle(
+                color: Colors.grey.shade400,
+                fontSize: 11,
+              ),
+            ),
+            const SizedBox(height: 10),
+            ScaleOnTap(
+              onTap: onQuickConnect,
+              child: Container(
+                height: 38,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                alignment: Alignment.center,
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.flash_on, color: Colors.white, size: 18),
+                    SizedBox(width: 6),
+                    Text(
+                      'Quick Connect',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

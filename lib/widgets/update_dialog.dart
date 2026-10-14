@@ -93,7 +93,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
   Future<void> _installApk(String filePath) async {
     try {
       setState(() {
-        _statusText = 'در حال باز کردن نصب‌کننده...';
+        _statusText = 'Opening installer...';
         _errorMessage = null;
       });
       await _platformChannel.invokeMethod('installApk', {'filePath': filePath});
@@ -106,14 +106,14 @@ class _UpdateDialogState extends State<UpdateDialog> {
             _isDownloading = false;
             _needsPermission = true;
             _downloadedApkPath = filePath;
-            _statusText = 'دسترسی نصب برنامه‌های ناشناس لازم است.';
+            _statusText = 'Unknown app install permission is required.';
           });
         }
       } else {
         if (mounted) {
           setState(() {
             _isDownloading = false;
-            _errorMessage = 'خطا در باز کردن نصب‌کننده: ${e.message}';
+            _errorMessage = 'Failed to open installer: ${e.message}';
           });
         }
       }
@@ -122,7 +122,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
       if (mounted) {
         setState(() {
           _isDownloading = false;
-          _errorMessage = 'خطای سیستمی در نصب: $e';
+          _errorMessage = 'System error during install: $e';
         });
       }
     }
@@ -149,7 +149,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
     setState(() {
       _isDownloading = true;
       _progress = 0.0;
-      _statusText = 'در حال بررسی معماری دستگاه و آماده‌سازی...';
+      _statusText = 'Checking device architecture...';
       _needsPermission = false;
       _errorMessage = null;
     });
@@ -162,7 +162,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
       final savePath = '${tempDir.path}/iVPN_${widget.version}.apk';
 
       setState(() {
-        _statusText = 'در حال دانلود بروزرسانی...';
+        _statusText = 'Downloading update...';
       });
 
       final dio = Dio(
@@ -182,7 +182,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
               setState(() {
                 _progress = received / total;
                 final percent = (_progress * 100).toStringAsFixed(0);
-                _statusText = 'در حال دریافت: $percent%';
+                _statusText = 'Downloading: $percent%';
               });
             }
           },
@@ -194,7 +194,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
           if (mounted) {
             setState(() {
               _progress = 0.0;
-              _statusText = 'در حال دریافت نسخه استاندارد...';
+              _statusText = 'Downloading standard package...';
             });
           }
           await dio.download(
@@ -205,7 +205,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
                 setState(() {
                   _progress = received / total;
                   final percent = (_progress * 100).toStringAsFixed(0);
-                  _statusText = 'در حال دریافت: $percent%';
+                  _statusText = 'Downloading: $percent%';
                 });
               }
             },
@@ -218,7 +218,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
 
       final file = File(savePath);
       if (!downloadSuccess || !await file.exists() || await file.length() < 1024 * 1024) {
-        throw Exception('دانلود فایل ناقص بود یا اندازه فایل نامعتبر است.');
+        throw Exception('Incomplete download or invalid file size.');
       }
 
       _downloadedApkPath = savePath;
@@ -228,7 +228,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
       if (mounted) {
         setState(() {
           _isDownloading = false;
-          _errorMessage = 'خطا در دریافت فایل: $e';
+          _errorMessage = 'Download error: $e';
         });
       }
     }
@@ -362,7 +362,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'برای ادامه نصب، دسترسی «نصب برنامه‌های ناشناخته» را به iVPN بدهید و دکمه نصب را بزنید.',
+                        'Please grant "Install unknown apps" permission to iVPN, then tap Install.',
                         style: const TextStyle(color: Colors.white, fontSize: 12),
                       ),
                     ),
@@ -443,7 +443,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
                         ),
                       ),
                       icon: const Icon(Icons.install_mobile, size: 18),
-                      label: const Text('نصب برنامه'),
+                      label: const Text('Install Now'),
                     )
                   else
                     ElevatedButton.icon(

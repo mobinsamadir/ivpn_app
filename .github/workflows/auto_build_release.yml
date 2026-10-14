@@ -228,7 +228,7 @@ jobs:
           path: release-files
 
       - name: Create Combined GitHub Release
-        uses: softprops/action-gh-release@v3.0.1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.0.${{ github.run_number }}
           name: iVPN v1.0.${{ github.run_number }}

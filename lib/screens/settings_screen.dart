@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/theme_provider.dart'; // برای دسترسی به ThemeProvider
 import '../services/config_manager.dart';
 import '../widgets/scale_on_tap.dart';
@@ -18,12 +19,25 @@ class _SettingsScreenState extends State<SettingsScreen>
     with WidgetsBindingObserver {
   // متغیر برای کنترل وضعیت‌های جدید
   bool _isBatteryOptimizationIgnored = false;
+  bool _autoTestOnStartup = true;
+  bool _autoRefreshOnStartup = true;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _checkBatteryOptimizationStatus();
+    _loadStartupPreferences();
+  }
+
+  Future<void> _loadStartupPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _autoTestOnStartup = prefs.getBool('autoTestOnStartup') ?? true;
+        _autoRefreshOnStartup = prefs.getBool('autoRefreshOnStartup') ?? true;
+      });
+    }
   }
 
   @override
@@ -172,6 +186,28 @@ class _SettingsScreenState extends State<SettingsScreen>
                 subtitle: const Text('Choose which apps use the VPN'),
               ),
             ),
+          ),
+          SwitchListTile(
+            title: const Text('Auto-Test on Startup'),
+            subtitle: const Text('Test configs automatically when app launches'),
+            value: _autoTestOnStartup,
+            onChanged: (bool value) async {
+              setState(() => _autoTestOnStartup = value);
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setBool('autoTestOnStartup', value);
+            },
+            secondary: const Icon(Icons.speed_outlined),
+          ),
+          SwitchListTile(
+            title: const Text('Auto-Refresh on Startup'),
+            subtitle: const Text('Refresh server list from cloud on app startup'),
+            value: _autoRefreshOnStartup,
+            onChanged: (bool value) async {
+              setState(() => _autoRefreshOnStartup = value);
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setBool('autoRefreshOnStartup', value);
+            },
+            secondary: const Icon(Icons.cloud_sync_outlined),
           ),
           const Divider(),
 

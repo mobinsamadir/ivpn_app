@@ -1,29 +1,23 @@
-// lib/screens/about_screen.dart
-
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart'; // این پکیج را در مرحله بعد اضافه می‌کنیم
+import 'package:url_launcher/url_launcher.dart';
+import '../services/config_gist_service.dart';
 import '../widgets/scale_on_tap.dart';
 
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
 
-  // آدرس کانال تلگرام شما
-  // فعلاً آدرس اصلی تلگرام است، بعداً می‌توانید آن را با آدرس کانال خودتان جایگزین کنید
-  final String _telegramChannelUrl = 'https://t.me/telegram';
-
-  // تابعی برای باز کردن لینک
-  Future<void> _launchUrl() async {
-    final Uri url = Uri.parse(_telegramChannelUrl);
-    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-      // اگر باز کردن لینک با خطا مواجه شد، می‌توانید یک پیام به کاربر نمایش دهید
-      throw 'Could not launch $url';
+  Future<void> _launchTelegram() async {
+    final tg = await ConfigGistService.getTelegramSupport();
+    final Uri url = Uri.parse('https://t.me/$tg');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('About US')),
+      appBar: AppBar(title: const Text('About iVPN')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -35,33 +29,32 @@ class AboutScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'نسخه 1.0.0',
+              'Version 1.0.0',
               style: TextStyle(color: Colors.grey[600], fontSize: 16),
             ),
             const Divider(height: 40),
             const Text(
-              'اپلیکیشن iVPN یک ابزار امن و سریع برای دسترسی به اینترنت آزاد است. ما متعهد به حفظ حریم خصوصی و ارائه بهترین تجربه کاربری برای شما هستیم.',
+              'iVPN is a high-speed, secure, and privacy-focused client designed for unrestricted access to the open internet.',
               style: TextStyle(fontSize: 16, height: 1.5),
             ),
             const SizedBox(height: 24),
 
-            // بخش لینک کانال تلگرام
+            // Telegram Support Section
             const Text(
-              'پشتیبانی و سرورهای اختصاصی',
+              'Support & VIP Dedicated Configs',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             ScaleOnTap(
-              onTap: _launchUrl, // با کلیک روی این آیتم، لینک باز می‌شود
+              onTap: _launchTelegram,
               child: ListTile(
-                leading: const Icon(Icons.send_outlined, color: Colors.blue),
-                title: const Text('کانال تلگرام ما'),
-                subtitle: const Text('برای خرید و دریافت سرورهای اختصاصی'),
-                trailing: const Icon(Icons.open_in_new),
-                onTap: null, // Gesture handled by ScaleOnTap
+                leading: const Icon(Icons.send_rounded, color: Colors.blueAccent),
+                title: const Text('Telegram Support'),
+                subtitle: const Text('Order dedicated VIP configs or contact support'),
+                trailing: const Icon(Icons.open_in_new, size: 18),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  side: BorderSide(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: Colors.grey.withValues(alpha: 0.3)),
                 ),
               ),
             ),

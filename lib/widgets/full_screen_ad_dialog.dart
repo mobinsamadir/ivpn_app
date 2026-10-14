@@ -59,125 +59,104 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
         backgroundColor: Colors.black, // Force solid background
         body: Stack(
           children: [
-            // Main Content Layer
-            SafeArea(
-              child: Column(
-                children: [
-                  // Header
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Premium Connection',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        // Timer Badge
-                        ValueListenableBuilder<int>(
-                          valueListenable: _timeLeftNotifier,
-                          builder: (context, timeLeft, child) {
-                            if (timeLeft <= 0) return const SizedBox.shrink();
-                            return Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.redAccent.withValues(alpha: 0.8),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.timer,
-                                    color: Colors.white,
-                                    size: 14,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    '${timeLeft}s',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Ad Content
-                  Expanded(
-                    child: Container(
-                      width: double.infinity,
-                      color: const Color(
-                        0xFF121212,
-                      ), // Inner background just in case
-                      child: Center(
-                        child: UniversalAdWidget(slot: widget.unitId),
-                      ),
-                    ),
-                  ),
-
-                  // Footer Status
-                  ValueListenableBuilder<int>(
-                    valueListenable: _timeLeftNotifier,
-                    builder: (context, timeLeft, child) {
-                      final bool canClose = timeLeft <= 0;
-                      return Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF1E1E1E),
-                          border:
-                              Border(top: BorderSide(color: Color(0xFF333333))),
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              canClose
-                                  ? "Thank you! You can now close this ad."
-                                  : "Your premium connection is ready in ${timeLeft}s...",
-                              style: TextStyle(
-                                color: canClose
-                                    ? Colors.greenAccent
-                                    : Colors.grey[400],
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-                            // Visual Indicator
-                            if (!canClose)
-                              const SizedBox(
-                                width: double.infinity,
-                                height: 4,
-                                child: LinearProgressIndicator(
-                                  backgroundColor: Colors.black,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.blueAccent,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ],
+            // 1. True Fullscreen Ad Layer (100% of Screen)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black,
+                child: UniversalAdWidget(slot: widget.unitId),
               ),
             ),
 
-            // Escapability Layer: Close Button (Only appears after timer)
+            // 2. Floating Top Header with Timer Badge & Title
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.7),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.white12),
+                        ),
+                        child: const Text(
+                          'iVPN Premium Sponsor',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      // Timer Badge
+                      ValueListenableBuilder<int>(
+                        valueListenable: _timeLeftNotifier,
+                        builder: (context, timeLeft, child) {
+                          if (timeLeft <= 0) return const SizedBox.shrink();
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.redAccent.withValues(alpha: 0.85),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.timer,
+                                  color: Colors.white,
+                                  size: 14,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '${timeLeft}s',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // 3. Floating Bottom Countdown Line
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: ValueListenableBuilder<int>(
+                valueListenable: _timeLeftNotifier,
+                builder: (context, timeLeft, child) {
+                  if (timeLeft <= 0) return const SizedBox.shrink();
+                  final progress = (15 - timeLeft) / 15.0;
+                  return LinearProgressIndicator(
+                    value: progress,
+                    backgroundColor: Colors.black54,
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      Colors.blueAccent,
+                    ),
+                    minHeight: 4,
+                  );
+                },
+              ),
+            ),
+
+            // 4. Escapability Layer: Close Button (Only appears after timer)
             ValueListenableBuilder<int>(
               valueListenable: _timeLeftNotifier,
               builder: (context, timeLeft, child) {
@@ -187,22 +166,21 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
                   right: 0,
                   child: SafeArea(
                     child: Padding(
-                      padding: const EdgeInsets.all(16.0),
+                      padding: const EdgeInsets.all(12.0),
                       child: Material(
-                        color: Colors.black54,
+                        color: Colors.black87,
                         shape: const CircleBorder(),
                         clipBehavior: Clip.hardEdge,
                         child: Tooltip(
                           message: 'Close & Claim Reward',
                           child: ScaleOnTap(
                             onTap: () {
-                              // Success!
                               Navigator.of(context).pop(true);
                             },
                             child: const Padding(
-                              padding: EdgeInsets.all(8.0),
+                              padding: EdgeInsets.all(10.0),
                               child: Icon(
-                                Icons.close,
+                                Icons.close_rounded,
                                 color: Colors.white,
                                 size: 28,
                               ),

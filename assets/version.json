@@ -1,6 +1,7 @@
 {
   "version": "1.0.4",
   "version_code": 1004,
+  "telegram_support": "iVPN_support",
   "release_notes": "• رفع قطعی کرش هنگام اتصال به وی‌پی‌ان (اصلاح فراخوانی Foreground Service در اندروید)\n• دانلود هوشمند نسخه اختصاصی پردازنده گوشی (ABI) در بروزرسانی داخلی با حجم کمتر (~100MB)\n• رفع مشکل هدایت ناخواسته به مرورگر هنگام دانلود و پاکسازی خودکار کش APK\n• رفع بن‌بست DNS در تست کانفیگ‌ها و پشتیبانی از DoH/TCP\n• رفع خطای کامپایل نسخه ویندوز (C4596/C2440)",
   "url": "https://github.com/mobinsamadir/ivpn_app/releases/latest/download/iVPN-release.apk"
 }

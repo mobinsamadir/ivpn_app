@@ -74,13 +74,24 @@ class _UniversalAdWidgetState extends State<UniversalAdWidget> {
         }
 
         final ad = currentAd;
-        // CRITICAL FIX: Fallback to a default height if null to prevent unconstrained expansion (Black Screen)
-        double effectiveHeight = widget.height ?? 250.0;
+        
+        double? effectiveHeight = widget.height;
+        if (effectiveHeight == null) {
+          if (widget.slot == 'reward_ad') {
+            effectiveHeight = double.infinity;
+          } else if (widget.slot == 'home_banner_top' ||
+              widget.slot == 'home_banner_bottom') {
+            // High-eCPM Large Responsive Banner (100dp)
+            effectiveHeight = 100.0;
+          } else {
+            effectiveHeight = 250.0;
+          }
+        }
 
-        // Enforce strict 60dp for banner slots
-        if (widget.slot == 'home_banner_top' ||
-            widget.slot == 'home_banner_bottom') {
-          effectiveHeight = 60.0;
+        if (effectiveHeight.isInfinite) {
+          return SizedBox.expand(
+            child: _buildContent(ad),
+          );
         }
 
         return SizedBox(

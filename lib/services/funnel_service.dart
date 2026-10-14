@@ -84,6 +84,10 @@ class FunnelService {
   final _progressController = StreamController<String>.broadcast();
   Stream<String> get progressStream => _progressController.stream;
 
+  // Live Best Server Discovered During Funnel
+  final ValueNotifier<VpnConfigWithMetrics?> bestDiscoveredConfigNotifier =
+      ValueNotifier<VpnConfigWithMetrics?>(null);
+
   Future<void> stop() async {
     _stopRequested = true;
     _isRunning = false;
@@ -92,6 +96,7 @@ class FunnelService {
     _httpQueue.clear();
     _speedQueue.clear();
     _cachedServerDetails.clear();
+    bestDiscoveredConfigNotifier.value = null;
 
     // Kill any zombie processes (Windows)
     if (!Platform.isAndroid) {
@@ -117,6 +122,7 @@ class FunnelService {
     _httpPassed = 0;
     _speedFinished = 0;
     _totalFailed = 0;
+    bestDiscoveredConfigNotifier.value = null;
 
     AdvancedLogger.info(
       "FunnelService: Starting Pipeline (RetestDead: $retestDead)",
@@ -380,6 +386,17 @@ class FunnelService {
 
           // Update Manager (triggers Sort & UI update)
           await _configManager.updateConfigDirectly(result);
+
+          // Update best candidate notifier live
+          if (result.currentPing > 0) {
+            final currentBest = bestDiscoveredConfigNotifier.value;
+            if (currentBest == null || result.currentPing < currentBest.currentPing) {
+              bestDiscoveredConfigNotifier.value = result;
+              AdvancedLogger.info(
+                "[FunnelService] ⚡ Faster candidate discovered: ${result.name} (${result.currentPing}ms)",
+              );
+            }
+          }
 
           // Promote to Speed Queue
           _speedQueue.add(result);
