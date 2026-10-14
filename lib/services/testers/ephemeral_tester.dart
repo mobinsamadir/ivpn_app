@@ -113,7 +113,7 @@ class EphemeralTester {
     bool isCompleted = false;
 
     // Watchdog Timer
-    final timer = Timer(const Duration(seconds: 15), () {
+    final timer = Timer(const Duration(seconds: 25), () {
       if (!isCompleted) {
         isCompleted = true;
         AdvancedLogger.warn(
@@ -314,17 +314,20 @@ class EphemeralTester {
 
           final sw = Stopwatch()..start();
           int httpAttempts = 0;
+          final probeUrls = [
+            'https://cp.cloudflare.com/generate_204',
+            'https://www.google.com/generate_204',
+          ];
 
-          while (httpAttempts < 2) {
+          while (httpAttempts < probeUrls.length) {
+            final testUrl = probeUrls[httpAttempts];
             try {
               AdvancedLogger.warn(
-                '[TESTER] HTTP Probe started to http://127.0.0.1:$proxyPort (Attempt ${httpAttempts + 1})',
+                '[TESTER] HTTP Probe ($testUrl) via 127.0.0.1:$httpPort (Attempt ${httpAttempts + 1})',
               );
-              final req = await client.getUrl(
-                Uri.parse('https://www.google.com/generate_204'),
-              );
+              final req = await client.getUrl(Uri.parse(testUrl));
               final resp = await req.close().timeout(
-                    const Duration(seconds: 5),
+                    const Duration(seconds: 6),
                   );
               sw.stop();
 
@@ -332,7 +335,7 @@ class EphemeralTester {
                 '[TESTER] HTTP Response received: ${resp.statusCode}',
               );
 
-              if (resp.statusCode == 204) {
+              if (resp.statusCode == 204 || resp.statusCode == 200) {
                 latency = sw.elapsedMilliseconds;
                 stage2Success = true;
                 break;
@@ -341,13 +344,11 @@ class EphemeralTester {
               }
             } catch (e) {
               httpAttempts++;
-              if (httpAttempts < 2 &&
-                  (e.toString().contains('HandshakeException') ||
-                      e.toString().contains('SocketException'))) {
+              if (httpAttempts < probeUrls.length) {
                 AdvancedLogger.warn(
-                  '[TESTER] HTTP Handshake failed, retrying in 1s... $e',
+                  '[TESTER] HTTP Probe to $testUrl failed, trying fallback... $e',
                 );
-                await Future.delayed(const Duration(seconds: 1));
+                await Future.delayed(const Duration(milliseconds: 500));
               } else {
                 AdvancedLogger.warn('[TESTER] HTTP Response Error: $e');
                 throw Exception("Stage 2 (HTTP) Failed: $e");

@@ -1,6 +1,6 @@
 {
-  "version": "1.0.3",
-  "version_code": 1003,
-  "release_notes": "• رفع کامل کرش هنگام تست و بررسی کانفیگ‌ها\n• اجرای سریع و بدون توقف صفحه اسپلش ابتدایی\n• اصلاح نام فایل‌های نصبی اندروید به iVPN\n• ارتقای سیستم دانلود و نصب مستقیم درون‌برنامه‌ای",
+  "version": "1.0.4",
+  "version_code": 1004,
+  "release_notes": "• رفع مشکل بن‌بست DNS در تست کانفیگ‌ها و پشتیبانی از DoH/TCP\n• افزایش زمان سگ‌نگهبان (Watchdog) به ۲۵ ثانیه و استفاده از پروب‌های پرسرعت کلودفلر و گوگل\n• رفع خطای کامپایل نسخه ویندوز (C4596/C2440) در flutter_secure_storage_windows",
   "url": "https://github.com/mobinsamadir/ivpn_app/releases/latest/download/iVPN-release.apk"
 }

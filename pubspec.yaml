@@ -1,6 +1,6 @@
 name: ivpn_new
 description: iVPN Client - High Performance VPN
-version: 1.0.3+1003
+version: 1.0.4+1004
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -91,6 +91,8 @@ flutter:
 
 
 dependency_overrides:
+  flutter_secure_storage_windows:
+    path: packages/flutter_secure_storage_windows
   window_manager:
     path: packages/window_manager
   permission_handler_windows:

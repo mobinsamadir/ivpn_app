@@ -687,15 +687,44 @@ class SingboxConfigGenerator {
     if (isTest) {
       return {
         "servers": [
-          {"tag": "remote", "address": "8.8.8.8", "detour": "proxy"},
+          {
+            "tag": "remote-doh",
+            "address": "https://8.8.8.8/dns-query",
+            "detour": "proxy",
+          },
+          {
+            "tag": "remote-tcp",
+            "address": "tcp://1.1.1.1",
+            "detour": "proxy",
+          },
+          {
+            "tag": "local",
+            "address": "local",
+            "detour": "direct",
+          },
         ],
-        "rules": [],
-        "final": "remote",
+        "rules": [
+          {
+            "outbound": ["any"],
+            "server": "local",
+          },
+        ],
+        "final": "remote-doh",
+        "strategy": "ipv4_only",
       };
     } else {
       return {
         "servers": [
-          {"tag": "google", "address": "8.8.8.8", "detour": "proxy"},
+          {
+            "tag": "google-doh",
+            "address": "https://8.8.8.8/dns-query",
+            "detour": "proxy",
+          },
+          {
+            "tag": "cf-tcp",
+            "address": "tcp://1.1.1.1",
+            "detour": "proxy",
+          },
           {"tag": "local", "address": "local", "detour": "direct"},
           {"tag": "block-dns", "address": "rcode://success"},
         ],
@@ -709,7 +738,7 @@ class SingboxConfigGenerator {
             "server": "local",
           },
         ],
-        "final": "google",
+        "final": "google-doh",
         "strategy": "ipv4_only",
       };
     }
@@ -720,6 +749,7 @@ class SingboxConfigGenerator {
     if (isTest) {
       return {
         "rules": [
+          {"protocol": "dns", "action": "hijack-dns"},
           {
             "outbound": "proxy",
             "network": ["tcp", "udp"],
