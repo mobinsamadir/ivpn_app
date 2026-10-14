@@ -206,7 +206,7 @@ class EphemeralTester {
           socket = await Socket.connect(
             host,
             port,
-            timeout: const Duration(seconds: 3),
+            timeout: const Duration(seconds: 5),
           );
           socket.destroy();
         } catch (e) {
@@ -306,7 +306,7 @@ class EphemeralTester {
 
           // HTTP proxy configured on httpPort (listenPort + 1)
           client.findProxy = (uri) => "PROXY 127.0.0.1:$httpPort";
-          client.connectionTimeout = const Duration(seconds: 3);
+          client.connectionTimeout = const Duration(seconds: 5);
 
           // Test HTTP (Stage 2) with fast Cloudflare 204 probe
           await Future.delayed(const Duration(milliseconds: 300));
@@ -319,7 +319,7 @@ class EphemeralTester {
             );
             final req = await client.getUrl(Uri.parse(testUrl));
             final resp = await req.close().timeout(
-                  const Duration(milliseconds: 3500),
+                  const Duration(milliseconds: 6000),
                 );
             sw.stop();
 

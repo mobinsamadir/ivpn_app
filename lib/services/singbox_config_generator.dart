@@ -663,11 +663,11 @@ class SingboxConfigGenerator {
         {
           "type": "tun",
           "tag": "tun-in",
-          "inet4_address": "172.19.0.1/30",
-          "mtu": 1350,
-          "auto_route": true,
+          "inet4_address": "172.19.0.1/28",
+          "mtu": 1400,
+          "auto_route": false,
           "strict_route": isKillSwitchEnabled,
-          "stack": "system",
+          "stack": "mixed",
           "sniff": true,
         },
       ];
@@ -762,6 +762,7 @@ class SingboxConfigGenerator {
     } else {
       return {
         "auto_detect_interface": true,
+        "find_process": splitTunnelingPackages.isNotEmpty,
         "rules": [
           {"protocol": "dns", "action": "hijack-dns"},
           {"ip_is_private": true, "outbound": "direct"},

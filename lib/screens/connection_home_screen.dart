@@ -851,7 +851,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                           ],
                         ),
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 12),
                       ListenableBuilder(
                         listenable: _configManager,
                         builder: (context, _) => ValueListenableBuilder<Set<String>>(
@@ -874,7 +874,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                           ),
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 10),
                     ],
                   ),
                 ),
@@ -2073,22 +2073,29 @@ class _SubscriptionCardState extends State<_SubscriptionCard>
                 ],
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: const [
-                      Icon(Icons.star_rounded, color: Colors.white, size: 20),
-                      SizedBox(width: 6),
-                      Text(
-                        'Buy VIP Dedicated Config',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
+                  Expanded(
+                    child: Row(
+                      children: const [
+                        Icon(Icons.workspace_premium_rounded,
+                            color: Colors.white, size: 20),
+                        SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            'Buy VIP Config',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -2097,9 +2104,10 @@ class _SubscriptionCardState extends State<_SubscriptionCard>
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: const Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          'Telegram Support',
+                          'Telegram',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 11,

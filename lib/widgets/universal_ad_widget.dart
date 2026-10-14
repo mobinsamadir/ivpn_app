@@ -81,8 +81,8 @@ class _UniversalAdWidgetState extends State<UniversalAdWidget> {
             effectiveHeight = double.infinity;
           } else if (widget.slot == 'home_banner_top' ||
               widget.slot == 'home_banner_bottom') {
-            // High-eCPM Large Responsive Banner (100dp)
-            effectiveHeight = 100.0;
+            // Standard mobile banner height (55dp)
+            effectiveHeight = 55.0;
           } else {
             effectiveHeight = 250.0;
           }

@@ -346,26 +346,24 @@ class _ConfigInfo extends StatelessWidget {
                     ),
             ),
             const Spacer(),
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              layoutBuilder:
-                  (Widget? currentChild, List<Widget> previousChildren) {
-                return Stack(
-                  alignment: Alignment.centerRight,
-                  children: <Widget>[
-                    ...previousChildren,
-                    if (currentChild != null) currentChild,
-                  ],
-                );
-              },
-              child: isTesting
-                  ? const SizedBox.shrink(key: ValueKey('empty_score'))
-                  : Text(
-                      'Score: ${config.calculatedScore.toStringAsFixed(1)}',
-                      key: const ValueKey('score'),
-                      style: TextStyle(fontSize: 11, color: Colors.grey[500]),
-                    ),
-            ),
+            if (!isTesting)
+              Container(
+                key: const ValueKey('score_badge'),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.white12),
+                ),
+                child: Text(
+                  'Score: ${config.calculatedScore.toStringAsFixed(1)}',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade400,
+                  ),
+                ),
+              ),
           ],
         ),
       ],

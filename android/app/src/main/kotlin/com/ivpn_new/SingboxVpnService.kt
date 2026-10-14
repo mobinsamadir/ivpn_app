@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.net.VpnService
 import android.os.Build
 import android.os.Handler
@@ -371,8 +372,7 @@ class SingboxVpnService :
 
         if (action == ACTION_START) {
             try {
-                createNotificationChannel()
-                startForeground(VPN_NOTIFICATION_ID, createNotification())
+                startServiceForeground()
             } catch (e: Throwable) {
                 android.util.Log.e("NativeVpnLifecycle", "Error starting foreground synchronously: ${e.message}")
             }
@@ -389,6 +389,20 @@ class SingboxVpnService :
         return START_NOT_STICKY
     }
 
+    private fun startServiceForeground() {
+        createNotificationChannel()
+        val notification = createNotification()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(
+                VPN_NOTIFICATION_ID,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
+            )
+        } else {
+            startForeground(VPN_NOTIFICATION_ID, notification)
+        }
+    }
+
     private suspend fun startVpn(rawInput: String) {
         nativeCallMutex.withLock {
             if (isVpnRunning) return
@@ -396,8 +410,7 @@ class SingboxVpnService :
             isVpnRunning = true
 
             try {
-                createNotificationChannel()
-                startForeground(VPN_NOTIFICATION_ID, createNotification())
+                startServiceForeground()
             } catch (ignored: Throwable) {}
 
             try {

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'universal_ad_widget.dart';
 import '../services/ad_manager_service.dart';
+import '../services/config_gist_service.dart';
 import 'scale_on_tap.dart';
 
 class FullScreenAdDialog extends StatefulWidget {
@@ -14,17 +15,31 @@ class FullScreenAdDialog extends StatefulWidget {
 }
 
 class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
-  final ValueNotifier<int> _timeLeftNotifier =
-      ValueNotifier<int>(15); // Strict 15s countdown
+  int _totalDuration = 20;
+  late final ValueNotifier<int> _timeLeftNotifier;
   Timer? _timer;
 
   @override
   void initState() {
     super.initState();
+    _totalDuration = ConfigGistService.rewardAdDurationSeconds;
+    _timeLeftNotifier = ValueNotifier<int>(_totalDuration);
+    _initDurationAndStartTimer();
+  }
+
+  Future<void> _initDurationAndStartTimer() async {
+    final configured = await ConfigGistService.getRewardAdDurationSeconds();
+    if (mounted && configured != _totalDuration && _timeLeftNotifier.value == _totalDuration) {
+      setState(() {
+        _totalDuration = configured;
+        _timeLeftNotifier.value = configured;
+      });
+    }
     _startTimer();
   }
 
   void _startTimer() {
+    _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_timeLeftNotifier.value > 0) {
         if (mounted) {
@@ -143,7 +158,9 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
                 valueListenable: _timeLeftNotifier,
                 builder: (context, timeLeft, child) {
                   if (timeLeft <= 0) return const SizedBox.shrink();
-                  final progress = (15 - timeLeft) / 15.0;
+                  final progress = _totalDuration > 0
+                      ? (_totalDuration - timeLeft) / _totalDuration
+                      : 1.0;
                   return LinearProgressIndicator(
                     value: progress,
                     backgroundColor: Colors.black54,

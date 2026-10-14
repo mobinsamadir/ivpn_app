@@ -1,7 +1,8 @@
 {
-  "version": "1.0.4",
-  "version_code": 1004,
+  "version": "1.0.5",
+  "version_code": 1005,
   "telegram_support": "iVPN_support",
-  "release_notes": "• رفع قطعی کرش هنگام اتصال به وی‌پی‌ان (اصلاح فراخوانی Foreground Service در اندروید)\n• دانلود هوشمند نسخه اختصاصی پردازنده گوشی (ABI) در بروزرسانی داخلی با حجم کمتر (~100MB)\n• رفع مشکل هدایت ناخواسته به مرورگر هنگام دانلود و پاکسازی خودکار کش APK\n• رفع بن‌بست DNS در تست کانفیگ‌ها و پشتیبانی از DoH/TCP\n• رفع خطای کامپایل نسخه ویندوز (C4596/C2440)",
+  "reward_ad_duration_seconds": 20,
+  "release_notes": "• Fix native VPN connection crash by using userspace mixed stack\n• Calibrate network latency test timeouts for high-latency networks\n• Add 20-second mandatory countdown for rewarded video ads\n• Optimize banner sizes and layout for mobile screens\n• Responsive VIP subscription button connected to Telegram",
   "url": "https://github.com/mobinsamadir/ivpn_app/releases/latest/download/iVPN-release.apk"
 }

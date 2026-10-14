@@ -23,17 +23,45 @@ class ConfigGistService {
   ConfigGistService._internal();
 
   static String telegramSupport = 'iVPN_support';
+  static int rewardAdDurationSeconds = 20;
+
+  static const String _cachedTelegramSupportKey = 'cached_telegram_support';
+  static const String _cachedRewardAdDurationKey = 'cached_reward_ad_duration';
 
   static Future<String> getTelegramSupport() async {
     try {
-      final jsonStr = await rootBundle.loadString('assets/version.json');
-      final data = jsonDecode(jsonStr);
-      if (data['telegram_support'] != null &&
-          data['telegram_support'].toString().trim().isNotEmpty) {
-        telegramSupport = data['telegram_support'].toString().trim();
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.containsKey(_cachedTelegramSupportKey)) {
+        telegramSupport = prefs.getString(_cachedTelegramSupportKey) ?? telegramSupport;
+      } else {
+        final jsonStr = await rootBundle.loadString('assets/version.json');
+        final data = jsonDecode(jsonStr);
+        if (data['telegram_support'] != null &&
+            data['telegram_support'].toString().trim().isNotEmpty) {
+          telegramSupport = data['telegram_support'].toString().trim();
+          await prefs.setString(_cachedTelegramSupportKey, telegramSupport);
+        }
       }
     } catch (_) {}
     return telegramSupport;
+  }
+
+  static Future<int> getRewardAdDurationSeconds() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.containsKey(_cachedRewardAdDurationKey)) {
+        rewardAdDurationSeconds = prefs.getInt(_cachedRewardAdDurationKey) ?? 20;
+      } else {
+        final jsonStr = await rootBundle.loadString('assets/version.json');
+        final data = jsonDecode(jsonStr);
+        if (data['reward_ad_duration_seconds'] != null) {
+          rewardAdDurationSeconds =
+              int.tryParse(data['reward_ad_duration_seconds'].toString()) ?? 20;
+          await prefs.setInt(_cachedRewardAdDurationKey, rewardAdDurationSeconds);
+        }
+      }
+    } catch (_) {}
+    return rewardAdDurationSeconds;
   }
 
   static const String _lastFetchKey = 'last_config_fetch_timestamp';
