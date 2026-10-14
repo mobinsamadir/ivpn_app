@@ -73,6 +73,9 @@ String? _extractCountryCode(String name) {
   final textMap = {
     'GERMAN': 'DE',
     'FRANKFURT': 'DE',
+    'CLOUVIDER': 'DE',
+    'HETZNER': 'DE',
+    'HESSEN': 'DE',
     'UNITED STATES': 'US',
     'AMERICA': 'US',
     'UNITED KINGDOM': 'GB',
@@ -80,6 +83,7 @@ String? _extractCountryCode(String name) {
     'ENGLAND': 'GB',
     'FRANCE': 'FR',
     'PARIS': 'FR',
+    'OVH': 'FR',
     'NETHERLANDS': 'NL',
     'AMSTERDAM': 'NL',
     'HOLLAND': 'NL',
@@ -105,7 +109,8 @@ String? _extractCountryCode(String name) {
     'HONG KONG': 'HK',
     'ITALY': 'IT',
     'SPAIN': 'ES',
-    'IRAN': 'IR',
+    'AUSTRIA': 'AT',
+    'VIENNA': 'AT',
   };
   for (final e in textMap.entries) {
     if (upperName.contains(e.key)) {
@@ -113,7 +118,8 @@ String? _extractCountryCode(String name) {
     }
   }
 
-  final codeRegex = RegExp(r'(?:^|[^A-Z])(US|DE|GB|UK|FR|NL|FI|TR|SG|CA|SE|CH|PL|RU|JP|KR|HK|IT|ES|IR|AT|NO)(?:$|[^A-Z])');
+  // Country code regex: Exclude IR to prevent remarks like 'MCI-IRAN' from showing Iran flag
+  final codeRegex = RegExp(r'(?:^|[^A-Z])(US|DE|GB|UK|FR|NL|FI|TR|SG|CA|SE|CH|PL|RU|JP|KR|HK|IT|ES|AT|NO)(?:$|[^A-Z])');
   final match = codeRegex.firstMatch(upperName);
   if (match != null) {
     final code = match.group(1);
@@ -1223,18 +1229,12 @@ class ConfigManager extends ChangeNotifier {
               return;
             }
 
-            if (testResult.lastFailedStage != null &&
-                (testResult.lastFailedStage!.contains("Init") ||
-                    testResult.lastFailedStage!.contains("Stage1_ProxyInit"))) {
-              await markInvalid(target.id);
-              throw Exception("Pre-flight check failed (Invalid/Dead Config)");
-            }
-
-            await markFailure(target.id);
-            throw Exception("Pre-flight check failed (Connectivity)");
+            AdvancedLogger.warn(
+              "[ConfigManager] Pre-flight check inconclusive for ${target.name} (${testResult.failureReason}). Proceeding directly with native tunnel.",
+            );
+          } else {
+            await updateConfigDirectly(testResult);
           }
-
-          await updateConfigDirectly(testResult);
         }
 
         if (_isGlobalStopRequested) {
