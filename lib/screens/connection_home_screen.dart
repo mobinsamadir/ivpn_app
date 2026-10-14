@@ -2412,13 +2412,13 @@ class _ConnectButton extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: const [
-                    const Icon(
+                    Icon(
                       Icons.refresh_rounded,
                       size: 17,
                       color: Colors.blueAccent,
                     ),
-                    const SizedBox(width: 6),
-                    const Text(
+                    SizedBox(width: 6),
+                    Text(
                       "Refresh Servers",
                       style: TextStyle(
                         color: Colors.white,
