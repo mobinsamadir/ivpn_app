@@ -317,11 +317,14 @@ class NativeVpnService {
         "✅ [Native] Connect command sent. Waiting for OS confirmation...",
       );
 
-      // Start cancelable timeout logic to listen for state update
+      _lastKnownState = "CONNECTING";
+      _statusController.add("CONNECTING");
+
+      // Start cancelable timeout logic to listen for state update (10 seconds timeout)
       Timer? timeoutTimer;
       StreamSubscription<String>? statusSub;
 
-      timeoutTimer = Timer(const Duration(seconds: 15), () async {
+      timeoutTimer = Timer(const Duration(seconds: 10), () async {
         AdvancedLogger.warn(
           "Native layer timed out. Forcing stopVpn and injecting ERROR event.",
         );
@@ -342,9 +345,7 @@ class NativeVpnService {
       });
 
       statusSub = connectionStatusStream.listen((status) {
-        if (status == "CONNECTED" ||
-            status.startsWith("ERROR") ||
-            status == "DISCONNECTED") {
+        if (status == "CONNECTED" || status.startsWith("ERROR")) {
           timeoutTimer?.cancel();
           statusSub?.cancel();
         }

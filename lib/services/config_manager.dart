@@ -37,7 +37,7 @@ String _extractServerName(String raw) {
 }
 
 String? _extractCountryCode(String name) {
-  final map = {
+  final emojiMap = {
     '🇺🇸': 'US',
     '🇩🇪': 'DE',
     '🇬🇧': 'GB',
@@ -59,12 +59,68 @@ String? _extractCountryCode(String name) {
     '🇵🇱': 'PL',
     '🇷🇺': 'RU',
     '🇮🇷': 'IR',
+    '🇫🇮': 'FI',
+    '🇦🇹': 'AT',
+    '🇳🇴': 'NO',
   };
-  for (final e in map.entries) {
+  for (final e in emojiMap.entries) {
     if (name.contains(e.key)) {
       return e.value;
     }
   }
+
+  final upperName = name.toUpperCase();
+  final textMap = {
+    'GERMAN': 'DE',
+    'FRANKFURT': 'DE',
+    'UNITED STATES': 'US',
+    'AMERICA': 'US',
+    'UNITED KINGDOM': 'GB',
+    'LONDON': 'GB',
+    'ENGLAND': 'GB',
+    'FRANCE': 'FR',
+    'PARIS': 'FR',
+    'NETHERLANDS': 'NL',
+    'AMSTERDAM': 'NL',
+    'HOLLAND': 'NL',
+    'TURKEY': 'TR',
+    'ISTANBUL': 'TR',
+    'SINGAPORE': 'SG',
+    'FINLAND': 'FI',
+    'HELSINKI': 'FI',
+    'SWEDEN': 'SE',
+    'STOCKHOLM': 'SE',
+    'SWITZERLAND': 'CH',
+    'ZURICH': 'CH',
+    'CANADA': 'CA',
+    'TORONTO': 'CA',
+    'RUSSIA': 'RU',
+    'MOSCOW': 'RU',
+    'POLAND': 'PL',
+    'WARSAW': 'PL',
+    'JAPAN': 'JP',
+    'TOKYO': 'JP',
+    'KOREA': 'KR',
+    'SEOUL': 'KR',
+    'HONG KONG': 'HK',
+    'ITALY': 'IT',
+    'SPAIN': 'ES',
+    'IRAN': 'IR',
+  };
+  for (final e in textMap.entries) {
+    if (upperName.contains(e.key)) {
+      return e.value;
+    }
+  }
+
+  final codeRegex = RegExp(r'(?:^|[^A-Z])(US|DE|GB|UK|FR|NL|FI|TR|SG|CA|SE|CH|PL|RU|JP|KR|HK|IT|ES|IR|AT|NO)(?:$|[^A-Z])');
+  final match = codeRegex.firstMatch(upperName);
+  if (match != null) {
+    final code = match.group(1);
+    if (code == 'UK') return 'GB';
+    return code;
+  }
+
   return null;
 }
 

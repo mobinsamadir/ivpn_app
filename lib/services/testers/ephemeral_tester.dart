@@ -306,54 +306,36 @@ class EphemeralTester {
 
           // HTTP proxy configured on httpPort (listenPort + 1)
           client.findProxy = (uri) => "PROXY 127.0.0.1:$httpPort";
-          client.connectionTimeout = const Duration(seconds: 5);
+          client.connectionTimeout = const Duration(seconds: 3);
 
-          // Test HTTP (Stage 2) with Retry for HandshakeException
-          // Delay briefly to allow sing-box to establish upstream TLS
-          await Future.delayed(const Duration(milliseconds: 500));
+          // Test HTTP (Stage 2) with fast Cloudflare 204 probe
+          await Future.delayed(const Duration(milliseconds: 300));
 
           final sw = Stopwatch()..start();
-          int httpAttempts = 0;
-          final probeUrls = [
-            'https://cp.cloudflare.com/generate_204',
-            'https://www.google.com/generate_204',
-          ];
-
-          while (httpAttempts < probeUrls.length) {
-            final testUrl = probeUrls[httpAttempts];
-            try {
-              AdvancedLogger.warn(
-                '[TESTER] HTTP Probe ($testUrl) via 127.0.0.1:$httpPort (Attempt ${httpAttempts + 1})',
-              );
-              final req = await client.getUrl(Uri.parse(testUrl));
-              final resp = await req.close().timeout(
-                    const Duration(seconds: 6),
-                  );
-              sw.stop();
-
-              AdvancedLogger.warn(
-                '[TESTER] HTTP Response received: ${resp.statusCode}',
-              );
-
-              if (resp.statusCode == 204 || resp.statusCode == 200) {
-                latency = sw.elapsedMilliseconds;
-                stage2Success = true;
-                break;
-              } else {
-                throw Exception("HTTP Status ${resp.statusCode}");
-              }
-            } catch (e) {
-              httpAttempts++;
-              if (httpAttempts < probeUrls.length) {
-                AdvancedLogger.warn(
-                  '[TESTER] HTTP Probe to $testUrl failed, trying fallback... $e',
+          const testUrl = 'https://cp.cloudflare.com/generate_204';
+          try {
+            AdvancedLogger.warn(
+              '[TESTER] Fast HTTP Probe ($testUrl) via 127.0.0.1:$httpPort',
+            );
+            final req = await client.getUrl(Uri.parse(testUrl));
+            final resp = await req.close().timeout(
+                  const Duration(milliseconds: 3500),
                 );
-                await Future.delayed(const Duration(milliseconds: 500));
-              } else {
-                AdvancedLogger.warn('[TESTER] HTTP Response Error: $e');
-                throw Exception("Stage 2 (HTTP) Failed: $e");
-              }
+            sw.stop();
+
+            AdvancedLogger.warn(
+              '[TESTER] HTTP Response received: ${resp.statusCode}',
+            );
+
+            if (resp.statusCode == 204 || resp.statusCode == 200) {
+              latency = sw.elapsedMilliseconds;
+              stage2Success = true;
+            } else {
+              throw Exception("HTTP Status ${resp.statusCode}");
             }
+          } catch (e) {
+            AdvancedLogger.warn('[TESTER] HTTP Response Error: $e');
+            throw Exception("Stage 2 (HTTP) Failed: $e");
           }
 
           // Test Speed (Stage 3)

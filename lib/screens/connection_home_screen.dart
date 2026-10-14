@@ -133,7 +133,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     // 1. Initialize Ad Service IMMEDIATELY
     _adManagerService.initialize();
 
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
         // Rebuild handled by AnimatedBuilder
@@ -1009,6 +1009,10 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                             'Valid (${_configManager.validatedConfigs.length})',
                       ),
                       Tab(
+                        icon: const Icon(Icons.public, size: 18),
+                        text: 'Location (${_getUniqueLocationsCount()})',
+                      ),
+                      Tab(
                         icon: const Icon(Icons.star, size: 18),
                         text: 'Favs (${_configManager.favoriteConfigs.length})',
                       ),
@@ -1021,12 +1025,16 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
               ListenableBuilder(
                 listenable: Listenable.merge([_tabController, _configManager, _isFetching, _activeTestIds]),
                 builder: (context, _) {
+                    if (_tabController.index == 2) {
+                      return _buildLocationsSliver();
+                    }
+
                     List<VpnConfigWithMetrics> configs;
                     switch (_tabController.index) {
                       case 1:
                         configs = _configManager.validatedConfigs;
                         break;
-                      case 2:
+                      case 3:
                         configs = _configManager.favoriteConfigs;
                         break;
                       case 0:
@@ -1228,6 +1236,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
         }
       }
 
+      // Stop FunnelService before connecting so it doesn't hold locks/ports
+      await _funnelService.stop();
+
       // 2. Delegate to Service (Smart Failover)
       await _configManager.connectWithSmartFailover();
     } catch (e) {
@@ -1310,11 +1321,209 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     }
   }
 
+  int _getUniqueLocationsCount() {
+    final codes = <String>{};
+    for (final c in _configManager.allConfigs) {
+      codes.add(c.countryCode ?? 'GLOBAL');
+    }
+    return codes.length;
+  }
+
+  String _countryCodeToFlag(String code) {
+    final upper = code.toUpperCase();
+    final flags = {
+      'US': '🇺🇸', 'DE': '🇩🇪', 'TR': '🇹🇷', 'IR': '🇮🇷',
+      'GB': '🇬🇧', 'FR': '🇫🇷', 'JP': '🇯🇵', 'KR': '🇰🇷',
+      'CN': '🇨🇳', 'RU': '🇷🇺', 'NL': '🇳🇱', 'CA': '🇨🇦',
+      'AU': '🇦🇺', 'SG': '🇸🇬', 'IN': '🇮🇳', 'BR': '🇧🇷',
+      'IT': '🇮🇹', 'ES': '🇪🇸', 'SE': '🇸🇪', 'CH': '🇨🇭',
+      'NO': '🇳🇴', 'FI': '🇫🇮', 'DK': '🇩🇰', 'PL': '🇵🇱',
+      'CZ': '🇨🇿', 'HU': '🇭🇺', 'AT': '🇦🇹', 'BE': '🇧🇪',
+      'IE': '🇮🇪', 'PT': '🇵🇹', 'GR': '🇬🇷', 'RO': '🇷🇴',
+      'BG': '🇧🇬', 'HR': '🇭🇷', 'SK': '🇸🇰', 'SI': '🇸🇮',
+    };
+    if (flags.containsKey(upper)) return flags[upper]!;
+    if (upper.length == 2) {
+      try {
+        final first = upper.codeUnitAt(0) - 0x41 + 0x1F1E6;
+        final second = upper.codeUnitAt(1) - 0x41 + 0x1F1E6;
+        return String.fromCharCode(first) + String.fromCharCode(second);
+      } catch (_) {}
+    }
+    return '🌐';
+  }
+
+  String _countryCodeToName(String code) {
+    const map = {
+      'US': 'United States',
+      'DE': 'Germany',
+      'GB': 'United Kingdom',
+      'FR': 'France',
+      'NL': 'Netherlands',
+      'FI': 'Finland',
+      'TR': 'Turkey',
+      'SG': 'Singapore',
+      'CA': 'Canada',
+      'SE': 'Sweden',
+      'CH': 'Switzerland',
+      'JP': 'Japan',
+      'KR': 'South Korea',
+      'HK': 'Hong Kong',
+      'IT': 'Italy',
+      'ES': 'Spain',
+      'PL': 'Poland',
+      'RU': 'Russia',
+      'IR': 'Iran',
+      'BR': 'Brazil',
+      'AU': 'Australia',
+      'AT': 'Austria',
+      'NO': 'Norway',
+    };
+    return map[code.toUpperCase()] ?? (code == 'GLOBAL' ? 'Global / Other' : code);
+  }
+
+  Widget _buildLocationsSliver() {
+    final Map<String, List<VpnConfigWithMetrics>> groups = {};
+    for (final c in _configManager.allConfigs) {
+      final code = c.countryCode ?? 'GLOBAL';
+      groups.putIfAbsent(code, () => []).add(c);
+    }
+
+    if (groups.isEmpty) {
+      if (_isFetching.value) {
+        return SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) => const ShimmerConfigCard(),
+            childCount: 6,
+          ),
+        );
+      }
+      return SliverToBoxAdapter(
+        child: Container(
+          padding: const EdgeInsets.all(50),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.public_off, size: 64, color: Colors.grey[600]),
+                const SizedBox(height: 16),
+                Text(
+                  'No location data available',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 18),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    final sortedCountryCodes = groups.keys.toList()
+      ..sort((a, b) {
+        if (a == 'GLOBAL') return 1;
+        if (b == 'GLOBAL') return -1;
+        return groups[b]!.length.compareTo(groups[a]!.length);
+      });
+
+    return SliverList(
+      delegate: SliverChildBuilderDelegate(
+        (context, index) {
+          final countryCode = sortedCountryCodes[index];
+          final countryConfigs = groups[countryCode]!;
+          final activeCount =
+              countryConfigs.where((c) => c.funnelStage >= 2 && c.isAlive).length;
+          final flag = _countryCodeToFlag(countryCode);
+          final countryName = _countryCodeToName(countryCode);
+
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E1E1E),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              ),
+              child: Theme(
+                data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                child: ExpansionTile(
+                  leading: Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.05),
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      flag,
+                      style: const TextStyle(fontSize: 22),
+                    ),
+                  ),
+                  title: Text(
+                    countryName,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                  subtitle: Text(
+                    '${countryConfigs.length} servers • $activeCount active',
+                    style: TextStyle(
+                      color: activeCount > 0 ? Colors.greenAccent : Colors.grey[400],
+                      fontSize: 12,
+                    ),
+                  ),
+                  children: countryConfigs.map((config) {
+                    return ConfigCard(
+                      config: config,
+                      isSelected: _configManager.selectedConfig?.id == config.id,
+                      isTesting: _activeTestIds.value.contains(config.id),
+                      onTap: () async {
+                        _configManager.selectConfig(config);
+                        if (_configManager.isAutoSwitchEnabled) {
+                          if (_configManager.isConnected) {
+                            await _configManager.switchConfig(config);
+                          }
+                        } else {
+                          try {
+                            await _configManager.connectManual(config);
+                          } catch (e) {
+                            _showToast('Connection failed: $e');
+                          }
+                        }
+                      },
+                      onTestLatency: () => _runSingleTest(config),
+                      onTestSpeed: () => _runSingleTest(config),
+                      onToggleFavorite: () async {
+                        await _configManager.toggleFavorite(config.id);
+                      },
+                      onDelete: () async {
+                        final confirm =
+                            await _showDeleteConfirmationDialog(config);
+                        if (confirm && mounted) {
+                          await _configManager.deleteConfig(config.id);
+                        }
+                      },
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+          );
+        },
+        childCount: sortedCountryCodes.length,
+      ),
+    );
+  }
+
   List<VpnConfigWithMetrics> _getCurrentList() {
     switch (_tabController.index) {
       case 1:
         return _configManager.validatedConfigs;
       case 2:
+        return _configManager.allConfigs;
+      case 3:
         return _configManager.favoriteConfigs;
       case 0:
       default:
@@ -1961,7 +2170,7 @@ class _ConnectButton extends StatelessWidget {
                     layoutBuilder:
                         (Widget? currentChild, List<Widget> previousChildren) {
                       return Stack(
-                        alignment: Alignment.centerLeft,
+                        alignment: Alignment.center,
                         children: <Widget>[
                           ...previousChildren,
                           if (currentChild != null) currentChild,
@@ -1991,7 +2200,7 @@ class _ConnectButton extends StatelessWidget {
                     layoutBuilder:
                         (Widget? currentChild, List<Widget> previousChildren) {
                       return Stack(
-                        alignment: Alignment.centerLeft,
+                        alignment: Alignment.center,
                         children: <Widget>[
                           ...previousChildren,
                           if (currentChild != null) currentChild,

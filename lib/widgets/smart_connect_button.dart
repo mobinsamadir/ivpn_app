@@ -124,7 +124,7 @@ class _SmartConnectButtonState extends State<SmartConnectButton>
                           List<Widget> previousChildren,
                         ) {
                           return Stack(
-                            alignment: Alignment.centerLeft,
+                            alignment: Alignment.center,
                             children: <Widget>[
                               ...previousChildren,
                               if (currentChild != null) currentChild,
@@ -162,7 +162,7 @@ class _SmartConnectButtonState extends State<SmartConnectButton>
                           List<Widget> previousChildren,
                         ) {
                           return Stack(
-                            alignment: Alignment.centerLeft,
+                            alignment: Alignment.center,
                             children: <Widget>[
                               ...previousChildren,
                               if (currentChild != null) currentChild,
