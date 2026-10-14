@@ -361,10 +361,6 @@ class SingboxVpnService :
         }
     }
 
-    override fun autoDetectInterfaceControl(fd: Int) {
-        this.protect(fd)
-    }
-
     override fun onStartCommand(
         intent: Intent?,
         flags: Int,
