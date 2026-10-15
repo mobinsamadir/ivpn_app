@@ -1,8 +1,8 @@
 {
-  "version": "1.0.6",
-  "version_code": 1006,
+  "version": "1.0.7",
+  "version_code": 1007,
   "telegram_support": "iVPN_support",
   "reward_ad_duration_seconds": 20,
-  "release_notes": "• Fix in-app update invalid package error with permanent keystore signature\n• Fix false Iran flag identification on European servers (Cloudvider, Hetzner, etc.)\n• Make pre-flight check non-blocking for manual user connections\n• Ensure automatic GitHub Releases on build completion",
+  "release_notes": "• Fix sing-box 1.12 tun address parsing error resolving failed VPN connections\n• Add branded sponsor fallback layer to rewarded ad dialog\n• Fix in-app update invalid package error with permanent keystore signature\n• Calibrate network latency test timeouts and pre-flight tunneling",
   "url": "https://github.com/mobinsamadir/ivpn_app/releases/latest/download/iVPN-release.apk"
 }

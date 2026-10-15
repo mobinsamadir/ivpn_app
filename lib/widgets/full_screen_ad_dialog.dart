@@ -74,12 +74,62 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
         backgroundColor: Colors.black, // Force solid background
         body: Stack(
           children: [
-            // 1. True Fullscreen Ad Layer (100% of Screen)
+            // 0. Branded Fallback / Sponsor Background Layer
             Positioned.fill(
               child: Container(
-                color: Colors.black,
-                child: UniversalAdWidget(slot: widget.unitId),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF0F172A), Color(0xFF020617)],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                ),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.blueAccent.withValues(alpha: 0.1),
+                          border: Border.all(
+                            color: Colors.blueAccent.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.shield_rounded,
+                          size: 64,
+                          color: Colors.blueAccent,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'iVPN Free Sponsor Network',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Keeping Secure VPN Free & Fast For Everyone',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.6),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
+            ),
+
+            // 1. True Fullscreen Ad Layer (100% of Screen)
+            Positioned.fill(
+              child: UniversalAdWidget(slot: widget.unitId),
             ),
 
             // 2. Floating Top Header with Timer Badge & Title

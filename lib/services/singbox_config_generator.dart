@@ -663,7 +663,7 @@ class SingboxConfigGenerator {
         {
           "type": "tun",
           "tag": "tun-in",
-          "inet4_address": "172.19.0.1/28",
+          "address": ["172.19.0.1/28"],
           "mtu": 1400,
           "auto_route": false,
           "strict_route": isKillSwitchEnabled,
