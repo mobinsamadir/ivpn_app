@@ -63,7 +63,7 @@ class FunnelService {
   // Limits
 
   static int get _maxTcpWorkers =>
-      Platform.isWindows ? 4 : _getDynamicWorkerCount(8);
+      Platform.isWindows ? 8 : _getDynamicWorkerCount(16);
   static int get _maxHttpWorkers =>
       Platform.isAndroid ? 1 : (Platform.isWindows ? 2 : _getDynamicWorkerCount(3));
   static int get _maxSpeedWorkers => 1;
@@ -320,11 +320,11 @@ class FunnelService {
           final port = details['port'] as int? ?? 443;
 
           try {
-            // 2-second timeout for fast fail
+            // 1.5-second timeout for fast fail on dead servers
             final socket = await Socket.connect(
               host,
               port,
-              timeout: const Duration(seconds: 2),
+              timeout: const Duration(milliseconds: 1500),
             );
             socket.destroy();
             passed = true;

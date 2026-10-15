@@ -260,6 +260,7 @@ class ConfigManager extends ChangeNotifier {
 
   Timer? _sessionTimer;
   Timer? _throttleTimer; // For UI throttling
+  Timer? _saveDebounceTimer; // For debouncing disk I/O on rapid metric changes
   bool _hasPendingUpdates = false; // Flag for buffered updates
 
   // Global Kill Switch
@@ -894,7 +895,23 @@ class ConfigManager extends ChangeNotifier {
     return jsonEncode(configs.map((e) => e.toJson()).toList());
   }
 
-  Future<void> _saveAllConfigs() async {
+  Future<void> _saveAllConfigs({bool forceImmediate = false}) async {
+    if (forceImmediate) {
+      _saveDebounceTimer?.cancel();
+      _saveDebounceTimer = null;
+      await _executeSaveAllConfigs();
+      return;
+    }
+
+    if (_saveDebounceTimer?.isActive ?? false) return;
+
+    _saveDebounceTimer = Timer(const Duration(milliseconds: 1500), () {
+      _saveDebounceTimer = null;
+      _executeSaveAllConfigs();
+    });
+  }
+
+  Future<void> _executeSaveAllConfigs() async {
     try {
       // Deep copy to prevent concurrent modification exceptions during isolate execution
       final configsSnapshot = List<VpnConfigWithMetrics>.from(allConfigs);

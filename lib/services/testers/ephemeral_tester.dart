@@ -272,9 +272,8 @@ class EphemeralTester {
           'isTest': true,
         });
 
-        // Start Proxy
-        // CRITICAL: Prevent hitting the Go libbox runtime too fast across sequential tests
-        await Future.delayed(const Duration(milliseconds: 500));
+        // Start Proxy with optimal runtime yield
+        await Future.delayed(const Duration(milliseconds: 120));
 
         try {
           proxyPort = await nativeService.startTestProxy(jsonConfig);
@@ -312,7 +311,7 @@ class EphemeralTester {
           client.connectionTimeout = const Duration(seconds: 5);
 
           // Test HTTP (Stage 2) with fast Cloudflare 204 probe
-          await Future.delayed(const Duration(milliseconds: 300));
+          await Future.delayed(const Duration(milliseconds: 100));
 
           final sw = Stopwatch()..start();
           const testUrl = 'https://cp.cloudflare.com/generate_204';

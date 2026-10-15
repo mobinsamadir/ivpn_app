@@ -75,7 +75,7 @@ class SingboxVpnService :
                     android.util.Log.e("NativeVpnLifecycle", "Error closing testServer: ${e.message}")
                     e.printStackTrace()
                 } finally {
-                    delay(300) // Give Go garbage collector and OS socket release more time
+                    delay(120) // Fast GC and OS socket release
                 }
             }
         }
@@ -215,7 +215,7 @@ class SingboxVpnService :
                             result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(-1) } }
                             return@withContext
                         }
-                        delay(200)
+                        delay(80)
 
                         result?.let { r -> Handler(Looper.getMainLooper()).post { r.success(socksPort) } }
                     } finally {
