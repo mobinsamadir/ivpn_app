@@ -1165,18 +1165,27 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
 
   // --- LOGIC METHODS ---
   Future<void> _handleConnection() async {
-    if (_connectionFlowState != 'idle') {
-      AdvancedLogger.warn("[ConnectionHomeScreen] Ignoring connect tap: currently $_connectionFlowState");
+    // Check if user wants to disconnect or cancel connecting first
+    final status = _configManager.connectionStatus.toLowerCase();
+    final bool isConnectingOrConnected = _configManager.isConnected ||
+        status.contains('connecting') ||
+        _connectionFlowState == 'connecting' ||
+        _connectionFlowState == 'requesting_permission';
+
+    if (isConnectingOrConnected) {
+      AdvancedLogger.info("[HomeScreen] Connect button tapped to cancel / disconnect");
+      _connectionFlowState = 'disconnecting';
+      _wasVpnConnected = false;
+      try {
+        await _configManager.stopAllOperations();
+      } finally {
+        _connectionFlowState = 'idle';
+      }
       return;
     }
 
-    // Check if user wants to disconnect or cancel connecting
-    final status = _configManager.connectionStatus.toLowerCase();
-    if (_configManager.isConnected || status.contains('connecting')) {
-      _connectionFlowState = 'disconnecting';
-      _wasVpnConnected = false;
-      await _configManager.stopAllOperations();
-      _connectionFlowState = 'idle';
+    if (_connectionFlowState != 'idle') {
+      AdvancedLogger.warn("[ConnectionHomeScreen] Ignoring connect tap: currently $_connectionFlowState");
       return;
     }
 

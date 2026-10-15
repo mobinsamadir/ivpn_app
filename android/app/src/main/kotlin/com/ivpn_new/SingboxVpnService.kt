@@ -487,12 +487,28 @@ class SingboxVpnService :
         android.util.Log.d("NativeVpnLifecycle", "stopVpnInternal called")
 
         try {
-            mainServer?.close()
-            mainServer = null
-            vpnInterface?.close()
-            vpnInterface = null
+            try {
+                mainServer?.close()
+            } catch (e: Throwable) {
+                android.util.Log.e("NativeVpnLifecycle", "Error closing mainServer: ${e.message}")
+            } finally {
+                mainServer = null
+            }
 
-            stopForeground(true)
+            try {
+                vpnInterface?.close()
+            } catch (e: Throwable) {
+                android.util.Log.e("NativeVpnLifecycle", "Error closing vpnInterface: ${e.message}")
+            } finally {
+                vpnInterface = null
+            }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                stopForeground(STOP_FOREGROUND_REMOVE)
+            } else {
+                @Suppress("DEPRECATION")
+                stopForeground(true)
+            }
             stopSelf()
 
             // CRITICAL FIX: Broadcast "DISCONNECTED" State to Dart
@@ -555,14 +571,24 @@ class SingboxVpnService :
         stopVpnInternal()
     }
 
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        android.util.Log.d("NativeVpnLifecycle", "onTaskRemoved called - cleaning up VPN")
+        stopVpnInternal()
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         android.util.Log.d("NativeVpnLifecycle", "onDestroy called")
-        runBlocking {
-            stopVpn()
-            nativeCallMutex.withLock {
-                closeTestServerUnlocked()
+        stopVpnInternal()
+        try {
+            runBlocking {
+                nativeCallMutex.withLock {
+                    closeTestServerUnlocked()
+                }
             }
+        } catch (e: Throwable) {
+            android.util.Log.e("NativeVpnLifecycle", "Error closing testServer in onDestroy: ${e.message}")
         }
         serviceScope.cancel()
     }

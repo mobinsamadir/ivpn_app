@@ -61,6 +61,7 @@ class MainActivity : FlutterActivity() {
     private var pendingVpnResult: MethodChannel.Result? = null
     private var pendingTestProxyResult: MethodChannel.Result? = null
     private var pendingMeasurePingResult: MethodChannel.Result? = null
+    private var pendingPermissionResult: MethodChannel.Result? = null
     private var pendingAction: String? = null
 
     // Scope for launching coroutines on the Main thread
@@ -108,10 +109,22 @@ class MainActivity : FlutterActivity() {
             scope.launch(Dispatchers.IO) {
                 try {
                     when (call.method) {
-                                                "hasVpnPermission" -> {
+                        "hasVpnPermission" -> {
                             withContext(Dispatchers.Main) {
-                                val intent = withContext(Dispatchers.Main) { android.net.VpnService.prepare(this@MainActivity) }
+                                val intent = android.net.VpnService.prepare(this@MainActivity)
                                 result.success(intent == null) // If null, permission is already granted
+                            }
+                        }
+                        "requestVpnPermission" -> {
+                            withContext(Dispatchers.Main) {
+                                val intent = android.net.VpnService.prepare(this@MainActivity)
+                                if (intent == null) {
+                                    result.success(true)
+                                } else {
+                                    pendingPermissionResult = result
+                                    pendingAction = "requestVpnPermission"
+                                    startActivityForResult(intent, vpnRequestCode)
+                                }
                             }
                         }
                         "startVpn" -> {
@@ -267,6 +280,14 @@ class MainActivity : FlutterActivity() {
     ) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == vpnRequestCode) {
+            if (pendingAction == "requestVpnPermission") {
+                val granted = (resultCode == Activity.RESULT_OK)
+                pendingPermissionResult?.success(granted)
+                pendingPermissionResult = null
+                pendingAction = null
+                return
+            }
+
             if (resultCode == Activity.RESULT_OK && pendingConfig != null) {
                 val config = pendingConfig!!
                 when (pendingAction) {

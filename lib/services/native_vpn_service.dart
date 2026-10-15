@@ -159,22 +159,17 @@ class NativeVpnService {
     if (Platform.isWindows) return true;
     try {
       AdvancedLogger.info("[NativeVpnService] Explicitly requesting VPN Permission...");
-      // testConfig on MainActivity triggers prepare() and waits for onActivityResult
-      // If it throws PERMISSION_DENIED, the user denied it.
-      await _methodChannel.invokeMethod('testConfig', {'config': '{}'});
-      return true;
+      final bool? granted =
+          await _methodChannel.invokeMethod<bool>('requestVpnPermission');
+      return granted ?? false;
     } on PlatformException catch (e) {
-      if (e.code == 'PERMISSION_DENIED') {
+      if (e.code == 'VPN_PERMISSION_DENIED' || e.code == 'PERMISSION_DENIED') {
         AdvancedLogger.warn("VPN Permission was denied by the user.");
         return false;
       }
-      if (e.code == 'INVALID_CONFIG') {
-        // MainActivity testConfig might complain about empty config if permission is ALREADY granted.
-        // That means we have permission!
-        return true;
-      }
       return false;
-    } catch (_) {
+    } catch (e) {
+      AdvancedLogger.error("Failed to request VPN permission: $e");
       return false;
     }
   }

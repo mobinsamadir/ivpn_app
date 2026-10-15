@@ -704,7 +704,7 @@ class SingboxConfigGenerator {
         ],
         "rules": [
           {
-            "outbound": ["any"],
+            "outbound": ["direct"],
             "server": "local",
           },
         ],
@@ -733,7 +733,7 @@ class SingboxConfigGenerator {
             "server": "block-dns",
           },
           {
-            "outbound": ["any"],
+            "outbound": ["direct"],
             "server": "local",
           },
         ],
@@ -794,16 +794,8 @@ class SingboxConfigGenerator {
     bool isKillSwitchEnabled = false,
     List<String> splitTunnelingPackages = const [],
   }) {
-    if (!isTest) {
-      proxyOutbound["multiplex"] = {
-        "enabled": true,
-        "padding": true,
-        "protocol": "h2mux",
-        "max_connections": 4,
-        "min_streams": 2,
-      };
-      proxyOutbound["tcp_fast_open"] = true;
-    }
+    // Maintain parity between test and live configs: do not force h2mux/TFO
+    // unless explicitly supported or requested by outbound config.
 
     final Map<String, dynamic> config = {
       "log": {
