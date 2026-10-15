@@ -1,6 +1,6 @@
 name: ivpn_new
 description: iVPN Client - High Performance VPN
-version: 1.0.7+1007
+version: 2.0.0+2000
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
