@@ -121,43 +121,75 @@ class _SplashScreenState extends State<SplashScreen>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Logo
+              // Branded Logo
               AnimatedBuilder(
                 animation: _progressController,
                 builder: (context, child) {
                   return Transform.scale(
-                    scale: 0.8 + (_progressController.value * 0.2),
+                    scale: 0.9 + (_progressController.value * 0.1),
                     child: Opacity(
-                      opacity: 0.5 + (_progressController.value * 0.5),
+                      opacity: 0.7 + (_progressController.value * 0.3),
                       child: child,
                     ),
                   );
                 },
                 child: Container(
-                  padding: const EdgeInsets.all(24),
+                  width: 120,
+                  height: 120,
                   decoration: BoxDecoration(
-                    shape: BoxShape.circle,
+                    borderRadius: BorderRadius.circular(28),
                     gradient: const LinearGradient(
-                      colors: [Color(0xFF11998E), Color(0xFF38EF7D)],
+                      colors: [Color(0xFF1F2937), Color(0xFF111827)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF38EF7D).withValues(alpha: 0.3),
-                        blurRadius: 30,
-                        spreadRadius: 5,
+                        color: const Color(0xFF38EF7D).withValues(alpha: 0.25),
+                        blurRadius: 32,
+                        spreadRadius: 4,
+                        offset: const Offset(0, 8),
                       ),
                     ],
+                    border: Border.all(
+                      color: const Color(0xFF38EF7D).withValues(alpha: 0.35),
+                      width: 1.5,
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.vpn_lock,
-                    size: 80,
-                    color: Colors.white,
+                  padding: const EdgeInsets.all(16),
+                  child: Image.asset(
+                    'assets/icon.png',
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) => const Icon(
+                      Icons.shield_rounded,
+                      size: 64,
+                      color: Colors.greenAccent,
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(height: 60),
+              const SizedBox(height: 28),
+              // Brand Name & Tagline
+              const Text(
+                'iVPN',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 2.0,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'High Speed • Secure • Borderless',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.6),
+                  fontSize: 13,
+                  letterSpacing: 0.8,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+              const SizedBox(height: 48),
 
               if (_hasError) ...[
                 const Icon(
@@ -189,7 +221,7 @@ class _SplashScreenState extends State<SplashScreen>
               ] else ...[
                 // Custom Progress Bar
                 Container(
-                  width: 200,
+                  width: 220,
                   height: 6,
                   decoration: BoxDecoration(
                     color: Colors.white12,
@@ -211,13 +243,13 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
                 // Rotating Message
                 AnimatedSwitcher(
                   layoutBuilder:
                       (Widget? currentChild, List<Widget> previousChildren) {
                     return Stack(
-                      alignment: Alignment.centerLeft,
+                      alignment: Alignment.center,
                       children: <Widget>[
                         ...previousChildren,
                         if (currentChild != null) currentChild,
@@ -228,10 +260,12 @@ class _SplashScreenState extends State<SplashScreen>
                   child: Text(
                     _statusMessage,
                     key: ValueKey<String>(_statusMessage),
+                    textAlign: TextAlign.center,
                     style: const TextStyle(
                       color: Colors.white70,
-                      fontSize: 16,
+                      fontSize: 14,
                       fontWeight: FontWeight.w500,
+                      letterSpacing: 0.5,
                     ),
                   ),
                 ),

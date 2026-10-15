@@ -104,7 +104,7 @@ class EphemeralTester {
   /// Returns a VpnConfigWithMetrics object with updated stageResults and scores.
   Future<VpnConfigWithMetrics> runTest(
     VpnConfigWithMetrics config, {
-    TestMode mode = TestMode.speed,
+    TestMode mode = TestMode.connectivity,
   }) async {
     final completer = Completer<VpnConfigWithMetrics>();
 
@@ -112,8 +112,11 @@ class EphemeralTester {
     Process? processForCleanup;
     bool isCompleted = false;
 
-    // Watchdog Timer
-    final timer = Timer(const Duration(seconds: 25), () {
+    // Watchdog Timer: 12s for connectivity, 25s for full speed test
+    final watchdogDuration = mode == TestMode.connectivity
+        ? const Duration(seconds: 12)
+        : const Duration(seconds: 25);
+    final timer = Timer(watchdogDuration, () {
       if (!isCompleted) {
         isCompleted = true;
         AdvancedLogger.warn(

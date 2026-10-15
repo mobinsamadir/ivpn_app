@@ -677,7 +677,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
             ),
           ),
           Tooltip(
-            message: 'View Logs',
+            message: 'Logs & Diagnostics',
             child: ScaleOnTap(
               onTap: () {
                 Navigator.push(
@@ -687,7 +687,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
               },
               child: const Padding(
                 padding: EdgeInsets.all(8.0),
-                child: Icon(Icons.receipt_long, color: Colors.amber),
+                child: Icon(Icons.terminal_rounded, color: Colors.amberAccent),
               ),
             ),
           ),
@@ -1242,25 +1242,34 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
       }
 
       // 1. SMART WAIT LOOP
-      // If we have no valid configs yet, wait for the Funnel
-      if (_configManager.validatedConfigs.isEmpty) {
-        _configManager.setConnected(false, status: 'Testing servers...');
+      // If we have no valid configs yet and user hasn't explicitly selected one, wait for the Funnel
+      if (_configManager.validatedConfigs.isEmpty && _configManager.selectedConfig == null) {
+        _configManager.setConnected(false, status: 'Finding fastest servers...');
 
-        // Start Funnel ONLY if we reach here and have permission
-        _funnelService.startFunnel(retestDead: false); // Prioritize fresh ones
+        // Start Funnel with lightweight connectivity probe (no heavy speed test)
+        _funnelService.startFunnel(retestDead: false, enableSpeedTest: false);
 
         int waits = 0;
-        // Wait up to 10 seconds for initial discovery, giving time to find low ping candidates
-        while (waits < 10 && !_configManager.isConnectionCancelled) {
+        const int maxWaits = 25;
+        while (waits < maxWaits && !_configManager.isConnectionCancelled) {
           await Future.delayed(const Duration(seconds: 1));
           waits++;
+          
+          final count = _configManager.validatedConfigs.length;
+          _configManager.setConnected(
+            false,
+            status: count > 0
+                ? 'Found $count candidates ($waits/${maxWaits}s)...'
+                : 'Finding fastest servers ($waits/${maxWaits}s)...',
+          );
+
           if (_configManager.validatedConfigs.isNotEmpty) {
             final lowestPing = _configManager.validatedConfigs
                 .map((c) => c.currentPing)
                 .where((p) => p > 0)
                 .fold<int>(9999, (prev, elem) => elem < prev ? elem : prev);
-            // If we found a low ping server (<180ms) or 3+ options, or 6 seconds passed, proceed
-            if (lowestPing < 180 || _configManager.validatedConfigs.length >= 3 || waits >= 6) {
+            // If we found a low ping server (<250ms), or 2+ candidates, or 5s passed with at least 1 candidate, connect immediately!
+            if (lowestPing < 250 || count >= 2 || (count >= 1 && waits >= 5)) {
               break;
             }
           }
@@ -1272,9 +1281,16 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
         }
 
         if (_configManager.validatedConfigs.isEmpty) {
-          _showToast("No accessible servers found. Please update list.");
-          _configManager.setConnected(false, status: 'Failed');
-          return;
+          AdvancedLogger.warn(
+            "[HomeScreen] Discovery grace period ended without validated servers. Attempting direct fallback connection...",
+          );
+          if (_configManager.allConfigs.isNotEmpty) {
+            _configManager.selectConfig(_configManager.allConfigs.first);
+          } else {
+            _showToast("No accessible servers found. Please update list.");
+            _configManager.setConnected(false, status: 'Failed');
+            return;
+          }
         }
       }
 
@@ -1286,7 +1302,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     } catch (e) {
       AdvancedLogger.error('Connection failed: $e');
       _configManager.setConnected(false, status: 'Failed');
-      _showToast('Connection failed. Please try again.');
+      _showErrorWithLogAction('Connection failed. Tap to view logs.');
     } finally {
       if (_connectionFlowState != 'disconnecting') _connectionFlowState = 'idle';
     }
@@ -1600,6 +1616,28 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
         content: Text(message),
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _showErrorWithLogAction(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.redAccent.shade700,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 5),
+        action: SnackBarAction(
+          label: 'View Logs',
+          textColor: Colors.white,
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const LogViewerScreen()),
+            );
+          },
+        ),
       ),
     );
   }

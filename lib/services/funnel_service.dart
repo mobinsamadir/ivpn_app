@@ -63,7 +63,7 @@ class FunnelService {
   // Limits
 
   static int get _maxTcpWorkers =>
-      Platform.isWindows ? 2 : _getDynamicWorkerCount(4);
+      Platform.isWindows ? 4 : _getDynamicWorkerCount(8);
   static int get _maxHttpWorkers =>
       Platform.isAndroid ? 1 : (Platform.isWindows ? 2 : _getDynamicWorkerCount(3));
   static int get _maxSpeedWorkers => 1;
@@ -71,6 +71,7 @@ class FunnelService {
   // State
   bool _isRunning = false;
   bool _stopRequested = false;
+  bool _enableSpeedTest = false;
   Timer? _uiThrottleTimer; // Throttled UI updater
 
   // Stats
@@ -110,7 +111,8 @@ class FunnelService {
 
   Future<void> startFunnel(
       {bool retestDead = false,
-      List<VpnConfigWithMetrics>? targetConfigs}) async {
+      List<VpnConfigWithMetrics>? targetConfigs,
+      bool enableSpeedTest = false}) async {
     if (_isRunning) {
       AdvancedLogger.warn("FunnelService: Already running.");
       return;
@@ -118,6 +120,7 @@ class FunnelService {
 
     _isRunning = true;
     _stopRequested = false;
+    _enableSpeedTest = enableSpeedTest;
     _tcpPassed = 0;
     _httpPassed = 0;
     _speedFinished = 0;
@@ -224,7 +227,9 @@ class FunnelService {
     // We spawn fixed number of loops that pull from queues
     _spawnWorkers(_maxTcpWorkers, _tcpWorker, "TCP");
     _spawnWorkers(_maxHttpWorkers, _httpWorker, "HTTP");
-    _spawnWorkers(_maxSpeedWorkers, _speedWorker, "Speed");
+    if (_enableSpeedTest) {
+      _spawnWorkers(_maxSpeedWorkers, _speedWorker, "Speed");
+    }
   }
 
   void _printTelemetrySummary() {
@@ -398,8 +403,10 @@ class FunnelService {
             }
           }
 
-          // Promote to Speed Queue
-          _speedQueue.add(result);
+          // Promote to Speed Queue only if explicitly requested
+          if (_enableSpeedTest) {
+            _speedQueue.add(result);
+          }
         } else {
           _totalFailed++;
           AdvancedLogger.debug(
