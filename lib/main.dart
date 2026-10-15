@@ -93,7 +93,7 @@ void main() {
         debugPrint("NetworkTuningConfig initialization warning: $e");
       }
 
-      // Asynchronous background cleanup of cached APKs and temporary test files
+      // Asynchronous background cleanup of cached APKs, temporary test files, and bloated logs
       unawaited(() async {
         try {
           final tempDir = await getTemporaryDirectory();
@@ -102,12 +102,46 @@ void main() {
             for (final entity in entities) {
               if (entity is File &&
                   (entity.path.endsWith('.apk') ||
-                      entity.path.contains('test_'))) {
+                      entity.path.contains('test_') ||
+                      entity.path.endsWith('.tmp'))) {
                 try {
                   await entity.delete();
                 } catch (_) {}
               }
             }
+          }
+
+          // Truncate box.log if > 2 MB to prevent cache explosion
+          final dirsToCheck = <Directory>[
+            tempDir,
+            await getApplicationDocumentsDirectory(),
+            await getApplicationSupportDirectory(),
+          ];
+
+          for (final dir in dirsToCheck) {
+            try {
+              if (await dir.exists()) {
+                final boxLogFile = File('${dir.path}/box.log');
+                if (await boxLogFile.exists()) {
+                  final size = await boxLogFile.length();
+                  if (size > 2 * 1024 * 1024) {
+                    await boxLogFile.writeAsString('');
+                    AdvancedLogger.info(
+                      "Cleaned bloated box.log (${(size / (1024 * 1024)).toStringAsFixed(1)} MB)",
+                    );
+                  }
+                }
+
+                final files = await dir.list().toList();
+                for (final f in files) {
+                  if (f is File && f.path.endsWith('.apk')) {
+                    try {
+                      await f.delete();
+                    } catch (_) {}
+                  }
+                }
+              }
+            } catch (_) {}
           }
         } catch (_) {}
       }());

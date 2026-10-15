@@ -147,39 +147,33 @@ class FunnelService {
 
     // 1. Populate TCP Queue (Initial Feed) - Run locally to avoid isolate serialization overhead
     final allConfigs = targetConfigs ?? _configManager.allConfigs;
-    final lastConnected = <VpnConfigWithMetrics>[];
     final favorites = <VpnConfigWithMetrics>[];
-    final validated = <VpnConfigWithMetrics>[];
-    final fresh = <VpnConfigWithMetrics>[];
-    final softFail = <VpnConfigWithMetrics>[];
-    final dead = <VpnConfigWithMetrics>[];
+    final currentlyValid = <VpnConfigWithMetrics>[];
+    final resurrectionCandidates = <VpnConfigWithMetrics>[];
+    final freshUntested = <VpnConfigWithMetrics>[];
+    final deadOrFailed = <VpnConfigWithMetrics>[];
     final now = DateTime.now();
 
     for (final c in allConfigs) {
-      // Do not skip if config has never been tested (c.lastTestedAt == null)
-      if (!retestDead && c.lastTestedAt != null && c.failureCount >= 3) {
-        final hoursSinceTested = now.difference(c.lastTestedAt!).inHours;
-        if (hoursSinceTested < 2) continue;
-      }
-
-      // Last-connected fast lane: recently successful Stage-2+ config
-      final isRecentlyValidated = c.funnelStage >= 2 &&
-          c.lastSuccessfulConnectionTime > 0 &&
-          now.millisecondsSinceEpoch - c.lastSuccessfulConnectionTime <
-              const Duration(hours: 2).inMilliseconds;
-
-      if (isRecentlyValidated) {
-        lastConnected.add(c);
-      } else if (c.isFavorite) {
+      if (c.isFavorite) {
+        // Tier 1: User Favorites
         favorites.add(c);
-      } else if (c.isValidated || c.funnelStage > 0) {
-        validated.add(c);
-      } else if (c.funnelStage == 0 && c.failureCount == 0) {
-        fresh.add(c);
-      } else if (c.failureCount < 3) {
-        softFail.add(c);
+      } else if (c.isValidated) {
+        // Tier 2: Currently Valid
+        currentlyValid.add(c);
+      } else if (c.wasEverValidated) {
+        // Tier 3: Previously valid resurrection candidates
+        resurrectionCandidates.add(c);
+      } else if (c.funnelStage == 0 && c.failureCount == 0 && c.lastTestedAt == null) {
+        // Tier 4: Fresh untested configs
+        freshUntested.add(c);
       } else {
-        dead.add(c);
+        // Tier 5: Dead or repeatedly failed
+        if (!retestDead && c.lastTestedAt != null && c.failureCount >= 3) {
+          final hoursSinceTested = now.difference(c.lastTestedAt!).inHours;
+          if (hoursSinceTested < 2) continue;
+        }
+        deadOrFailed.add(c);
       }
     }
 
@@ -187,15 +181,25 @@ class FunnelService {
       return b.calculatedScore.compareTo(a.calculatedScore);
     }
 
-    lastConnected.sort(compareScore);
     favorites.sort(compareScore);
-    validated.sort(compareScore);
+    currentlyValid.sort(compareScore);
+    resurrectionCandidates.sort((a, b) {
+      final timeComp = b.lastSuccessfulConnectionTime.compareTo(a.lastSuccessfulConnectionTime);
+      if (timeComp != 0) return timeComp;
+      return compareScore(a, b);
+    });
+    freshUntested.sort(compareScore);
+    deadOrFailed.sort(compareScore);
 
-    // PRIORITY ORDER: Last-connected → favorites → validated → fresh → soft-failures
-    final all = [...lastConnected, ...favorites, ...validated, ...fresh, ...softFail];
-    if (retestDead) {
-      all.addAll(dead);
-    }
+    // 5-TIER PRIORITY ORDER:
+    // 1. Favorites -> 2. Currently Valid -> 3. Resurrection Candidates -> 4. Fresh Untested -> 5. Dead/Failed
+    final all = [
+      ...favorites,
+      ...currentlyValid,
+      ...resurrectionCandidates,
+      ...freshUntested,
+      ...deadOrFailed,
+    ];
 
     _totalConfigs = all.length;
     _tcpQueue.addAll(all);

@@ -88,12 +88,16 @@ class ConfigGistService {
         "[UpdateCheck] Checking for updates... Current Build: $currentBuild",
       );
 
+      final updateCheckTimeout = Duration(
+        seconds: (15 * NetworkTuningConfig.instance.multiplier).round().clamp(15, 45),
+      );
+
       String? responseBody;
       try {
         final cacheBuster = DateTime.now().millisecondsSinceEpoch;
         final repoResponse = await http
             .get(Uri.parse('$_repoUpdateUrl?t=$cacheBuster'))
-            .timeout(const Duration(seconds: 8));
+            .timeout(updateCheckTimeout);
         if (repoResponse.statusCode == 200) {
           responseBody = repoResponse.body;
         }
@@ -106,7 +110,7 @@ class ConfigGistService {
           final cacheBuster = DateTime.now().millisecondsSinceEpoch;
           final response = await http
               .get(Uri.parse('$_cdnUpdateUrl?t=$cacheBuster'))
-              .timeout(const Duration(seconds: 8));
+              .timeout(updateCheckTimeout);
           if (response.statusCode == 200) {
             responseBody = response.body;
           }
@@ -317,13 +321,17 @@ class ConfigGistService {
     }
 
     try {
+      final fetchTimeout = Duration(
+        seconds: (25 * NetworkTuningConfig.instance.multiplier).round().clamp(25, 60),
+      );
+
       final response = await http.get(
         Uri.parse(targetUrl),
         headers: {
           'User-Agent':
               'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
         },
-      ).timeout(const Duration(seconds: 15)); // strict 15-second timeout
+      ).timeout(fetchTimeout);
 
       if (response.statusCode != 200) return null;
 
@@ -342,7 +350,7 @@ class ConfigGistService {
           if (fileId != null) {
             final confirmUrl =
                 'https://drive.google.com/uc?export=download&id=$fileId&confirm=$confirmToken';
-            final retryResponse = await http.get(Uri.parse(confirmUrl));
+            final retryResponse = await http.get(Uri.parse(confirmUrl)).timeout(fetchTimeout);
             if (retryResponse.statusCode == 200) content = retryResponse.body;
           }
         }

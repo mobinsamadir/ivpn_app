@@ -242,3 +242,57 @@
     - افزودن تایم‌اوت‌های ۳۰ ثانیه و ۱۰ دقیقه به Dio برای دانلود مطمئن فایل‌های حجیم APK.
 12. [`lib/main.dart`](file:///lib/main.dart):
     - راه‌اندازی زودهنگام `NetworkTuningConfig.instance.init()` در استارتاپ اپلیکیشن.
+
+---
+
+## ۱۲. فاز تکمیلی: رفع ریشه‌ای مشکلات تست زنده روی دستگاه واقعی (Real-Device Runtime Fixes & Stability Hardening)
+
+پس از تست زنده روی دستگاه فیزیکی اندروید، مشاهدات و شواهد لاگ‌های سیستمی تحلیل شد و اصلاحات مهندسی زیر به طور کامل پیاده‌سازی و نهایی گردید:
+
+### ۱. رفع ریشه‌ای قطعی کامل اینترنت و عبور صفر بایت از تونل (Zero-Traffic & Blackhole Fix)
+- **ریشه‌یابی**:
+  در فایل تنظیمات تولید شده sing-box، مقدار `"auto_detect_interface": true` فعال بود. این آپشن در هسته sing-box مستلزم آن است که متد `PlatformInterface.getInterfaces()` پیاده‌سازی شده باشد. اما کلاس پیاده‌ساز اندروید (`StubPlatformInterface`) یک لیست خالی برمی‌گرداند. در نتیجه sing-box هیچ اینترفیس خروجی در شبکه تشخیص نمی‌داد و در لاگ داخلی `box.log` خطای مکرر `dns: exchange failed ... no available network interface` ثبت می‌شد و تمامی پکت‌های خروجی و DNS دور ریخته می‌شدند.
+- **راه‌حل پیاده‌سازی شده**:
+  - در متد `_buildRoute` فایل [`singbox_config_generator.dart`](file:///lib/services/singbox_config_generator.dart) مقدار `"auto_detect_interface": false` قرار داده شد.
+  - حفاظت و مسیریابی سوکت‌های هسته مستقیماً توسط مکانیزم `protect(fd)` در کلاس `SingboxVpnService` از طریق `autoDetectInterfaceControl` به سیستم‌عامل اندروید محول شد که در نتیجه آن بسته‌ها و درخواست‌های DNS بدون مسدودیت از شبکه وای‌فای/موبایل به سمت سرور جریان پیدا می‌کنند.
+  - در زمان اتصال لایو یا تست، سطح لاگ sing-box از `trace` به `warn` در محیط پروداکشن تغییر داده شد تا از باد کردن فایل `box.log` جلوگیری شود.
+
+### ۲. حذف قطعی و آنی آیکون کلید VPN و انسداد Dead TUN پس از Disconnect
+- **ریشه‌یابی**:
+  در متد `forceStopVpnNowInternal()` و توابع خاتمه، تنها متد `mainServer.close()` یا `vpnInterface.close()` به صورت ناقص صدا زده می‌شد در حالی که متد `mainServer.serviceStop()` در کاتلین کامنت شده بود! در سیستم Go/libbox تا زمانی که `serviceStop()` صدا زده نشود، گو-روتین‌های خواندن پکت‌ها روی TUN همچنان در حال اجرا مانده و File Descriptor را در سطح کرنل باز نگه می‌دارند.
+- **راه‌حل پیاده‌سازی شده**:
+  - در متد `forceStopVpnNowInternal()` و `closeTestServerUnlocked()` در فایل [`SingboxVpnService.kt`](file:///android/app/src/main/kotlin/com/ivpn_new/SingboxVpnService.kt)، ابتدا متد `serviceStop()` برای متوقف ساختن روتین‌های Go فراخوانی شده، سپس `close()` و در نهایت `vpnInterface?.close()` بسته می‌شود. با این ترتیب، سیستم‌عامل اندروید بلافاصله متوجه بسته شدن سوکت TUN شده و آیکون کلید را ظرف کمتر از یک ثانیه از نوار وضعیت حذف می‌کند.
+
+### ۳. حذف فوری کانفیگ‌های ناموفق از لیست معتبرها (Fix Valid List Persistence)
+- **ریشه‌یابی**:
+  متغیر گتر `isValidated` صرفاً شرط `funnelStage >= 2` را چک می‌کرد؛ از طرفی در متد `markFailure` فیلد `funnelStage` ریست نمی‌شد و کانفیگی که قبلاً سالم ارزیابی شده بود، با قطع شدن یا فیل شدن در تست‌های بعدی همچنان در تب Valid باقی می‌ماند.
+- **راه‌حل پیاده‌سازی شده**:
+  - در [`vpn_config_with_metrics.dart`](file:///lib/models/vpn_config_with_metrics.dart)، گتر `isValidated` به شکل سخت‌گیرانه `funnelStage >= 2 && isAlive && failureCount == 0` بازتعریف شد.
+  - مشخصه `wasEverValidated` برای ذخیره و تشخیص کانفیگ‌هایی که در گذشته کار کرده‌اند افزوده شد (`lastSuccessfulConnectionTime > 0`).
+  - در [`config_manager.dart`](file:///lib/services/config_manager.dart) متد `markFailure` کانفیگ را بلافاصله با `funnelStage: 0` به‌روز می‌کند تا همان لحظه از لیست Valid خارج شود.
+
+### ۴. صف هوشمند ۵ سطحی در پایپ‌لاین ارزیابی (`FunnelService`)
+- **معماری جدید صف TCP در [`funnel_service.dart`](file:///lib/services/funnel_service.dart)**:
+  1. **سطح ۱ (Favorites)**: کانفیگ‌های ستاره‌دار و منتخب کاربر (`c.isFavorite`).
+  2. **سطح ۲ (Currently Valid)**: کانفیگ‌های سالم فعلی (`c.isValidated`).
+  3. **سطح ۳ (Resurrection Candidates)**: کانفیگ‌های معتبر گذشته که اخیراً فیل شده‌اند (`c.wasEverValidated && !c.isValidated`) که بر اساس زمان آخرین اتصال موفقیت‌آمیز مرتب می‌شوند.
+  4. **سطح ۴ (Fresh Untested)**: کانفیگ‌های تازه اضافه شده که تاکنون تست نشده‌اند.
+  5. **سطح ۵ (Dead/Failed)**: کانفیگ‌های با خطای تکراری و از کار افتاده.
+
+### ۵. جلوگیری از تداخل تستر با اتصال اصلی (Prevent Tester-Tunnel Collisions)
+- قبل از اجرای اتصال زنده (`connectWithSmartFailover` و `connectManual`) در [`config_manager.dart`](file:///lib/services/config_manager.dart)، متد `FunnelService().stop()` فراخوانی می‌شود تا هیچ تستر بک‌گراندی در هنگام هندشیک تونل اصلی روی پورت‌های محلی یا سوکت‌ها فعال نباشد.
+
+### ۶. بهینه‌سازی UX و حذف پرش‌های SnackBar
+- در [`connection_home_screen.dart`](file:///lib/screens/connection_home_screen.dart)، لیسنر اسنک‌بار پرشی `_onBestConfigDiscovered` به کلی حذف شد. کارت هوشمند `_QuickConnectSuggestionCard` که در بدنه اصلی صفحه تعبیه شده است، به شکل طبیعی و زیبا بهترین سرور کشف‌شده را بدون اختلال در نمایش سایر بخش‌ها به کاربر پیشنهاد می‌دهد.
+
+### ۷. پاکسازی خودکار کش‌های حجیم و لاگ‌ها (Cache Maintenance)
+- **ریشه‌یابی**: لاگ `box.log` با لاگ‌لول `trace` و فایل‌های دانلودی `iVPN-release.apk` قبلی حجم دیتای کش را تا بیش از ۲۰۰ مگابایت افزایش داده بودند.
+- **راه‌حل پیاده‌سازی شده**:
+  - در [`main.dart`](file:///lib/main.dart) روتین پس‌زمینه در هنگام استارتاپ اپلیکیشن قرار داده شد که دایرکتوری‌های کش و اسناد را پویش کرده و چنانچه فایل `box.log` فراتر از ۲ مگابایت باشد، آن را به طور خودکار خالی (Truncate) می‌کند. همچنین تمامی فایل‌های قدیمی `.apk` و فایل‌های موقت `.tmp` را پاک می‌نماید.
+
+### ۸. مقیاس‌پذیری تایم‌اوت سرویس‌های خارجی (`AdManager` و `ConfigGistService`)
+- تایم‌اوت ۵ ثانیه‌ای Dio در [`ad_manager_service.dart`](file:///lib/services/ad_manager_service.dart) که منجر به خطای `connection timeout` به گیت‌هاب می‌شد، به تایم‌اوت پویا با ضریب `NetworkTuningConfig.instance.multiplier` ارتقا یافت (حداقل ۱۵ تا ۴۵ ثانیه).
+- در [`config_gist_service.dart`](file:///lib/services/config_gist_service.dart) تایم‌اوت بررسی نسخه و واکشی کانفیگ‌های مخزن به ۲۵ تا ۶۰ ثانیه پویا افزایش یافت تا در سخت‌ترین شرایط فیلترینگ ایران عملیات با موفقیت انجام شود.
+
+### ۹. ارتقای نسخه به 2.0.4
+- نسخه اپلیکیشن در [`pubspec.yaml`](file:///pubspec.yaml) به `2.0.4+2004` و در [`assets/version.json`](file:///assets/version.json) به نسخه `2.0.4` با کد بیلد `2004` ارتقا یافت تا چرخه به‌روزرسانی درون‌برنامه‌ای به درستی عمل کند.

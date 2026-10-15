@@ -17,6 +17,7 @@ import '../utils/cancellable_operation.dart';
 import 'native_vpn_service.dart';
 import 'testers/ephemeral_tester.dart';
 import 'network_tuning_config.dart';
+import 'funnel_service.dart';
 
 // --- TOP-LEVEL HELPER FUNCTIONS FOR ISOLATE ---
 
@@ -628,6 +629,7 @@ class ConfigManager extends ChangeNotifier {
       allConfigs[index] = allConfigs[index].copyWith(
         failureCount: allConfigs[index].failureCount + 1,
         isAlive: false,
+        funnelStage: 0,
       );
       await _updateLists();
       unawaited(_saveAllConfigs());
@@ -1197,6 +1199,11 @@ class ConfigManager extends ChangeNotifier {
     );
     _isGlobalStopRequested = false;
 
+    // Stop background funnel tests so ephemeral native testers do not collide with live tunnel
+    try {
+      FunnelService().stop();
+    } catch (_) {}
+
     // 1. Notify UI
     setConnected(false, status: 'Optimizing connection...');
 
@@ -1345,6 +1352,11 @@ class ConfigManager extends ChangeNotifier {
     userInitiatedDisconnect = false;
     isConnectionCancelled = false;
     _isGlobalStopRequested = false;
+
+    // Stop background funnel tests so ephemeral native testers do not collide with live tunnel
+    try {
+      FunnelService().stop();
+    } catch (_) {}
 
     AdvancedLogger.info(
       '[ConfigManager] Starting Manual Connection to ${target.name}...',

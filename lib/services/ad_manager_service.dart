@@ -8,6 +8,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import '../models/ad_config.dart';
 import '../utils/advanced_logger.dart';
 import '../widgets/full_screen_ad_dialog.dart';
+import 'network_tuning_config.dart';
 
 // Global toggle for Ads (True = Ads Enabled, False = Ads Disabled / Premium Free Mode)
 // Driven by configuration `global_ads_enabled` (defaults to true)
@@ -80,14 +81,17 @@ class AdManagerService {
 
   bool _initialized = false;
 
-  // CRITICAL FIX: Add Timeouts to prevent hanging if GitHub/Gist is blocked
-  final Dio _dio = Dio(
-    BaseOptions(
-      connectTimeout: const Duration(seconds: 5),
-      receiveTimeout: const Duration(seconds: 5),
-      sendTimeout: const Duration(seconds: 5),
-    ),
-  );
+  // Dynamic Dio instance with timeouts calibrated for Iranian network conditions
+  Dio get _dio {
+    final timeoutSec = (18 * NetworkTuningConfig.instance.multiplier).round().clamp(15, 45);
+    return Dio(
+      BaseOptions(
+        connectTimeout: Duration(seconds: timeoutSec),
+        receiveTimeout: Duration(seconds: timeoutSec),
+        sendTimeout: Duration(seconds: timeoutSec),
+      ),
+    );
+  }
 
   Future<void> initialize() async {
     if (_initialized) return;

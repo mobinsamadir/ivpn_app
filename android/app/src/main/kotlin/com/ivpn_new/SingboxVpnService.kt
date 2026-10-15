@@ -76,7 +76,11 @@ class SingboxVpnService :
             if (serverToClose != null) {
                 try {
                     android.util.Log.d("NativeVpnLifecycle", "[LIFECYCLE] STOP_STARTED: Closing existing testServer...")
-                    // serverToClose.serviceStop()
+                    try {
+                        serverToClose.serviceStop()
+                    } catch (e: Throwable) {
+                        android.util.Log.w("NativeVpnLifecycle", "testServer serviceStop error: ${e.message}")
+                    }
                     serverToClose.close()
                     android.util.Log.d("NativeVpnLifecycle", "[LIFECYCLE] DISPOSED: testServer successfully closed.")
                 } catch (e: Throwable) {
@@ -505,7 +509,25 @@ class SingboxVpnService :
         android.util.Log.d("NativeVpnLifecycle", "forceStopVpnNowInternal invoked")
         isVpnRunning = false
 
-        // 1. Close vpnInterface FIRST so OS immediately destroys tun0 and drops the status bar VPN icon
+        // 1. First tell libbox Go runtime to stop the VPN service and release tun0
+        val server = mainServer
+        mainServer = null
+        if (server != null) {
+            try {
+                server.serviceStop()
+                android.util.Log.d("NativeVpnLifecycle", "mainServer.serviceStop() called successfully")
+            } catch (e: Throwable) {
+                android.util.Log.e("NativeVpnLifecycle", "Error calling mainServer.serviceStop(): ${e.message}")
+            }
+            try {
+                server.close()
+                android.util.Log.d("NativeVpnLifecycle", "mainServer.close() called successfully")
+            } catch (e: Throwable) {
+                android.util.Log.e("NativeVpnLifecycle", "Error closing mainServer: ${e.message}")
+            }
+        }
+
+        // 2. Close vpnInterface so OS immediately destroys tun0 and drops the status bar VPN icon
         val pfd = vpnInterface
         vpnInterface = null
         if (pfd != null) {
@@ -514,18 +536,6 @@ class SingboxVpnService :
                 android.util.Log.d("NativeVpnLifecycle", "vpnInterface closed successfully (tun0 destroyed)")
             } catch (e: Throwable) {
                 android.util.Log.e("NativeVpnLifecycle", "Error closing vpnInterface: ${e.message}")
-            }
-        }
-
-        // 2. Close main Libbox CommandServer
-        val server = mainServer
-        mainServer = null
-        if (server != null) {
-            try {
-                server.close()
-                android.util.Log.d("NativeVpnLifecycle", "mainServer closed successfully")
-            } catch (e: Throwable) {
-                android.util.Log.e("NativeVpnLifecycle", "Error closing mainServer: ${e.message}")
             }
         }
 

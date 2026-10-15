@@ -770,7 +770,11 @@ class SingboxConfigGenerator {
       };
     } else {
       return {
-        "auto_detect_interface": true,
+        // CRITICAL FIX: In Android VpnService, auto_detect_interface must be false
+        // because StubPlatformInterface does not monitor network interfaces, causing
+        // sing-box to throw 'no available network interface' on all DNS and outbound traffic.
+        // Instead, Android VpnService.protect(fd) protects outbound sockets via autoDetectInterfaceControl.
+        "auto_detect_interface": false,
         "find_process": splitTunnelingPackages.isNotEmpty,
         "rules": [
           {"action": "sniff"},
@@ -809,7 +813,8 @@ class SingboxConfigGenerator {
 
     final Map<String, dynamic> config = {
       "log": {
-        "level": "trace",
+        // Use 'warn' in production so box.log does not explode to 200MB+ in size
+        "level": isTest ? "fatal" : "warn",
         "output": isTest ? "stderr" : "box.log",
         "timestamp": true,
       },
