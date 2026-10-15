@@ -67,14 +67,15 @@ class ConfigGistService {
   static const String _lastFetchKey = 'last_config_fetch_timestamp';
   static const String _backupConfigsKey = 'gist_backup_configs';
   static const Duration _fetchInterval = Duration(hours: 24);
-  static const String _updateUrl =
-      'https://gist.githubusercontent.com/mobinsamadir/1f91132e6d919d2dec5085a90c47ed4a/raw/7a8a456296fdf33ad4dd4d7a447dbfce0e966adb/version.json';
   static const String _repoUpdateUrl =
       'https://raw.githubusercontent.com/mobinsamadir/ivpn_app/main/assets/version.json';
+  static const String _cdnUpdateUrl =
+      'https://cdn.jsdelivr.net/gh/mobinsamadir/ivpn_app@main/assets/version.json';
 
-  // Mirrors List (GitHub -> Gist -> MyFiles -> Drive API)
+  // Mirrors List (GitHub Raw + jsDelivr CDN Mirror)
   static const List<String> _mirrors = [
     'https://raw.githubusercontent.com/mobinsamadir/ivpn-servers/main/real_delay_passed.txt',
+    'https://cdn.jsdelivr.net/gh/mobinsamadir/ivpn-servers@main/real_delay_passed.txt',
   ];
 
   Future<void> checkForUpdates(BuildContext context) async {
@@ -101,14 +102,15 @@ class ConfigGistService {
 
       if (responseBody == null) {
         try {
+          final cacheBuster = DateTime.now().millisecondsSinceEpoch;
           final response = await http
-              .get(Uri.parse(_updateUrl))
+              .get(Uri.parse('$_cdnUpdateUrl?t=$cacheBuster'))
               .timeout(const Duration(seconds: 5));
           if (response.statusCode == 200) {
             responseBody = response.body;
           }
         } catch (e) {
-          AdvancedLogger.warn("[UpdateCheck] Fallback Gist also failed ($e)");
+          AdvancedLogger.warn("[UpdateCheck] CDN Mirror also failed ($e)");
         }
       }
 

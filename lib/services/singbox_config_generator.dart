@@ -668,7 +668,6 @@ class SingboxConfigGenerator {
           "auto_route": false,
           "strict_route": isKillSwitchEnabled,
           "stack": "mixed",
-          "sniff": true,
         },
       ];
     }
@@ -764,6 +763,7 @@ class SingboxConfigGenerator {
         "auto_detect_interface": true,
         "find_process": splitTunnelingPackages.isNotEmpty,
         "rules": [
+          {"action": "sniff"},
           {"protocol": "dns", "action": "hijack-dns"},
           {"ip_is_private": true, "outbound": "direct"},
           if (splitTunnelingPackages.isNotEmpty)

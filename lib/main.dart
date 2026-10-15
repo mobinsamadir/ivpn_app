@@ -6,6 +6,7 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'utils/advanced_logger.dart';
@@ -79,11 +80,29 @@ void main() {
             'version': Platform.operatingSystemVersion,
           },
         );
-
-AdvancedLogger.info("Application starting...");
+        AdvancedLogger.info("Application starting...");
       } catch (e) {
         debugPrint("Logger initialization warning: $e");
       }
+
+      // Asynchronous background cleanup of cached APKs and temporary test files
+      unawaited(() async {
+        try {
+          final tempDir = await getTemporaryDirectory();
+          if (await tempDir.exists()) {
+            final entities = await tempDir.list().toList();
+            for (final entity in entities) {
+              if (entity is File &&
+                  (entity.path.endsWith('.apk') ||
+                      entity.path.contains('test_'))) {
+                try {
+                  await entity.delete();
+                } catch (_) {}
+              }
+            }
+          }
+        } catch (_) {}
+      }());
 
       // Setup Global Crash Recovery
       // FlutterError.onError = (details) {

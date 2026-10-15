@@ -22,16 +22,13 @@ class AdManagerService {
     null,
   );
 
-  // Primary URL (Gist)
-  static final String _adUrl = utf8.decode(
-    base64.decode(
-      'aHR0cHM6Ly9naXN0LmdpdGh1YnVzZXJjb250ZW50LmNvbS9tb2JpbnNhbWFkaXIvMDM3Y2RhYjhiODcxM2UxYzVhNTJkODE1NTM5ZjU2MzgvcmF3LzA4NjgzM2E5N2QyMzZkOWNmNTdkNDI3YzQ2YzIyNjg5MDQyNDRhN2UvYWRfY29uZmlnLmpzb24=',
-    ),
-  );
-
-  // Fallback Mirror (Direct from Repository)
-  static const String _adMirrorUrl =
+  // Primary URL (Direct from Repository)
+  static const String _adUrl =
       'https://raw.githubusercontent.com/mobinsamadir/ivpn_app/main/assets/ad_config.json';
+
+  // Fallback Mirror (jsDelivr CDN)
+  static const String _adMirrorUrl =
+      'https://cdn.jsdelivr.net/gh/mobinsamadir/ivpn_app@main/assets/ad_config.json';
 
   static const String _storageKey = "ad_config_cache";
 
