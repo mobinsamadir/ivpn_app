@@ -167,6 +167,10 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
       if (mounted) _testProgress.value = msg;
     });
 
+    // Discovery Banner: show SnackBar when a new best config is found during background scan.
+    // Does NOT auto-connect — user must tap the action button explicitly.
+    _funnelService.bestDiscoveredConfigNotifier.addListener(_onBestConfigDiscovered);
+
     // VPN Connection Status Listener
     _vpnStatusSubscription = _nativeVpnService.connectionStatusStream.listen((
       status,
@@ -301,6 +305,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     _statsSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _timeWalletService.removeListener(_onTimeChanged);
+    _funnelService.bestDiscoveredConfigNotifier.removeListener(_onBestConfigDiscovered);
 
     _pingMonitorTimer?.cancel();
     _testProgress.dispose();
@@ -309,6 +314,49 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     _isAdmin.dispose();
     _tabController.dispose();
     super.dispose();
+  }
+
+  /// Called whenever [FunnelService.bestDiscoveredConfigNotifier] changes.
+  /// Shows a non-blocking banner (SnackBar) to inform the user a fast server
+  /// was found during background discovery. Never auto-connects.
+  void _onBestConfigDiscovered() {
+    if (!mounted) return;
+    final best = _funnelService.bestDiscoveredConfigNotifier.value;
+    if (best == null) return;
+    // Don't show if already connected to this config or user is mid-connect
+    if (_configManager.isConnected) return;
+
+    final ping = best.currentPing > 0 ? '${best.currentPing}ms' : '';
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: const Color(0xFF1B5E20),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 6),
+        content: Row(
+          children: [
+            const Icon(Icons.wifi_tethering, color: Colors.white, size: 18),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'سرور سریع پیدا شد${ping.isNotEmpty ? " ($ping)" : ""}: ${best.name}',
+                style: const TextStyle(color: Colors.white, fontSize: 13),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        action: SnackBarAction(
+          label: 'اتصال',
+          textColor: Colors.greenAccent,
+          onPressed: () {
+            if (mounted && !_configManager.isConnected) {
+              _quickConnectToConfig(best);
+            }
+          },
+        ),
+      ),
+    );
   }
 
   // Start ping monitoring for auto-switch functionality

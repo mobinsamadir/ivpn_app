@@ -12,6 +12,7 @@ import 'package:window_manager/window_manager.dart';
 import 'utils/advanced_logger.dart';
 
 import 'services/config_manager.dart';
+import 'services/network_tuning_config.dart'; // Dynamic timing singleton
 import 'utils/cleanup_utils.dart';
 import 'providers/theme_provider.dart';
 import 'services/background_ad_service.dart';
@@ -83,6 +84,13 @@ void main() {
         AdvancedLogger.info("Application starting...");
       } catch (e) {
         debugPrint("Logger initialization warning: $e");
+      }
+
+      // Initialize network timing config from bundled assets/version.json
+      try {
+        await NetworkTuningConfig.instance.init().timeout(const Duration(seconds: 2));
+      } catch (e) {
+        debugPrint("NetworkTuningConfig initialization warning: $e");
       }
 
       // Asynchronous background cleanup of cached APKs and temporary test files

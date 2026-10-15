@@ -11,6 +11,7 @@ import '../../utils/advanced_logger.dart';
 import '../../utils/port_allocator.dart'; // NEW
 import '../binary_manager.dart';
 import '../native_vpn_service.dart';
+import '../network_tuning_config.dart'; // Dynamic timing
 
 Map<String, dynamic> _parseJsonMap(String str) =>
     jsonDecode(str) as Map<String, dynamic>;
@@ -112,10 +113,12 @@ class EphemeralTester {
     Process? processForCleanup;
     bool isCompleted = false;
 
-    // Watchdog Timer: 12s for connectivity, 25s for full speed test
+    final tuning = NetworkTuningConfig.instance;
+
+    // Watchdog Timer: dynamic from NetworkTuningConfig
     final watchdogDuration = mode == TestMode.connectivity
-        ? const Duration(seconds: 12)
-        : const Duration(seconds: 25);
+        ? Duration(milliseconds: tuning.watchdogConnectivityMs)
+        : Duration(milliseconds: tuning.watchdogSpeedMs);
     final timer = Timer(watchdogDuration, () {
       if (!isCompleted) {
         isCompleted = true;
@@ -245,6 +248,7 @@ class EphemeralTester {
       AdvancedLogger.debug('[LIFECYCLE] [${config.id}] Acquired Android Semaphore');
 
       final nativeService = NativeVpnService();
+      final tuning = NetworkTuningConfig.instance;
       int proxyPort = -1;
       int listenPort = 0; // NEW: Dynamic Port Allocation
       int latency = 0;
@@ -272,8 +276,8 @@ class EphemeralTester {
           'isTest': true,
         });
 
-        // Start Proxy with optimal runtime yield
-        await Future.delayed(const Duration(milliseconds: 120));
+        // Brief yield before spawning so the Dart event-loop isn't starved
+        await Future.delayed(Duration(milliseconds: tuning.proxySpawnCooldownMs));
 
         try {
           proxyPort = await nativeService.startTestProxy(jsonConfig);
@@ -295,49 +299,103 @@ class EphemeralTester {
           throw Exception("Early Exit: Native Proxy Failed (Code: $proxyPort)");
         }
 
-        AdvancedLogger.warn(
-          '[TESTER] Waiting for local socket to become ready...',
+        // ── SOCKET READINESS POLL ─────────────────────────────────────────────
+        // Poll until the local HTTP proxy port is accepting connections.
+        // This avoids false negatives from probing before Sing-box is ready.
+        final socketPollDeadline = DateTime.now().add(
+          Duration(milliseconds: tuning.socketReadyPollTimeoutMs),
         );
+        bool proxyReady = false;
+        int pollCount = 0;
+        while (DateTime.now().isBefore(socketPollDeadline)) {
+          try {
+            final testSocket = await Socket.connect(
+              '127.0.0.1',
+              httpPort,
+              timeout: const Duration(milliseconds: 300),
+            );
+            testSocket.destroy();
+            proxyReady = true;
+            AdvancedLogger.warn(
+              '[TESTER] Proxy port $httpPort ready after ${pollCount * 100 + 100}ms',
+            );
+            break;
+          } catch (_) {
+            pollCount++;
+            await Future.delayed(const Duration(milliseconds: 100));
+          }
+        }
 
-        // Setup HttpClient
+        if (!proxyReady) {
+          throw Exception(
+            "Local HTTP proxy port $httpPort never became ready within ${tuning.socketReadyPollTimeoutMs}ms",
+          );
+        }
+
+        // Post-ready warm-up: allow upstream TLS negotiation to complete
+        await Future.delayed(Duration(milliseconds: tuning.postSocketReadyWarmupMs));
+
+        // ── MULTI-ATTEMPT HTTP PROBE ──────────────────────────────────────────
+        // Try multiple targets so transient DPI resets on one host don't count
+        // as a failure. Order: Cloudflare HTTP → gstatic → Cloudflare HTTPS.
+        final probeTargets = [
+          'http://cp.cloudflare.com/generate_204',
+          'http://connectivitycheck.gstatic.com/generate_204',
+          'https://cp.cloudflare.com/generate_204',
+        ];
+
         final client = HttpClient();
-
         try {
-          // Constraint 3: Isolated SSL Bypass
-          // removed insecure TLS bypass — all test targets use public CA-signed certs, traffic only tunneled via local Sing-box proxy, not TLS-terminated
-
-          // HTTP proxy configured on httpPort (listenPort + 1)
           client.findProxy = (uri) => "PROXY 127.0.0.1:$httpPort";
           client.connectionTimeout = const Duration(seconds: 5);
 
-          // Test HTTP (Stage 2) with fast Cloudflare 204 probe
-          await Future.delayed(const Duration(milliseconds: 100));
-
           final sw = Stopwatch()..start();
-          const testUrl = 'https://cp.cloudflare.com/generate_204';
-          try {
-            AdvancedLogger.warn(
-              '[TESTER] Fast HTTP Probe ($testUrl) via 127.0.0.1:$httpPort',
-            );
-            final req = await client.getUrl(Uri.parse(testUrl));
-            final resp = await req.close().timeout(
-                  const Duration(milliseconds: 6000),
-                );
-            sw.stop();
+          int probeAttempt = 0;
+          final maxProbes = tuning.httpProbeRetries;
 
-            AdvancedLogger.warn(
-              '[TESTER] HTTP Response received: ${resp.statusCode}',
-            );
+          for (int t = 0; t < probeTargets.length && probeAttempt < maxProbes; t++) {
+            final targetUrl = probeTargets[t % probeTargets.length];
+            probeAttempt++;
+            try {
+              AdvancedLogger.warn(
+                '[TESTER] HTTP Probe attempt $probeAttempt/$maxProbes → $targetUrl via 127.0.0.1:$httpPort',
+              );
+              final req = await client
+                  .getUrl(Uri.parse(targetUrl))
+                  .timeout(Duration(milliseconds: tuning.httpProbeTimeoutMs));
+              final resp = await req
+                  .close()
+                  .timeout(Duration(milliseconds: tuning.httpProbeTimeoutMs));
+              sw.stop();
 
-            if (resp.statusCode == 204 || resp.statusCode == 200) {
-              latency = sw.elapsedMilliseconds;
-              stage2Success = true;
-            } else {
-              throw Exception("HTTP Status ${resp.statusCode}");
+              AdvancedLogger.warn(
+                '[TESTER] HTTP Response: ${resp.statusCode} (${sw.elapsedMilliseconds}ms)',
+              );
+
+              if (resp.statusCode == 204 || resp.statusCode == 200) {
+                latency = sw.elapsedMilliseconds;
+                stage2Success = true;
+                break;
+              } else {
+                AdvancedLogger.warn('[TESTER] Unexpected status ${resp.statusCode}, trying next target');
+              }
+            } catch (e) {
+              final isTransient = e.toString().contains('Connection reset') ||
+                  e.toString().contains('HandshakeException') ||
+                  e.toString().contains('SocketException') ||
+                  e.toString().contains('Connection refused');
+              AdvancedLogger.warn(
+                '[TESTER] Probe attempt $probeAttempt failed (${isTransient ? "transient" : "hard"}): $e',
+              );
+              if (probeAttempt < maxProbes) {
+                // Brief back-off between retries
+                await Future.delayed(const Duration(milliseconds: 400));
+              }
             }
-          } catch (e) {
-            AdvancedLogger.warn('[TESTER] HTTP Response Error: $e');
-            throw Exception("Stage 2 (HTTP) Failed: $e");
+          }
+
+          if (!stage2Success) {
+            throw Exception("Stage 2 (HTTP) Failed after $probeAttempt attempts");
           }
 
           // Test Speed (Stage 3)

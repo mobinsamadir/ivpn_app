@@ -665,7 +665,11 @@ class SingboxConfigGenerator {
           "tag": "tun-in",
           "address": ["172.19.0.1/28"],
           "mtu": 1400,
-          "auto_route": false,
+          // CRITICAL FIX: auto_route MUST be true on Android so libbox invokes
+          // openTun() and the kernel routes traffic through the VPN file-descriptor.
+          // With auto_route=false the TUN interface is created but never receives
+          // any packets, causing the "connected but no traffic" symptom.
+          "auto_route": true,
           "strict_route": isKillSwitchEnabled,
           "stack": "mixed",
         },
@@ -704,7 +708,11 @@ class SingboxConfigGenerator {
         ],
         "rules": [
           {
-            "outbound": ["direct"],
+            // CRITICAL FIX: "any" allows sing-box to resolve the proxy server
+            // hostname via direct OR proxy during bootstrap. Using ["direct"] alone
+            // causes a DNS deadlock in censored networks (Iran/DPI):
+            //   can't resolve proxy host → can't reach proxy → tunnel never starts.
+            "outbound": ["any"],
             "server": "local",
           },
         ],
@@ -733,7 +741,9 @@ class SingboxConfigGenerator {
             "server": "block-dns",
           },
           {
-            "outbound": ["direct"],
+            // CRITICAL FIX: Allow DNS resolution via any outbound so the proxy
+            // server's hostname can be resolved even when direct DNS is censored.
+            "outbound": ["any"],
             "server": "local",
           },
         ],

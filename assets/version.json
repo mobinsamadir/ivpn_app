@@ -4,5 +4,7 @@
   "telegram_support": "iVPN_support",
   "reward_ad_duration_seconds": 20,
   "release_notes": "• Fix sing-box 1.12 tun address parsing error resolving failed VPN connections\n• Add branded sponsor fallback layer to rewarded ad dialog\n• Fix in-app update invalid package error with permanent keystore signature\n• Calibrate network latency test timeouts and pre-flight tunneling",
-  "url": "https://github.com/mobinsamadir/ivpn_app/releases/latest/download/iVPN-release.apk"
+  "url": "https://github.com/mobinsamadir/ivpn_app/releases/latest/download/iVPN-release.apk",
+  "network_tolerance_multiplier": 1.5,
+  "network_tuning": {}
 }

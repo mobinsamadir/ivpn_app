@@ -8,6 +8,7 @@ import 'config_manager.dart'; // Correct relative import (same folder)
 import 'singbox_config_generator.dart';
 import 'testers/ephemeral_tester.dart';
 import '../utils/advanced_logger.dart';
+import 'network_tuning_config.dart'; // Dynamic timing
 
 // Top-level function for batch processing in Isolate
 Map<String, Map<String, dynamic>> batchProcessConfigsInIsolate(
@@ -146,6 +147,7 @@ class FunnelService {
 
     // 1. Populate TCP Queue (Initial Feed) - Run locally to avoid isolate serialization overhead
     final allConfigs = targetConfigs ?? _configManager.allConfigs;
+    final lastConnected = <VpnConfigWithMetrics>[];
     final favorites = <VpnConfigWithMetrics>[];
     final validated = <VpnConfigWithMetrics>[];
     final fresh = <VpnConfigWithMetrics>[];
@@ -159,7 +161,16 @@ class FunnelService {
         final hoursSinceTested = now.difference(c.lastTestedAt!).inHours;
         if (hoursSinceTested < 2) continue;
       }
-      if (c.isFavorite) {
+
+      // Last-connected fast lane: recently successful Stage-2+ config
+      final isRecentlyValidated = c.funnelStage >= 2 &&
+          c.lastSuccessfulConnectionTime > 0 &&
+          now.millisecondsSinceEpoch - c.lastSuccessfulConnectionTime <
+              const Duration(hours: 2).inMilliseconds;
+
+      if (isRecentlyValidated) {
+        lastConnected.add(c);
+      } else if (c.isFavorite) {
         favorites.add(c);
       } else if (c.isValidated || c.funnelStage > 0) {
         validated.add(c);
@@ -176,11 +187,12 @@ class FunnelService {
       return b.calculatedScore.compareTo(a.calculatedScore);
     }
 
+    lastConnected.sort(compareScore);
     favorites.sort(compareScore);
     validated.sort(compareScore);
 
-    // PRIORITY ORDER: Validated first, then fresh/untested, then soft-failures, then favorites
-    final all = [...validated, ...fresh, ...favorites, ...softFail];
+    // PRIORITY ORDER: Last-connected → favorites → validated → fresh → soft-failures
+    final all = [...lastConnected, ...favorites, ...validated, ...fresh, ...softFail];
     if (retestDead) {
       all.addAll(dead);
     }
@@ -320,11 +332,11 @@ class FunnelService {
           final port = details['port'] as int? ?? 443;
 
           try {
-            // 1.5-second timeout for fast fail on dead servers
+            // Dynamic timeout from NetworkTuningConfig (tolerates censored/high-latency networks)
             final socket = await Socket.connect(
               host,
               port,
-              timeout: const Duration(milliseconds: 1500),
+              timeout: Duration(milliseconds: NetworkTuningConfig.instance.tcpPingTimeoutMs),
             );
             socket.destroy();
             passed = true;
