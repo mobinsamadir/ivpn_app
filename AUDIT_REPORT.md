@@ -1,83 +1,60 @@
-# گزارش بررسی معماری و تجربه کاربری (Audit Report)
+# گزارش جامع بررسی معماری، الگوریتم‌ها و تجربه کاربری (Comprehensive Audit Report)
 
-## ۱. خلاصه وضعیت و استک شناسایی‌شده
-- **پلتفرم‌ها:** فلاتر (iOS, Android, Windows)
-- **معماری مدیریت وضعیت:** Provider, ValueNotifier
-- **سرویس‌های Native:** استفاده از MethodChannel (مانند VpnService در اندروید)
-- **شبکه و ارتباطات:** dio، http، اتصال VPN (V2Ray/Sing-Box)
+این گزارش شامل کالبدشکافی عمیق معماری فعلی پروژه، الگوریتم‌های شبکه‌سازی، مدیریت حافظه، و برنامه‌ریزی هدفمند برای بهبود پایداری و رابط کاربری است.
 
-## ۲. لیست فایل‌ها و ماژول‌های بررسی‌شده
-- `pubspec.yaml`
-- `lib/main.dart`
-- `lib/services/native_vpn_service.dart`
-- `lib/services/config_manager.dart`
-- `lib/screens/connection_home_screen.dart`
-- `lib/screens/settings_screen.dart`
-- `lib/widgets/config_card.dart`
-- `lib/widgets/update_dialog.dart`
-- `android/app/src/main/kotlin/com/ivpn_new/MainActivity.kt`
+## ۱. مستندسازی دقیق نحوه کارکرد فعلی برنامه و الگوریتم‌ها (How the App Currently Works)
 
-## ۳. گزارش مشکلات فنی و منطقی
+### الگوریتم کشف و تست کانفیگ‌ها (Discovery & Testing Algorithm)
+- **شروع تست:** پس از باز شدن برنامه، متد `initAppSequence` (در `connection_home_screen.dart`) اجرا می‌شود و لیست کانفیگ‌ها از طریق `configGistService` دریافت و به `ConfigManager` داده می‌شود. سپس `testAllServers()` فراخوانی می‌شود که در نهایت `EphemeralTester.testConfigs()` را اجرا می‌کند.
+- **تخصیص پورت:** در `ephemeral_tester.dart`، از `PortAllocator` برای دریافت پورت SOCKS (مثلاً `11000`) استفاده می‌شود و پورت HTTP یک عدد بالاتر (`11001`) تعیین می‌شود. این اطلاعات برای ساخت JSON (توسط `_generateConfigWrapper`) استفاده می‌شود.
+- **اجرای پراکسی در سمت Native:** متد `NativeVpnService.startTestProxy` فراخوانی می‌شود و در `MainActivity.kt`/`SingboxVpnService.kt` JSON دریافت می‌شود. مشکل اینجاست که در `SingboxVpnService` تنها پورت SOCKS از JSON استخراج و ساخته می‌شود و `httpPort` برای ساخت پراکسی HTTP به Libbox داده نمی‌شود.
+- **پروب HTTP (HTTP Probe):** بعد از راه‌اندازی، `ephemeral_tester.dart` از طریق `HttpClient` و ست کردن پروکسی HTTP روی `127.0.0.1:11001` درخواست تست ارسال می‌کند، که با خطای `Connection reset by peer` مواجه می‌شود (زیرا پراکسی روی این پورت وجود ندارد).
+- **Grace Period و Watchdog:** در `connection_home_screen.dart`، یک تایمر ۸ ثانیه‌ای به عنوان `grace period` وجود دارد. همزمان در `ConfigManager` یک `Strict Watchdog` در متد `_startWatchdog` وجود دارد که در صورت طولانی شدن تست‌ها کانفیگ‌ها را Invalid می‌کند.
 
-### ۳.۱ مدیریت اتصالات و پلتفرم (Platform Channel & Async)
+### الگوریتم رتبه‌بندی و حافظه (Scoring, Tiering & Persistence Memory)
+- **حافظه معتبر (Valid Cache):** `ConfigManager` نتایج موفق را در لیستی به نام `validatedConfigs` نگه می‌دارد و بر اساس پینگ (`latency`) سورت می‌کند.
+- **ذخیره‌سازی (Persistence):** متدهای ذخیره‌سازی از کلاس `StorageInterface` (بر پایه `shared_preferences`) استفاده می‌کنند تا لیست کانفیگ‌ها را به صورت JSON نگهداری کنند. اما تاریخچه دقیق (مثل پینگ آخرین تست) پس از راه‌اندازی مجدد اپلیکیشن ممکن است به درستی Restore یا اولویت‌بندی نشود (متد `saveConfigs`).
+- **انتخاب بهترین سرور:** متد `getBestConfig()` سعی می‌کند بهترین سرور را انتخاب کند. اولویت آن: سروری که قبلاً به عنوان `lastConnected` انتخاب شده و معتبر است، سپس اولین سرور در لیست `validatedConfigs` (کمترین پینگ).
+
+### ماشین وضعیت اتصال و رفتارهای خودکار (Connection State Machine & Fallbacks)
+- زمانی که کاربر وارد برنامه می‌شود، `HomeScreen` وارد وضعیت `auto_testing` می‌شود.
+- اگر `Discovery grace period` تمام شود و سرور `valid` پیدا نشود، برنامه تلاش می‌کند با استفاده از **Fallback مستقیم** به یک کانفیگ تست‌نشده متصل شود (متد `_connectToBestServer`). اینجاست که `Pre-flight check inconclusive` در `ConfigManager` رخ داده و مستقیماً متد اتصال Native فراخوانی می‌شود. از آنجا که کانفیگ خراب است، سیستم عامل تونل VPN را می‌سازد اما ترافیک Route نمی‌شود و با خطای `Active ping failed` پس از چند ثانیه قطع می‌شود.
+
+### سیستم اعلان‌ها (Notification & Alert Mechanism)
+- در حال حاضر در `splash_screen.dart` متد `Permission.notification.request()` فراخوانی می‌شود اما هیچ اثری از `flutter_local_notifications` یا مدیریت Notification واقعی (مانند ایجاد Channel و نمایش پیغام در Background/Foreground) در `ConfigManager` یا `ConnectionHomeScreen` وجود ندارد. پیام‌ها در سطح UI با `SnackBar` (مثلاً خطای اینترنت یا لود نشدن لیست) به صورت خام نمایش داده می‌شوند.
+
+## ۲. طراحی الگوریتم هدف (Target Algorithm Design based on Existing Code)
+
+برای اصلاح ساختار با کمترین تغییر در معماری اصلی:
+- **تخصیص پورت‌ها در Tester:** به جای درخواست از Kotlin برای ساخت HTTP Proxy مفقود شده، می‌توانیم در سمت Dart و Kotlin از یک Inbound یکپارچه (مثل Tun یا Mixed) استفاده کنیم، یا اینکه در `SingboxVpnService`، آرایه `inbounds` دقیقاً به صورت خام (بدون بازنویسی یا فیلتر SOCKS) به `Libbox` پاس داده شود تا پراکسی HTTP نیز فعال شود.
+- **صف اولویت‌بندی‌شده هوشمند (Smart Memory Queue):** در `ConfigManager`، لیست سرورها برای تست در ابتدای برنامه به این صورت مرتب شوند: ۱) شناسه آخرین اتصال موفق ۲) سرورهای `valid` قبلی ذخیره شده در دیتابیس لوکال (SharedPreferences) بر اساس پینگ ۳) سرورهای جدید تست‌نشده ۴) سرورهای خراب قبلی (فقط به عنوان Fallback).
+- **منع اتصال خودکار:** حذف رفتار Fallback در اتمام `Grace period`. اگر هیچ سروری تایید نشد، State روی `idle` برود و کاربر را از طریق UI مطلع کند، و از اتصال به سرور تست‌نشده جداً خودداری شود.
+- **سیستم اعلان:** اضافه‌کردن متد در `ConfigManager` که پس از موفقیت تست اولین سرور با پینگ زیر یک Threshold (مثلاً ۳۰۰ میلی‌ثانیه)، در صورتی که برنامه در Background است یک Notification سیستم (از طریق یک Notification Service ساده) یا در Foreground یک دیالوگ یا Badge نمایش دهد: "سرور مناسب یافت شد. برای اتصال کلیک کنید".
+
+## ۳. لیست جامع مشکلات فنی، منطقی و امنیتی (Technical & Architectural Issues)
 
 - [ ] **TECH-01** `[CRITICAL]` - **Race Condition در Android MethodChannel Result:**
-  - **آدرس:** `android/app/src/main/kotlin/com/ivpn_new/MainActivity.kt` (خطوط ۱۲۰ تا ۱۸۰)
-  - **علت:** متدهای کانال مانند `testConfig` و `startTestProxy` به `VpnService.prepare` وابسته‌اند و `startActivityForResult` را فراخوانی می‌کنند، اما `Result` در همان متد خاتمه نمی‌یابد و بازگردانده نمی‌شود. در فلاتر، این منجر به معلق ماندن `await`ها (Unawaited Futures) می‌شود تا زمانی که Activity Result به یک Listener برسد.
-  - **راه‌حل:** در اندروید، نتیجه باید در بلوک `onActivityResult` هندل شود یا در صورت نیاز به ادامه، نتیجه از طریق یک ذخیره‌ساز (مثل `pendingResult`) با مدیریت دقیق همگام شود. در صورت عدم دریافت Permission باید ارور برگردانده شود.
+  - مدیریت ناصحیح بازگشت Result در `startActivityForResult` در فایل `MainActivity.kt` که باعث معلق ماندن Futures و فریز شدن اپلیکیشن می‌شود.
+- [ ] **TECH-02** `[HIGH]` - **استفاده بی‌رویه از `compute` برای داده‌های خرد:**
+  - تحمیل Overhead بالای ایجاد Isolate برای متدهای Parse کوچک در `config_manager.dart` و `ephemeral_tester.dart`.
+- [ ] **TECH-03** `[HIGH]` - **استفاده نادرست از `setState` به جای Local State:**
+  - در صفحاتی مانند `ConnectionHomeScreen` تغییر متغیرهای جزئی باعث Rebuild سنگین ویجت تری می‌شود.
+- [ ] **TECH-04** `[CRITICAL]` - **اتصال خطرناک به سرورهای تاییدنشده (Watchdog Fallback):**
+  - در صورت اتمام `Grace period` در `connection_home_screen.dart` (خط ۱۲۸۵) یا وقوع `Pre-flight check inconclusive` در `ConfigManager` (خط ۱۲۳۳)، کلاینت به سرور تست‌نشده وصل شده و باعث مسدود شدن ارتباط شبکه و Timeouts می‌شود.
+- [ ] **TECH-05** `[HIGH]` - **قفل شدن State روی `requesting_permission`:**
+  - در نتیجه عدم دریافت پاسخ موفق یا خطا از Native، ماشین وضعیت اتصال در UI (خط ۱۱۶۹) در حالت دریافت پرمیشن گیر کرده و کلیک‌های بعدی نادیده گرفته می‌شود.
+- [ ] **TECH-06** `[CRITICAL]` - **باگ `Connection reset by peer` در تست پراکسی:**
+  - تنظیمات `httpPort` ارسال شده از سمت Dart، در `SingboxVpnService` اندروید نادیده گرفته شده و در نتیجه `Libbox` تنها روی `socksPort` باز می‌شود، که باعث شکست تمام تست‌های HTTP Probe در `127.0.0.1:11001` می‌گردد.
+- [ ] **TECH-07** `[MEDIUM]` - **نشت حافظه در Timer ها و Stream ها:**
+  - در کلاس `NativeVpnService` چندین Stream Broadcast وجود دارد که در متد `dispose` بسته‌بندی کاملی ندارند یا باگ‌های مربوط به Event Channel های بسته نشده در Android ممکن است منجر به Memory Leak شوند.
 
-- [ ] **TECH-02** `[HIGH]` - **استفاده از JSON.decode در داخل Compute برای داده‌های بسیار کوچک (Overhead):**
-  - **آدرس:** `lib/services/config_manager.dart` (خط ۴۸۴، ۸۷۸، ۹۰۳، ۹۵۳ و ...)
-  - **علت:** برای استخراج و پارس کردن تمام داده‌های کوچک یا تبدیل `configs` به `JSON`، به طور گسترده از `compute` (Isolates) استفاده شده است. شروع یک Isolate جدید برای داده‌های کوچک به دلیل Overhead ایجاد آن، باعث کاهش عملکرد و حتی کندی بیشتر نسبت به پردازش همگام در UI Thread می‌شود.
-  - **راه‌حل:** محدود کردن `compute` فقط برای لیست‌های طولانی یا پردازش‌هایی که اندازه داده از یک آستانه مشخص (Threshold) بیشتر است. برای دیتای کوچک، از تبدیل همگام استفاده شود.
+## ۴. لیست جامع بهبودهای UI/UX (UI/UX Improvement Actions)
 
-### ۳.۲ مدیریت وضعیت در UI
-
-- [ ] **TECH-03** `[HIGH]` - **استفاده نادرست از `setState` به جای مدیریت وضعیت خرد (Local State) در صفحه‌های اصلی:**
-  - **آدرس:** `lib/screens/connection_home_screen.dart` (خط ۶۱۸، ۶۳۲)، `lib/screens/settings_screen.dart` (خط ۳۶ و ۵۹ و ...) و `lib/widgets/update_dialog.dart` (استفاده متعدد)
-  - **علت:** به جای استفاده از `ValueNotifier` و `ValueListenableBuilder`، به وفور از `setState` برای تغییر متغیرهای جزئی (مانند `_autoTestOnStartup`) در صفحات اصلی استفاده شده است. این کار باعث Rebuild کامل ویجت تری (Widget Tree) آن صفحات، خصوصاً صفحات سنگین می‌شود که منجر به کندی رندر (Jank) خواهد شد.
-  - **راه‌حل:** تغییر متغیرهای وضعیت جزئی به `ValueNotifier` و آپدیت کردن تنها بخش‌های وابسته به آنها با `ValueListenableBuilder`.
-
-## ۴. گزارش بهبودهای UI/UX
-
-### ۴.۱ راست‌چین (RTL) و لایوت (Layout)
-
-- [ ] **UX-01** `[HIGH]` - **عدم پشتیبانی صریح از جهت‌گیری‌های زبان (Directionality / RTL):**
-  - **آدرس:** `lib/screens/connection_home_screen.dart`, `lib/screens/settings_screen.dart`
-  - **علت:** با وجود امکان چندزبانگی یا اجرای برنامه در دستگاه‌هایی با زبان پیش‌فرض راست‌به‌چپ (مثل فارسی/عربی)، استفاده از `Directionality` در سطوح بالا صریحاً مدیریت نشده یا کامپوننت‌ها براساس `Start/End` طراحی نشده‌اند (استفاده از `Left/Right` سخت‌کد شده). این امر باعث بهم‌ریختگی رابط کاربری در زبان‌های RTL می‌شود.
-  - **راه‌حل:** به جای حاشیه‌های چپ/راست (`padding: EdgeInsets.only(left: ...)`), از معادل‌های راست‌چین (`EdgeInsetsDirectional`) و برای ترازبندی‌ها از `AlignmentDirectional` استفاده شود تا هماهنگی با RTL حفظ شود.
-
-### ۴.۲ حالت‌های تعاملی و نمایشی
-
-- [ ] **UX-02** `[MEDIUM]` - **وضعیت‌های نامشخص هنگام تست لاتنسی و سرعت در `ConfigCard`:**
-  - **آدرس:** `lib/widgets/config_card.dart`
-  - **علت:** با اینکه نمایش حالت تست با یک `CircularProgressIndicator` پیاده‌سازی شده، اما وضعیت "عدم موفقیت/شکست (Failed/Timeout)" یا "خالی (Empty)" به صورت واضح برای کاربر مشخص نیست (صرفاً از رنگ‌ها استفاده شده، رنگ قرمز برای Poor).
-  - **راه‌حل:** در کنار رنگ‌بندی، یک آیکون کوچک برای خطای اتصال یا پیام و وضعیت‌های شفاف‌تر به کارت‌ها افزوده شود تا بدون نیاز به دانش قبلی، کاربر با یک نگاه وضعیت سرور را درک کند.
-
-- [ ] **UX-03** `[MEDIUM]` - **طراحی متکی بر رنگ (Color-reliance) برای مقادیر متریک:**
-  - **آدرس:** `lib/widgets/config_card.dart` (توابع `getPingColor` و `getTierColor`)
-  - **علت:** مقادیر مختلف پینگ صرفاً با رنگ‌ها متمایز شده‌اند (سبز، زرد، قرمز). این مسئله از نظر دسترس‌پذیری (Accessibility) برای افراد مبتلا به کوررنگی مشکل‌ساز است.
-  - **راه‌حل:** علاوه بر رنگ، استفاده از برچسب‌های متنی یا آیکون‌های متناسب با وضعیت (مانند استفاده از یک آیکون Wi-Fi با نوارهای کمتر برای پینگ ضعیف).
-
-## ۵. ابهامات و موارد نیازمند تست Runtime
-- **مدیریت خطاهای MethodChannel در ویندوز:** در `NativeVpnService` ذکر شده که برخی متدها مثل درخواست پرمیشن، در ویندوز بلافاصله `true` بازمی‌گردانند. باید بررسی شود که رفتار برنامه در محیط واقعی ویندوز چه خواهد بود (آیا کرش می‌کند یا خطا به طور خاموش نادیده گرفته می‌شود؟).
-- **حافظه و Stream Controllers:** در کلاس‌های `NativeVpnService` و `ConfigManager` چندین استریم به صورت Broadcast ایجاد شده‌اند. باید با ابزارهای Profiling مطمئن شد که تمام این استریم‌ها در زمان اتمام استفاده (Dispose) بسته می‌شوند و Memory Leak رخ نمی‌دهد.
-
-## ۶. نقشه راه اجرایی (Action Plan)
-
-1. **فاز ۱: پایداری پلتفرم (Platform Stability) - اولویت بالا**
-   - رفع باگ‌های ارتباطی Native (MethodChannel) به ویژه مدیریت Result‌های `Activity` در اندروید (`TECH-01`).
-
-2. **فاز ۲: بهبود عملکرد کلاینت و معماری State - اولویت بالا**
-   - جایگزینی `setState` در کلاس‌های اصلی با `ValueNotifier` (`TECH-03`).
-   - بازنگری در استفاده از Isolates (`compute`) برای دیکود JSON کوچک (`TECH-02`).
-
-3. **فاز ۳: اصلاحات رابط کاربری و تجربه کاربری (UI/UX) - اولویت متوسط**
-   - پیاده‌سازی سیستم یکپارچه RTL با تغییر `EdgeInsets` به `EdgeInsetsDirectional` (`UX-01`).
-   - بهبود وضعیت‌های قابل رویت در کامپوننت‌های کارت سرور و افزودن المان‌های Accessible (`UX-02` و `UX-03`).
-
----
-**Uninspected / Remaining Areas:**
-- `lib/services/testers/*` (نیاز به بازبینی مکانیزم تست کانفیگ‌ها و Threading)
-- `lib/widgets/shimmer_*.dart` (بررسی دقیق اسکلتون‌های لودینگ)
-- `packages/*` (پکیج‌های کاستوم مثل `flutter_secure_storage_windows`)
+- [ ] **UX-01** `[HIGH]` - **عدم پشتیبانی از RTL در Layout ها:**
+  - در `connection_home_screen.dart` و `settings_screen.dart` حاشیه‌بندی‌ها به صورت Hardcode شده (`Left/Right`) هستند که در زبان‌های راست‌چین رابط کاربری را به هم می‌ریزد.
+- [ ] **UX-02** `[MEDIUM]` - **گزارش‌دهی نامفهوم خطا در `ConfigCard`:**
+  - وضعیت‌های عدم موفقیت (شکست تست یا Timeout) تنها با رنگ‌ها نشان داده می‌شوند و آیکون یا Tooltip مشخصی برای آگاه‌سازی کاربر درباره دلیل خرابی ندارند.
+- [ ] **UX-03** `[MEDIUM]` - **طراحی متکی به رنگ برای دسترس‌پذیری (Accessibility):**
+  - مقادیر Ping در `ConfigCard` برای افراد کوررنگ قابل تشخیص نیست؛ نیاز به برچسب‌های متنی یا آیکونیک در کنار رنگ‌های سبز/زرد/قرمز می‌باشد.
+- [ ] **UX-04** `[LOW]` - **نبود وضعیت Empty State برای لیست سرورها:**
+  - اگر هیچ کانفیگی توسط `ConfigGistService` واکشی نشود یا لود لیست خطا بخورد، هیچ تصویر Placeholder مناسبی با امکان Try Again نمایش داده نمی‌شود.
