@@ -145,6 +145,11 @@ jobs:
               echo "Renamed $f -> $new_name"
             fi
           done
+          if [ ! -f "iVPN-release.apk" ]; then
+            echo "::error::iVPN-release.apk is missing after build and rename!"
+            exit 1
+          fi
+          echo "Verified required artifact iVPN-release.apk exists."
           ls -la
 
       - name: Upload Artifacts
@@ -216,7 +221,9 @@ jobs:
       contents: write
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.0
+        with:
+          fetch-depth: 0
 
       - name: Download Android Artifacts
         if: needs.build-android.result == 'success'
@@ -232,20 +239,48 @@ jobs:
           name: windows-zip
           path: release-files
 
-      - name: Extract Version Info
+      - name: Flatten and Verify Release Assets
+        run: |
+          mkdir -p release-assets
+          if [ -d "release-files" ]; then
+            find release-files -type f \( -name "*.apk" -o -name "*.zip" \) -exec mv -f {} release-assets/ \;
+          fi
+          echo "=== Prepared Release Assets ==="
+          ls -lh release-assets/
+          if [ -z "$(ls -A release-assets)" ]; then
+            echo "::error::No .apk or .zip files found in downloaded artifacts!"
+            exit 1
+          fi
+
+      - name: Extract Version & Release Notes
         id: version_info
         run: |
-          VERSION=$(jq -r .version assets/version.json)
+          VERSION=$(jq -r '.version // empty' assets/version.json | xargs)
+          if [ -z "$VERSION" ]; then
+            echo "::error::Failed to extract version from assets/version.json"
+            exit 1
+          fi
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          jq -r '.release_notes // ""' assets/version.json > release_notes.txt
           echo "Release target: v$VERSION"
+
+      - name: Force Update Release Tag to Current Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -fa "v${{ steps.version_info.outputs.VERSION }}" -m "Release v${{ steps.version_info.outputs.VERSION }}"
+          git push origin "refs/tags/v${{ steps.version_info.outputs.VERSION }}" --force
 
       - name: Create Combined GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version_info.outputs.VERSION }}
           name: iVPN v${{ steps.version_info.outputs.VERSION }}
-          target_commitish: ${{ github.sha }}
-          files: release-files/*
+          body_path: release_notes.txt
+          files: |
+            release-assets/*.apk
+            release-assets/*.zip
+          fail_on_unmatched_files: false
           draft: false
           prerelease: false
           make_latest: true
