@@ -168,6 +168,8 @@ class _UpdateDialogState extends State<UpdateDialog> {
       final dio = Dio(
         BaseOptions(
           followRedirects: true,
+          connectTimeout: const Duration(seconds: 30),
+          receiveTimeout: const Duration(minutes: 10),
           validateStatus: (status) => status != null && status < 400,
         ),
       );

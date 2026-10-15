@@ -16,6 +16,7 @@ import '../utils/connectivity_utils.dart';
 import '../utils/cancellable_operation.dart';
 import 'native_vpn_service.dart';
 import 'testers/ephemeral_tester.dart';
+import 'network_tuning_config.dart';
 
 // --- TOP-LEVEL HELPER FUNCTIONS FOR ISOLATE ---
 
@@ -1267,13 +1268,14 @@ class ConfigManager extends ChangeNotifier {
             isKillSwitchEnabled: _isKillSwitchEnabled,
           );
 
-          // Wait for CONNECTED state with strict 15-second timeout
+          // Wait for CONNECTED state with dynamic timeout
+          final connectTimeoutSec = NetworkTuningConfig.instance.connectWaitTimeoutSec;
           await nativeService.connectionStatusStream
               .firstWhere(
             (status) => status == 'CONNECTED' || status.startsWith('ERROR'),
           )
               .timeout(
-            const Duration(seconds: 15),
+            Duration(seconds: connectTimeoutSec),
             onTimeout: () {
               throw Exception('Timeout waiting for CONNECTED state');
             },
@@ -1359,13 +1361,14 @@ class ConfigManager extends ChangeNotifier {
         isKillSwitchEnabled: _isKillSwitchEnabled,
       );
 
-      // Wait for CONNECTED state with strict 15-second timeout
+      // Wait for CONNECTED state with dynamic timeout
+      final connectTimeoutSec = NetworkTuningConfig.instance.connectWaitTimeoutSec;
       await nativeService.connectionStatusStream
           .firstWhere(
         (status) => status == 'CONNECTED' || status.startsWith('ERROR'),
       )
           .timeout(
-        const Duration(seconds: 15),
+        Duration(seconds: connectTimeoutSec),
         onTimeout: () {
           throw Exception('Timeout waiting for CONNECTED state');
         },

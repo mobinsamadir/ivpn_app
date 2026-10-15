@@ -62,6 +62,14 @@ class SingboxVpnService :
         val nativeCallMutex = Mutex()
         private var testServer: io.nekohasekai.libbox.CommandServer? = null
 
+        @Volatile
+        var activeServiceInstance: SingboxVpnService? = null
+
+        fun forceStopVpnNow() {
+            android.util.Log.d("NativeVpnLifecycle", "forceStopVpnNow called on companion object")
+            activeServiceInstance?.forceStopVpnNowInternal()
+        }
+
         private suspend fun closeTestServerUnlocked() {
             val serverToClose = testServer
             testServer = null
@@ -362,6 +370,12 @@ class SingboxVpnService :
         }
     }
 
+    override fun onCreate() {
+        super.onCreate()
+        activeServiceInstance = this
+        android.util.Log.d("NativeVpnLifecycle", "SingboxVpnService onCreate, activeInstance set")
+    }
+
     override fun onStartCommand(
         intent: Intent?,
         flags: Int,
@@ -369,6 +383,12 @@ class SingboxVpnService :
     ): Int {
         val action = intent?.getStringExtra("action")
         val config = intent?.getStringExtra("config")
+
+        if (action == ACTION_STOP) {
+            android.util.Log.d("NativeVpnLifecycle", "onStartCommand: ACTION_STOP received, executing immediate forceStop")
+            forceStopVpnNowInternal()
+            return START_NOT_STICKY
+        }
 
         if (action == ACTION_START) {
             try {
@@ -381,8 +401,6 @@ class SingboxVpnService :
         serviceScope.launch {
             if (action == ACTION_START && config != null) {
                 startVpn(config)
-            } else if (action == ACTION_STOP) {
-                stopVpn()
             }
         }
 
@@ -476,48 +494,62 @@ class SingboxVpnService :
     }
 
     private suspend fun stopVpn() {
-        nativeCallMutex.withLock {
-            stopVpnInternal()
-        }
+        forceStopVpnNowInternal()
     }
 
     private fun stopVpnInternal() {
-        if (!isVpnRunning) return
+        forceStopVpnNowInternal()
+    }
+
+    fun forceStopVpnNowInternal() {
+        android.util.Log.d("NativeVpnLifecycle", "forceStopVpnNowInternal invoked")
         isVpnRunning = false
-        android.util.Log.d("NativeVpnLifecycle", "stopVpnInternal called")
 
-        try {
+        // 1. Close vpnInterface FIRST so OS immediately destroys tun0 and drops the status bar VPN icon
+        val pfd = vpnInterface
+        vpnInterface = null
+        if (pfd != null) {
             try {
-                mainServer?.close()
-            } catch (e: Throwable) {
-                android.util.Log.e("NativeVpnLifecycle", "Error closing mainServer: ${e.message}")
-            } finally {
-                mainServer = null
-            }
-
-            try {
-                vpnInterface?.close()
+                pfd.close()
+                android.util.Log.d("NativeVpnLifecycle", "vpnInterface closed successfully (tun0 destroyed)")
             } catch (e: Throwable) {
                 android.util.Log.e("NativeVpnLifecycle", "Error closing vpnInterface: ${e.message}")
-            } finally {
-                vpnInterface = null
             }
+        }
 
+        // 2. Close main Libbox CommandServer
+        val server = mainServer
+        mainServer = null
+        if (server != null) {
+            try {
+                server.close()
+                android.util.Log.d("NativeVpnLifecycle", "mainServer closed successfully")
+            } catch (e: Throwable) {
+                android.util.Log.e("NativeVpnLifecycle", "Error closing mainServer: ${e.message}")
+            }
+        }
+
+        // 3. Remove foreground notification and stop service
+        try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 stopForeground(STOP_FOREGROUND_REMOVE)
             } else {
                 @Suppress("DEPRECATION")
                 stopForeground(true)
             }
-            stopSelf()
-
-            // CRITICAL FIX: Broadcast "DISCONNECTED" State to Dart
-            MainActivity.sendVpnStatus("DISCONNECTED")
-            android.util.Log.d("NativeVpnLifecycle", "stopVpnInternal completed successfully")
         } catch (e: Throwable) {
-            android.util.Log.e("NativeVpnLifecycle", "stopVpnInternal error: ${e.message}")
-            e.printStackTrace()
+            android.util.Log.e("NativeVpnLifecycle", "Error in stopForeground: ${e.message}")
         }
+
+        try {
+            stopSelf()
+        } catch (e: Throwable) {
+            android.util.Log.e("NativeVpnLifecycle", "Error in stopSelf: ${e.message}")
+        }
+
+        // 4. Notify Dart side
+        MainActivity.sendVpnStatus("DISCONNECTED")
+        android.util.Log.d("NativeVpnLifecycle", "forceStopVpnNowInternal completed")
     }
 
     private fun createNotificationChannel() {
@@ -568,19 +600,22 @@ class SingboxVpnService :
         super.onRevoke()
         android.util.Log.d("NativeVpnLifecycle", "onRevoke called by OS")
         MainActivity.sendVpnStatus("ERROR: REVOKED")
-        stopVpnInternal()
+        forceStopVpnNowInternal()
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
         android.util.Log.d("NativeVpnLifecycle", "onTaskRemoved called - cleaning up VPN")
-        stopVpnInternal()
+        forceStopVpnNowInternal()
     }
 
     override fun onDestroy() {
         super.onDestroy()
         android.util.Log.d("NativeVpnLifecycle", "onDestroy called")
-        stopVpnInternal()
+        if (activeServiceInstance === this) {
+            activeServiceInstance = null
+        }
+        forceStopVpnNowInternal()
         try {
             runBlocking {
                 nativeCallMutex.withLock {

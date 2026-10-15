@@ -343,6 +343,12 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun stopVpnService() {
+        android.util.Log.d("MainActivity", "stopVpnService invoked, triggering forceStopVpnNow")
+        try {
+            SingboxVpnService.forceStopVpnNow()
+        } catch (e: Throwable) {
+            android.util.Log.e("MainActivity", "Error in forceStopVpnNow: ${e.message}")
+        }
         val serviceIntent =
             Intent(this, SingboxVpnService::class.java).apply {
                 putExtra("action", SingboxVpnService.ACTION_STOP)

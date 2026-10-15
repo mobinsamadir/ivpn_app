@@ -12,6 +12,7 @@ import '../utils/advanced_logger.dart';
 import '../widgets/update_dialog.dart';
 import 'config_manager.dart';
 import 'config_parser.dart';
+import 'network_tuning_config.dart';
 
 dynamic _parseJson(String str) => jsonDecode(str);
 
@@ -92,7 +93,7 @@ class ConfigGistService {
         final cacheBuster = DateTime.now().millisecondsSinceEpoch;
         final repoResponse = await http
             .get(Uri.parse('$_repoUpdateUrl?t=$cacheBuster'))
-            .timeout(const Duration(seconds: 5));
+            .timeout(const Duration(seconds: 8));
         if (repoResponse.statusCode == 200) {
           responseBody = repoResponse.body;
         }
@@ -105,7 +106,7 @@ class ConfigGistService {
           final cacheBuster = DateTime.now().millisecondsSinceEpoch;
           final response = await http
               .get(Uri.parse('$_cdnUpdateUrl?t=$cacheBuster'))
-              .timeout(const Duration(seconds: 5));
+              .timeout(const Duration(seconds: 8));
           if (response.statusCode == 200) {
             responseBody = response.body;
           }
@@ -115,6 +116,7 @@ class ConfigGistService {
       }
 
       if (responseBody != null) {
+        NetworkTuningConfig.instance.refresh(responseBody);
         final data = await compute(_parseJsonInIsolate, responseBody);
         if (data['telegram_support'] != null &&
             data['telegram_support'].toString().trim().isNotEmpty) {
