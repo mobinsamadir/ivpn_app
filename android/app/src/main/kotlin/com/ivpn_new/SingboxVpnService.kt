@@ -77,9 +77,9 @@ class SingboxVpnService :
                 try {
                     android.util.Log.d("NativeVpnLifecycle", "[LIFECYCLE] STOP_STARTED: Closing existing testServer...")
                     try {
-                        serverToClose.serviceStop()
+                        serverToClose.closeService()
                     } catch (e: Throwable) {
-                        android.util.Log.w("NativeVpnLifecycle", "testServer serviceStop error: ${e.message}")
+                        android.util.Log.w("NativeVpnLifecycle", "testServer closeService error: ${e.message}")
                     }
                     serverToClose.close()
                     android.util.Log.d("NativeVpnLifecycle", "[LIFECYCLE] DISPOSED: testServer successfully closed.")
@@ -514,10 +514,10 @@ class SingboxVpnService :
         mainServer = null
         if (server != null) {
             try {
-                server.serviceStop()
-                android.util.Log.d("NativeVpnLifecycle", "mainServer.serviceStop() called successfully")
+                server.closeService()
+                android.util.Log.d("NativeVpnLifecycle", "mainServer.closeService() called successfully")
             } catch (e: Throwable) {
-                android.util.Log.e("NativeVpnLifecycle", "Error calling mainServer.serviceStop(): ${e.message}")
+                android.util.Log.e("NativeVpnLifecycle", "Error calling mainServer.closeService(): ${e.message}")
             }
             try {
                 server.close()

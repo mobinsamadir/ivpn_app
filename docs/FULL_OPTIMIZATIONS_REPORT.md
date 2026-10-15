@@ -259,9 +259,9 @@
 
 ### ۲. حذف قطعی و آنی آیکون کلید VPN و انسداد Dead TUN پس از Disconnect
 - **ریشه‌یابی**:
-  در متد `forceStopVpnNowInternal()` و توابع خاتمه، تنها متد `mainServer.close()` یا `vpnInterface.close()` به صورت ناقص صدا زده می‌شد در حالی که متد `mainServer.serviceStop()` در کاتلین کامنت شده بود! در سیستم Go/libbox تا زمانی که `serviceStop()` صدا زده نشود، گو-روتین‌های خواندن پکت‌ها روی TUN همچنان در حال اجرا مانده و File Descriptor را در سطح کرنل باز نگه می‌دارند.
+  در متد `forceStopVpnNowInternal()` و توابع خاتمه، تنها متد `mainServer.close()` یا `vpnInterface.close()` صدا زده می‌شد. در ساختار Gomobile/libbox، کلاس `CommandServer` برای توقف لایو سرویس دارای متد اختصاصی `closeService()` است که سرویس در حال اجرای sing-box را متوقف می‌کند؛ بدون اجرای `closeService()`، گو-روتین‌های خواندن پکت‌ها روی TUN تا زمان تخریب پروسه فعال مانده و File Descriptor را در سطح کرنل باز نگه می‌داشتند.
 - **راه‌حل پیاده‌سازی شده**:
-  - در متد `forceStopVpnNowInternal()` و `closeTestServerUnlocked()` در فایل [`SingboxVpnService.kt`](file:///android/app/src/main/kotlin/com/ivpn_new/SingboxVpnService.kt)، ابتدا متد `serviceStop()` برای متوقف ساختن روتین‌های Go فراخوانی شده، سپس `close()` و در نهایت `vpnInterface?.close()` بسته می‌شود. با این ترتیب، سیستم‌عامل اندروید بلافاصله متوجه بسته شدن سوکت TUN شده و آیکون کلید را ظرف کمتر از یک ثانیه از نوار وضعیت حذف می‌کند.
+  - در متد `forceStopVpnNowInternal()` و `closeTestServerUnlocked()` در فایل [`SingboxVpnService.kt`](file:///android/app/src/main/kotlin/com/ivpn_new/SingboxVpnService.kt)، ابتدا متد `closeService()` برای متوقف ساختن قطعی سرویس sing-box در libbox فراخوانی شده، سپس `close()` و در نهایت `vpnInterface?.close()` بسته می‌شود. با این ترتیب، سیستم‌عامل اندروید بلافاصله متوجه بسته شدن سوکت TUN شده و آیکون کلید را ظرف کمتر از یک ثانیه از نوار وضعیت حذف می‌کند.
 
 ### ۳. حذف فوری کانفیگ‌های ناموفق از لیست معتبرها (Fix Valid List Persistence)
 - **ریشه‌یابی**:
