@@ -24,8 +24,38 @@ jobs:
     outputs:
       android: ${{ steps.changes.outputs.android }}
       windows: ${{ steps.changes.outputs.windows }}
+      version: ${{ steps.compute_version.outputs.version }}
+      version_code: ${{ steps.compute_version.outputs.version_code }}
     steps:
       - uses: actions/checkout@v7.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Compute Next Release Version
+        id: compute_version
+        run: |
+          BASE_VER=$(jq -r '.version // "2.0.0"' assets/version.json | xargs)
+          BASE_CODE=$(jq -r '.version_code // 2000' assets/version.json | xargs)
+
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$BASE_VER"
+
+          # Find all existing git tags matching vMAJOR.MINOR.*
+          EXISTING_TAGS=$(git tag -l "v${MAJOR}.${MINOR}.*" | sed "s/^v${MAJOR}\.${MINOR}\.//" | grep -E '^[0-9]+$' | sort -n | tail -n 1)
+
+          if [ -n "$EXISTING_TAGS" ] && [ "$EXISTING_TAGS" -ge "$PATCH" ]; then
+            NEXT_PATCH=$((EXISTING_TAGS + 1))
+          else
+            NEXT_PATCH=$PATCH
+          fi
+
+          DIFF=$((NEXT_PATCH - PATCH))
+          NEXT_VER="${MAJOR}.${MINOR}.${NEXT_PATCH}"
+          NEXT_CODE=$((BASE_CODE + DIFF))
+
+          echo "Computed Next Version: v${NEXT_VER}+${NEXT_CODE} (assets/version.json remains untouched at ${BASE_VER}+${BASE_CODE})"
+          echo "version=${NEXT_VER}" >> $GITHUB_OUTPUT
+          echo "version_code=${NEXT_CODE}" >> $GITHUB_OUTPUT
+
       - uses: dorny/paths-filter@v3
         id: changes
         with:
@@ -89,7 +119,7 @@ jobs:
           dart run tool/setup_core.dart
 
       - name: Update Version Code (Dynamic)
-        run: dart run tool/update_version.dart
+        run: dart run tool/update_version.dart --version "${{ needs.filter.outputs.version }}" --code "${{ needs.filter.outputs.version_code }}"
 
       - name: Validate Core Tag
         run: |
@@ -194,7 +224,7 @@ jobs:
           dart run tool/setup_core.dart
 
       - name: Update Version Code (Dynamic)
-        run: dart run tool/update_version.dart
+        run: dart run tool/update_version.dart --version "${{ needs.filter.outputs.version }}" --code "${{ needs.filter.outputs.version_code }}"
 
       - name: Build iVPN Windows
         run: |
@@ -252,30 +282,17 @@ jobs:
             exit 1
           fi
 
-      - name: Extract Version & Release Notes
-        id: version_info
+      - name: Extract Release Notes
         run: |
-          VERSION=$(jq -r '.version // empty' assets/version.json | xargs)
-          if [ -z "$VERSION" ]; then
-            echo "::error::Failed to extract version from assets/version.json"
-            exit 1
-          fi
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           jq -r '.release_notes // ""' assets/version.json > release_notes.txt
-          echo "Release target: v$VERSION"
-
-      - name: Force Update Release Tag to Current Commit
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -fa "v${{ steps.version_info.outputs.VERSION }}" -m "Release v${{ steps.version_info.outputs.VERSION }}"
-          git push origin "refs/tags/v${{ steps.version_info.outputs.VERSION }}" --force
+          echo "Release target: v${{ needs.filter.outputs.version }}"
 
       - name: Create Combined GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.version_info.outputs.VERSION }}
-          name: iVPN v${{ steps.version_info.outputs.VERSION }}
+          tag_name: v${{ needs.filter.outputs.version }}
+          name: iVPN v${{ needs.filter.outputs.version }}
+          target_commitish: ${{ github.sha }}
           body_path: release_notes.txt
           files: |
             release-assets/*.apk
