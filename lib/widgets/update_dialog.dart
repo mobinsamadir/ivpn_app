@@ -5,7 +5,6 @@ import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
-import 'package:device_info_plus/device_info_plus.dart';
 import '../utils/advanced_logger.dart';
 
 class UpdateDialog extends StatefulWidget {
@@ -60,29 +59,11 @@ class _UpdateDialogState extends State<UpdateDialog> {
     }
 
     if (Platform.isAndroid) {
-      try {
-        final info = await DeviceInfoPlugin().androidInfo;
-        final abis = info.supportedAbis;
-        AdvancedLogger.info('[InAppUpdate] Device supported ABIs: $abis');
-
-        String? targetAbi;
-        if (abis.contains('arm64-v8a')) {
-          targetAbi = 'arm64-v8a';
-        } else if (abis.contains('armeabi-v7a')) {
-          targetAbi = 'armeabi-v7a';
-        } else if (abis.contains('x86_64')) {
-          targetAbi = 'x86_64';
-        } else if (abis.contains('x86')) {
-          targetAbi = 'x86';
-        }
-
-        if (targetAbi != null) {
-          final abiUrl = '$baseUrl/iVPN-$targetAbi-release.apk';
-          AdvancedLogger.info('[InAppUpdate] Target ABI URL: $abiUrl');
-          return abiUrl;
-        }
-      } catch (e) {
-        AdvancedLogger.warn('[InAppUpdate] Error detecting ABI: $e');
+      // Always use Universal APK (iVPN-release.apk). Single-ABI split APKs
+      // cause Android PackageInstaller to fail with "App not installed"
+      // (INSTALL_FAILED_UPDATE_INCOMPATIBLE) when installed on top of existing installs.
+      if (widget.downloadUrl.isNotEmpty && widget.downloadUrl.endsWith('.apk')) {
+        return widget.downloadUrl;
       }
       return '$baseUrl/iVPN-release.apk';
     }

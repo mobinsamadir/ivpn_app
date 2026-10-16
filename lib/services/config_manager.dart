@@ -630,6 +630,7 @@ class ConfigManager extends ChangeNotifier {
         failureCount: allConfigs[index].failureCount + 1,
         isAlive: false,
         funnelStage: 0,
+        ping: -1,
       );
       await _updateLists();
       unawaited(_saveAllConfigs());
@@ -739,10 +740,11 @@ class ConfigManager extends ChangeNotifier {
     if (!_isConnected || _selectedConfig == null) return -1;
 
     final stopwatch = Stopwatch()..start();
+    final timeoutSec = (12 * NetworkTuningConfig.instance.multiplier).round().clamp(10, 30);
     try {
       final response = await http
           .head(Uri.parse('https://www.google.com'))
-          .timeout(const Duration(seconds: 5));
+          .timeout(Duration(seconds: timeoutSec));
 
       stopwatch.stop();
       if (response.statusCode == 200) {
@@ -1100,9 +1102,27 @@ class ConfigManager extends ChangeNotifier {
     _sessionTimer?.cancel();
   }
 
+  int _consecutivePingFailures = 0;
+
   // --- EVENT-DRIVEN SMART MONITOR ---
   Future<void> evaluateAutoSwitch(int currentPing) async {
     if (!isAutoSwitchEnabled || !_isConnected) return;
+
+    // Reset failure counter if ping is healthy
+    if (currentPing > 0 && currentPing <= 400) {
+      _consecutivePingFailures = 0;
+      return;
+    }
+
+    if (currentPing == -1) {
+      _consecutivePingFailures++;
+      if (_consecutivePingFailures < 2) {
+        AdvancedLogger.info(
+          '[ConfigManager] Active ping timeout recorded (attempt $_consecutivePingFailures/2). Waiting before auto-switch.',
+        );
+        return;
+      }
+    }
 
     // Thresholds: >400ms is panic, must be >150ms better to switch
     const int panicThreshold = 400;
@@ -1129,6 +1149,7 @@ class ConfigManager extends ChangeNotifier {
     }
 
     if (needsSwitch) {
+      _consecutivePingFailures = 0;
       AdvancedLogger.warn(
         '[ConfigManager] Auto-Switch Triggered. Current Ping: $currentPing',
       );

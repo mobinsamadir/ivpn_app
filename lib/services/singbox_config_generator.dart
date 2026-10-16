@@ -708,11 +708,8 @@ class SingboxConfigGenerator {
         ],
         "rules": [
           {
-            // CRITICAL FIX: "any" allows sing-box to resolve the proxy server
-            // hostname via direct OR proxy during bootstrap. Using ["direct"] alone
-            // causes a DNS deadlock in censored networks (Iran/DPI):
-            //   can't resolve proxy host → can't reach proxy → tunnel never starts.
-            "outbound": ["any"],
+            // Direct traffic uses local system DNS
+            "outbound": ["direct"],
             "server": "local",
           },
         ],
@@ -741,9 +738,8 @@ class SingboxConfigGenerator {
             "server": "block-dns",
           },
           {
-            // CRITICAL FIX: Allow DNS resolution via any outbound so the proxy
-            // server's hostname can be resolved even when direct DNS is censored.
-            "outbound": ["any"],
+            // Only direct outbound uses local system DNS; all proxy traffic uses google-doh through the encrypted tunnel
+            "outbound": ["direct"],
             "server": "local",
           },
         ],

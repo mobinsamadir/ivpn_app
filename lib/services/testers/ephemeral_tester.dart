@@ -119,54 +119,60 @@ class EphemeralTester {
     final watchdogDuration = mode == TestMode.connectivity
         ? Duration(milliseconds: tuning.watchdogConnectivityMs)
         : Duration(milliseconds: tuning.watchdogSpeedMs);
-    final timer = Timer(watchdogDuration, () {
-      if (!isCompleted) {
-        isCompleted = true;
-        AdvancedLogger.warn(
-          "[EphemeralTester] WATCHDOG TRIGGERED for ${config.name}. Force killing process...",
-        );
-
-        if (processForCleanup != null) {
-          try {
-            processForCleanup?.kill(ProcessSignal.sigkill);
-          } catch (_) {}
-          _activeProcesses.remove(processForCleanup);
-        } else if (Platform.isAndroid) {
-          try {
-            NativeVpnService().stopTestProxy();
-          } catch (_) {}
-        }
-
-        if (!completer.isCompleted) {
-          completer.complete(
-            config.copyWith(
-              funnelStage: 0,
-              failureReason: "Strict Watchdog Timeout",
-              lastFailedStage: "Watchdog_Timeout",
-              failureCount: config.failureCount + 1,
-              lastTestedAt: DateTime.now(),
-              ping: -1,
-            ),
+    Timer? timer;
+    void resetWatchdog() {
+      timer?.cancel();
+      timer = Timer(watchdogDuration, () {
+        if (!isCompleted) {
+          isCompleted = true;
+          AdvancedLogger.warn(
+            "[EphemeralTester] WATCHDOG TRIGGERED for ${config.name}. Force killing process...",
           );
+
+          if (processForCleanup != null) {
+            try {
+              processForCleanup?.kill(ProcessSignal.sigkill);
+            } catch (_) {}
+            _activeProcesses.remove(processForCleanup);
+          } else if (Platform.isAndroid) {
+            try {
+              NativeVpnService().stopTestProxy();
+            } catch (_) {}
+          }
+
+          if (!completer.isCompleted) {
+            completer.complete(
+              config.copyWith(
+                funnelStage: 0,
+                failureReason: "Strict Watchdog Timeout",
+                lastFailedStage: "Watchdog_Timeout",
+                failureCount: config.failureCount + 1,
+                lastTestedAt: DateTime.now(),
+                ping: -1,
+              ),
+            );
+          }
         }
-      }
-    });
+      });
+    }
+
+    resetWatchdog();
 
     void setProcess(Process? p) => processForCleanup = p;
     void setPort(
       int p,
     ) {} // Not needed here anymore, runTestInternal handles port
 
-    _runTestInternal(config, mode, setProcess, setPort).then((result) {
+    _runTestInternal(config, mode, setProcess, setPort, resetWatchdog).then((result) {
       if (!isCompleted) {
         isCompleted = true;
-        timer.cancel();
+        timer?.cancel();
         if (!completer.isCompleted) completer.complete(result);
       }
     }).catchError((e) {
       if (!isCompleted) {
         isCompleted = true;
-        timer.cancel();
+        timer?.cancel();
         if (!completer.isCompleted) {
           completer.complete(
             config.copyWith(
@@ -189,8 +195,9 @@ class EphemeralTester {
     VpnConfigWithMetrics config,
     TestMode mode,
     Function(Process?) onProcess,
-    Function(int) onPort,
-  ) async {
+    Function(int) onPort, [
+    void Function()? onWatchdogReset,
+  ]) async {
     // --- ANDROID PATH (STRICT SERIALIZATION FOR STAGE 2/3) ---
     if (Platform.isAndroid) {
       // STAGE 1: TCP Check (Concurrent - No Semaphore)
@@ -244,8 +251,7 @@ class EphemeralTester {
 
       await _androidSemaphore.acquire();
       AdvancedLogger.debug('[LIFECYCLE] [${config.id}] Acquired Android Semaphore');
-
-      AdvancedLogger.debug('[LIFECYCLE] [${config.id}] Acquired Android Semaphore');
+      onWatchdogReset?.call();
 
       final nativeService = NativeVpnService();
       final tuning = NetworkTuningConfig.instance;
@@ -485,6 +491,7 @@ class EphemeralTester {
     } else {
       // --- WINDOWS / DESKTOP PATH ---
       await _windowsSemaphore.acquire();
+      onWatchdogReset?.call();
 
       int port = 0;
       Process? process;
