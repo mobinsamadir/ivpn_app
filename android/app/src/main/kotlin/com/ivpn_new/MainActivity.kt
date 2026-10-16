@@ -2,6 +2,7 @@ package com.ivpn_new
 
 import android.app.Activity
 import android.content.Intent
+import android.net.TrafficStats
 import android.net.Uri
 import android.net.VpnService
 import android.os.Build
@@ -15,6 +16,8 @@ import io.flutter.plugin.common.MethodChannel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicBoolean
@@ -100,6 +103,92 @@ class MainActivity : FlutterActivity() {
 
                 override fun onCancel(arguments: Any?) {
                     eventSink = null
+                }
+            },
+        )
+
+        // Setup EventChannel for VPN Traffic Stats
+        EventChannel(flutterEngine.dartExecutor.binaryMessenger, "vpn_stats").setStreamHandler(
+            object : EventChannel.StreamHandler {
+                private var statsJob: kotlinx.coroutines.Job? = null
+
+                override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
+                    statsJob?.cancel()
+                    statsJob = CoroutineScope(Dispatchers.IO).launch {
+                        val uid = applicationInfo.uid
+
+                        fun getRx(): Long {
+                            val uidRx = TrafficStats.getUidRxBytes(uid)
+                            return if (uidRx != TrafficStats.UNSUPPORTED.toLong()) uidRx else TrafficStats.getTotalRxBytes()
+                        }
+
+                        fun getTx(): Long {
+                            val uidTx = TrafficStats.getUidTxBytes(uid)
+                            return if (uidTx != TrafficStats.UNSUPPORTED.toLong()) uidTx else TrafficStats.getTotalTxBytes()
+                        }
+
+                        var initialRx = getRx()
+                        var initialTx = getTx()
+                        var lastRx = initialRx
+                        var lastTx = initialTx
+                        var lastTime = System.currentTimeMillis()
+
+                        while (isActive) {
+                            delay(1000)
+                            val now = System.currentTimeMillis()
+                            val curRx = getRx()
+                            val curTx = getTx()
+
+                            if (!SingboxVpnService.isVpnRunning) {
+                                initialRx = curRx
+                                initialTx = curTx
+                                lastRx = curRx
+                                lastTx = curTx
+                                lastTime = now
+                                withContext(Dispatchers.Main) {
+                                    events?.success(
+                                        mapOf(
+                                            "rx" to 0L,
+                                            "tx" to 0L,
+                                            "downloadSpeed" to 0L,
+                                            "uploadSpeed" to 0L,
+                                        ),
+                                    )
+                                }
+                                continue
+                            }
+
+                            val timeDiff = (now - lastTime) / 1000.0
+                            val rxDelta = if (curRx >= lastRx && curRx != TrafficStats.UNSUPPORTED.toLong()) curRx - lastRx else 0L
+                            val txDelta = if (curTx >= lastTx && curTx != TrafficStats.UNSUPPORTED.toLong()) curTx - lastTx else 0L
+
+                            val downSpeed = if (timeDiff > 0) (rxDelta / timeDiff).toLong() else 0L
+                            val upSpeed = if (timeDiff > 0) (txDelta / timeDiff).toLong() else 0L
+
+                            val totalRx = if (curRx >= initialRx && curRx != TrafficStats.UNSUPPORTED.toLong()) curRx - initialRx else 0L
+                            val totalTx = if (curTx >= initialTx && curTx != TrafficStats.UNSUPPORTED.toLong()) curTx - initialTx else 0L
+
+                            lastRx = curRx
+                            lastTx = curTx
+                            lastTime = now
+
+                            withContext(Dispatchers.Main) {
+                                events?.success(
+                                    mapOf(
+                                        "rx" to totalRx,
+                                        "tx" to totalTx,
+                                        "downloadSpeed" to downSpeed,
+                                        "uploadSpeed" to upSpeed,
+                                    ),
+                                )
+                            }
+                        }
+                    }
+                }
+
+                override fun onCancel(arguments: Any?) {
+                    statsJob?.cancel()
+                    statsJob = null
                 }
             },
         )

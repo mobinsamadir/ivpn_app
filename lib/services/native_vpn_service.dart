@@ -41,11 +41,13 @@ class NativeVpnService {
     return _statsEventChannel.receiveBroadcastStream().map((event) {
       if (event is Map) {
         return {
-          'rx': (event['rx'] as num).toInt(),
-          'tx': (event['tx'] as num).toInt(),
+          'rx': (event['rx'] as num?)?.toInt() ?? 0,
+          'tx': (event['tx'] as num?)?.toInt() ?? 0,
+          'downloadSpeed': (event['downloadSpeed'] as num?)?.toInt() ?? 0,
+          'uploadSpeed': (event['uploadSpeed'] as num?)?.toInt() ?? 0,
         };
       }
-      return {'rx': 0, 'tx': 0};
+      return {'rx': 0, 'tx': 0, 'downloadSpeed': 0, 'uploadSpeed': 0};
     });
   }
 

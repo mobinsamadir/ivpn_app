@@ -167,6 +167,16 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
       if (mounted) _testProgress.value = msg;
     });
 
+    // Listen to VPN Traffic Stats
+    _statsSubscription = _nativeVpnService.statsStream.listen((stats) {
+      if (mounted) {
+        setState(() {
+          _rxBytes = stats['rx'] ?? 0;
+          _txBytes = stats['tx'] ?? 0;
+        });
+      }
+    });
+
     // VPN Connection Status Listener
     _vpnStatusSubscription = _nativeVpnService.connectionStatusStream.listen((
       status,
@@ -1249,8 +1259,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
       }
 
       // 1. SMART WAIT LOOP
-      // If we have no valid configs yet and user hasn't explicitly selected one, wait for the Funnel
-      if (_configManager.validatedConfigs.isEmpty && _configManager.selectedConfig == null) {
+      // If we have no valid configs yet (or selected config is not validated), wait for the Funnel
+      final bool hasValidSelected = _configManager.selectedConfig?.isValidated ?? false;
+      if (_configManager.validatedConfigs.isEmpty && !hasValidSelected) {
         _configManager.setConnected(false, status: 'Finding fastest servers...');
 
         // Start Funnel with lightweight connectivity probe (no heavy speed test)
@@ -1296,6 +1307,19 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
           _connectionFlowState = 'idle';
           return;
         }
+      }
+
+      // Final check: Never connect if no validated config exists
+      final bool canConnect = _configManager.validatedConfigs.isNotEmpty ||
+          (_configManager.selectedConfig?.isValidated ?? false);
+      if (!canConnect) {
+        AdvancedLogger.warn(
+          "[HomeScreen] Cannot connect: No validated configurations available.",
+        );
+        _showToast("No valid configurations available.");
+        _configManager.setConnected(false, status: 'Failed');
+        _connectionFlowState = 'idle';
+        return;
       }
 
       // Stop FunnelService before connecting so it doesn't hold locks/ports

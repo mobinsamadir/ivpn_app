@@ -158,51 +158,150 @@ class _VideoAd extends StatefulWidget {
 }
 
 class _VideoAdState extends State<_VideoAd> {
-  late VideoPlayerController _videoController;
+  VideoPlayerController? _videoController;
   ChewieController? _chewieController;
-
   late final ValueNotifier<bool> _isInitialized;
+  bool _hasErrorOrTimeout = false;
+  Timer? _timeoutTimer;
 
   @override
   void initState() {
     super.initState();
     _isInitialized = ValueNotifier(false);
+    _timeoutTimer = Timer(const Duration(seconds: 4), () {
+      if (mounted && !_isInitialized.value) {
+        setState(() {
+          _hasErrorOrTimeout = true;
+        });
+      }
+    });
     _initializePlayer();
   }
 
   Future<void> _initializePlayer() async {
-    _videoController = VideoPlayerController.networkUrl(
-      Uri.parse(widget.videoUrl),
-    );
-    await _videoController.initialize();
-
-    if (mounted) {
-      _chewieController = ChewieController(
-        videoPlayerController: _videoController,
-        autoPlay: true,
-        looping: true,
-        showControls: false, // Ad style
-        aspectRatio: _videoController.value.aspectRatio,
+    try {
+      final controller = VideoPlayerController.networkUrl(
+        Uri.parse(widget.videoUrl),
       );
-      _isInitialized.value = true;
+      _videoController = controller;
+      await controller.initialize().timeout(const Duration(seconds: 4));
+
+      if (mounted) {
+        _timeoutTimer?.cancel();
+        _chewieController = ChewieController(
+          videoPlayerController: controller,
+          autoPlay: true,
+          looping: true,
+          showControls: false, // Ad style
+          aspectRatio: controller.value.aspectRatio,
+        );
+        _isInitialized.value = true;
+      }
+    } catch (e) {
+      AdvancedLogger.warn('[AdWidget] Video init failed or timed out: $e');
+      if (mounted) {
+        setState(() {
+          _hasErrorOrTimeout = true;
+        });
+      }
     }
   }
 
   @override
   void dispose() {
-    _videoController.dispose();
+    _timeoutTimer?.cancel();
+    _videoController?.dispose();
     _chewieController?.dispose();
     _isInitialized.dispose();
     super.dispose();
   }
 
+  Widget _buildBrandedFallback() {
+    return ScaleOnTap(
+      onTap: () {
+        if (widget.targetUrl.isNotEmpty) {
+          launchUrl(
+            Uri.parse(widget.targetUrl),
+            mode: LaunchMode.externalApplication,
+          );
+        }
+      },
+      child: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [
+              Color(0xFF0F172A),
+              Color(0xFF1E293B),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.blueAccent.withValues(alpha: 0.15),
+                ),
+                child: const Icon(
+                  Icons.shield_rounded,
+                  size: 48,
+                  color: Colors.blueAccent,
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'iVPN Sponsor Network',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'High-Speed Secure Connection',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.7),
+                  fontSize: 12,
+                ),
+              ),
+              if (!_hasErrorOrTimeout) ...[
+                const SizedBox(height: 14),
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.blueAccent),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_hasErrorOrTimeout) {
+      return _buildBrandedFallback();
+    }
+
     return ValueListenableBuilder<bool>(
       valueListenable: _isInitialized,
       builder: (context, isInitialized, child) {
         if (!isInitialized || _chewieController == null) {
-          return const Center(child: CircularProgressIndicator());
+          return _buildBrandedFallback();
         }
 
         return ScaleOnTap(

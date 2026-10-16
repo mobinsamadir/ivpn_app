@@ -1075,14 +1075,12 @@ class ConfigManager extends ChangeNotifier {
     if (_selectedConfig != null && _selectedConfig!.isValidated) {
       return _selectedConfig;
     }
-    if (favoriteConfigs.isNotEmpty) {
-      return favoriteConfigs.first;
+    final validFavorites = favoriteConfigs.where((c) => c.isValidated);
+    if (validFavorites.isNotEmpty) {
+      return validFavorites.first;
     }
     if (validatedConfigs.isNotEmpty) {
       return validatedConfigs.first;
-    }
-    if (allConfigs.isNotEmpty) {
-      return allConfigs.first;
     }
     return null;
   }

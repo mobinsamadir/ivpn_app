@@ -61,6 +61,19 @@ class SingboxVpnService :
         var isLibboxSetup = false
         val nativeCallMutex = Mutex()
         private var testServer: io.nekohasekai.libbox.CommandServer? = null
+        private val libboxSetupLock = Any()
+
+        fun ensureLibboxSetup(workingDir: File) {
+            synchronized(libboxSetupLock) {
+                if (isLibboxSetup) return
+                val options = io.nekohasekai.libbox.SetupOptions()
+                options.setBasePath(workingDir.absolutePath)
+                options.setWorkingPath(workingDir.absolutePath)
+                options.setTempPath(workingDir.absolutePath)
+                Libbox.setup(options)
+                isLibboxSetup = true
+            }
+        }
 
         @Volatile
         var activeServiceInstance: SingboxVpnService? = null
@@ -77,10 +90,12 @@ class SingboxVpnService :
                 try {
                     android.util.Log.d("NativeVpnLifecycle", "[LIFECYCLE] STOP_STARTED: Closing existing testServer...")
                     try {
-                        serverToClose.closeService()
-                    } catch (e: Throwable) {
-                        android.util.Log.w("NativeVpnLifecycle", "testServer closeService error: ${e.message}")
-                    }
+                        try {
+                            serverToClose.javaClass.getMethod("serviceStop").invoke(serverToClose)
+                        } catch (_: Throwable) {
+                            serverToClose.closeService()
+                        }
+                    } catch (_: Throwable) {}
                     serverToClose.close()
                     android.util.Log.d("NativeVpnLifecycle", "[LIFECYCLE] DISPOSED: testServer successfully closed.")
                 } catch (e: Throwable) {
@@ -198,14 +213,7 @@ class SingboxVpnService :
                         // SAFE CALL to Libbox - pass JSON content string
                         val server =
                             try {
-                                if (!isLibboxSetup) {
-                                    val options = io.nekohasekai.libbox.SetupOptions()
-                                    options.setBasePath(tempDir.absolutePath)
-                                    options.setWorkingPath(tempDir.absolutePath)
-                                    options.setTempPath(tempDir.absolutePath)
-                                    Libbox.setup(options)
-                                    isLibboxSetup = true
-                                }
+                                ensureLibboxSetup(tempDir)
                                 Libbox.newCommandServer(StubCommandServerHandler(), StubPlatformInterface())
                             } catch (e: Throwable) {
                                 e.printStackTrace()
@@ -300,14 +308,7 @@ class SingboxVpnService :
                         android.util.Log.d("NativeVpnLifecycle", "[LIFECYCLE] CREATE_STARTED")
                         val newTestServer =
                             try {
-                                if (!isLibboxSetup) {
-                                    val options = io.nekohasekai.libbox.SetupOptions()
-                                    options.setBasePath(tempDir.absolutePath)
-                                    options.setWorkingPath(tempDir.absolutePath)
-                                    options.setTempPath(tempDir.absolutePath)
-                                    Libbox.setup(options)
-                                    isLibboxSetup = true
-                                }
+                                ensureLibboxSetup(tempDir)
                                 Libbox.newCommandServer(StubCommandServerHandler(), StubPlatformInterface())
                             } catch (e: Throwable) {
                                 e.printStackTrace()
@@ -467,15 +468,9 @@ class SingboxVpnService :
                     return
                 }
 
-                val configDir = getExternalFilesDir(null) ?: filesDir
-
                 // SAFE CALL - pass JSON content string directly without invalid file_descriptor injection
                 try {
-                    val options = io.nekohasekai.libbox.SetupOptions()
-                    options.setBasePath(configDir.absolutePath)
-                    options.setWorkingPath(configDir.absolutePath)
-                    options.setTempPath(configDir.absolutePath)
-                    Libbox.setup(options)
+                    ensureLibboxSetup(cacheDir)
                     mainServer = Libbox.newCommandServer(StubCommandServerHandler(), this@SingboxVpnService)
                     mainServer?.startOrReloadService(configJson, OverrideOptions())
                 } catch (e: Throwable) {
@@ -509,37 +504,31 @@ class SingboxVpnService :
         android.util.Log.d("NativeVpnLifecycle", "forceStopVpnNowInternal invoked")
         isVpnRunning = false
 
-        // 1. First tell libbox Go runtime to stop the VPN service and release tun0
+        // 1. Close vpnInterface FIRST so OS immediately destroys tun0
+        try {
+            vpnInterface?.close()
+        } catch (_: Throwable) {
+        } finally {
+            vpnInterface = null
+        }
+
+        // 2. Stop and close mainServer
         val server = mainServer
         mainServer = null
         if (server != null) {
             try {
-                server.closeService()
-                android.util.Log.d("NativeVpnLifecycle", "mainServer.closeService() called successfully")
-            } catch (e: Throwable) {
-                android.util.Log.e("NativeVpnLifecycle", "Error calling mainServer.closeService(): ${e.message}")
-            }
+                try {
+                    server.javaClass.getMethod("serviceStop").invoke(server)
+                } catch (_: Throwable) {
+                    server.closeService()
+                }
+            } catch (_: Throwable) {}
             try {
                 server.close()
-                android.util.Log.d("NativeVpnLifecycle", "mainServer.close() called successfully")
-            } catch (e: Throwable) {
-                android.util.Log.e("NativeVpnLifecycle", "Error closing mainServer: ${e.message}")
-            }
+            } catch (_: Throwable) {}
         }
 
-        // 2. Close vpnInterface so OS immediately destroys tun0 and drops the status bar VPN icon
-        val pfd = vpnInterface
-        vpnInterface = null
-        if (pfd != null) {
-            try {
-                pfd.close()
-                android.util.Log.d("NativeVpnLifecycle", "vpnInterface closed successfully (tun0 destroyed)")
-            } catch (e: Throwable) {
-                android.util.Log.e("NativeVpnLifecycle", "Error closing vpnInterface: ${e.message}")
-            }
-        }
-
-        // 3. Remove foreground notification and stop service
+        // 3. Remove foreground notification
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 stopForeground(STOP_FOREGROUND_REMOVE)
@@ -551,14 +540,16 @@ class SingboxVpnService :
             android.util.Log.e("NativeVpnLifecycle", "Error in stopForeground: ${e.message}")
         }
 
+        // 4. Notify Dart side BEFORE stopSelf()
+        MainActivity.sendVpnStatus("DISCONNECTED")
+
+        // 5. Stop service
         try {
             stopSelf()
         } catch (e: Throwable) {
             android.util.Log.e("NativeVpnLifecycle", "Error in stopSelf: ${e.message}")
         }
 
-        // 4. Notify Dart side
-        MainActivity.sendVpnStatus("DISCONNECTED")
         android.util.Log.d("NativeVpnLifecycle", "forceStopVpnNowInternal completed")
     }
 

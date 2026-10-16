@@ -708,8 +708,7 @@ class SingboxConfigGenerator {
         ],
         "rules": [
           {
-            // Direct traffic uses local system DNS
-            "outbound": ["direct"],
+            "outbound": ["any"],
             "server": "local",
           },
         ],
@@ -738,8 +737,8 @@ class SingboxConfigGenerator {
             "server": "block-dns",
           },
           {
-            // Only direct outbound uses local system DNS; all proxy traffic uses google-doh through the encrypted tunnel
-            "outbound": ["direct"],
+            // Ensure outbound proxy domains resolve without deadlock
+            "outbound": ["any"],
             "server": "local",
           },
         ],

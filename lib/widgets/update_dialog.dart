@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import '../utils/advanced_logger.dart';
 
 class UpdateDialog extends StatefulWidget {
@@ -59,9 +60,23 @@ class _UpdateDialogState extends State<UpdateDialog> {
     }
 
     if (Platform.isAndroid) {
-      // Always use Universal APK (iVPN-release.apk). Single-ABI split APKs
-      // cause Android PackageInstaller to fail with "App not installed"
-      // (INSTALL_FAILED_UPDATE_INCOMPATIBLE) when installed on top of existing installs.
+      try {
+        final androidInfo = await DeviceInfoPlugin().androidInfo;
+        final primaryAbi = androidInfo.supportedAbis.isNotEmpty
+            ? androidInfo.supportedAbis.first.toLowerCase()
+            : '';
+
+        if (primaryAbi.contains('x86_64')) {
+          return '$baseUrl/iVPN-x86_64-release.apk';
+        } else if (primaryAbi.contains('arm64-v8a')) {
+          return '$baseUrl/iVPN-arm64-v8a-release.apk';
+        } else if (primaryAbi.contains('armeabi-v7a')) {
+          return '$baseUrl/iVPN-armeabi-v7a-release.apk';
+        }
+      } catch (e) {
+        AdvancedLogger.warn('[InAppUpdate] Could not detect ABI: $e');
+      }
+
       if (widget.downloadUrl.isNotEmpty && widget.downloadUrl.endsWith('.apk')) {
         return widget.downloadUrl;
       }
@@ -173,7 +188,9 @@ class _UpdateDialogState extends State<UpdateDialog> {
         downloadSuccess = true;
       } catch (dlErr) {
         AdvancedLogger.warn('[InAppUpdate] ABI download failed ($dlErr), retrying with universal APK...');
-        if (targetUrl != widget.downloadUrl) {
+        const String universalFallbackUrl = 'https://github.com/mobinsamadir/ivpn_app/releases/latest/download/iVPN-release.apk';
+        final fallbackUrl = (targetUrl != universalFallbackUrl) ? universalFallbackUrl : widget.downloadUrl;
+        if (targetUrl != fallbackUrl) {
           if (mounted) {
             setState(() {
               _progress = 0.0;
@@ -181,7 +198,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
             });
           }
           await dio.download(
-            widget.downloadUrl,
+            fallbackUrl,
             savePath,
             onReceiveProgress: (received, total) {
               if (total > 0 && mounted) {

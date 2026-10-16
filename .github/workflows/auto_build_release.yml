@@ -147,11 +147,6 @@ jobs:
           mv libbox-legacy.aar android/app/libs/ || true
           mv aar_checksums.txt tool/
 
-          echo "Downloading Terminal View..."
-          curl -L -A "Mozilla/5.0" -o android/app/libs/terminal-view.aar "https://jitpack.io/com/github/termux/termux-app/terminal-view/v0.118.3/terminal-view-v0.118.3.aar"
-          echo "Downloading Terminal Emulator..."
-          curl -L -A "Mozilla/5.0" -o android/app/libs/terminal-emulator.aar "https://jitpack.io/com/github/termux/termux-app/terminal-emulator/v0.118.3/terminal-emulator-v0.118.3.aar"
-
       - name: Verify AAR Checksums
         if: steps.aar-cache.outputs.cache-hit != 'true'
         run: |
