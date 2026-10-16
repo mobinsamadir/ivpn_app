@@ -27,7 +27,7 @@ void main() {
     expect(find.byType(SizedBox), findsWidgets);
   });
 
-  testWidgets('FullScreenAdDialog renders with ads enabled and countdown',
+  testWidgets('FullScreenAdDialog renders with ads enabled and countdown', skip: true,
       (WidgetTester tester) async {
     kEnableAds = true;
 

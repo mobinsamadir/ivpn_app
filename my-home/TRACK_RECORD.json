@@ -42,5 +42,6 @@
     "blind_spots_resolved": false,
     "total_modules_audited": 8,
     "remaining_known_tasks": 0
-  }
+  },
+  "tasks_completed": 1
 }
