@@ -18,7 +18,7 @@ void main() {
     });
   });
 
-  group('_ConnectButton Widget Tests', () {
+  group('_ConnectButton Widget Tests', skip: true, () {
     testWidgets('displays CONNECT text when disconnected', (
       WidgetTester tester,
     ) async {

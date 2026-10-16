@@ -1,9 +1,41 @@
+import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'dart:async';
 import '../utils/advanced_logger.dart';
 import '../utils/cancellable_operation.dart';
 
 class CleanupUtils {
+  /// Truncates the box.log file if it exceeds 2MB and deletes downloaded APKs
+  static Future<void> truncateLogsAndOldApks() async {
+    try {
+      final cacheDir = await getTemporaryDirectory();
+      final filesDir = await getApplicationDocumentsDirectory();
+
+      // Check log file in both cache and files
+      for (final dir in [cacheDir, filesDir]) {
+        final logFile = File('${dir.path}/box.log');
+        if (await logFile.exists()) {
+          final size = await logFile.length();
+          if (size > 2 * 1024 * 1024) { // 2 MB
+            AdvancedLogger.info("Truncating box.log (size: ${size / 1024 / 1024} MB)");
+            await logFile.writeAsString(""); // Clear the log file
+          }
+        }
+
+        // Delete any downloaded .apk files
+        final apkFiles = dir.listSync().where((e) => e.path.endsWith('.apk'));
+        for (final apk in apkFiles) {
+          if (apk is File) {
+            AdvancedLogger.info("Deleting old APK: ${apk.path}");
+            await apk.delete();
+          }
+        }
+      }
+    } catch (e) {
+      AdvancedLogger.warn("Cleanup failed: $e");
+    }
+  }
+
   static final Map<String, List<Object>> _jobResources = {};
   static final Map<String, CancelToken> _activeTokens = {};
 

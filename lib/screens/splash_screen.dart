@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import '../services/config_manager.dart';
+import '../utils/cleanup_utils.dart';
 import '../services/time_wallet_service.dart';
 import '../utils/advanced_logger.dart';
 import '../services/ad_manager_service.dart';
@@ -81,6 +83,7 @@ class _SplashScreenState extends State<SplashScreen>
       // Ensure minimum splash time of 2 seconds
       final minSplashFuture = Future.delayed(const Duration(seconds: 2));
 
+      await CleanupUtils.truncateLogsAndOldApks();
       await configManager.init().timeout(
         const Duration(seconds: 10),
         onTimeout: () {
@@ -270,14 +273,19 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                 ),
                 const SizedBox(height: 36),
-                Text(
-                  'v2.0.0',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.3),
-                    fontSize: 11,
-                    letterSpacing: 1.0,
-                    fontFamily: 'monospace',
-                  ),
+                FutureBuilder<PackageInfo>(
+                  future: PackageInfo.fromPlatform(),
+                  builder: (context, snapshot) {
+                    return Text(
+                      'v${snapshot.data?.version ?? ""}',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.3),
+                        fontSize: 11,
+                        letterSpacing: 1.0,
+                        fontFamily: 'monospace',
+                      ),
+                    );
+                  },
                 ),
               ],
             ],

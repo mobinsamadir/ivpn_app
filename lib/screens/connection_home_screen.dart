@@ -248,9 +248,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                   }
                 });
               } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('No valid configuration found')),
-                );
+
               }
             }
           }
@@ -1291,15 +1289,12 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
 
         if (_configManager.validatedConfigs.isEmpty) {
           AdvancedLogger.warn(
-            "[HomeScreen] Discovery grace period ended without validated servers. Attempting direct fallback connection...",
+            "[HomeScreen] Discovery grace period ended without validated servers. Disconnecting...",
           );
-          if (_configManager.allConfigs.isNotEmpty) {
-            _configManager.selectConfig(_configManager.allConfigs.first);
-          } else {
-            _showToast("No accessible servers found. Please update list.");
-            _configManager.setConnected(false, status: 'Failed');
-            return;
-          }
+          _showToast("No valid server found.");
+          _configManager.setConnected(false, status: 'Failed');
+          _connectionFlowState = 'idle';
+          return;
         }
       }
 
@@ -2515,6 +2510,7 @@ class _ConnectButton extends StatelessWidget {
             ],
           ),
         ),
+
       ],
     );
   }
