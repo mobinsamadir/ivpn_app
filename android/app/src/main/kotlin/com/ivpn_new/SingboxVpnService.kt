@@ -56,6 +56,11 @@ class SingboxVpnService :
         const val VPN_NOTIFICATION_ID = 1
         const val ACTION_START = "start"
         const val ACTION_STOP = "stop"
+        const val ACTION_SKIP_SERVER = "skip_server"
+
+        fun updateTraffic(rx: Long, tx: Long, downSpeed: Long, upSpeed: Long) {
+            activeServiceInstance?.updateNotificationStats(rx, tx, downSpeed, upSpeed)
+        }
 
         var isVpnRunning = false
         var isLibboxSetup = false
@@ -395,6 +400,12 @@ class SingboxVpnService :
             return START_NOT_STICKY
         }
 
+        if (action == ACTION_SKIP_SERVER) {
+            android.util.Log.d("NativeVpnLifecycle", "onStartCommand: ACTION_SKIP_SERVER received, notifying Dart to skip")
+            MainActivity.sendVpnStatus("USER_ACTION:SKIP")
+            return START_NOT_STICKY
+        }
+
         if (action == ACTION_START) {
             try {
                 startServiceForeground()
@@ -566,7 +577,17 @@ class SingboxVpnService :
         }
     }
 
-    private fun createNotification(): Notification {
+    private fun formatBytes(bytes: Long): String {
+        if (bytes < 1024) return "$bytes B"
+        val kb = bytes / 1024.0
+        if (kb < 1024) return String.format("%.1f KB", kb)
+        val mb = kb / 1024.0
+        if (mb < 1024) return String.format("%.1f MB", mb)
+        val gb = mb / 1024.0
+        return String.format("%.2f GB", gb)
+    }
+
+    private fun createNotification(contentText: String? = null): Notification {
         val notificationIntent = Intent(this, MainActivity::class.java)
         val pendingIntent =
             PendingIntent.getActivity(
@@ -576,14 +597,33 @@ class SingboxVpnService :
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
 
+        val skipIntent = Intent(this, SingboxVpnService::class.java).apply {
+            putExtra("action", ACTION_SKIP_SERVER)
+        }
+        val skipPendingIntent = PendingIntent.getService(
+            this,
+            1,
+            skipIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+
         return NotificationCompat
             .Builder(this, VPN_NOTIFICATION_CHANNEL_ID)
             .setContentTitle("iVPN is Connected")
-            .setContentText("Your traffic is secure")
+            .setContentText(contentText ?: "Your traffic is secure")
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
+            .addAction(android.R.drawable.ic_media_next, "Skip Server", skipPendingIntent)
             .build()
+    }
+
+    fun updateNotificationStats(rx: Long, tx: Long, downSpeed: Long, upSpeed: Long) {
+        if (!isVpnRunning) return
+        val text = "↓ ${formatBytes(downSpeed)}/s   ↑ ${formatBytes(upSpeed)}/s  |  Total: ${formatBytes(rx + tx)}"
+        val notification = createNotification(text)
+        val manager = getSystemService(NotificationManager::class.java)
+        manager?.notify(VPN_NOTIFICATION_ID, notification)
     }
 
     override fun openTun(options: TunOptions): Int {

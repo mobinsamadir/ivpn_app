@@ -192,17 +192,26 @@ class FunnelService {
     deadOrFailed.sort(compareScore);
 
     // 5-TIER PRIORITY ORDER:
-    // 1. Favorites -> 2. Currently Valid -> 3. Resurrection Candidates -> 4. Fresh Untested -> 5. Dead/Failed
-    final all = [
-      ...favorites,
+    // Fast-track: Previously validated and favorite configs bypass TCP queue directly to HTTP queue!
+    final priorityBatch = <VpnConfigWithMetrics>[
+      ...favorites.where((c) => c.isValidated),
       ...currentlyValid,
-      ...resurrectionCandidates,
-      ...freshUntested,
-      ...deadOrFailed,
     ];
 
+    final Set<String> priorityIds = priorityBatch.map((c) => c.id).toSet();
+    final remainingConfigs = [
+      ...favorites.where((c) => !priorityIds.contains(c.id)),
+      ...resurrectionCandidates.where((c) => !priorityIds.contains(c.id)),
+      ...freshUntested.where((c) => !priorityIds.contains(c.id)),
+      ...deadOrFailed.where((c) => !priorityIds.contains(c.id)),
+    ];
+
+    final all = [...priorityBatch, ...remainingConfigs];
     _totalConfigs = all.length;
-    _tcpQueue.addAll(all);
+
+    // Priority validated servers are tested first in HTTP queue
+    _httpQueue.addAll(priorityBatch);
+    _tcpQueue.addAll(remainingConfigs);
 
     // 1.5 Batch Pre-process Configs (Extract Host/Port in Isolate)
     try {

@@ -673,6 +673,8 @@ class SingboxConfigGenerator {
           "strict_route": isKillSwitchEnabled,
           // Use gvisor userspace stack on Android to eliminate kernel system stack crashes
           "stack": "gvisor",
+          "sniff": true,
+          "sniff_override_destination": false,
         },
       ];
     }
@@ -692,12 +694,12 @@ class SingboxConfigGenerator {
       return {
         "servers": [
           {
-            "tag": "remote-doh",
-            "address": "https://8.8.8.8/dns-query",
+            "tag": "remote-tcp",
+            "address": "tcp://8.8.8.8",
             "detour": "proxy",
           },
           {
-            "tag": "remote-tcp",
+            "tag": "remote-cf",
             "address": "tcp://1.1.1.1",
             "detour": "proxy",
           },
@@ -709,23 +711,23 @@ class SingboxConfigGenerator {
         ],
         "rules": [
           {
-            "outbound": ["any"],
+            "outbound": ["direct"],
             "server": "local",
           },
         ],
-        "final": "remote-doh",
+        "final": "remote-tcp",
         "strategy": "ipv4_only",
       };
     } else {
       return {
         "servers": [
           {
-            "tag": "google-doh",
-            "address": "https://8.8.8.8/dns-query",
+            "tag": "remote-dns",
+            "address": "tcp://8.8.8.8",
             "detour": "proxy",
           },
           {
-            "tag": "cf-tcp",
+            "tag": "remote-cf",
             "address": "tcp://1.1.1.1",
             "detour": "proxy",
           },
@@ -738,12 +740,11 @@ class SingboxConfigGenerator {
             "server": "block-dns",
           },
           {
-            // Ensure outbound proxy domains resolve without deadlock
-            "outbound": ["any"],
+            "outbound": ["direct"],
             "server": "local",
           },
         ],
-        "final": "google-doh",
+        "final": "remote-dns",
         "strategy": "ipv4_only",
       };
     }

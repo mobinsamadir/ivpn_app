@@ -185,6 +185,16 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
         '[ConnectionHomeScreen] Received VPN status update: $status',
       );
       if (mounted) {
+        if (status == 'USER_ACTION:SKIP') {
+          AdvancedLogger.info('[HomeScreen] User clicked Skip Server from notification');
+          if (!_timeWalletService.hasTime) {
+            _showToast("Time expired! Please recharge time first.");
+            return;
+          }
+          _skipServer();
+          return;
+        }
+
         _lastNativeStatus = status;
         // Update the connection status in ConfigManager to reflect the actual VPN status
         _configManager.setConnected(
@@ -216,6 +226,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
           _wasVpnConnected = false;
 
           if (wasConnected &&
+              _configManager.isAutoSwitchEnabled &&
               !_configManager.userInitiatedDisconnect &&
               !_configManager.isConnectionCancelled) {
             final now = DateTime.now();
@@ -1265,19 +1276,18 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
       }
 
       // 1. SMART WAIT LOOP
-      // Only run discovery wait loop if auto-switch is ENABLED and no candidate is validated yet!
-      // If auto-switch is disabled OR user manually selected a config, connect immediately without waiting!
-      final bool isAutoSwitch = _configManager.isAutoSwitchEnabled;
+      // If user has not manually selected a config and no candidate is validated yet,
+      // run a quick discovery wait loop to find working servers!
       final bool hasManualSelection = _configManager.selectedConfig != null;
 
-      if (isAutoSwitch && !hasManualSelection && _configManager.validatedConfigs.isEmpty) {
+      if (!hasManualSelection && _configManager.validatedConfigs.isEmpty) {
         _configManager.setConnected(false, status: 'Finding fastest servers...');
 
         // Start Funnel with lightweight connectivity probe (no heavy speed test)
         _funnelService.startFunnel(retestDead: false, enableSpeedTest: false);
 
         int waits = 0;
-        const int maxWaits = 25;
+        const int maxWaits = 10;
         while (waits < maxWaits && !_configManager.isConnectionCancelled) {
           await Future.delayed(const Duration(seconds: 1));
           waits++;
@@ -1295,8 +1305,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                 .map((c) => c.currentPing)
                 .where((p) => p > 0)
                 .fold<int>(9999, (prev, elem) => elem < prev ? elem : prev);
-            // If we found a low ping server (<250ms), or 2+ candidates, or 5s passed with at least 1 candidate, connect immediately!
-            if (lowestPing < 250 || count >= 2 || (count >= 1 && waits >= 5)) {
+            // If we found a good ping server (<450ms), or 2+ candidates, or 4s passed with at least 1 candidate, connect immediately!
+            if (lowestPing < 450 || count >= 2 || (count >= 1 && waits >= 4)) {
               break;
             }
           }
@@ -1304,40 +1314,38 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
 
         if (_configManager.isConnectionCancelled) {
           _configManager.setConnected(false, status: 'Disconnected');
+          _connectionFlowState = 'idle';
           return;
         }
 
         if (_configManager.validatedConfigs.isEmpty) {
           AdvancedLogger.warn(
-            "[HomeScreen] Discovery grace period ended without validated servers. Disconnecting...",
+            "[HomeScreen] Discovery grace period ended without validated servers.",
           );
-          _showToast("No valid server found.");
-          _configManager.setConnected(false, status: 'Failed');
+          _showToast("No responsive servers found. Testing in progress, please wait.");
+          _configManager.setConnected(false, status: 'Disconnected');
           _connectionFlowState = 'idle';
           return;
         }
       }
 
-      // Final check: Validate only if auto-switch is enabled
-      if (isAutoSwitch) {
-        final bool canConnect = _configManager.validatedConfigs.isNotEmpty ||
-            (_configManager.selectedConfig?.isValidated ?? false);
-        if (!canConnect) {
-          AdvancedLogger.warn(
-            "[HomeScreen] Cannot connect: No validated configurations available.",
-          );
-          _showToast("No valid configurations available.");
-          _configManager.setConnected(false, status: 'Failed');
-          _connectionFlowState = 'idle';
-          return;
-        }
-      } else {
-        if (_configManager.allConfigs.isEmpty) {
-          _showToast("No configurations available.");
-          _configManager.setConnected(false, status: 'Failed');
-          _connectionFlowState = 'idle';
-          return;
-        }
+      // Check if we have any valid candidate or user selection
+      final bool canConnect = _configManager.validatedConfigs.isNotEmpty ||
+          _configManager.selectedConfig != null;
+      if (!canConnect) {
+        AdvancedLogger.warn(
+          "[HomeScreen] Cannot connect: No validated configurations available.",
+        );
+        _showToast("No valid configurations available. Please test or refresh.");
+        _configManager.setConnected(false, status: 'Disconnected');
+        _connectionFlowState = 'idle';
+        return;
+      }
+
+      // If user hasn't manually selected a specific config, pick the fastest validated candidate
+      if (!hasManualSelection && _configManager.validatedConfigs.isNotEmpty) {
+        final top = _configManager.fastestValidatedConfig ?? _configManager.validatedConfigs.first;
+        _configManager.selectConfig(top);
       }
 
       // Stop FunnelService before connecting so it doesn't hold locks/ports
@@ -1426,6 +1434,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   Future<void> _skipServer() async {
     if (_isNativeOperationInProgress) return;
     try {
+      _configManager.userInitiatedDisconnect = true;
+      _configManager.isConnectionCancelled = true;
       if (_configManager.isConnected) {
         await _nativeVpnService.disconnect();
         // Short delay to allow native cleanup

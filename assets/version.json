@@ -1,9 +1,9 @@
 {
-  "version": "2.0.4",
-  "version_code": 2004,
+  "version": "2.0.5",
+  "version_code": 2005,
   "telegram_support": "iVPN_support",
   "reward_ad_duration_seconds": 20,
-  "release_notes": "• Fix live VPN zero-traffic & DNS resolution issue\n• Fix Android VPN key/lock icon persisting after disconnect\n• Implement 5-tier smart priority test queue\n• Eliminate SnackBar flickering and enhance Quick-Connect UI\n• Scale all timeouts dynamically for Iranian network conditions\n• Auto-truncate oversized logs and purge cached APKs",
+  "release_notes": "• Fix remote DNS routing through proxy to restore browser and YouTube access\n• Fix 1.1GB TrafficStats baseline calculation\n• Eliminate Next Server ping-pong rotation loop\n• Add real-time speed & Skip button to status bar notification\n• Eliminate black screen on Rewarded Ad load\n• Priority test queue for previously valid servers",
   "url": "https://github.com/mobinsamadir/ivpn_app/releases/latest/download/iVPN-release.apk",
   "network_tolerance_multiplier": 1.5,
   "server_urls": [

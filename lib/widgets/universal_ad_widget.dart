@@ -343,6 +343,28 @@ class _WebViewAd extends StatelessWidget {
       content = content.replaceAll("src='//", "src='https://");
     }
 
+    final notifyScript = """
+      <script>
+        function notifyAdLoaded() {
+          try {
+            if (window.AdChannel) {
+              window.AdChannel.postMessage('ad_loaded');
+            }
+          } catch(e) {}
+        }
+        window.addEventListener('load', function() {
+          var iframes = document.getElementsByTagName('iframe');
+          if (iframes.length > 0) {
+            for (var i = 0; i < iframes.length; i++) {
+              iframes[i].addEventListener('load', notifyAdLoaded);
+            }
+          } else {
+            notifyAdLoaded();
+          }
+        });
+      </script>
+    """;
+
     // Step 3: Wrap in Full HTML Template (For Transparency & Centering)
     if (!content.contains("<html")) {
       content = """
@@ -353,14 +375,21 @@ class _WebViewAd extends StatelessWidget {
         <style>
           html, body { margin: 0; padding: 0; width: 100%; height: 100%; background-color: transparent !important; }
           body { display: flex; justify-content: center; align-items: center; }
-          iframe { border: none; width: 100%; height: 100%; overflow: hidden; display: block; }
+          iframe { border: none; width: 100%; height: 100%; overflow: hidden; display: block; background-color: transparent !important; }
         </style>
       </head>
       <body>
         $content
+        $notifyScript
       </body>
       </html>
       """;
+    } else {
+      if (content.contains("</body>")) {
+        content = content.replaceFirst("</body>", "$notifyScript</body>");
+      } else {
+        content = "$content$notifyScript";
+      }
     }
 
     return _MobileWebView(htmlContent: content);
@@ -385,27 +414,42 @@ class _MobileWebViewState extends State<_MobileWebView> {
     super.initState();
     AdvancedLogger.info('[AdWidget] Loading Mobile HTML...');
 
-    // Safety timeout: If ad does not load cleanly within 4 seconds, keep sponsor card visible
-    _loadTimeoutTimer = Timer(const Duration(seconds: 4), () {
+    final hasIframe = widget.htmlContent.contains('<iframe');
+
+    // Safety timeout: If ad does not load cleanly within 6 seconds, keep sponsor card visible
+    _loadTimeoutTimer = Timer(const Duration(seconds: 6), () {
       if (mounted && !_isReadyNotifier.value) {
-        AdvancedLogger.info('[AdWidget] Mobile HTML load timed out (4s), keeping sponsor card.');
+        AdvancedLogger.info('[AdWidget] Ad iframe load timed out (6s), keeping sponsor card visible.');
       }
     });
 
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..enableZoom(false)
-      ..setBackgroundColor(Colors.transparent)
+      ..setBackgroundColor(const Color(0x00000000))
+      ..addJavaScriptChannel(
+        'AdChannel',
+        onMessageReceived: (JavaScriptMessage message) {
+          if (message.message == 'ad_loaded') {
+            AdvancedLogger.info('[AdWidget] Mobile Ad iframe content loaded successfully.');
+            _loadTimeoutTimer?.cancel();
+            if (mounted) _isReadyNotifier.value = true;
+          }
+        },
+      )
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageFinished: (_) {
-            AdvancedLogger.info('[AdWidget] Mobile Page Loaded.');
-            _loadTimeoutTimer?.cancel();
-            if (mounted) _isReadyNotifier.value = true;
+            AdvancedLogger.info('[AdWidget] Mobile Wrapper HTML Loaded.');
+            if (!hasIframe) {
+              _loadTimeoutTimer?.cancel();
+              if (mounted) _isReadyNotifier.value = true;
+            }
           },
           onNavigationRequest: (NavigationRequest request) {
             final url = request.url;
             if (url.startsWith('data:') ||
+                url.startsWith('about:') ||
                 url.contains('acceptable.a-ads.com')) {
               return NavigationDecision.navigate;
             }
@@ -431,7 +475,7 @@ class _MobileWebViewState extends State<_MobileWebView> {
       builder: (context, isReady, child) {
         return AnimatedOpacity(
           opacity: isReady ? 1.0 : 0.0,
-          duration: const Duration(milliseconds: 300),
+          duration: const Duration(milliseconds: 350),
           child: isReady
               ? WebViewWidget(
                   controller: _controller,

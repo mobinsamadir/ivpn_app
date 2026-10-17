@@ -127,24 +127,27 @@ class MainActivity : FlutterActivity() {
                             return if (uidTx != TrafficStats.UNSUPPORTED.toLong()) uidTx else TrafficStats.getTotalTxBytes()
                         }
 
-                        var initialRx = getRx()
-                        var initialTx = getTx()
-                        var lastRx = initialRx
-                        var lastTx = initialTx
+                        var sessionRx = 0L
+                        var sessionTx = 0L
+                        var lastRx = getRx()
+                        var lastTx = getTx()
                         var lastTime = System.currentTimeMillis()
+                        var wasRunning = false
 
                         while (isActive) {
                             delay(1000)
                             val now = System.currentTimeMillis()
                             val curRx = getRx()
                             val curTx = getTx()
+                            val isRunning = SingboxVpnService.isVpnRunning
 
-                            if (!SingboxVpnService.isVpnRunning) {
-                                initialRx = curRx
-                                initialTx = curTx
+                            if (!isRunning) {
+                                sessionRx = 0L
+                                sessionTx = 0L
                                 lastRx = curRx
                                 lastTx = curTx
                                 lastTime = now
+                                wasRunning = false
                                 withContext(Dispatchers.Main) {
                                     events?.success(
                                         mapOf(
@@ -158,25 +161,46 @@ class MainActivity : FlutterActivity() {
                                 continue
                             }
 
+                            // If VPN just turned on, reset baseline to current counters
+                            if (!wasRunning) {
+                                wasRunning = true
+                                sessionRx = 0L
+                                sessionTx = 0L
+                                lastRx = curRx
+                                lastTx = curTx
+                                lastTime = now
+                                continue
+                            }
+
                             val timeDiff = (now - lastTime) / 1000.0
-                            val rxDelta = if (curRx >= lastRx && curRx != TrafficStats.UNSUPPORTED.toLong()) curRx - lastRx else 0L
-                            val txDelta = if (curTx >= lastTx && curTx != TrafficStats.UNSUPPORTED.toLong()) curTx - lastTx else 0L
+                            // Sanity check: delta must be non-negative and < 50MB in 1 second to avoid baseline jumping glitches
+                            val rxDelta = if (curRx >= lastRx && curRx != TrafficStats.UNSUPPORTED.toLong()) {
+                                val d = curRx - lastRx
+                                if (d in 0..50000000L) d else 0L
+                            } else 0L
+
+                            val txDelta = if (curTx >= lastTx && curTx != TrafficStats.UNSUPPORTED.toLong()) {
+                                val d = curTx - lastTx
+                                if (d in 0..50000000L) d else 0L
+                            } else 0L
+
+                            sessionRx += rxDelta
+                            sessionTx += txDelta
 
                             val downSpeed = if (timeDiff > 0) (rxDelta / timeDiff).toLong() else 0L
                             val upSpeed = if (timeDiff > 0) (txDelta / timeDiff).toLong() else 0L
-
-                            val totalRx = if (curRx >= initialRx && curRx != TrafficStats.UNSUPPORTED.toLong()) curRx - initialRx else 0L
-                            val totalTx = if (curTx >= initialTx && curTx != TrafficStats.UNSUPPORTED.toLong()) curTx - initialTx else 0L
 
                             lastRx = curRx
                             lastTx = curTx
                             lastTime = now
 
+                            SingboxVpnService.updateTraffic(sessionRx, sessionTx, downSpeed, upSpeed)
+
                             withContext(Dispatchers.Main) {
                                 events?.success(
                                     mapOf(
-                                        "rx" to totalRx,
-                                        "tx" to totalTx,
+                                        "rx" to sessionRx,
+                                        "tx" to sessionTx,
                                         "downloadSpeed" to downSpeed,
                                         "uploadSpeed" to upSpeed,
                                     ),

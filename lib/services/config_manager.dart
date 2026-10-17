@@ -825,12 +825,18 @@ class ConfigManager extends ChangeNotifier {
       (a, b) => b.calculatedScore.compareTo(a.calculatedScore),
     );
 
-    // Find best candidate that isn't the currently selected one
+    // Find current index in validCandidates and pick next sequentially
     VpnConfigWithMetrics? candidate;
-    for (final c in validCandidates) {
-      if (c.id != _selectedConfig?.id) {
-        candidate = c;
-        break;
+    final currentIndex = validCandidates.indexWhere((c) => c.id == _selectedConfig?.id);
+    if (currentIndex != -1 && validCandidates.length > 1) {
+      final nextIndex = (currentIndex + 1) % validCandidates.length;
+      candidate = validCandidates[nextIndex];
+    } else {
+      for (final c in validCandidates) {
+        if (c.id != _selectedConfig?.id) {
+          candidate = c;
+          break;
+        }
       }
     }
 
@@ -847,7 +853,7 @@ class ConfigManager extends ChangeNotifier {
     _safeNotifyListeners();
 
     if (performConnection) {
-      await connectWithSmartFailover();
+      await connectWithSmartFailover(preferredConfig: candidate);
     }
     return true;
   }
@@ -1103,22 +1109,26 @@ class ConfigManager extends ChangeNotifier {
       return _selectedConfig;
     }
 
-    // 3. When auto-switch is disabled, allow falling back to first favorite or first available config
-    if (!_isAutoSwitchEnabled) {
-      if (favoriteConfigs.isNotEmpty) return favoriteConfigs.first;
-      if (validatedConfigs.isNotEmpty) return validatedConfigs.first;
-      if (allConfigs.isNotEmpty) return allConfigs.first;
-      return null;
-    }
-
-    // 4. When auto-switch is enabled, only connect to validated candidates
+    // 3. Priority: Valid favorites
     final validFavorites = favoriteConfigs.where((c) => c.isValidated);
     if (validFavorites.isNotEmpty) {
       return validFavorites.first;
     }
+
+    // 4. Priority: Fastest validated config
+    if (fastestValidatedConfig != null) {
+      return fastestValidatedConfig;
+    }
     if (validatedConfigs.isNotEmpty) {
       return validatedConfigs.first;
     }
+
+    // 5. If user had selected any config, return it
+    if (_selectedConfig != null) {
+      return _selectedConfig;
+    }
+
+    // 6. When no server is validated yet, return null so callers can run discovery rather than connecting to dead servers
     return null;
   }
 
@@ -1203,11 +1213,16 @@ class ConfigManager extends ChangeNotifier {
     if (reserveList.isNotEmpty) {
       nextBest = reserveList.removeAt(0);
     }
-    // Priority 2: Best Validated Config
+    // Priority 2: Best Validated Config (rotate sequentially)
     else if (validatedConfigs.isNotEmpty) {
-      nextBest = validatedConfigs.firstWhereOrNull(
-        (c) => c.id != _selectedConfig?.id,
-      );
+      final curIdx = validatedConfigs.indexWhere((c) => c.id == _selectedConfig?.id);
+      if (curIdx != -1 && validatedConfigs.length > 1) {
+        nextBest = validatedConfigs[(curIdx + 1) % validatedConfigs.length];
+      } else {
+        nextBest = validatedConfigs.firstWhereOrNull(
+          (c) => c.id != _selectedConfig?.id,
+        );
+      }
     }
 
     if (nextBest != null) {
@@ -1247,7 +1262,7 @@ class ConfigManager extends ChangeNotifier {
   }
 
   // --- SMART FAILOVER CONNECTION ---
-  Future<void> connectWithSmartFailover() async {
+  Future<void> connectWithSmartFailover({VpnConfigWithMetrics? preferredConfig}) async {
     userInitiatedDisconnect = false;
     isConnectionCancelled = false;
     AdvancedLogger.info(
@@ -1263,9 +1278,8 @@ class ConfigManager extends ChangeNotifier {
     // 1. Notify UI
     setConnected(false, status: 'Optimizing connection...');
 
-    // 2. Get best available config
-    // If user already selected a valid one, getBestConfig honors it.
-    VpnConfigWithMetrics? target = await getBestConfig();
+    // 2. Get target config: preferredConfig takes highest priority, then _selectedConfig, then getBestConfig()
+    VpnConfigWithMetrics? target = preferredConfig ?? _selectedConfig ?? await getBestConfig();
 
     if (target == null) {
       AdvancedLogger.warn(
@@ -1288,11 +1302,10 @@ class ConfigManager extends ChangeNotifier {
         // 3. Pre-flight Check with FAST LANE logic
         setConnected(false, status: 'Verifying ${target.name}...');
 
-        final bool isFastLane = !_isAutoSwitchEnabled ||
-            (target.lastTestedAt != null &&
-                DateTime.now().difference(target.lastTestedAt!).inMinutes < 45 &&
-                target.funnelStage >= 2 &&
-                target.currentPing > 0);
+        final bool isFastLane = target.isValidated &&
+            target.currentPing > 0 &&
+            target.lastTestedAt != null &&
+            DateTime.now().difference(target.lastTestedAt!).inMinutes < 45;
 
         if (isFastLane) {
           AdvancedLogger.info(
