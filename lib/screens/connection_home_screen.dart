@@ -760,27 +760,174 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
       resizeToAvoidBottomInset: false,
       backgroundColor: const Color(0xFF0A0A0A),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0A0A0A),
+        backgroundColor: const Color(0xFF0F172A),
         elevation: 0,
-        title: const Text(
-          'iVPN',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
+        centerTitle: false,
+        titleSpacing: 16,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(
+            color: Colors.white.withValues(alpha: 0.06),
+            height: 1,
           ),
         ),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Brand Logo with Cyber Border
+            Container(
+              width: 36,
+              height: 36,
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                border: Border.all(
+                  color: Colors.blueAccent.withValues(alpha: 0.4),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.blueAccent.withValues(alpha: 0.2),
+                    blurRadius: 10,
+                    spreadRadius: 1,
+                  ),
+                ],
+              ),
+              child: Image.asset(
+                'assets/icon.png',
+                fit: BoxFit.contain,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'iVPN',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF2563EB), Color(0xFF7C3AED)],
+                        ),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        'SECURE',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'High-Speed Private Proxy',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.5),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
         actions: [
+          // Time Wallet Chip in Header
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: ListenableBuilder(
+              listenable: _timeWalletService,
+              builder: (context, _) => Tooltip(
+                message: 'Earn Free Time',
+                child: ScaleOnTap(
+                  onTap: _showAdSequence,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _timeWalletService.hasTime
+                          ? const Color(0xFF1E293B)
+                          : Colors.amber.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: _timeWalletService.hasTime
+                            ? Colors.blueAccent.withValues(alpha: 0.4)
+                            : Colors.amberAccent.withValues(alpha: 0.6),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.bolt_rounded,
+                          size: 15,
+                          color: _timeWalletService.hasTime
+                              ? Colors.cyanAccent
+                              : Colors.amberAccent,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _timeWalletService.hasTime
+                              ? _timeWalletService.formattedTime
+                              : '+1h',
+                          style: TextStyle(
+                            color: _timeWalletService.hasTime
+                                ? Colors.white
+                                : Colors.amberAccent,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          // Action Buttons with Frosted Glass Circles
           Tooltip(
             message: 'Force Refresh',
             child: ScaleOnTap(
               onTap: _refreshConfigsManual,
-              child: const Padding(
-                padding: EdgeInsets.all(8.0),
-                child: Icon(Icons.refresh, color: Colors.greenAccent),
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFF1E293B).withValues(alpha: 0.6),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                ),
+                child: const Center(
+                  child: Icon(Icons.sync_rounded, color: Colors.greenAccent, size: 18),
+                ),
               ),
             ),
           ),
+          const SizedBox(width: 6),
           Tooltip(
             message: 'Logs & Diagnostics',
             child: ScaleOnTap(
@@ -790,12 +937,21 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                   MaterialPageRoute(builder: (_) => const LogViewerScreen()),
                 );
               },
-              child: const Padding(
-                padding: EdgeInsets.all(8.0),
-                child: Icon(Icons.terminal_rounded, color: Colors.amberAccent),
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFF1E293B).withValues(alpha: 0.6),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                ),
+                child: const Center(
+                  child: Icon(Icons.terminal_rounded, color: Colors.amberAccent, size: 18),
+                ),
               ),
             ),
           ),
+          const SizedBox(width: 6),
           Tooltip(
             message: 'Settings',
             child: ScaleOnTap(
@@ -805,12 +961,21 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                   MaterialPageRoute(builder: (_) => const SettingsScreen()),
                 );
               },
-              child: const Padding(
-                padding: EdgeInsets.all(8.0),
-                child: Icon(Icons.settings, color: Colors.white),
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFF1E293B).withValues(alpha: 0.6),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                ),
+                child: const Center(
+                  child: Icon(Icons.settings_outlined, color: Colors.white70, size: 18),
+                ),
               ),
             ),
           ),
+          const SizedBox(width: 12),
         ],
       ),
       floatingActionButton: Tooltip(

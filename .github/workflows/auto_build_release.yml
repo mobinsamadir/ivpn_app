@@ -18,6 +18,10 @@ concurrency:
 permissions:
   contents: write
 
+env:
+  # Set to '1' to enable Windows build, or '0' to suspend Windows build & save runner minutes
+  ENABLE_WINDOWS_BUILD: '0'
+
 jobs:
   filter:
     runs-on: ubuntu-latest
@@ -186,7 +190,7 @@ jobs:
 
   build-windows:
     needs: filter
-    if: needs.filter.outputs.windows == 'true' || github.event_name == 'workflow_dispatch'
+    if: env.ENABLE_WINDOWS_BUILD == '1' && (needs.filter.outputs.windows == 'true' || github.event_name == 'workflow_dispatch')
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7.0.0
