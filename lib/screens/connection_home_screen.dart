@@ -115,6 +115,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   StreamSubscription? _statsSubscription;
   int _rxBytes = 0;
   int _txBytes = 0;
+  int _lastObservedRxBytes = 0;
+  int _lastObservedTxBytes = 0;
+  int _silentFreezeCounter = 0;
 
   late TabController _tabController;
 
@@ -185,6 +188,22 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
         '[ConnectionHomeScreen] Received VPN status update: $status',
       );
       if (mounted) {
+        if (status == 'USER_ACTION:DISCONNECT') {
+          AdvancedLogger.info('[HomeScreen] User clicked Disconnect from notification');
+          _connectionFlowState = 'disconnecting';
+          _wasVpnConnected = false;
+          _configManager.stopAllOperations().then((_) {
+            if (mounted) _connectionFlowState = 'idle';
+          });
+          return;
+        }
+
+        if (status == 'USER_ACTION:OPEN_REWARD_AD') {
+          AdvancedLogger.info('[HomeScreen] User opened low-time alert from notification');
+          _showAdSequence();
+          return;
+        }
+
         if (status == 'USER_ACTION:SKIP') {
           AdvancedLogger.info('[HomeScreen] User clicked Skip Server from notification');
           if (!_timeWalletService.hasTime) {
@@ -193,6 +212,10 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
           }
           _skipServer();
           return;
+        }
+
+        if (status == 'CONNECTED') {
+          _syncNotificationMeta();
         }
 
         _lastNativeStatus = status;
@@ -222,6 +245,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
 
           _rxBytes = 0;
           _txBytes = 0;
+          _lastObservedRxBytes = 0;
+          _lastObservedTxBytes = 0;
+          _silentFreezeCounter = 0;
           final wasConnected = _wasVpnConnected;
           _wasVpnConnected = false;
 
@@ -260,16 +286,22 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
               final validConfigs = _configManager.validatedConfigs;
               if (validConfigs.isNotEmpty) {
                 if (_configManager.selectedConfig != null) {
-                  _configManager.setConnected(false, status: 'Failed');
+                  _configManager.setConnected(false, status: 'Auto-recovering...');
                 }
 
-                Future.delayed(const Duration(seconds: 2), () {
+                Future.delayed(const Duration(seconds: 1), () {
                   if (mounted && !_configManager.userInitiatedDisconnect) {
                     _skipServer();
                   }
                 });
               } else {
-
+                _configManager.setConnected(false, status: 'Finding replacement server...');
+                _funnelService.startFunnel(retestDead: false, enableSpeedTest: false);
+                Future.delayed(const Duration(seconds: 3), () {
+                  if (mounted && !_configManager.userInitiatedDisconnect) {
+                    _skipServer();
+                  }
+                });
               }
             }
           }
@@ -330,34 +362,84 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     super.dispose();
   }
 
-  // Start ping monitoring for auto-switch functionality
-  void _startPingMonitoring() {
-    _pingMonitorTimer?.cancel();
-    _pingMonitorTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
-      _checkForHighPingAndAutoSwitch();
-    });
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
+      // Deep Sleep Battery Saver: Relax monitoring to 45 seconds when backgrounded/locked
+      _adjustPingMonitoringInterval(const Duration(seconds: 45));
+    } else if (state == AppLifecycleState.resumed) {
+      // Restore responsive 10-second monitoring when resumed and refresh session notification
+      _adjustPingMonitoringInterval(const Duration(seconds: 10));
+      _syncNotificationMeta();
+    }
   }
 
-  // Check for high ping and auto-switch if needed
+  void _adjustPingMonitoringInterval(Duration interval) {
+    _pingMonitorTimer?.cancel();
+    if (_configManager.isConnected) {
+      _pingMonitorTimer = Timer.periodic(interval, (timer) {
+        _checkForHighPingAndAutoSwitch();
+      });
+    }
+  }
+
+  // Start ping monitoring for auto-switch functionality
+  void _startPingMonitoring() {
+    _adjustPingMonitoringInterval(const Duration(seconds: 10));
+  }
+
+  // Check for silent freeze (ACK blackhole) or high ping and auto-switch if needed
   void _checkForHighPingAndAutoSwitch() async {
     if (!_configManager.isAutoSwitchEnabled) {
       _highPingCounter = 0;
+      _silentFreezeCounter = 0;
       return;
     }
 
     // CRITICAL FIX: Only check ping if we are TRULY connected reported by Native OS
     if (_lastNativeStatus != "CONNECTED") {
       _highPingCounter = 0;
+      _silentFreezeCounter = 0;
       return;
     }
 
     if (!_configManager.isConnected) {
       _highPingCounter = 0;
+      _silentFreezeCounter = 0;
       return;
     }
 
-    // Check if current ping is high
-    // Increased threshold to 3000ms to prevent loop
+    final int rxDelta = _rxBytes - _lastObservedRxBytes;
+    final int txDelta = _txBytes - _lastObservedTxBytes;
+    _lastObservedRxBytes = _rxBytes;
+    _lastObservedTxBytes = _txBytes;
+
+    // 1. Silent Freeze Detector (Dead Man's Switch / Iranian Filter Blackhole)
+    // When the phone attempts to transmit traffic (Tx > 10KB) but receives 0 bytes in response
+    if (txDelta > 10 * 1024 && rxDelta == 0) {
+      _silentFreezeCounter++;
+      AdvancedLogger.warn(
+        '[FreezeDetector] Silent freeze detected (Tx: $txDelta, Rx: 0). Count: $_silentFreezeCounter',
+      );
+      if (_silentFreezeCounter >= 2) {
+        _silentFreezeCounter = 0;
+        _highPingCounter = 0;
+        AdvancedLogger.warn(
+          '[FreezeDetector] Dead Man\'s Switch triggered! Performing silent auto-switch...',
+        );
+        _showToast("Network freeze detected. Switching server...");
+        await _performAutoSwitch();
+        return;
+      }
+    } else if (rxDelta > 0) {
+      // Traffic is actively flowing and healthy!
+      _silentFreezeCounter = 0;
+      _highPingCounter = 0;
+      return;
+    }
+
+    // 2. Check if current ping is high (> 3000ms)
     if (_configManager.selectedConfig != null &&
         (_configManager.selectedConfig?.currentPing ?? 0) > 3000) {
       _highPingCounter++;
@@ -395,32 +477,15 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     _lastAutoSwitchTime = now;
 
     _isSwitching = true;
+    final currentId = _configManager.selectedConfig?.id;
     AdvancedLogger.info(
-      '[ConnectionHomeScreen] Initiating auto-switch due to high ping',
+      '[ConnectionHomeScreen] Initiating auto-switch excluding current $currentId',
     );
-    _showToast("High ping detected. Switching to best server...");
+    _showToast("High latency detected. Switching to best server...");
 
     try {
-      // Stop current VPN connection
-      await _nativeVpnService.disconnect();
-
-      // Cool-down period to allow OS to release TUN interface
-      AdvancedLogger.info('Waiting for port release...');
-      await Future.delayed(
-        const Duration(seconds: 2),
-      ); // Increased delay for safety
-
-      // Check if user cancelled during the delay
-      if (_configManager.userInitiatedDisconnect ||
-          _configManager.isConnectionCancelled) {
-        AdvancedLogger.warn(
-          '[AutoSwitch] User initiated disconnect or cancelled during switch. Aborting.',
-        );
-        return;
-      }
-
-      // Use Smart Failover
-      await _configManager.connectWithSmartFailover();
+      // Seamless Make-Before-Break: switch directly to next best validated server excluding current
+      await _configManager.connectWithSmartFailover(excludeId: currentId);
     } catch (e, stackTrace) {
       AdvancedLogger.error(
         '[ConnectionHomeScreen] Auto-switch failed: $e',
@@ -435,6 +500,9 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
 
   void _onTimeChanged() {
     if (mounted) {
+      if (_configManager.isConnected) {
+        _syncNotificationMeta();
+      }
       // Enforced disconnection UI alert
       if (!_timeWalletService.hasTime && _configManager.isConnected) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -448,6 +516,20 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
         );
       }
     }
+  }
+
+  void _syncNotificationMeta() {
+    final remainingSec = _timeWalletService.remainingSeconds;
+    final timeText = _timeWalletService.formattedTime;
+    final config = _configManager.selectedConfig;
+    final flag = config?.countryCode != null ? _countryCodeToFlag(config!.countryCode!) : '';
+    final serverName = config != null ? '$flag ${config.name}'.trim() : 'Connected';
+
+    _nativeVpnService.updateSessionMeta(
+      serverName: serverName,
+      remainingTimeText: timeText,
+      remainingSeconds: remainingSec,
+    );
   }
 
   String _getConnectionStatusMessage(String status) {
@@ -1434,13 +1516,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
   Future<void> _skipServer() async {
     if (_isNativeOperationInProgress) return;
     try {
-      _configManager.userInitiatedDisconnect = true;
-      _configManager.isConnectionCancelled = true;
-      if (_configManager.isConnected) {
-        await _nativeVpnService.disconnect();
-        // Short delay to allow native cleanup
-        await Future.delayed(const Duration(milliseconds: 500));
-      }
+      _showToast("Finding next best server...");
       final success = await _configManager.skipToNext(
         sourceList: _getCurrentList(),
       );

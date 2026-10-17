@@ -722,6 +722,10 @@ class SingboxConfigGenerator {
       return {
         "servers": [
           {
+            "tag": "fakeip-dns",
+            "address": "fakeip",
+          },
+          {
             "tag": "remote-dns",
             "address": "tcp://8.8.8.8",
             "detour": "proxy",
@@ -744,7 +748,13 @@ class SingboxConfigGenerator {
             "server": "local",
           },
         ],
-        "final": "remote-dns",
+        "fakeip": {
+          "enabled": true,
+          "inet4_range": "198.18.0.0/15",
+          "inet6_range": "fc00::/18",
+        },
+        "independent_cache": true,
+        "final": "fakeip-dns",
         "strategy": "ipv4_only",
       };
     }
@@ -776,6 +786,7 @@ class SingboxConfigGenerator {
         "rules": [
           {"action": "sniff"},
           {"protocol": "dns", "action": "hijack-dns"},
+          {"ip_cidr": ["198.18.0.0/15"], "outbound": "proxy"},
           {"ip_is_private": true, "outbound": "direct"},
           if (splitTunnelingPackages.isNotEmpty)
             {"package_name": splitTunnelingPackages, "outbound": "direct"},

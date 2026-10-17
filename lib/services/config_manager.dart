@@ -254,6 +254,9 @@ class ConfigManager extends ChangeNotifier {
     return best ?? (validatedConfigs.isNotEmpty ? validatedConfigs.first : null);
   }
   List<VpnConfigWithMetrics> favoriteConfigs = [];
+  List<VpnConfigWithMetrics> get gamingConfigs =>
+      validatedConfigs.where((c) => c.isGamingOptimized).toList()
+        ..sort((a, b) => a.currentPing.compareTo(b.currentPing));
   List<VpnConfigWithMetrics> reserveList = []; // Fallback servers
   Set<String> _blockedConfigs = {}; // Blacklist for deleted configs
 
@@ -826,14 +829,15 @@ class ConfigManager extends ChangeNotifier {
     );
 
     // Find current index in validCandidates and pick next sequentially
+    final currentId = _selectedConfig?.id;
     VpnConfigWithMetrics? candidate;
-    final currentIndex = validCandidates.indexWhere((c) => c.id == _selectedConfig?.id);
+    final currentIndex = validCandidates.indexWhere((c) => c.id == currentId);
     if (currentIndex != -1 && validCandidates.length > 1) {
       final nextIndex = (currentIndex + 1) % validCandidates.length;
       candidate = validCandidates[nextIndex];
     } else {
       for (final c in validCandidates) {
-        if (c.id != _selectedConfig?.id) {
+        if (c.id != currentId) {
           candidate = c;
           break;
         }
@@ -853,7 +857,10 @@ class ConfigManager extends ChangeNotifier {
     _safeNotifyListeners();
 
     if (performConnection) {
-      await connectWithSmartFailover(preferredConfig: candidate);
+      await connectWithSmartFailover(
+        preferredConfig: candidate,
+        excludeId: currentId,
+      );
     }
     return true;
   }
@@ -1098,37 +1105,59 @@ class ConfigManager extends ChangeNotifier {
   }
 
   // --- UI & LEGACY COMPATIBILITY METHODS ---
-  Future<VpnConfigWithMetrics?> getBestConfig() async {
-    // 1. If user explicitly selected a config and auto-switch is disabled, always honor user's choice
-    if (_selectedConfig != null && !_isAutoSwitchEnabled) {
+  Future<VpnConfigWithMetrics?> getBestConfig({
+    String? excludeId,
+    Set<String>? excludeIds,
+  }) async {
+    final Set<String> excluded = {
+      if (excludeId != null) excludeId,
+      ...?excludeIds,
+    };
+
+    bool isExcluded(VpnConfigWithMetrics c) => excluded.contains(c.id);
+
+    // 1. If user explicitly selected a config and auto-switch is disabled, always honor user's choice (if not excluded)
+    if (_selectedConfig != null &&
+        !_isAutoSwitchEnabled &&
+        !isExcluded(_selectedConfig!)) {
       return _selectedConfig;
     }
 
-    // 2. If user selected a valid config, honor it
-    if (_selectedConfig != null && _selectedConfig!.isValidated) {
+    // 2. If user selected a valid config and not excluded, honor it
+    if (_selectedConfig != null &&
+        _selectedConfig!.isValidated &&
+        !isExcluded(_selectedConfig!)) {
       return _selectedConfig;
     }
 
-    // 3. Priority: Valid favorites
-    final validFavorites = favoriteConfigs.where((c) => c.isValidated);
+    // 3. Priority: Valid favorites not excluded
+    final validFavorites =
+        favoriteConfigs.where((c) => c.isValidated && !isExcluded(c)).toList();
     if (validFavorites.isNotEmpty) {
+      validFavorites.sort((a, b) => b.calculatedScore.compareTo(a.calculatedScore));
       return validFavorites.first;
     }
 
-    // 4. Priority: Fastest validated config
-    if (fastestValidatedConfig != null) {
-      return fastestValidatedConfig;
-    }
-    if (validatedConfigs.isNotEmpty) {
-      return validatedConfigs.first;
+    // 4. Priority: Fastest validated config not excluded
+    final candidates = validatedConfigs.where((c) => !isExcluded(c)).toList();
+    if (candidates.isNotEmpty) {
+      candidates.sort((a, b) => b.calculatedScore.compareTo(a.calculatedScore));
+      return candidates.first;
     }
 
-    // 5. If user had selected any config, return it
-    if (_selectedConfig != null) {
+    // 5. If user had selected any config that is not excluded
+    if (_selectedConfig != null && !isExcluded(_selectedConfig!)) {
       return _selectedConfig;
     }
 
-    // 6. When no server is validated yet, return null so callers can run discovery rather than connecting to dead servers
+    // 6. Any other alive config not excluded
+    final fallbackAlive =
+        allConfigs.where((c) => c.isAlive && !isExcluded(c)).toList();
+    if (fallbackAlive.isNotEmpty) {
+      fallbackAlive.sort((a, b) => b.calculatedScore.compareTo(a.calculatedScore));
+      return fallbackAlive.first;
+    }
+
     return null;
   }
 
@@ -1262,7 +1291,11 @@ class ConfigManager extends ChangeNotifier {
   }
 
   // --- SMART FAILOVER CONNECTION ---
-  Future<void> connectWithSmartFailover({VpnConfigWithMetrics? preferredConfig}) async {
+  Future<void> connectWithSmartFailover({
+    VpnConfigWithMetrics? preferredConfig,
+    String? excludeId,
+    Set<String>? excludeIds,
+  }) async {
     userInitiatedDisconnect = false;
     isConnectionCancelled = false;
     AdvancedLogger.info(
@@ -1275,11 +1308,25 @@ class ConfigManager extends ChangeNotifier {
       FunnelService().stop();
     } catch (_) {}
 
+    final Set<String> attemptedIds = {
+      if (excludeId != null) excludeId,
+      ...?excludeIds,
+    };
+
     // 1. Notify UI
     setConnected(false, status: 'Optimizing connection...');
 
-    // 2. Get target config: preferredConfig takes highest priority, then _selectedConfig, then getBestConfig()
-    VpnConfigWithMetrics? target = preferredConfig ?? _selectedConfig ?? await getBestConfig();
+    // 2. Get target config: preferredConfig takes highest priority, then _selectedConfig (if not excluded), then getBestConfig(excludeIds)
+    VpnConfigWithMetrics? target;
+    if (preferredConfig != null && !attemptedIds.contains(preferredConfig.id)) {
+      target = preferredConfig;
+    } else if (_selectedConfig != null &&
+        !attemptedIds.contains(_selectedConfig!.id) &&
+        _selectedConfig!.isValidated) {
+      target = _selectedConfig;
+    } else {
+      target = await getBestConfig(excludeIds: attemptedIds);
+    }
 
     if (target == null) {
       AdvancedLogger.warn(
@@ -1296,6 +1343,7 @@ class ConfigManager extends ChangeNotifier {
 
     while (
         attempts < maxAttempts && target != null && !_isGlobalStopRequested) {
+      attemptedIds.add(target.id);
       try {
         selectConfig(target); // Update UI selection
 
@@ -1397,9 +1445,9 @@ class ConfigManager extends ChangeNotifier {
           break;
         }
 
-        // 7. Prepare next
+        // 7. Prepare next (excluding all attempted IDs)
         attempts++;
-        target = await getBestConfig(); // Get NEW best
+        target = await getBestConfig(excludeIds: attemptedIds);
 
         if (target != null && target.id != _selectedConfig?.id) {
           setConnected(false, status: 'Switching to ${target.name}...');

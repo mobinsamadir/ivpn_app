@@ -54,12 +54,36 @@ class SingboxVpnService :
     companion object {
         const val VPN_NOTIFICATION_CHANNEL_ID = "ivpn_service_channel"
         const val VPN_NOTIFICATION_ID = 1
+        const val LOW_TIME_CHANNEL_ID = "ivpn_low_time_channel"
+        const val LOW_TIME_NOTIFICATION_ID = 99
         const val ACTION_START = "start"
         const val ACTION_STOP = "stop"
+        const val ACTION_DISCONNECT = "disconnect"
         const val ACTION_SKIP_SERVER = "skip_server"
 
+        @Volatile var currentServerName: String = ""
+        @Volatile var currentRemainingTimeText: String = ""
+        @Volatile var currentRemainingSeconds: Int = -1
+        @Volatile var lastDownSpeed: Long = 0
+        @Volatile var lastUpSpeed: Long = 0
+        @Volatile var lastRx: Long = 0
+        @Volatile var lastTx: Long = 0
+
         fun updateTraffic(rx: Long, tx: Long, downSpeed: Long, upSpeed: Long) {
-            activeServiceInstance?.updateNotificationStats(rx, tx, downSpeed, upSpeed)
+            lastRx = rx
+            lastTx = tx
+            lastDownSpeed = downSpeed
+            lastUpSpeed = upSpeed
+            activeServiceInstance?.updateNotificationStats()
+        }
+
+        fun updateSessionMeta(serverName: String?, remainingTimeText: String?, remainingSeconds: Int) {
+            if (serverName != null) currentServerName = serverName
+            if (remainingTimeText != null) currentRemainingTimeText = remainingTimeText
+            currentRemainingSeconds = remainingSeconds
+            android.util.Log.d("NativeVpnLifecycle", "updateSessionMeta: server=$currentServerName, time=$currentRemainingTimeText, remainingSec=$remainingSeconds")
+            activeServiceInstance?.updateNotificationStats()
+            activeServiceInstance?.checkLowTimeAlert(remainingSeconds)
         }
 
         var isVpnRunning = false
@@ -400,6 +424,13 @@ class SingboxVpnService :
             return START_NOT_STICKY
         }
 
+        if (action == ACTION_DISCONNECT) {
+            android.util.Log.d("NativeVpnLifecycle", "onStartCommand: ACTION_DISCONNECT received")
+            MainActivity.sendVpnStatus("USER_ACTION:DISCONNECT")
+            forceStopVpnNowInternal()
+            return START_NOT_STICKY
+        }
+
         if (action == ACTION_SKIP_SERVER) {
             android.util.Log.d("NativeVpnLifecycle", "onStartCommand: ACTION_SKIP_SERVER received, notifying Dart to skip")
             MainActivity.sendVpnStatus("USER_ACTION:SKIP")
@@ -547,6 +578,8 @@ class SingboxVpnService :
                 @Suppress("DEPRECATION")
                 stopForeground(true)
             }
+            val manager = getSystemService(NotificationManager::class.java)
+            manager?.cancel(LOW_TIME_NOTIFICATION_ID)
         } catch (e: Throwable) {
             android.util.Log.e("NativeVpnLifecycle", "Error in stopForeground: ${e.message}")
         }
@@ -571,9 +604,24 @@ class SingboxVpnService :
                     VPN_NOTIFICATION_CHANNEL_ID,
                     "iVPN Connection Status",
                     NotificationManager.IMPORTANCE_LOW,
-                )
+                ).apply {
+                    setShowBadge(false)
+                    enableVibration(false)
+                    setSound(null, null)
+                }
+
+            val lowTimeChannel =
+                NotificationChannel(
+                    LOW_TIME_CHANNEL_ID,
+                    "iVPN Account Alerts",
+                    NotificationManager.IMPORTANCE_HIGH,
+                ).apply {
+                    description = "Alerts when VPN access time is running out"
+                }
+
             val manager = getSystemService(NotificationManager::class.java)
-            manager.createNotificationChannel(serviceChannel)
+            manager?.createNotificationChannel(serviceChannel)
+            manager?.createNotificationChannel(lowTimeChannel)
         }
     }
 
@@ -587,7 +635,7 @@ class SingboxVpnService :
         return String.format("%.2f GB", gb)
     }
 
-    private fun createNotification(contentText: String? = null): Notification {
+    private fun createNotification(): Notification {
         val notificationIntent = Intent(this, MainActivity::class.java)
         val pendingIntent =
             PendingIntent.getActivity(
@@ -607,23 +655,76 @@ class SingboxVpnService :
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
 
+        val disconnectIntent = Intent(this, SingboxVpnService::class.java).apply {
+            putExtra("action", ACTION_DISCONNECT)
+        }
+        val disconnectPendingIntent = PendingIntent.getService(
+            this,
+            2,
+            disconnectIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+
+        val title = if (currentServerName.isNotBlank() && currentServerName != "Connected") {
+            "$currentServerName • Connected"
+        } else {
+            "iVPN Connected"
+        }
+
+        val content = buildString {
+            if (currentRemainingTimeText.isNotBlank()) {
+                append("⏳ $currentRemainingTimeText  •  ")
+            }
+            append("↓ ${formatBytes(lastDownSpeed)}/s   ↑ ${formatBytes(lastUpSpeed)}/s  •  Total: ${formatBytes(lastRx + lastTx)}")
+        }
+
         return NotificationCompat
             .Builder(this, VPN_NOTIFICATION_CHANNEL_ID)
-            .setContentTitle("iVPN is Connected")
-            .setContentText(contentText ?: "Your traffic is secure")
+            .setContentTitle(title)
+            .setContentText(content)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
+            .setOnlyAlertOnce(true)
             .addAction(android.R.drawable.ic_media_next, "Skip Server", skipPendingIntent)
+            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Disconnect", disconnectPendingIntent)
             .build()
     }
 
-    fun updateNotificationStats(rx: Long, tx: Long, downSpeed: Long, upSpeed: Long) {
+    fun updateNotificationStats() {
         if (!isVpnRunning) return
-        val text = "↓ ${formatBytes(downSpeed)}/s   ↑ ${formatBytes(upSpeed)}/s  |  Total: ${formatBytes(rx + tx)}"
-        val notification = createNotification(text)
+        val notification = createNotification()
         val manager = getSystemService(NotificationManager::class.java)
         manager?.notify(VPN_NOTIFICATION_ID, notification)
+    }
+
+    fun checkLowTimeAlert(remainingSeconds: Int) {
+        if (!isVpnRunning) return
+        val manager = getSystemService(NotificationManager::class.java) ?: return
+        if (remainingSeconds in 1..300) { // Under 5 minutes left
+            val intent = Intent(this, MainActivity::class.java).apply {
+                putExtra("action", "open_reward_ad")
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
+            val pi = PendingIntent.getActivity(
+                this,
+                3,
+                intent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+            val minutesLeft = Math.max(1, remainingSeconds / 60)
+            val alert = NotificationCompat.Builder(this, LOW_TIME_CHANNEL_ID)
+                .setContentTitle("Access Time Running Low")
+                .setContentText("You have $minutesLeft min left. Tap to extend time now.")
+                .setSmallIcon(R.mipmap.ic_launcher)
+                .setContentIntent(pi)
+                .setAutoCancel(true)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .build()
+            manager.notify(LOW_TIME_NOTIFICATION_ID, alert)
+        } else if (remainingSeconds > 300 || remainingSeconds <= 0) {
+            manager.cancel(LOW_TIME_NOTIFICATION_ID)
+        }
     }
 
     override fun openTun(options: TunOptions): Int {

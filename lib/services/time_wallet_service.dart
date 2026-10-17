@@ -86,6 +86,17 @@ class TimeWalletService extends ChangeNotifier {
     return diff > 0 ? diff ~/ 1000 : 0;
   }
 
+  String get formattedTime {
+    final sec = remainingSeconds;
+    final h = sec ~/ 3600;
+    final m = (sec % 3600) ~/ 60;
+    final s = sec % 60;
+    if (h > 0) {
+      return '${h}h ${m}m';
+    }
+    return '${m}m ${s}s';
+  }
+
   bool get hasTime => remainingSeconds > 0;
 
   /// Add time to wallet (e.g., after watching an ad)

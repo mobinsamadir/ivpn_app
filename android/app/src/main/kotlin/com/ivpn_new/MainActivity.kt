@@ -80,6 +80,24 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleNotificationAction(intent)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        handleNotificationAction(intent)
+    }
+
+    private fun handleNotificationAction(intent: Intent?) {
+        val action = intent?.getStringExtra("action")
+        if (action == "open_reward_ad") {
+            intent.removeExtra("action")
+            sendVpnStatus("USER_ACTION:OPEN_REWARD_AD")
+        }
+    }
+
     override fun configureFlutterEngine(
         @NonNull flutterEngine: FlutterEngine,
     ) {
@@ -301,6 +319,13 @@ class MainActivity : FlutterActivity() {
                         "stopTestProxy" -> {
                             SingboxVpnService.stopTestProxy()
                             result.success(null)
+                        }
+                        "updateSessionMeta" -> {
+                            val serverName = call.argument<String>("serverName")
+                            val remainingTimeText = call.argument<String>("remainingTimeText")
+                            val remainingSeconds = call.argument<Int>("remainingSeconds") ?: -1
+                            SingboxVpnService.updateSessionMeta(serverName, remainingTimeText, remainingSeconds)
+                            result.success(true)
                         }
                         "installApk" -> {
                             val filePath = call.argument<String>("filePath")

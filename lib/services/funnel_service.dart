@@ -336,6 +336,7 @@ class FunnelService {
       try {
         // STAGE 1: TCP Connect (Raw Dart Socket)
         bool passed = false;
+        int tcpLatency = -1;
 
         // Use Cached Details and remove from cache to free memory immediately
         final details = _cachedServerDetails.remove(config.id);
@@ -344,6 +345,7 @@ class FunnelService {
           final host = details['host'] as String;
           final port = details['port'] as int? ?? 443;
 
+          final sw = Stopwatch()..start();
           try {
             // Dynamic timeout from NetworkTuningConfig (tolerates censored/high-latency networks)
             final socket = await Socket.connect(
@@ -352,7 +354,9 @@ class FunnelService {
               timeout: Duration(milliseconds: NetworkTuningConfig.instance.tcpPingTimeoutMs),
             );
             socket.destroy();
+            sw.stop();
             passed = true;
+            tcpLatency = sw.elapsedMilliseconds;
           } catch (_) {
             // Failed
           }
@@ -360,11 +364,16 @@ class FunnelService {
 
         if (passed) {
           _tcpPassed++;
-          // Promote to HTTP Queue
-          _httpQueue.add(config);
-
-          // Optimistic Update: Mark TCP passed in UI (optional, but good for feedback)
-          // We don't save to disk yet to avoid IO thrashing
+          final updated = config.copyWith(
+            ping: tcpLatency,
+            funnelStage: 1,
+            stageResults: {
+              ...config.stageResults,
+              'TCP': TestResult(success: true, latency: tcpLatency),
+            },
+          );
+          _httpQueue.add(updated);
+          await _configManager.updateConfigDirectly(updated);
         } else {
           // Failed TCP - Mark Dead
           _totalFailed++;

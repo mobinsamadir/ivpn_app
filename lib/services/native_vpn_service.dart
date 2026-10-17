@@ -84,7 +84,8 @@ class NativeVpnService {
                 "RECONNECTING",
                 "PAUSED",
               ].contains(message) ||
-              message.startsWith("ERROR");
+              message.startsWith("ERROR") ||
+              message.startsWith("USER_ACTION:");
 
           if (isStatus) {
             _lastKnownState = message;
@@ -369,6 +370,23 @@ class NativeVpnService {
       AdvancedLogger.info("Disconnect command sent.");
     } catch (e) {
       AdvancedLogger.error("Failed to send disconnect command: $e");
+    }
+  }
+
+  Future<void> updateSessionMeta({
+    String? serverName,
+    String? remainingTimeText,
+    int? remainingSeconds,
+  }) async {
+    if (!Platform.isAndroid) return;
+    try {
+      await _methodChannel.invokeMethod('updateSessionMeta', {
+        'serverName': serverName,
+        'remainingTimeText': remainingTimeText,
+        'remainingSeconds': remainingSeconds,
+      });
+    } catch (e) {
+      AdvancedLogger.error("Failed to update session meta: $e");
     }
   }
 

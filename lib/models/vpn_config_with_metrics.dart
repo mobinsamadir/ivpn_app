@@ -108,33 +108,74 @@ class VpnConfigWithMetrics implements Comparable<VpnConfigWithMetrics> {
     return deviceMetrics.values.firstOrNull?.latestPing ?? -1;
   }
 
-  // Legacy Score (Deprecated usage but kept for backward compat if needed)
-  double get score {
-    // Cache expensive getters to prevent O(N log N) bottlenecks during sorting
-    final int cachedPing = currentPing;
+  String get protocolType {
+    final lower = rawConfig.toLowerCase();
+    if (lower.startsWith('vless://')) {
+      if (lower.contains('security=reality')) return 'vless-reality';
+      if (lower.contains('type=grpc')) return 'vless-grpc';
+      return 'vless';
+    }
+    if (lower.startsWith('trojan://')) {
+      if (lower.contains('type=grpc')) return 'trojan-grpc';
+      return 'trojan';
+    }
+    if (lower.startsWith('vmess://')) return 'vmess';
+    if (lower.startsWith('ss://')) return 'shadowsocks';
+    return 'other';
+  }
 
-    // 1. Funnel Stage (0-3) - Biggest Factor (1000 points per stage)
+  // Composite Health, TTFB & Stability Score
+  double get score {
+    final int cachedPing = currentPing;
+    final httpResult = stageResults['HTTP'];
+    final int? ttfb = (httpResult?.success == true && (httpResult?.latency ?? 0) > 0)
+        ? httpResult!.latency
+        : null;
+
+    // 1. Funnel Stage (0-3) - (1000 points per validated stage)
     double baseScore = funnelStage * 1000.0;
 
-    // 2. Speed Score (0-50) - (10 points per unit)
-    baseScore += speedScore * 10.0;
-
-    // 3. Ping Bonus
-    if (cachedPing > 0) {
-      baseScore +=
-          (2000 - cachedPing) / 10.0; // Lower ping gives slightly more points
-    } else {
-      // 4. PURGATORY BONUS: Not Verified (-1 Ping), but has History
-      if (lastSuccessfulConnectionTime > 0) {
-        baseScore += 100.0; // Rank above purely random/dead configs
-      }
+    // 2. Real TTFB Latency (Time to First Byte over HTTP 204)
+    if (ttfb != null && ttfb > 0) {
+      baseScore += (3000.0 - ttfb.clamp(50, 3000)) * 0.5;
+    } else if (cachedPing > 0) {
+      // Fallback: TCP Socket Ping
+      baseScore += (2000.0 - cachedPing.clamp(50, 2000)) * 0.2;
+    } else if (lastSuccessfulConnectionTime > 0) {
+      // Historical success purgatory bonus
+      baseScore += 100.0;
     }
 
-    // 5. Favorite Override
-    if (isFavorite) baseScore += 5000;
+    // 3. Speed Score (0-50)
+    baseScore += speedScore * 10.0;
 
-    // 6. Failure Penalty
-    baseScore -= (failureCount * 50);
+    // 4. Stability Index (Reliability through successful sessions)
+    final int successfulSessions = deviceMetrics.values.fold<int>(
+      0,
+      (sum, m) => sum + m.usageCount,
+    );
+    baseScore += (successfulSessions * 30.0).clamp(0, 300.0);
+
+    // 5. Freshness Bonus: Tested within last 30 minutes
+    if (lastTestedAt != null &&
+        DateTime.now().difference(lastTestedAt!).inMinutes < 30 &&
+        funnelStage >= 2) {
+      baseScore += 150.0;
+    }
+
+    // 6. Protocol Resilience Bonus (Tested to resist DPI throttling)
+    final proto = protocolType;
+    if (proto == 'vless-reality') {
+      baseScore += 150.0;
+    } else if (proto == 'trojan-grpc' || proto == 'vless-grpc') {
+      baseScore += 100.0;
+    }
+
+    // 7. Favorite Override
+    if (isFavorite) baseScore += 5000.0;
+
+    // 8. Failure Penalty
+    baseScore -= (failureCount * 75.0);
 
     return baseScore;
   }
@@ -149,6 +190,25 @@ class VpnConfigWithMetrics implements Comparable<VpnConfigWithMetrics> {
 
   double get successRate {
     return 0.0; // Placeholder
+  }
+
+  /// Latency jitter estimate between TCP socket ping and HTTP TTFB latency
+  int? get jitter {
+    final int tcpPing = ping > 0 ? ping : (stageResults['TCP']?.latency ?? -1);
+    final int httpPing = stageResults['HTTP']?.latency ?? -1;
+    if (tcpPing > 0 && httpPing > 0) {
+      return (httpPing - tcpPing).abs();
+    }
+    return null;
+  }
+
+  /// Whether this server is optimized for low-latency gaming (Ping <= 160ms, Jitter <= 90ms)
+  bool get isGamingOptimized {
+    final p = currentPing;
+    if (p <= 0 || p > 160) return false;
+    final j = jitter;
+    if (j != null && j > 90) return false;
+    return isValidated;
   }
 
   // Helper to check if config is dead

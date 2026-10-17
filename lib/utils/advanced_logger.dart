@@ -227,9 +227,7 @@ class AdvancedLogger {
     String message, {
     Map<String, dynamic>? metadata,
   }) {
-    // Release Mode: Only allow critical errors AND warnings (for native logs)
-    if (kReleaseMode && level.index < LogLevel.warn.index) return;
-
+    // Keep info/warn/error logs available in release mode so 'adb logcat' displays full debugging lifecycle
     if (level.index < _minLevel.index) return;
 
     final maskedMessage = _maskSensitiveData(message);
@@ -243,11 +241,17 @@ class AdvancedLogger {
         'metadata': maskedMetadata,
     };
 
-    // Console output with colors
+    // Console output with colors for ADB logcat
     final color = _getColorCode(level);
     const reset = '\x1B[0m';
     final levelStr = level.toString().split('.').last.padRight(5);
-    debugPrint('$color[$levelStr]$reset $maskedMessage');
+    final logLine = '$color[$levelStr]$reset $maskedMessage';
+    debugPrint(logLine);
+    if (kReleaseMode) {
+      // In release mode on Android, print directly so 'adb logcat -s flutter' captures it
+      // ignore: avoid_print
+      print('[iVPN] $logLine');
+    }
     if (maskedMetadata != null && maskedMetadata.isNotEmpty) {
       debugPrint('  └─ ${jsonEncode(maskedMetadata)}');
     }
