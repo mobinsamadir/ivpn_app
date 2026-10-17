@@ -377,22 +377,31 @@ class _MobileWebView extends StatefulWidget {
 
 class _MobileWebViewState extends State<_MobileWebView> {
   late final WebViewController _controller;
-  final ValueNotifier<bool> _isLoadingNotifier = ValueNotifier(true);
+  final ValueNotifier<bool> _isReadyNotifier = ValueNotifier(false);
+  Timer? _loadTimeoutTimer;
 
   @override
   void initState() {
     super.initState();
     AdvancedLogger.info('[AdWidget] Loading Mobile HTML...');
+
+    // Safety timeout: If ad does not load cleanly within 4 seconds, keep sponsor card visible
+    _loadTimeoutTimer = Timer(const Duration(seconds: 4), () {
+      if (mounted && !_isReadyNotifier.value) {
+        AdvancedLogger.info('[AdWidget] Mobile HTML load timed out (4s), keeping sponsor card.');
+      }
+    });
+
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..enableZoom(false)
       ..enableZoom(false)
       ..setBackgroundColor(Colors.transparent)
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageFinished: (_) {
             AdvancedLogger.info('[AdWidget] Mobile Page Loaded.');
-            if (mounted) _isLoadingNotifier.value = false;
+            _loadTimeoutTimer?.cancel();
+            if (mounted) _isReadyNotifier.value = true;
           },
           onNavigationRequest: (NavigationRequest request) {
             final url = request.url;
@@ -410,33 +419,27 @@ class _MobileWebViewState extends State<_MobileWebView> {
 
   @override
   void dispose() {
-    _isLoadingNotifier.dispose();
+    _loadTimeoutTimer?.cancel();
+    _isReadyNotifier.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        WebViewWidget(
-          controller: _controller,
-          gestureRecognizers: <Factory<
-              OneSequenceGestureRecognizer>>{}, // Prevent scroll hijacking
-        ),
-        ValueListenableBuilder<bool>(
-          valueListenable: _isLoadingNotifier,
-          builder: (context, isLoading, child) {
-            if (isLoading) {
-              return const Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blueAccent),
-                ),
-              );
-            }
-            return const SizedBox.shrink();
-          },
-        ),
-      ],
+    return ValueListenableBuilder<bool>(
+      valueListenable: _isReadyNotifier,
+      builder: (context, isReady, child) {
+        return AnimatedOpacity(
+          opacity: isReady ? 1.0 : 0.0,
+          duration: const Duration(milliseconds: 300),
+          child: isReady
+              ? WebViewWidget(
+                  controller: _controller,
+                  gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{},
+                )
+              : const SizedBox.shrink(),
+        );
+      },
     );
   }
 }

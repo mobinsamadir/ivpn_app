@@ -408,13 +408,16 @@ class FunnelService {
           // Update Manager (triggers Sort & UI update)
           await _configManager.updateConfigDirectly(result);
 
-          // Update best candidate notifier live
-          if (result.currentPing > 0) {
-            final currentBest = bestDiscoveredConfigNotifier.value;
-            if (currentBest == null || result.currentPing < currentBest.currentPing) {
-              bestDiscoveredConfigNotifier.value = result;
+          // Update best candidate notifier live with the fastest server discovered so far
+          final topCandidate = _configManager.fastestValidatedConfig ?? result;
+          if (topCandidate.currentPing > 0) {
+            final prev = bestDiscoveredConfigNotifier.value;
+            if (prev == null ||
+                topCandidate.currentPing < prev.currentPing ||
+                prev.id != topCandidate.id) {
+              bestDiscoveredConfigNotifier.value = topCandidate;
               AdvancedLogger.info(
-                "[FunnelService] ⚡ Faster candidate discovered: ${result.name} (${result.currentPing}ms)",
+                "[FunnelService] ⚡ Dynamically updated fastest server: ${topCandidate.name} (${topCandidate.currentPing}ms)",
               );
             }
           }
@@ -468,6 +471,16 @@ class FunnelService {
         if (result.funnelStage == 3) {
           _speedFinished++;
           await _configManager.updateConfigDirectly(result);
+
+          final topCandidate = _configManager.fastestValidatedConfig ?? result;
+          if (topCandidate.currentPing > 0) {
+            final prev = bestDiscoveredConfigNotifier.value;
+            if (prev == null ||
+                topCandidate.currentPing < prev.currentPing ||
+                prev.id != topCandidate.id) {
+              bestDiscoveredConfigNotifier.value = topCandidate;
+            }
+          }
         }
         // If speed test fails (but HTTP passed), we still keep it as Stage 2 valid
         // EphemeralTester handles this (returns Stage 2 result if Stage 3 fails)

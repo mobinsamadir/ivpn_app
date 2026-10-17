@@ -569,24 +569,30 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
     }
 
     // New Smart Fetch Logic
-    try {
-      final success = await _configGistService.fetchAndApplyConfigs(
-        _configManager,
-      );
-      if (!success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              "⚠️ Server list could not be loaded. Please check your connection and tap Refresh.",
-            ),
-            backgroundColor: Colors.orangeAccent,
-            duration: Duration(seconds: 4),
-          ),
+    if (_autoRefreshOnStartup) {
+      try {
+        final success = await _configGistService.fetchAndApplyConfigs(
+          _configManager,
         );
+        if (!success && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                "⚠️ Server list could not be loaded. Please check your connection and tap Refresh.",
+              ),
+              backgroundColor: Colors.orangeAccent,
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
+      } catch (e) {
+        AdvancedLogger.warn("[HomeScreen] Config fetch failed: $e");
+      } finally {
+        if (mounted) {
+          _isFetching.value = false;
+        }
       }
-    } catch (e) {
-      AdvancedLogger.warn("[HomeScreen] Config fetch failed: $e");
-    } finally {
+    } else {
       if (mounted) {
         _isFetching.value = false;
       }
@@ -597,16 +603,14 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
       _configGistService.checkForUpdates(context);
     }
 
-    // Auto Refresh on startup if enabled
-    if (_autoRefreshOnStartup) {
-      AdvancedLogger.info("[HomeScreen] Triggering Auto-Refresh on startup...");
-      await _refreshConfigsManual();
-    }
-
-    // Auto Test on startup if enabled
-    if (_autoTestOnStartup) {
-      AdvancedLogger.info("[HomeScreen] Triggering Auto-Test on startup...");
-      await _runSmartAutoTest();
+    // Auto Test on startup if enabled (delayed slightly so UI finishes smooth initial draw)
+    if (_autoTestOnStartup && mounted) {
+      Future.delayed(const Duration(milliseconds: 1000), () {
+        if (mounted && !_configManager.isConnected) {
+          AdvancedLogger.info("[HomeScreen] Triggering Auto-Test in background...");
+          _runSmartAutoTest();
+        }
+      });
     }
   }
 
@@ -845,14 +849,16 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                               valueListenable:
                                   _funnelService.bestDiscoveredConfigNotifier,
                               builder: (context, bestConfig, _) {
-                                if (bestConfig == null ||
-                                    _configManager.isConnected) {
+                                final candidate = bestConfig ?? _configManager.fastestValidatedConfig;
+                                if (candidate == null ||
+                                    _configManager.isConnected ||
+                                    candidate.id == _configManager.selectedConfig?.id) {
                                   return const SizedBox.shrink();
                                 }
                                 return _QuickConnectSuggestionCard(
-                                  config: bestConfig,
+                                  config: candidate,
                                   onQuickConnect: () =>
-                                      _quickConnectToConfig(bestConfig),
+                                      _quickConnectToConfig(candidate),
                                 );
                               },
                             ),
@@ -1259,9 +1265,12 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
       }
 
       // 1. SMART WAIT LOOP
-      // If we have no valid configs yet (or selected config is not validated), wait for the Funnel
-      final bool hasValidSelected = _configManager.selectedConfig?.isValidated ?? false;
-      if (_configManager.validatedConfigs.isEmpty && !hasValidSelected) {
+      // Only run discovery wait loop if auto-switch is ENABLED and no candidate is validated yet!
+      // If auto-switch is disabled OR user manually selected a config, connect immediately without waiting!
+      final bool isAutoSwitch = _configManager.isAutoSwitchEnabled;
+      final bool hasManualSelection = _configManager.selectedConfig != null;
+
+      if (isAutoSwitch && !hasManualSelection && _configManager.validatedConfigs.isEmpty) {
         _configManager.setConnected(false, status: 'Finding fastest servers...');
 
         // Start Funnel with lightweight connectivity probe (no heavy speed test)
@@ -1309,17 +1318,26 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
         }
       }
 
-      // Final check: Never connect if no validated config exists
-      final bool canConnect = _configManager.validatedConfigs.isNotEmpty ||
-          (_configManager.selectedConfig?.isValidated ?? false);
-      if (!canConnect) {
-        AdvancedLogger.warn(
-          "[HomeScreen] Cannot connect: No validated configurations available.",
-        );
-        _showToast("No valid configurations available.");
-        _configManager.setConnected(false, status: 'Failed');
-        _connectionFlowState = 'idle';
-        return;
+      // Final check: Validate only if auto-switch is enabled
+      if (isAutoSwitch) {
+        final bool canConnect = _configManager.validatedConfigs.isNotEmpty ||
+            (_configManager.selectedConfig?.isValidated ?? false);
+        if (!canConnect) {
+          AdvancedLogger.warn(
+            "[HomeScreen] Cannot connect: No validated configurations available.",
+          );
+          _showToast("No valid configurations available.");
+          _configManager.setConnected(false, status: 'Failed');
+          _connectionFlowState = 'idle';
+          return;
+        }
+      } else {
+        if (_configManager.allConfigs.isEmpty) {
+          _showToast("No configurations available.");
+          _configManager.setConnected(false, status: 'Failed');
+          _connectionFlowState = 'idle';
+          return;
+        }
       }
 
       // Stop FunnelService before connecting so it doesn't hold locks/ports

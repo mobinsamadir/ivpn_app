@@ -73,11 +73,49 @@ class ConfigGistService {
   static const String _cdnUpdateUrl =
       'https://cdn.jsdelivr.net/gh/mobinsamadir/ivpn_app@main/assets/version.json';
 
-  // Mirrors List (GitHub Raw + jsDelivr CDN Mirror)
-  static const List<String> _mirrors = [
-    'https://raw.githubusercontent.com/mobinsamadir/ivpn-servers/main/real_delay_passed.txt',
-    'https://cdn.jsdelivr.net/gh/mobinsamadir/ivpn-servers@main/real_delay_passed.txt',
-  ];
+  static const String _serverUrlsCacheKey = 'cached_server_urls';
+
+  static Future<List<String>> getServerUrls() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cached = prefs.getStringList(_serverUrlsCacheKey);
+      if (cached != null && cached.isNotEmpty) {
+        return cached;
+      }
+    } catch (_) {}
+
+    try {
+      final localJsonStr = await rootBundle.loadString('assets/version.json');
+      final data = jsonDecode(localJsonStr);
+      if (data is Map && data['server_urls'] is List) {
+        final list = (data['server_urls'] as List)
+            .map((e) => e.toString().trim())
+            .where((u) => u.isNotEmpty)
+            .toList();
+        if (list.isNotEmpty) return list;
+      }
+    } catch (_) {}
+
+    return const [];
+  }
+
+  static Future<void> saveServerUrls(List<dynamic> urls) async {
+    try {
+      final list = urls
+          .map((e) => e.toString().trim())
+          .where((u) => u.isNotEmpty)
+          .toList();
+      if (list.isNotEmpty) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setStringList(_serverUrlsCacheKey, list);
+        AdvancedLogger.info(
+          "[ConfigGistService] Dynamically updated ${list.length} server URLs from version.json",
+        );
+      }
+    } catch (e) {
+      AdvancedLogger.warn("[ConfigGistService] Failed to cache server URLs: $e");
+    }
+  }
 
   Future<void> checkForUpdates(BuildContext context) async {
     try {
@@ -122,6 +160,9 @@ class ConfigGistService {
       if (responseBody != null) {
         NetworkTuningConfig.instance.refresh(responseBody);
         final data = await compute(_parseJsonInIsolate, responseBody);
+        if (data is Map && data['server_urls'] is List) {
+          await saveServerUrls(data['server_urls'] as List);
+        }
         if (data['telegram_support'] != null &&
             data['telegram_support'].toString().trim().isNotEmpty) {
           telegramSupport = data['telegram_support'].toString().trim();
@@ -206,7 +247,8 @@ class ConfigGistService {
     );
 
     bool success = false;
-    for (var url in _mirrors) {
+    final mirrors = await getServerUrls();
+    for (var url in mirrors) {
       if (success) break;
       try {
         final content = await _robustFetch(url);

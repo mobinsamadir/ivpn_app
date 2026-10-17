@@ -242,6 +242,17 @@ class ConfigManager extends ChangeNotifier {
   // --- STATE VARIABLES ---
   List<VpnConfigWithMetrics> allConfigs = [];
   List<VpnConfigWithMetrics> validatedConfigs = [];
+  VpnConfigWithMetrics? get fastestValidatedConfig {
+    if (validatedConfigs.isEmpty) return null;
+    VpnConfigWithMetrics? best;
+    for (final c in validatedConfigs) {
+      if (c.currentPing <= 0) continue;
+      if (best == null || c.currentPing < best.currentPing) {
+        best = c;
+      }
+    }
+    return best ?? (validatedConfigs.isNotEmpty ? validatedConfigs.first : null);
+  }
   List<VpnConfigWithMetrics> favoriteConfigs = [];
   List<VpnConfigWithMetrics> reserveList = []; // Fallback servers
   Set<String> _blockedConfigs = {}; // Blacklist for deleted configs
@@ -280,7 +291,7 @@ class ConfigManager extends ChangeNotifier {
   final bool _isRefreshing = false;
   bool get isRefreshing => _isRefreshing;
 
-  bool _isAutoSwitchEnabled = true;
+  bool _isAutoSwitchEnabled = false;
   bool get isAutoSwitchEnabled => _isAutoSwitchEnabled;
   set isAutoSwitchEnabled(bool value) {
     _isAutoSwitchEnabled = value;
@@ -586,6 +597,16 @@ class ConfigManager extends ChangeNotifier {
         } else {
           validatedConfigs.add(config);
         }
+        validatedConfigs.sort((a, b) {
+          if (a.currentPing > 0 && b.currentPing > 0) {
+            return a.currentPing.compareTo(b.currentPing);
+          } else if (a.currentPing > 0) {
+            return -1;
+          } else if (b.currentPing > 0) {
+            return 1;
+          }
+          return b.score.compareTo(a.score);
+        });
       } else {
         if (valIndex != -1) {
           validatedConfigs.removeAt(valIndex);
@@ -996,7 +1017,7 @@ class ConfigManager extends ChangeNotifier {
   }
 
   Future<void> _loadAutoSwitchSetting() async {
-    _isAutoSwitchEnabled = await storage.getBool(_autoSwitchKey) ?? true;
+    _isAutoSwitchEnabled = await storage.getBool(_autoSwitchKey) ?? false;
   }
 
   Future<void> _saveAutoSwitchSetting() async {
@@ -1072,9 +1093,25 @@ class ConfigManager extends ChangeNotifier {
 
   // --- UI & LEGACY COMPATIBILITY METHODS ---
   Future<VpnConfigWithMetrics?> getBestConfig() async {
+    // 1. If user explicitly selected a config and auto-switch is disabled, always honor user's choice
+    if (_selectedConfig != null && !_isAutoSwitchEnabled) {
+      return _selectedConfig;
+    }
+
+    // 2. If user selected a valid config, honor it
     if (_selectedConfig != null && _selectedConfig!.isValidated) {
       return _selectedConfig;
     }
+
+    // 3. When auto-switch is disabled, allow falling back to first favorite or first available config
+    if (!_isAutoSwitchEnabled) {
+      if (favoriteConfigs.isNotEmpty) return favoriteConfigs.first;
+      if (validatedConfigs.isNotEmpty) return validatedConfigs.first;
+      if (allConfigs.isNotEmpty) return allConfigs.first;
+      return null;
+    }
+
+    // 4. When auto-switch is enabled, only connect to validated candidates
     final validFavorites = favoriteConfigs.where((c) => c.isValidated);
     if (validFavorites.isNotEmpty) {
       return validFavorites.first;
@@ -1251,10 +1288,11 @@ class ConfigManager extends ChangeNotifier {
         // 3. Pre-flight Check with FAST LANE logic
         setConnected(false, status: 'Verifying ${target.name}...');
 
-        final bool isFastLane = target.lastTestedAt != null &&
-            DateTime.now().difference(target.lastTestedAt!).inMinutes < 45 &&
-            target.funnelStage >= 2 &&
-            target.currentPing > 0;
+        final bool isFastLane = !_isAutoSwitchEnabled ||
+            (target.lastTestedAt != null &&
+                DateTime.now().difference(target.lastTestedAt!).inMinutes < 45 &&
+                target.funnelStage >= 2 &&
+                target.currentPing > 0);
 
         if (isFastLane) {
           AdvancedLogger.info(
@@ -1342,8 +1380,8 @@ class ConfigManager extends ChangeNotifier {
           await markFailure(target.id);
         }
 
-        if (_isGlobalStopRequested) {
-          return;
+        if (_isGlobalStopRequested || !_isAutoSwitchEnabled) {
+          break;
         }
 
         // 7. Prepare next

@@ -6,5 +6,9 @@
   "release_notes": "• Fix live VPN zero-traffic & DNS resolution issue\n• Fix Android VPN key/lock icon persisting after disconnect\n• Implement 5-tier smart priority test queue\n• Eliminate SnackBar flickering and enhance Quick-Connect UI\n• Scale all timeouts dynamically for Iranian network conditions\n• Auto-truncate oversized logs and purge cached APKs",
   "url": "https://github.com/mobinsamadir/ivpn_app/releases/latest/download/iVPN-release.apk",
   "network_tolerance_multiplier": 1.5,
+  "server_urls": [
+    "https://raw.githubusercontent.com/mobinsamadir/ivpn-servers/main/real_delay_passed.txt",
+    "https://cdn.jsdelivr.net/gh/mobinsamadir/ivpn-servers@main/real_delay_passed.txt"
+  ],
   "network_tuning": {}
 }

@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../providers/theme_provider.dart'; // برای دسترسی به ThemeProvider
+import '../providers/theme_provider.dart';
 import '../services/config_manager.dart';
 import '../widgets/scale_on_tap.dart';
 
@@ -17,7 +17,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen>
     with WidgetsBindingObserver {
-  // متغیر برای کنترل وضعیت‌های جدید
+  // State variables
   bool _isBatteryOptimizationIgnored = false;
   bool _autoTestOnStartup = true;
   bool _autoRefreshOnStartup = true;
@@ -114,7 +114,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       appBar: AppBar(title: const Text('Settings')),
       body: ListView(
         children: [
-          // بخش تنظیمات اتصال
+          // Connection Settings Section
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: Text(
@@ -211,7 +211,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           ),
           const Divider(),
 
-          // بخش تنظیمات ظاهری
+          // Appearance Settings Section
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: Text(
@@ -252,7 +252,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           ),
           const Divider(),
 
-          // بخش اطلاعات
+          // About Section
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: Text(

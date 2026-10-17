@@ -671,7 +671,8 @@ class SingboxConfigGenerator {
           // any packets, causing the "connected but no traffic" symptom.
           "auto_route": true,
           "strict_route": isKillSwitchEnabled,
-          "stack": "mixed",
+          // Use gvisor userspace stack on Android to eliminate kernel system stack crashes
+          "stack": "gvisor",
         },
       ];
     }

@@ -74,7 +74,7 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
         backgroundColor: Colors.black, // Force solid background
         body: Stack(
           children: [
-            // 0. Branded Fallback / Sponsor Background Layer
+            // 0. Branded Fallback / Sponsor Background Layer (Original iVPN Brand)
             Positioned.fill(
               child: Container(
                 decoration: const BoxDecoration(
@@ -85,43 +85,84 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
                   ),
                 ),
                 child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.blueAccent.withValues(alpha: 0.1),
-                          border: Border.all(
-                            color: Colors.blueAccent.withValues(alpha: 0.3),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 104,
+                          height: 104,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: const Color(0xFF1E293B),
+                            border: Border.all(
+                              color: Colors.blueAccent.withValues(alpha: 0.5),
+                              width: 2,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.blueAccent.withValues(alpha: 0.25),
+                                blurRadius: 24,
+                                spreadRadius: 4,
+                              ),
+                            ],
+                          ),
+                          child: ClipOval(
+                            child: Image.asset(
+                              'assets/icon.png',
+                              fit: BoxFit.contain,
+                            ),
                           ),
                         ),
-                        child: const Icon(
-                          Icons.shield_rounded,
-                          size: 64,
-                          color: Colors.blueAccent,
+                        const SizedBox(height: 24),
+                        const Text(
+                          'iVPN Sponsor Network',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                          textAlign: TextAlign.center,
                         ),
-                      ),
-                      const SizedBox(height: 20),
-                      const Text(
-                        'iVPN Free Sponsor Network',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.5,
+                        const SizedBox(height: 6),
+                        const Text(
+                          'Community Sponsored Secure Access',
+                          style: TextStyle(
+                            color: Colors.blueAccent,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.5,
+                          ),
+                          textAlign: TextAlign.center,
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Keeping Secure VPN Free & Fast For Everyone',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.6),
-                          fontSize: 13,
+                        const SizedBox(height: 14),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.06),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.1),
+                            ),
+                          ),
+                          child: const Text(
+                            'Providing fast and secure private internet access for everyone',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
