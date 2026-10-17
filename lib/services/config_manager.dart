@@ -294,7 +294,7 @@ class ConfigManager extends ChangeNotifier {
   final bool _isRefreshing = false;
   bool get isRefreshing => _isRefreshing;
 
-  bool _isAutoSwitchEnabled = false;
+  bool _isAutoSwitchEnabled = true;
   bool get isAutoSwitchEnabled => _isAutoSwitchEnabled;
   set isAutoSwitchEnabled(bool value) {
     _isAutoSwitchEnabled = value;
@@ -1030,7 +1030,7 @@ class ConfigManager extends ChangeNotifier {
   }
 
   Future<void> _loadAutoSwitchSetting() async {
-    _isAutoSwitchEnabled = await storage.getBool(_autoSwitchKey) ?? false;
+    _isAutoSwitchEnabled = await storage.getBool(_autoSwitchKey) ?? true;
   }
 
   Future<void> _saveAutoSwitchSetting() async {

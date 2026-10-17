@@ -414,8 +414,6 @@ class _MobileWebViewState extends State<_MobileWebView> {
     super.initState();
     AdvancedLogger.info('[AdWidget] Loading Mobile HTML...');
 
-    final hasIframe = widget.htmlContent.contains('<iframe');
-
     // Safety timeout: If ad does not load cleanly within 6 seconds, keep sponsor card visible
     _loadTimeoutTimer = Timer(const Duration(seconds: 6), () {
       if (mounted && !_isReadyNotifier.value) {
@@ -441,10 +439,8 @@ class _MobileWebViewState extends State<_MobileWebView> {
         NavigationDelegate(
           onPageFinished: (_) {
             AdvancedLogger.info('[AdWidget] Mobile Wrapper HTML Loaded.');
-            if (!hasIframe) {
-              _loadTimeoutTimer?.cancel();
-              if (mounted) _isReadyNotifier.value = true;
-            }
+            _loadTimeoutTimer?.cancel();
+            if (mounted) _isReadyNotifier.value = true;
           },
           onNavigationRequest: (NavigationRequest request) {
             final url = request.url;
@@ -476,12 +472,10 @@ class _MobileWebViewState extends State<_MobileWebView> {
         return AnimatedOpacity(
           opacity: isReady ? 1.0 : 0.0,
           duration: const Duration(milliseconds: 350),
-          child: isReady
-              ? WebViewWidget(
-                  controller: _controller,
-                  gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{},
-                )
-              : const SizedBox.shrink(),
+          child: WebViewWidget(
+            controller: _controller,
+            gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{},
+          ),
         );
       },
     );

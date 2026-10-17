@@ -722,10 +722,6 @@ class SingboxConfigGenerator {
       return {
         "servers": [
           {
-            "tag": "fakeip-dns",
-            "address": "fakeip",
-          },
-          {
             "tag": "remote-dns",
             "address": "tcp://8.8.8.8",
             "detour": "proxy",
@@ -734,6 +730,10 @@ class SingboxConfigGenerator {
             "tag": "remote-cf",
             "address": "tcp://1.1.1.1",
             "detour": "proxy",
+          },
+          {
+            "tag": "fakeip-dns",
+            "address": "fakeip",
           },
           {"tag": "local", "address": "local", "detour": "direct"},
           {"tag": "block-dns", "address": "rcode://success"},
@@ -747,6 +747,10 @@ class SingboxConfigGenerator {
             "outbound": ["direct"],
             "server": "local",
           },
+          {
+            "query_type": ["A", "AAAA"],
+            "server": "fakeip-dns",
+          },
         ],
         "fakeip": {
           "enabled": true,
@@ -754,7 +758,7 @@ class SingboxConfigGenerator {
           "inet6_range": "fc00::/18",
         },
         "independent_cache": true,
-        "final": "fakeip-dns",
+        "final": "remote-dns",
         "strategy": "ipv4_only",
       };
     }
