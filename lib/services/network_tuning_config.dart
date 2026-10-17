@@ -29,7 +29,7 @@ class NetworkTuningConfig {
   static const double _baseWatchdogConnectivityMs = 18000;
   static const double _baseWatchdogSpeedMs = 30000;
   static const double _basePreFlightTimeoutMs = 20000;
-  static const double _baseConnectWaitTimeoutSec = 20;
+  static const double _baseConnectWaitTimeoutSec = 30;
   static const double _baseStage1TcpTimeoutMs = 5000;
 
   // ---------- mutable state ----------

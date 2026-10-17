@@ -242,7 +242,7 @@ class VpnConfigWithMetrics implements Comparable<VpnConfigWithMetrics> {
   }
 
   bool get isValidated {
-    return funnelStage >= 2 && isAlive && failureCount == 0 && currentPing > 0;
+    return funnelStage >= 2 && isAlive && failureCount < 3 && currentPing > 0;
   }
 
   bool get wasEverValidated {

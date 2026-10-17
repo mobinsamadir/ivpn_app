@@ -650,11 +650,13 @@ class ConfigManager extends ChangeNotifier {
   Future<void> markFailure(String id) async {
     final index = allConfigs.indexWhere((c) => c.id == id);
     if (index != -1) {
+      final newFailureCount = allConfigs[index].failureCount + 1;
+      final shouldKill = newFailureCount >= 3;
       allConfigs[index] = allConfigs[index].copyWith(
-        failureCount: allConfigs[index].failureCount + 1,
-        isAlive: false,
-        funnelStage: 0,
-        ping: -1,
+        failureCount: newFailureCount,
+        isAlive: !shouldKill,
+        funnelStage: shouldKill ? 0 : allConfigs[index].funnelStage,
+        ping: shouldKill ? -1 : allConfigs[index].currentPing,
       );
       await _updateLists();
       unawaited(_saveAllConfigs());
@@ -1435,10 +1437,19 @@ class ConfigManager extends ChangeNotifier {
         // We can check if it is still alive to decide, but safe to call markFailure (it just increments)
         // unless it was marked invalid (count 99).
 
-        // Only mark failure if it wasn't already killed
+        // Only mark failure if it wasn't already killed and is not a local startup error
         final current = getConfigById(target.id);
         if (current != null && current.isAlive) {
-          await markFailure(target.id);
+          final errStr = e.toString();
+          if (!errStr.contains('START_FAILED') &&
+              !errStr.contains('PERMISSION') &&
+              !errStr.contains('Invalid Config')) {
+            await markFailure(target.id);
+          } else {
+            AdvancedLogger.warn(
+              '[ConfigManager] Skipping markFailure for ${target.name} due to local system/config error: $e',
+            );
+          }
         }
 
         if (_isGlobalStopRequested || !_isAutoSwitchEnabled) {

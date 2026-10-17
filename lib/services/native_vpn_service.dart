@@ -318,11 +318,11 @@ class NativeVpnService {
       _lastKnownState = "CONNECTING";
       _statusController.add("CONNECTING");
 
-      // Start cancelable timeout logic to listen for state update (10 seconds timeout)
+      // Start cancelable timeout logic to listen for state update (30 seconds timeout)
       Timer? timeoutTimer;
       StreamSubscription<String>? statusSub;
 
-      timeoutTimer = Timer(const Duration(seconds: 10), () async {
+      timeoutTimer = Timer(const Duration(seconds: 30), () async {
         AdvancedLogger.warn(
           "Native layer timed out. Forcing stopVpn and injecting ERROR event.",
         );

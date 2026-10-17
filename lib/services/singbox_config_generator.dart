@@ -673,8 +673,6 @@ class SingboxConfigGenerator {
           "strict_route": isKillSwitchEnabled,
           // Use gvisor userspace stack on Android to eliminate kernel system stack crashes
           "stack": "gvisor",
-          "sniff": true,
-          "sniff_override_destination": false,
         },
       ];
     }

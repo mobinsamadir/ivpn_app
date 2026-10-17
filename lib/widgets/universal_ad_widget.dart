@@ -406,20 +406,11 @@ class _MobileWebView extends StatefulWidget {
 
 class _MobileWebViewState extends State<_MobileWebView> {
   late final WebViewController _controller;
-  final ValueNotifier<bool> _isReadyNotifier = ValueNotifier(false);
-  Timer? _loadTimeoutTimer;
 
   @override
   void initState() {
     super.initState();
     AdvancedLogger.info('[AdWidget] Loading Mobile HTML...');
-
-    // Safety timeout: If ad does not load cleanly within 6 seconds, keep sponsor card visible
-    _loadTimeoutTimer = Timer(const Duration(seconds: 6), () {
-      if (mounted && !_isReadyNotifier.value) {
-        AdvancedLogger.info('[AdWidget] Ad iframe load timed out (6s), keeping sponsor card visible.');
-      }
-    });
 
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
@@ -430,8 +421,6 @@ class _MobileWebViewState extends State<_MobileWebView> {
         onMessageReceived: (JavaScriptMessage message) {
           if (message.message == 'ad_loaded') {
             AdvancedLogger.info('[AdWidget] Mobile Ad iframe content loaded successfully.');
-            _loadTimeoutTimer?.cancel();
-            if (mounted) _isReadyNotifier.value = true;
           }
         },
       )
@@ -439,8 +428,6 @@ class _MobileWebViewState extends State<_MobileWebView> {
         NavigationDelegate(
           onPageFinished: (_) {
             AdvancedLogger.info('[AdWidget] Mobile Wrapper HTML Loaded.');
-            _loadTimeoutTimer?.cancel();
-            if (mounted) _isReadyNotifier.value = true;
           },
           onNavigationRequest: (NavigationRequest request) {
             final url = request.url;
@@ -459,25 +446,14 @@ class _MobileWebViewState extends State<_MobileWebView> {
 
   @override
   void dispose() {
-    _loadTimeoutTimer?.cancel();
-    _isReadyNotifier.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<bool>(
-      valueListenable: _isReadyNotifier,
-      builder: (context, isReady, child) {
-        return AnimatedOpacity(
-          opacity: isReady ? 1.0 : 0.0,
-          duration: const Duration(milliseconds: 350),
-          child: WebViewWidget(
-            controller: _controller,
-            gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{},
-          ),
-        );
-      },
+    return WebViewWidget(
+      controller: _controller,
+      gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{},
     );
   }
 }

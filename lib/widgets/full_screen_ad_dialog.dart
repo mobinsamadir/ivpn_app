@@ -185,19 +185,31 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                         decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.7),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.white12),
+                          color: Colors.black.withValues(alpha: 0.75),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: Colors.blueAccent.withValues(alpha: 0.3)),
                         ),
-                        child: const Text(
-                          'iVPN Premium Sponsor',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.verified_user_rounded,
+                              color: Colors.blueAccent,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'iVPN Sponsor Network',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       // Timer Badge
@@ -207,19 +219,26 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
                           if (timeLeft <= 0) return const SizedBox.shrink();
                           return Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
+                              horizontal: 14,
+                              vertical: 8,
                             ),
                             decoration: BoxDecoration(
                               color: Colors.redAccent.withValues(alpha: 0.85),
-                              borderRadius: BorderRadius.circular(20),
+                              borderRadius: BorderRadius.circular(24),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.redAccent.withValues(alpha: 0.3),
+                                  blurRadius: 10,
+                                  spreadRadius: 1,
+                                ),
+                              ],
                             ),
                             child: Row(
                               children: [
                                 const Icon(
-                                  Icons.timer,
+                                  Icons.timer_outlined,
                                   color: Colors.white,
-                                  size: 14,
+                                  size: 15,
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
@@ -227,6 +246,7 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontWeight: FontWeight.bold,
+                                    fontSize: 13,
                                   ),
                                 ),
                               ],
@@ -274,25 +294,45 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
                   right: 0,
                   child: SafeArea(
                     child: Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: Material(
-                        color: Colors.black87,
-                        shape: const CircleBorder(),
-                        clipBehavior: Clip.hardEdge,
-                        child: Tooltip(
-                          message: 'Close & Claim Reward',
-                          child: ScaleOnTap(
-                            onTap: () {
-                              Navigator.of(context).pop(true);
-                            },
-                            child: const Padding(
-                              padding: EdgeInsets.all(10.0),
-                              child: Icon(
-                                Icons.close_rounded,
-                                color: Colors.white,
-                                size: 28,
+                      padding: const EdgeInsets.all(10.0),
+                      child: ScaleOnTap(
+                        onTap: () {
+                          Navigator.of(context).pop(true);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981),
+                            borderRadius: BorderRadius.circular(24),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF10B981).withValues(alpha: 0.5),
+                                blurRadius: 14,
+                                spreadRadius: 2,
                               ),
-                            ),
+                            ],
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Claim Reward',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              SizedBox(width: 6),
+                              Icon(
+                                Icons.check_circle_rounded,
+                                color: Colors.white,
+                                size: 18,
+                              ),
+                            ],
                           ),
                         ),
                       ),
