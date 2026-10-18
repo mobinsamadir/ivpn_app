@@ -30,10 +30,15 @@ jobs:
       windows: ${{ steps.changes.outputs.windows }}
       version: ${{ steps.compute_version.outputs.version }}
       version_code: ${{ steps.compute_version.outputs.version_code }}
+      enable_windows: ${{ steps.set_flags.outputs.enable_windows }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Set Job Flags
+        id: set_flags
+        run: echo "enable_windows=${ENABLE_WINDOWS_BUILD}" >> $GITHUB_OUTPUT
 
       - name: Compute Next Release Version
         id: compute_version
@@ -195,7 +200,7 @@ jobs:
 
   build-windows:
     needs: filter
-    if: env.ENABLE_WINDOWS_BUILD == '1' && (needs.filter.outputs.windows == 'true' || github.event_name == 'workflow_dispatch')
+    if: needs.filter.outputs.enable_windows == '1' && (needs.filter.outputs.windows == 'true' || github.event_name == 'workflow_dispatch')
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
