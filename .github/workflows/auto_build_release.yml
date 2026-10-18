@@ -31,15 +31,20 @@ jobs:
       version: ${{ steps.compute_version.outputs.version }}
       version_code: ${{ steps.compute_version.outputs.version_code }}
     steps:
-      - uses: actions/checkout@v7.0.0
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Compute Next Release Version
         id: compute_version
         run: |
-          BASE_VER=$(jq -r '.version // "2.0.0"' assets/version.json | xargs)
-          BASE_CODE=$(jq -r '.version_code // 2000' assets/version.json | xargs)
+          if [ -f assets/version.json ]; then
+            BASE_VER=$(jq -r '.version // "2.0.0"' assets/version.json | xargs)
+            BASE_CODE=$(jq -r '.version_code // 2000' assets/version.json | xargs)
+          else
+            BASE_VER="2.0.0"
+            BASE_CODE="2000"
+          fi
 
           IFS='.' read -r MAJOR MINOR PATCH <<< "$BASE_VER"
 
@@ -84,12 +89,12 @@ jobs:
     if: needs.filter.outputs.android == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7.0.0
+      - uses: actions/checkout@v4
         with:
           persist-credentials: false
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v5.5.0
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -98,7 +103,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Cache Pub Dependencies
-        uses: actions/cache@v6.1.0
+        uses: actions/cache@v4
         with:
           path: ~/.pub-cache
           key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
@@ -112,7 +117,7 @@ jobs:
 
       - name: Cache Android Assets
         id: android-assets-cache
-        uses: actions/cache@v6.1.0
+        uses: actions/cache@v4
         with:
           path: assets
           key: android-assets-v2-${{ hashFiles('tool/setup_core.dart') }}
@@ -133,7 +138,7 @@ jobs:
 
       - name: Cache AARs
         id: aar-cache
-        uses: actions/cache@v6.1.0
+        uses: actions/cache@v4
         with:
           path: android/app/libs
           key: ${{ runner.os }}-aar-internal-${{ hashFiles('tool/core_version.txt') }}
@@ -193,12 +198,12 @@ jobs:
     if: env.ENABLE_WINDOWS_BUILD == '1' && (needs.filter.outputs.windows == 'true' || github.event_name == 'workflow_dispatch')
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v7.0.0
+      - uses: actions/checkout@v4
         with:
           persist-credentials: false
 
       - name: Cache Pub Dependencies
-        uses: actions/cache@v6.1.0
+        uses: actions/cache@v4
         with:
           path: C:\Users\runneradmin\AppData\Local\Pub\Cache
           key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
@@ -212,7 +217,7 @@ jobs:
 
       - name: Cache Windows Assets
         id: assets-cache
-        uses: actions/cache@v6.1.0
+        uses: actions/cache@v4
         with:
           path: assets
           key: windows-assets-v2-${{ hashFiles('tool/setup_core.dart') }}
@@ -244,46 +249,29 @@ jobs:
 
   publish-release:
     needs: [filter, build-android, build-windows]
-    if: always() && (needs.build-android.result == 'success' || needs.build-windows.result == 'success')
+    if: always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && (needs.build-android.result == 'success' || needs.build-windows.result == 'success')
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v7.0.0
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Download Android Artifacts
-        if: needs.build-android.result == 'success'
+      - name: Download All Artifacts
         uses: actions/download-artifact@v4
         with:
-          name: android-apks
-          path: release-files
-
-      - name: Download Windows Artifacts
-        if: needs.build-windows.result == 'success'
-        uses: actions/download-artifact@v4
-        with:
-          name: windows-zip
-          path: release-files
-
-      - name: Flatten and Verify Release Assets
-        run: |
-          mkdir -p release-assets
-          if [ -d "release-files" ]; then
-            find release-files -type f \( -name "*.apk" -o -name "*.zip" \) -exec mv -f {} release-assets/ \;
-          fi
-          echo "=== Prepared Release Assets ==="
-          ls -lh release-assets/
-          if [ -z "$(ls -A release-assets)" ]; then
-            echo "::error::No .apk or .zip files found in downloaded artifacts!"
-            exit 1
-          fi
+          path: release-assets
+          merge-multiple: true
 
       - name: Extract Release Notes
         run: |
-          jq -r '.release_notes // ""' assets/version.json > release_notes.txt
+          if [ -f assets/version.json ]; then
+            jq -r '.release_notes // ""' assets/version.json > release_notes.txt
+          else
+            echo "" > release_notes.txt
+          fi
           echo "Release target: v${{ needs.filter.outputs.version }}"
 
       - name: Create Combined GitHub Release
@@ -302,4 +290,3 @@ jobs:
           make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
