@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'storage_interface.dart';
 import 'package:device_info_plus/device_info_plus.dart';
-import 'package:http/http.dart' as http;
 import 'package:connectivity_plus/connectivity_plus.dart'; // Event-Driven
 import 'package:collection/collection.dart';
 import 'package:crypto/crypto.dart'; // Import crypto for MD5
@@ -768,12 +767,15 @@ class ConfigManager extends ChangeNotifier {
     final stopwatch = Stopwatch()..start();
     final timeoutSec = (12 * NetworkTuningConfig.instance.multiplier).round().clamp(10, 30);
     try {
-      final response = await http
-          .head(Uri.parse('https://www.google.com'))
-          .timeout(Duration(seconds: timeoutSec));
+      final client = HttpClient();
+      client.findProxy = (uri) => 'PROXY 127.0.0.1:10808';
+      client.connectionTimeout = Duration(seconds: timeoutSec);
+      final request = await client.getUrl(Uri.parse('http://www.google.com/generate_204'));
+      final response = await request.close().timeout(Duration(seconds: timeoutSec));
+      client.close();
 
       stopwatch.stop();
-      if (response.statusCode == 200) {
+      if (response.statusCode == 204 || response.statusCode == 200) {
         final ping = stopwatch.elapsedMilliseconds;
         // Update metrics directly
         await updateConfigMetrics(

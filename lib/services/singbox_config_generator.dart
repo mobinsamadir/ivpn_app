@@ -1,5 +1,5 @@
 import 'dart:convert';
-
+import 'dart:io';
 import 'dart:math';
 import 'package:flutter/foundation.dart'; // For kDebugMode
 import '../utils/advanced_logger.dart';
@@ -663,16 +663,20 @@ class SingboxConfigGenerator {
         {
           "type": "tun",
           "tag": "tun-in",
-          "address": ["172.19.0.1/28"],
+          "address": ["172.19.0.1/28", "fdfe:dcba:9876::1/126"],
           "mtu": 1400,
           // CRITICAL FIX: auto_route MUST be true on Android so libbox invokes
           // openTun() and the kernel routes traffic through the VPN file-descriptor.
-          // With auto_route=false the TUN interface is created but never receives
-          // any packets, causing the "connected but no traffic" symptom.
           "auto_route": true,
           "strict_route": isKillSwitchEnabled,
           // Use gvisor userspace stack on Android to eliminate kernel system stack crashes
           "stack": "gvisor",
+        },
+        {
+          "type": "mixed",
+          "tag": "mixed-in",
+          "listen": "127.0.0.1",
+          "listen_port": socksPort,
         },
       ];
     }
@@ -680,6 +684,12 @@ class SingboxConfigGenerator {
 
   static List<Map<String, dynamic>> _buildOutbounds(
       Map<String, dynamic> proxyOutbound) {
+    // If the server address is a domain name, configure direct DNS resolution
+    // to avoid circular DNS dependency through the proxy before connection.
+    final server = proxyOutbound['server'];
+    if (server is String && InternetAddress.tryParse(server) == null) {
+      proxyOutbound['domain_resolver'] = 'direct-dns';
+    }
     return [
       proxyOutbound,
       {"type": "direct", "tag": "direct"},
@@ -729,6 +739,11 @@ class SingboxConfigGenerator {
             "address": "tcp://1.1.1.1",
             "detour": "proxy",
           },
+          {
+            "tag": "direct-dns",
+            "address": "8.8.8.8",
+            "detour": "direct",
+          },
           {"tag": "local", "address": "local", "detour": "direct"},
           {"tag": "block-dns", "address": "rcode://success"},
         ],
@@ -739,7 +754,7 @@ class SingboxConfigGenerator {
           },
           {
             "outbound": ["direct"],
-            "server": "local",
+            "server": "direct-dns",
           },
         ],
         "independent_cache": true,
@@ -809,9 +824,8 @@ class SingboxConfigGenerator {
 
     final Map<String, dynamic> config = {
       "log": {
-        // Use 'warn' in production so box.log does not explode to 200MB+ in size
-        "level": isTest ? "fatal" : "warn",
-        "output": isTest ? "stderr" : "box.log",
+        "level": isTest ? "fatal" : "info",
+        "output": isTest ? "stderr" : "",
         "timestamp": true,
       },
       "inbounds":

@@ -503,6 +503,23 @@ class SingboxVpnService :
                 builder.addDnsServer("8.8.8.8")
                 builder.addDnsServer("1.1.1.1")
 
+                // CRITICAL FIX: Exclude own package so sing-box outbound sockets and app traffic
+                // NEVER route into tun0 (stops infinite routing loop and runaway 433MB upload traffic)
+                try {
+                    builder.addDisallowedApplication(packageName)
+                    android.util.Log.i("NativeVpnLifecycle", "Successfully excluded $packageName from VPN tunnel")
+                } catch (e: Throwable) {
+                    android.util.Log.e("NativeVpnLifecycle", "Failed to exclude $packageName: ${e.message}")
+                }
+
+                // Add IPv6 route to prevent IPv6 traffic/DNS leaks from bypassing VPN
+                try {
+                    builder.addAddress("fdfe:dcba:9876::1", 126)
+                    builder.addRoute("::", 0)
+                } catch (e: Throwable) {
+                    android.util.Log.w("NativeVpnLifecycle", "IPv6 routing setup warning: ${e.message}")
+                }
+
                 vpnInterface = builder.establish()
 
                 if (vpnInterface == null) {
@@ -799,6 +816,9 @@ class StubPlatformInterface : PlatformInterface {
     override fun useProcFS(): Boolean = false
 
     fun writeLog(message: String?) {
+        if (!message.isNullOrBlank()) {
+            android.util.Log.i("SingboxCore", "[LOG] $message")
+        }
         MainActivity.sendVpnStatus(message ?: "")
     }
 
@@ -836,11 +856,21 @@ class StubPlatformInterface : PlatformInterface {
 class StubCommandServerHandler : io.nekohasekai.libbox.CommandServerHandler {
     override fun getSystemProxyStatus(): io.nekohasekai.libbox.SystemProxyStatus? = null
 
-    override fun serviceReload() {}
+    override fun serviceReload() {
+        android.util.Log.i("SingboxCore", "Core serviceReload called")
+    }
 
-    override fun serviceStop() {}
+    override fun serviceStop() {
+        android.util.Log.i("SingboxCore", "Core serviceStop called")
+    }
 
-    override fun setSystemProxyEnabled(enabled: Boolean) {}
+    override fun setSystemProxyEnabled(enabled: Boolean) {
+        android.util.Log.i("SingboxCore", "Core setSystemProxyEnabled: $enabled")
+    }
 
-    override fun writeDebugMessage(message: String?) {}
+    override fun writeDebugMessage(message: String?) {
+        if (!message.isNullOrBlank()) {
+            android.util.Log.i("SingboxCore", message)
+        }
+    }
 }
