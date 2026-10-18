@@ -278,24 +278,32 @@ class _ConfigInfo extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: (config.currentPing == -1
                                       ? Colors.redAccent
-                                      : getPingColor(config.currentPing))
+                                      : (config.funnelStage >= 2
+                                          ? getPingColor(config.currentPing)
+                                          : Colors.grey))
                                   .withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(6),
                               border: Border.all(
                                 color: (config.currentPing == -1
                                         ? Colors.redAccent
-                                        : getPingColor(config.currentPing))
+                                        : (config.funnelStage >= 2
+                                            ? getPingColor(config.currentPing)
+                                            : Colors.grey))
                                     .withValues(alpha: 0.3),
                               ),
                             ),
                             child: Text(
                               config.currentPing == -1
                                   ? 'Timeout'
-                                  : '${config.currentPing}ms',
+                                  : (config.funnelStage >= 2
+                                      ? '${config.currentPing}ms'
+                                      : 'TCP ${config.currentPing}ms'),
                               style: TextStyle(
                                 color: config.currentPing == -1
                                     ? Colors.redAccent
-                                    : getPingColor(config.currentPing),
+                                    : (config.funnelStage >= 2
+                                        ? getPingColor(config.currentPing)
+                                        : Colors.grey[400]),
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
                               ),

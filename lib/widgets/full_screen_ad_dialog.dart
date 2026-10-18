@@ -71,136 +71,37 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
     return PopScope(
       canPop: false,
       child: Scaffold(
-        backgroundColor: Colors.black, // Force solid background
-        body: Stack(
-          children: [
-            // 0. Branded Fallback / Sponsor Background Layer (Original iVPN Brand)
-            Positioned.fill(
-              child: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFF0F172A), Color(0xFF020617)],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                ),
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 104,
-                          height: 104,
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: const Color(0xFF1E293B),
-                            border: Border.all(
-                              color: Colors.blueAccent.withValues(alpha: 0.5),
-                              width: 2,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.blueAccent.withValues(alpha: 0.25),
-                                blurRadius: 24,
-                                spreadRadius: 4,
-                              ),
-                            ],
-                          ),
-                          child: ClipOval(
-                            child: Image.asset(
-                              'assets/icon.png',
-                              fit: BoxFit.contain,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        const Text(
-                          'iVPN Sponsor Network',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.5,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 6),
-                        const Text(
-                          'Community Sponsored Secure Access',
-                          style: TextStyle(
-                            color: Colors.blueAccent,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.5,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 14),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.06),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.1),
-                            ),
-                          ),
-                          child: const Text(
-                            'Providing fast and secure private internet access for everyone',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+        backgroundColor: const Color(0xFF0F172A),
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF0F172A), Color(0xFF020617)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
             ),
-
-            // 1. True Fullscreen Ad Layer (100% of Screen)
-            Positioned.fill(
-              child: UniversalAdWidget(slot: widget.unitId),
-            ),
-
-            // 2. Floating Top Header with Timer Badge & Title
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+          ),
+          child: SafeArea(
+            child: Column(
+              children: [
+                // 1. Top Bar: Header with "iVPN Sponsor Network" and Timer / Claim Reward
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                         decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.75),
+                          color: Colors.black.withValues(alpha: 0.6),
                           borderRadius: BorderRadius.circular(24),
                           border: Border.all(color: Colors.blueAccent.withValues(alpha: 0.3)),
                         ),
-                        child: Row(
+                        child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(
-                              Icons.verified_user_rounded,
-                              color: Colors.blueAccent,
-                              size: 16,
-                            ),
-                            const SizedBox(width: 8),
-                            const Text(
+                            Icon(Icons.verified_user_rounded, color: Colors.blueAccent, size: 16),
+                            SizedBox(width: 8),
+                            Text(
                               'iVPN Sponsor Network',
                               style: TextStyle(
                                 color: Colors.white,
@@ -212,16 +113,46 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
                           ],
                         ),
                       ),
-                      // Timer Badge
+                      // Timer or Claim Reward button
                       ValueListenableBuilder<int>(
                         valueListenable: _timeLeftNotifier,
-                        builder: (context, timeLeft, child) {
-                          if (timeLeft <= 0) return const SizedBox.shrink();
+                        builder: (context, timeLeft, _) {
+                          if (timeLeft <= 0) {
+                            return ScaleOnTap(
+                              onTap: () => Navigator.of(context).pop(true),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF10B981),
+                                  borderRadius: BorderRadius.circular(24),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFF10B981).withValues(alpha: 0.5),
+                                      blurRadius: 14,
+                                      spreadRadius: 2,
+                                    ),
+                                  ],
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      'Claim Reward',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                    SizedBox(width: 6),
+                                    Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }
                           return Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 8,
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                             decoration: BoxDecoration(
                               color: Colors.redAccent.withValues(alpha: 0.85),
                               borderRadius: BorderRadius.circular(24),
@@ -235,11 +166,7 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
                             ),
                             child: Row(
                               children: [
-                                const Icon(
-                                  Icons.timer_outlined,
-                                  color: Colors.white,
-                                  size: 15,
-                                ),
+                                const Icon(Icons.timer_outlined, color: Colors.white, size: 15),
                                 const SizedBox(width: 6),
                                 Text(
                                   '${timeLeft}s',
@@ -257,91 +184,98 @@ class _FullScreenAdDialogState extends State<FullScreenAdDialog> {
                     ],
                   ),
                 ),
-              ),
-            ),
 
-            // 3. Floating Bottom Countdown Line
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: ValueListenableBuilder<int>(
-                valueListenable: _timeLeftNotifier,
-                builder: (context, timeLeft, child) {
-                  if (timeLeft <= 0) return const SizedBox.shrink();
-                  final progress = _totalDuration > 0
-                      ? (_totalDuration - timeLeft) / _totalDuration
-                      : 1.0;
-                  return LinearProgressIndicator(
-                    value: progress,
-                    backgroundColor: Colors.black54,
-                    valueColor: const AlwaysStoppedAnimation<Color>(
-                      Colors.blueAccent,
-                    ),
-                    minHeight: 4,
-                  );
-                },
-              ),
-            ),
-
-            // 4. Escapability Layer: Close Button (Only appears after timer)
-            ValueListenableBuilder<int>(
-              valueListenable: _timeLeftNotifier,
-              builder: (context, timeLeft, child) {
-                if (timeLeft > 0) return const SizedBox.shrink();
-                return Positioned(
-                  top: 0,
-                  right: 0,
-                  child: SafeArea(
-                    child: Padding(
-                      padding: const EdgeInsets.all(10.0),
-                      child: ScaleOnTap(
-                        onTap: () {
-                          Navigator.of(context).pop(true);
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 8,
+                // 2. Middle Card: Branded Sponsor Message (Always Visible from Second 0)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 68,
+                        height: 68,
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: const Color(0xFF1E293B),
+                          border: Border.all(
+                            color: Colors.blueAccent.withValues(alpha: 0.5),
+                            width: 2,
                           ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF10B981),
-                            borderRadius: BorderRadius.circular(24),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF10B981).withValues(alpha: 0.5),
-                                blurRadius: 14,
-                                spreadRadius: 2,
-                              ),
-                            ],
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                'Claim Reward',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                ),
-                              ),
-                              SizedBox(width: 6),
-                              Icon(
-                                Icons.check_circle_rounded,
-                                color: Colors.white,
-                                size: 18,
-                              ),
-                            ],
-                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.blueAccent.withValues(alpha: 0.25),
+                              blurRadius: 20,
+                              spreadRadius: 3,
+                            ),
+                          ],
                         ),
+                        child: ClipOval(
+                          child: Image.asset('assets/icon.png', fit: BoxFit.contain),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      const Text(
+                        'Community Sponsored Access',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.3,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Watch sponsor content to earn 1 hour of high-speed connection',
+                        style: TextStyle(
+                          color: Colors.white60,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+
+                // 3. Ad Container (Embedded cleanly, responsive)
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0F172A).withValues(alpha: 0.6),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                        ),
+                        child: UniversalAdWidget(slot: widget.unitId),
                       ),
                     ),
                   ),
-                );
-              },
+                ),
+
+                // 4. Floating Bottom Countdown Line
+                ValueListenableBuilder<int>(
+                  valueListenable: _timeLeftNotifier,
+                  builder: (context, timeLeft, _) {
+                    if (timeLeft <= 0) return const SizedBox.shrink();
+                    final progress = _totalDuration > 0
+                        ? (_totalDuration - timeLeft) / _totalDuration
+                        : 1.0;
+                    return LinearProgressIndicator(
+                      value: progress,
+                      backgroundColor: Colors.black54,
+                      valueColor: const AlwaysStoppedAnimation<Color>(Colors.blueAccent),
+                      minHeight: 4,
+                    );
+                  },
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
