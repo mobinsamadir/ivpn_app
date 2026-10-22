@@ -1,0 +1,6 @@
+1. *Acknowledge task is already complete.*
+   - Since the timeouts are already implemented in `lib/services/ad_manager_service.dart`, no code changes are required.
+2. *Complete pre commit steps*
+   - Complete pre commit steps to make sure proper testing, verifications, reviews and reflections are done.
+3. *Submit the change.*
+   - I will submit the task with an empty commit or just finish the task since no changes are needed.
