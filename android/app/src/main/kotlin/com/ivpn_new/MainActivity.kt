@@ -338,21 +338,7 @@ class MainActivity : FlutterActivity() {
                                             return@withContext
                                         }
 
-                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                            if (!packageManager.canRequestPackageInstalls()) {
-                                                try {
-                                                    val settingsIntent = Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
-                                                        data = Uri.parse("package:$packageName")
-                                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                                    }
-                                                    startActivity(settingsIntent)
-                                                } catch (se: Exception) {
-                                                    android.util.Log.w("MainActivity", "Could not open package settings: ${se.message}")
-                                                }
-                                                result.error("PERMISSION_REQUIRED", "Permission required to install unknown apps", null)
-                                                return@withContext
-                                            }
-                                        }
+                                        
 
                                         val uri = androidx.core.content.FileProvider.getUriForFile(
                                             this@MainActivity,
