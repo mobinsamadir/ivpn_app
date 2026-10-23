@@ -306,7 +306,11 @@ class _SmartConnectButtonState extends State<SmartConnectButton>
         status: 'Connecting to ${configToUse.name}...',
       );
 
-      await NativeVpnService().connect(configToUse.rawConfig);
+      await NativeVpnService().connect(
+        configToUse.rawConfig,
+        isKillSwitchEnabled: configManager.isKillSwitchEnabled,
+        splitTunnelingPackages: configManager.splitTunnelingPackages,
+      );
     } catch (e) {
       AdvancedLogger.error('[SmartConnect] Connection failed: $e');
       if (mounted) {

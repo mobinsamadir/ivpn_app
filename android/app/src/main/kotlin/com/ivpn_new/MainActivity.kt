@@ -1,487 +1,556 @@
-package com.ivpn_new
-
-import android.app.Activity
-import android.content.Intent
-import android.net.TrafficStats
-import android.net.Uri
-import android.net.VpnService
-import android.os.Build
-import android.os.Handler
-import android.os.Looper
-import androidx.annotation.NonNull
-import io.flutter.embedding.android.FlutterActivity
-import io.flutter.embedding.engine.FlutterEngine
-import io.flutter.plugin.common.EventChannel
-import io.flutter.plugin.common.MethodChannel
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.util.concurrent.atomic.AtomicBoolean
-
-class SafeResult(
-    private val result: MethodChannel.Result,
-) : MethodChannel.Result {
-    private val isReplied = AtomicBoolean(false)
-
-    override fun success(res: Any?) {
-        if (isReplied.compareAndSet(false, true)) {
-            Handler(Looper.getMainLooper()).post {
-                result.success(res)
-            }
-        }
-    }
-
-    override fun error(
-        errorCode: String,
-        errorMessage: String?,
-        errorDetails: Any?,
-    ) {
-        if (isReplied.compareAndSet(false, true)) {
-            Handler(Looper.getMainLooper()).post {
-                result.error(errorCode, errorMessage, errorDetails)
-            }
-        }
-    }
-
-    override fun notImplemented() {
-        if (isReplied.compareAndSet(false, true)) {
-            Handler(Looper.getMainLooper()).post {
-                result.notImplemented()
-            }
-        }
-    }
-}
-
-class MainActivity : FlutterActivity() {
-    private val channel = "com.example.ivpn/vpn"
-    private val eventChannel = "com.example.ivpn/vpn_status"
-    private val vpnRequestCode = 0x0F
-    private var pendingConfig: String? = null
-    private var pendingVpnResult: MethodChannel.Result? = null
-    private var pendingTestProxyResult: MethodChannel.Result? = null
-    private var pendingMeasurePingResult: MethodChannel.Result? = null
-    private var pendingPermissionResult: MethodChannel.Result? = null
-    private var pendingAction: String? = null
-
-    // Scope for launching coroutines on the Main thread
-    private val scope = CoroutineScope(Dispatchers.Main)
-
-    companion object {
-        var eventSink: EventChannel.EventSink? = null
-
-        fun sendVpnStatus(status: String) {
-            Handler(Looper.getMainLooper()).post {
-                eventSink?.success(status)
-            }
-        }
-    }
-
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        handleNotificationAction(intent)
-    }
-
-    override fun onResume() {
-        super.onResume()
-        handleNotificationAction(intent)
-    }
-
-    private fun handleNotificationAction(intent: Intent?) {
-        val action = intent?.getStringExtra("action")
-        if (action == "open_reward_ad") {
-            intent.removeExtra("action")
-            sendVpnStatus("USER_ACTION:OPEN_REWARD_AD")
-        }
-    }
-
-    override fun configureFlutterEngine(
-        @NonNull flutterEngine: FlutterEngine,
-    ) {
-        super.configureFlutterEngine(flutterEngine)
-
-        // Setup EventChannel for VPN Status Updates
-        EventChannel(flutterEngine.dartExecutor.binaryMessenger, eventChannel).setStreamHandler(
-            object : EventChannel.StreamHandler {
-                override fun onListen(
-                    arguments: Any?,
-                    events: EventChannel.EventSink?,
-                ) {
-                    eventSink = events
-                    // Send current state if known (optional, but good practice)
-                    if (SingboxVpnService.isVpnRunning) {
-                        events?.success("CONNECTED")
-                    } else {
-                        events?.success("DISCONNECTED")
-                    }
-                }
-
-                override fun onCancel(arguments: Any?) {
-                    eventSink = null
-                }
-            },
-        )
-
-        // Setup EventChannel for VPN Traffic Stats
-        EventChannel(flutterEngine.dartExecutor.binaryMessenger, "vpn_stats").setStreamHandler(
-            object : EventChannel.StreamHandler {
-                private var statsJob: kotlinx.coroutines.Job? = null
-
-                override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
-                    statsJob?.cancel()
-                    statsJob = CoroutineScope(Dispatchers.IO).launch {
-                        val uid = applicationInfo.uid
-
-                        fun getRx(): Long {
-                            val uidRx = TrafficStats.getUidRxBytes(uid)
-                            return if (uidRx != TrafficStats.UNSUPPORTED.toLong()) uidRx else TrafficStats.getTotalRxBytes()
-                        }
-
-                        fun getTx(): Long {
-                            val uidTx = TrafficStats.getUidTxBytes(uid)
-                            return if (uidTx != TrafficStats.UNSUPPORTED.toLong()) uidTx else TrafficStats.getTotalTxBytes()
-                        }
-
-                        var sessionRx = 0L
-                        var sessionTx = 0L
-                        var lastRx = getRx()
-                        var lastTx = getTx()
-                        var lastTime = System.currentTimeMillis()
-                        var wasRunning = false
-
-                        while (isActive) {
-                            delay(1000)
-                            val now = System.currentTimeMillis()
-                            val curRx = getRx()
-                            val curTx = getTx()
-                            val isRunning = SingboxVpnService.isVpnRunning
-
-                            if (!isRunning) {
-                                sessionRx = 0L
-                                sessionTx = 0L
-                                lastRx = curRx
-                                lastTx = curTx
-                                lastTime = now
-                                wasRunning = false
-                                withContext(Dispatchers.Main) {
-                                    events?.success(
-                                        mapOf(
-                                            "rx" to 0L,
-                                            "tx" to 0L,
-                                            "downloadSpeed" to 0L,
-                                            "uploadSpeed" to 0L,
-                                        ),
-                                    )
-                                }
-                                continue
-                            }
-
-                            // If VPN just turned on, reset baseline to current counters
-                            if (!wasRunning) {
-                                wasRunning = true
-                                sessionRx = 0L
-                                sessionTx = 0L
-                                lastRx = curRx
-                                lastTx = curTx
-                                lastTime = now
-                                continue
-                            }
-
-                            val timeDiff = (now - lastTime) / 1000.0
-                            // Sanity check: delta must be non-negative and < 50MB in 1 second to avoid baseline jumping glitches
-                            val rxDelta = if (curRx >= lastRx && curRx != TrafficStats.UNSUPPORTED.toLong()) {
-                                val d = curRx - lastRx
-                                if (d in 0..50000000L) d else 0L
-                            } else 0L
-
-                            val txDelta = if (curTx >= lastTx && curTx != TrafficStats.UNSUPPORTED.toLong()) {
-                                val d = curTx - lastTx
-                                if (d in 0..50000000L) d else 0L
-                            } else 0L
-
-                            sessionRx += rxDelta
-                            sessionTx += txDelta
-
-                            val downSpeed = if (timeDiff > 0) (rxDelta / timeDiff).toLong() else 0L
-                            val upSpeed = if (timeDiff > 0) (txDelta / timeDiff).toLong() else 0L
-
-                            lastRx = curRx
-                            lastTx = curTx
-                            lastTime = now
-
-                            SingboxVpnService.updateTraffic(sessionRx, sessionTx, downSpeed, upSpeed)
-
-                            withContext(Dispatchers.Main) {
-                                events?.success(
-                                    mapOf(
-                                        "rx" to sessionRx,
-                                        "tx" to sessionTx,
-                                        "downloadSpeed" to downSpeed,
-                                        "uploadSpeed" to upSpeed,
-                                    ),
-                                )
-                            }
-                        }
-                    }
-                }
-
-                override fun onCancel(arguments: Any?) {
-                    statsJob?.cancel()
-                    statsJob = null
-                }
-            },
-        )
-
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channel).setMethodCallHandler { call, rawResult ->
-            val result = SafeResult(rawResult)
-            scope.launch(Dispatchers.IO) {
-                try {
-                    when (call.method) {
-                        "hasVpnPermission" -> {
-                            withContext(Dispatchers.Main) {
-                                val intent = android.net.VpnService.prepare(this@MainActivity)
-                                result.success(intent == null) // If null, permission is already granted
-                            }
-                        }
-                        "requestVpnPermission" -> {
-                            withContext(Dispatchers.Main) {
-                                val intent = android.net.VpnService.prepare(this@MainActivity)
-                                if (intent == null) {
-                                    result.success(true)
-                                } else {
-                                    pendingPermissionResult = result
-                                    pendingAction = "requestVpnPermission"
-                                    startActivityForResult(intent, vpnRequestCode)
-                                }
-                            }
-                        }
-                        "startVpn" -> {
-                            val config = call.argument<String>("config")
-                            withContext(Dispatchers.Main) {
-                                if (config != null && config.isNotBlank()) {
-                                    pendingConfig = config
-                                    pendingVpnResult = result
-                                    prepareVpn()
-                                } else {
-                                    result.error("INVALID_CONFIG", "Config string is null or empty", null)
-                                }
-                            }
-                        }
-                        "stopVpn" -> {
-                            withContext(Dispatchers.Main) {
-                                stopVpnService()
-                                result.success(null)
-                            }
-                        }
-                        "testConfig" -> {
-                            val config = call.argument<String>("config")
-                            val intent = withContext(Dispatchers.Main) { android.net.VpnService.prepare(this@MainActivity) }
-                            if (intent != null) {
-                                pendingConfig = config
-                                pendingMeasurePingResult = result
-                                pendingAction = "testConfig"
-                                withContext(Dispatchers.Main) { startActivityForResult(intent, vpnRequestCode) }
-                            } else {
-                                if (config != null && config.isNotBlank()) {
-                                    SingboxVpnService.measurePing(config, cacheDir, result)
-                                } else {
-                                    result.error("INVALID_CONFIG", "Config string is null or empty", null)
-                                }
-                            }
-                        }
-                        "startTestProxy" -> {
-                            android.util.Log.i("MainActivity", "startTestProxy invoked")
-                            val config = call.argument<String>("config")
-                            val intent = withContext(Dispatchers.Main) { android.net.VpnService.prepare(this@MainActivity) }
-                            if (intent != null) {
-                                android.util.Log.w("MainActivity", "startTestProxy: Permission needed, launching intent")
-                                pendingConfig = config
-                                pendingTestProxyResult = result
-                                pendingAction = "startTestProxy"
-                                withContext(Dispatchers.Main) { startActivityForResult(intent, vpnRequestCode) }
-                            } else {
-                                if (config != null && config.isNotBlank()) {
-                                    try {
-                                        SingboxVpnService.startTestProxy(testId = "dart_proxy_test", rawInput = config, tempDir = cacheDir, result = result)
-                                    } catch (e: Exception) {
-                                        android.util.Log.e("MainActivity", "Native crash in startTestProxy: ${e.message}", e)
-                                        result.error("NATIVE_CRASH", "Native crash in startTestProxy: ${e.message}", null)
-                                    }
-                                } else {
-                                    android.util.Log.e("MainActivity", "startTestProxy failed: INVALID_CONFIG")
-                                    result.error("INVALID_CONFIG", "Config string is null or empty", null)
-                                }
-                            }
-                        }
-                        "stopTestProxy" -> {
-                            SingboxVpnService.stopTestProxy()
-                            result.success(null)
-                        }
-                        "updateSessionMeta" -> {
-                            val serverName = call.argument<String>("serverName")
-                            val remainingTimeText = call.argument<String>("remainingTimeText")
-                            val remainingSeconds = call.argument<Int>("remainingSeconds") ?: -1
-                            SingboxVpnService.updateSessionMeta(serverName, remainingTimeText, remainingSeconds)
-                            result.success(true)
-                        }
-                        "installApk" -> {
-                            val filePath = call.argument<String>("filePath")
-                            withContext(Dispatchers.Main) {
-                                if (filePath != null) {
-                                    try {
-                                        val file = java.io.File(filePath)
-                                        if (!file.exists()) {
-                                            result.error("FILE_NOT_FOUND", "APK file does not exist", null)
-                                            return@withContext
-                                        }
-
-                                        
-
-                                        val uri = androidx.core.content.FileProvider.getUriForFile(
-                                            this@MainActivity,
-                                            "${applicationContext.packageName}.fileProvider",
-                                            file
-                                        )
-                                        val installIntent = Intent(Intent.ACTION_VIEW).apply {
-                                            setDataAndType(uri, "application/vnd.android.package-archive")
-                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                        }
-                                        startActivity(installIntent)
-                                        result.success(true)
-                                    } catch (e: Exception) {
-                                        android.util.Log.e("MainActivity", "Install APK error: ${e.message}", e)
-                                        result.error("INSTALL_ERROR", e.message, null)
-                                    }
-                                } else {
-                                    result.error("INVALID_PATH", "filePath is null", null)
-                                }
-                            }
-                        }
-                        else -> {
-                            result.notImplemented()
-                        }
-                    }
-                } catch (e: Throwable) {
-                    result.error("METHOD_ERROR", "Exception during method call: ${e.message}", null)
-                }
-            }
-        }
-    }
-
-    private fun prepareVpn() {
-        val intent = VpnService.prepare(this)
-        if (intent != null) {
-            startActivityForResult(intent, vpnRequestCode)
-        } else {
-            // Already granted
-            if (pendingConfig != null) {
-                val serviceIntent =
-                    Intent(this, SingboxVpnService::class.java).apply {
-                        putExtra("action", SingboxVpnService.ACTION_START)
-                        putExtra("config", pendingConfig)
-                    }
-
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    startForegroundService(serviceIntent)
-                } else {
-                    startService(serviceIntent)
-                }
-                pendingVpnResult?.success(null)
-                pendingConfig = null
-                pendingVpnResult = null
-            }
-        }
-    }
-
-    override fun onActivityResult(
-        requestCode: Int,
-        resultCode: Int,
-        data: Intent?,
-    ) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == vpnRequestCode) {
-            if (pendingAction == "requestVpnPermission") {
-                val granted = (resultCode == Activity.RESULT_OK)
-                pendingPermissionResult?.success(granted)
-                pendingPermissionResult = null
-                pendingAction = null
-                return
-            }
-
-            if (resultCode == Activity.RESULT_OK && pendingConfig != null) {
-                val config = pendingConfig!!
-                when (pendingAction) {
-                    "testConfig" -> {
-                        val result = pendingMeasurePingResult
-                        scope.launch(Dispatchers.IO) {
-                            SingboxVpnService.measurePing(config, cacheDir, result)
-                        }
-                        pendingMeasurePingResult = null
-                    }
-                    "startTestProxy" -> {
-                        val result = pendingTestProxyResult
-                        scope.launch(Dispatchers.IO) {
-                            try {
-                                SingboxVpnService.startTestProxy(testId = "dart_proxy_test", rawInput = config, tempDir = cacheDir, result = result)
-                            } catch (e: Exception) {
-                                android.util.Log.e("MainActivity", "Native crash in startTestProxy: ${e.message}", e)
-                                result?.error("NATIVE_CRASH", "Native crash in startTestProxy: ${e.message}", null)
-                            }
-                        }
-                        pendingTestProxyResult = null
-                    }
-                    else -> {
-                        // Default startVpn behavior
-                        val serviceIntent =
-                            Intent(this, SingboxVpnService::class.java).apply {
-                                putExtra("action", SingboxVpnService.ACTION_START)
-                                putExtra("config", config)
-                            }
-
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                            startForegroundService(serviceIntent)
-                        } else {
-                            startService(serviceIntent)
-                        }
-                        pendingVpnResult?.success(null)
-                    }
-                }
-            } else {
-                val details = mapOf("permanentlyDenied" to false)
-                when (pendingAction) {
-                    "testConfig" -> pendingMeasurePingResult?.error("VPN_PERMISSION_DENIED", "VPN permission was denied by the user.", details)
-                    "startTestProxy" -> pendingTestProxyResult?.error("VPN_PERMISSION_DENIED", "VPN permission was denied by the user.", details)
-                    else -> pendingVpnResult?.error("VPN_PERMISSION_DENIED", "VPN permission was denied by the user.", details)
-                }
-                pendingMeasurePingResult = null
-                pendingTestProxyResult = null
-                pendingVpnResult = null
-            }
-            pendingConfig = null
-            pendingAction = null
-        }
-    }
-
-    private fun stopVpnService() {
-        android.util.Log.d("MainActivity", "stopVpnService invoked, triggering forceStopVpnNow")
-        try {
-            SingboxVpnService.forceStopVpnNow()
-        } catch (e: Throwable) {
-            android.util.Log.e("MainActivity", "Error in forceStopVpnNow: ${e.message}")
-        }
-        val serviceIntent =
-            Intent(this, SingboxVpnService::class.java).apply {
-                putExtra("action", SingboxVpnService.ACTION_STOP)
-            }
-        startService(serviceIntent)
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        scope.cancel()
-    }
-}
+package com.ivpn_new
+
+import android.app.Activity
+import android.content.Intent
+import android.net.TrafficStats
+import android.net.Uri
+import android.net.VpnService
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import androidx.annotation.NonNull
+import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.EventChannel
+import io.flutter.plugin.common.MethodChannel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.util.concurrent.atomic.AtomicBoolean
+
+class SafeResult(
+    private val result: MethodChannel.Result,
+) : MethodChannel.Result {
+    private val isReplied = AtomicBoolean(false)
+
+    override fun success(res: Any?) {
+        if (isReplied.compareAndSet(false, true)) {
+            Handler(Looper.getMainLooper()).post {
+                result.success(res)
+            }
+        }
+    }
+
+    override fun error(
+        errorCode: String,
+        errorMessage: String?,
+        errorDetails: Any?,
+    ) {
+        if (isReplied.compareAndSet(false, true)) {
+            Handler(Looper.getMainLooper()).post {
+                result.error(errorCode, errorMessage, errorDetails)
+            }
+        }
+    }
+
+    override fun notImplemented() {
+        if (isReplied.compareAndSet(false, true)) {
+            Handler(Looper.getMainLooper()).post {
+                result.notImplemented()
+            }
+        }
+    }
+}
+
+class MainActivity : FlutterActivity() {
+    private val channel = "com.example.ivpn/vpn"
+    private val eventChannel = "com.example.ivpn/vpn_status"
+    private val vpnRequestCode = 0x0F
+    private var pendingConfig: String? = null
+    private var pendingVpnResult: MethodChannel.Result? = null
+    private var pendingTestProxyResult: MethodChannel.Result? = null
+    private var pendingMeasurePingResult: MethodChannel.Result? = null
+    private var pendingPermissionResult: MethodChannel.Result? = null
+    private var pendingAction: String? = null
+    private var pendingDisallowedPackages: ArrayList<String>? = null
+
+    // Scope for launching coroutines on the Main thread
+    private val scope = CoroutineScope(Dispatchers.Main)
+
+    companion object {
+        var eventSink: EventChannel.EventSink? = null
+
+        fun sendVpnStatus(status: String) {
+            Handler(Looper.getMainLooper()).post {
+                eventSink?.success(status)
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleNotificationAction(intent)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        handleNotificationAction(intent)
+    }
+
+    private fun handleNotificationAction(intent: Intent?) {
+        val action = intent?.getStringExtra("action")
+        if (action == "open_reward_ad") {
+            intent.removeExtra("action")
+            sendVpnStatus("USER_ACTION:OPEN_REWARD_AD")
+        }
+    }
+
+    override fun configureFlutterEngine(
+        @NonNull flutterEngine: FlutterEngine,
+    ) {
+        super.configureFlutterEngine(flutterEngine)
+
+        // Setup EventChannel for VPN Status Updates
+        EventChannel(flutterEngine.dartExecutor.binaryMessenger, eventChannel).setStreamHandler(
+            object : EventChannel.StreamHandler {
+                override fun onListen(
+                    arguments: Any?,
+                    events: EventChannel.EventSink?,
+                ) {
+                    eventSink = events
+                    // Send current state if known (optional, but good practice)
+                    if (SingboxVpnService.isVpnRunning) {
+                        events?.success("CONNECTED")
+                    } else {
+                        events?.success("DISCONNECTED")
+                    }
+                }
+
+                override fun onCancel(arguments: Any?) {
+                    eventSink = null
+                }
+            },
+        )
+
+        // Setup EventChannel for VPN Traffic Stats
+        EventChannel(flutterEngine.dartExecutor.binaryMessenger, "vpn_stats").setStreamHandler(
+            object : EventChannel.StreamHandler {
+                private var statsJob: kotlinx.coroutines.Job? = null
+
+                override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
+                    statsJob?.cancel()
+                    statsJob = CoroutineScope(Dispatchers.IO).launch {
+                        val uid = applicationInfo.uid
+
+                        fun getRx(): Long {
+                            val uidRx = TrafficStats.getUidRxBytes(uid)
+                            return if (uidRx != TrafficStats.UNSUPPORTED.toLong()) uidRx else TrafficStats.getTotalRxBytes()
+                        }
+
+                        fun getTx(): Long {
+                            val uidTx = TrafficStats.getUidTxBytes(uid)
+                            return if (uidTx != TrafficStats.UNSUPPORTED.toLong()) uidTx else TrafficStats.getTotalTxBytes()
+                        }
+
+                        var sessionRx = 0L
+                        var sessionTx = 0L
+                        var lastRx = getRx()
+                        var lastTx = getTx()
+                        var lastTime = System.currentTimeMillis()
+                        var wasRunning = false
+
+                        while (isActive) {
+                            delay(1000)
+                            val now = System.currentTimeMillis()
+                            val curRx = getRx()
+                            val curTx = getTx()
+                            val isRunning = SingboxVpnService.isVpnRunning
+
+                            if (!isRunning) {
+                                sessionRx = 0L
+                                sessionTx = 0L
+                                lastRx = curRx
+                                lastTx = curTx
+                                lastTime = now
+                                wasRunning = false
+                                withContext(Dispatchers.Main) {
+                                    events?.success(
+                                        mapOf(
+                                            "rx" to 0L,
+                                            "tx" to 0L,
+                                            "downloadSpeed" to 0L,
+                                            "uploadSpeed" to 0L,
+                                        ),
+                                    )
+                                }
+                                continue
+                            }
+
+                            // If VPN just turned on, reset baseline to current counters
+                            if (!wasRunning) {
+                                wasRunning = true
+                                sessionRx = 0L
+                                sessionTx = 0L
+                                lastRx = curRx
+                                lastTx = curTx
+                                lastTime = now
+                                continue
+                            }
+
+                            val timeDiff = (now - lastTime) / 1000.0
+                            // Sanity check: delta must be non-negative and < 50MB in 1 second to avoid baseline jumping glitches
+                            val rxDelta = if (curRx >= lastRx && curRx != TrafficStats.UNSUPPORTED.toLong()) {
+                                val d = curRx - lastRx
+                                if (d in 0..50000000L) d else 0L
+                            } else 0L
+
+                            val txDelta = if (curTx >= lastTx && curTx != TrafficStats.UNSUPPORTED.toLong()) {
+                                val d = curTx - lastTx
+                                if (d in 0..50000000L) d else 0L
+                            } else 0L
+
+                            sessionRx += rxDelta
+                            sessionTx += txDelta
+
+                            val downSpeed = if (timeDiff > 0) (rxDelta / timeDiff).toLong() else 0L
+                            val upSpeed = if (timeDiff > 0) (txDelta / timeDiff).toLong() else 0L
+
+                            lastRx = curRx
+                            lastTx = curTx
+                            lastTime = now
+
+                            SingboxVpnService.updateTraffic(sessionRx, sessionTx, downSpeed, upSpeed)
+
+                            withContext(Dispatchers.Main) {
+                                events?.success(
+                                    mapOf(
+                                        "rx" to sessionRx,
+                                        "tx" to sessionTx,
+                                        "downloadSpeed" to downSpeed,
+                                        "uploadSpeed" to upSpeed,
+                                    ),
+                                )
+                            }
+                        }
+                    }
+                }
+
+                override fun onCancel(arguments: Any?) {
+                    statsJob?.cancel()
+                    statsJob = null
+                }
+            },
+        )
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channel).setMethodCallHandler { call, rawResult ->
+            val result = SafeResult(rawResult)
+            scope.launch(Dispatchers.IO) {
+                try {
+                    when (call.method) {
+                        "hasVpnPermission" -> {
+                            withContext(Dispatchers.Main) {
+                                val intent = android.net.VpnService.prepare(this@MainActivity)
+                                result.success(intent == null) // If null, permission is already granted
+                            }
+                        }
+                        "requestVpnPermission" -> {
+                            withContext(Dispatchers.Main) {
+                                val intent = android.net.VpnService.prepare(this@MainActivity)
+                                if (intent == null) {
+                                    result.success(true)
+                                } else {
+                                    pendingPermissionResult = result
+                                    pendingAction = "requestVpnPermission"
+                                    startActivityForResult(intent, vpnRequestCode)
+                                }
+                            }
+                        }
+                        "startVpn" -> {
+                            val config = call.argument<String>("config")
+                            val disallowedPackages = call.argument<ArrayList<String>>("disallowedPackages")
+                            withContext(Dispatchers.Main) {
+                                if (config != null && config.isNotBlank()) {
+                                    pendingConfig = config
+                                    pendingDisallowedPackages = disallowedPackages
+                                    pendingVpnResult = result
+                                    prepareVpn()
+                                } else {
+                                    result.error("INVALID_CONFIG", "Config string is null or empty", null)
+                                }
+                            }
+                        }
+                        "getInstalledApps" -> {
+                            scope.launch(Dispatchers.IO) {
+                                try {
+                                    val pm = packageManager
+                                    val launcherIntent = Intent(Intent.ACTION_MAIN, null).apply {
+                                        addCategory(Intent.CATEGORY_LAUNCHER)
+                                    }
+                                    val resolveInfos = pm.queryIntentActivities(launcherIntent, 0)
+                                    val appsList = ArrayList<Map<String, Any?>>()
+                                    val ownPackage = packageName
+
+                                    for (resolveInfo in resolveInfos) {
+                                        val pkg = resolveInfo.activityInfo.packageName
+                                        if (pkg == ownPackage) continue
+
+                                        val appName = resolveInfo.loadLabel(pm).toString()
+                                        val appInfo = resolveInfo.activityInfo.applicationInfo
+                                        val isSystemApp = (appInfo.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
+
+                                        var iconBase64: String? = null
+                                        try {
+                                            val drawable = resolveInfo.loadIcon(pm)
+                                            val bitmap = if (drawable is android.graphics.drawable.BitmapDrawable && drawable.bitmap != null) {
+                                                drawable.bitmap
+                                            } else {
+                                                val w = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else 72
+                                                val h = if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight else 72
+                                                val b = android.graphics.Bitmap.createBitmap(w.coerceAtMost(96), h.coerceAtMost(96), android.graphics.Bitmap.Config.ARGB_8888)
+                                                val canvas = android.graphics.Canvas(b)
+                                                drawable.setBounds(0, 0, canvas.width, canvas.height)
+                                                drawable.draw(canvas)
+                                                b
+                                            }
+                                            val stream = java.io.ByteArrayOutputStream()
+                                            val scaledBitmap = if (bitmap.width > 96 || bitmap.height > 96) {
+                                                android.graphics.Bitmap.createScaledBitmap(bitmap, 72, 72, true)
+                                            } else {
+                                                bitmap
+                                            }
+                                            scaledBitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 80, stream)
+                                            iconBase64 = android.util.Base64.encodeToString(stream.toByteArray(), android.util.Base64.NO_WRAP)
+                                        } catch (_: Throwable) {}
+
+                                        appsList.add(mapOf(
+                                            "name" to appName,
+                                            "packageName" to pkg,
+                                            "isSystemApp" to isSystemApp,
+                                            "icon" to iconBase64
+                                        ))
+                                    }
+
+                                    appsList.sortBy { (it["name"] as? String)?.lowercase() ?: "" }
+
+                                    withContext(Dispatchers.Main) {
+                                        result.success(appsList)
+                                    }
+                                } catch (e: Exception) {
+                                    withContext(Dispatchers.Main) {
+                                        result.error("APP_QUERY_FAILED", e.message, null)
+                                    }
+                                }
+                            }
+                        }
+                        "stopVpn" -> {
+                            withContext(Dispatchers.Main) {
+                                stopVpnService()
+                                result.success(null)
+                            }
+                        }
+                        "testConfig" -> {
+                            val config = call.argument<String>("config")
+                            val intent = withContext(Dispatchers.Main) { android.net.VpnService.prepare(this@MainActivity) }
+                            if (intent != null) {
+                                pendingConfig = config
+                                pendingMeasurePingResult = result
+                                pendingAction = "testConfig"
+                                withContext(Dispatchers.Main) { startActivityForResult(intent, vpnRequestCode) }
+                            } else {
+                                if (config != null && config.isNotBlank()) {
+                                    SingboxVpnService.measurePing(config, cacheDir, result)
+                                } else {
+                                    result.error("INVALID_CONFIG", "Config string is null or empty", null)
+                                }
+                            }
+                        }
+                        "startTestProxy" -> {
+                            android.util.Log.i("MainActivity", "startTestProxy invoked")
+                            val config = call.argument<String>("config")
+                            val intent = withContext(Dispatchers.Main) { android.net.VpnService.prepare(this@MainActivity) }
+                            if (intent != null) {
+                                android.util.Log.w("MainActivity", "startTestProxy: Permission needed, launching intent")
+                                pendingConfig = config
+                                pendingTestProxyResult = result
+                                pendingAction = "startTestProxy"
+                                withContext(Dispatchers.Main) { startActivityForResult(intent, vpnRequestCode) }
+                            } else {
+                                if (config != null && config.isNotBlank()) {
+                                    try {
+                                        SingboxVpnService.startTestProxy(testId = "dart_proxy_test", rawInput = config, tempDir = cacheDir, result = result)
+                                    } catch (e: Exception) {
+                                        android.util.Log.e("MainActivity", "Native crash in startTestProxy: ${e.message}", e)
+                                        result.error("NATIVE_CRASH", "Native crash in startTestProxy: ${e.message}", null)
+                                    }
+                                } else {
+                                    android.util.Log.e("MainActivity", "startTestProxy failed: INVALID_CONFIG")
+                                    result.error("INVALID_CONFIG", "Config string is null or empty", null)
+                                }
+                            }
+                        }
+                        "stopTestProxy" -> {
+                            SingboxVpnService.stopTestProxy()
+                            result.success(null)
+                        }
+                        "updateSessionMeta" -> {
+                            val serverName = call.argument<String>("serverName")
+                            val remainingTimeText = call.argument<String>("remainingTimeText")
+                            val remainingSeconds = call.argument<Int>("remainingSeconds") ?: -1
+                            SingboxVpnService.updateSessionMeta(serverName, remainingTimeText, remainingSeconds)
+                            result.success(true)
+                        }
+                        "installApk" -> {
+                            val filePath = call.argument<String>("filePath")
+                            withContext(Dispatchers.Main) {
+                                if (filePath != null) {
+                                    try {
+                                        val file = java.io.File(filePath)
+                                        if (!file.exists()) {
+                                            result.error("FILE_NOT_FOUND", "APK file does not exist", null)
+                                            return@withContext
+                                        }
+
+                                        
+
+                                        val uri = androidx.core.content.FileProvider.getUriForFile(
+                                            this@MainActivity,
+                                            "${applicationContext.packageName}.fileProvider",
+                                            file
+                                        )
+                                        val installIntent = Intent(Intent.ACTION_VIEW).apply {
+                                            setDataAndType(uri, "application/vnd.android.package-archive")
+                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        }
+                                        startActivity(installIntent)
+                                        result.success(true)
+                                    } catch (e: Exception) {
+                                        android.util.Log.e("MainActivity", "Install APK error: ${e.message}", e)
+                                        result.error("INSTALL_ERROR", e.message, null)
+                                    }
+                                } else {
+                                    result.error("INVALID_PATH", "filePath is null", null)
+                                }
+                            }
+                        }
+                        else -> {
+                            result.notImplemented()
+                        }
+                    }
+                } catch (e: Throwable) {
+                    result.error("METHOD_ERROR", "Exception during method call: ${e.message}", null)
+                }
+            }
+        }
+    }
+
+    private fun prepareVpn() {
+        val intent = VpnService.prepare(this)
+        if (intent != null) {
+            startActivityForResult(intent, vpnRequestCode)
+        } else {
+            // Already granted
+            if (pendingConfig != null) {
+                val serviceIntent =
+                    Intent(this, SingboxVpnService::class.java).apply {
+                        putExtra("action", SingboxVpnService.ACTION_START)
+                        putExtra("config", pendingConfig)
+                    }
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    startForegroundService(serviceIntent)
+                } else {
+                    startService(serviceIntent)
+                }
+                pendingVpnResult?.success(null)
+                pendingConfig = null
+                pendingVpnResult = null
+            }
+        }
+    }
+
+    override fun onActivityResult(
+        requestCode: Int,
+        resultCode: Int,
+        data: Intent?,
+    ) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == vpnRequestCode) {
+            if (pendingAction == "requestVpnPermission") {
+                val granted = (resultCode == Activity.RESULT_OK)
+                pendingPermissionResult?.success(granted)
+                pendingPermissionResult = null
+                pendingAction = null
+                return
+            }
+
+            if (resultCode == Activity.RESULT_OK && pendingConfig != null) {
+                val config = pendingConfig!!
+                when (pendingAction) {
+                    "testConfig" -> {
+                        val result = pendingMeasurePingResult
+                        scope.launch(Dispatchers.IO) {
+                            SingboxVpnService.measurePing(config, cacheDir, result)
+                        }
+                        pendingMeasurePingResult = null
+                    }
+                    "startTestProxy" -> {
+                        val result = pendingTestProxyResult
+                        scope.launch(Dispatchers.IO) {
+                            try {
+                                SingboxVpnService.startTestProxy(testId = "dart_proxy_test", rawInput = config, tempDir = cacheDir, result = result)
+                            } catch (e: Exception) {
+                                android.util.Log.e("MainActivity", "Native crash in startTestProxy: ${e.message}", e)
+                                result?.error("NATIVE_CRASH", "Native crash in startTestProxy: ${e.message}", null)
+                            }
+                        }
+                        pendingTestProxyResult = null
+                    }
+                    else -> {
+                        // Default startVpn behavior
+                        val serviceIntent =
+                            Intent(this, SingboxVpnService::class.java).apply {
+                                putExtra("action", SingboxVpnService.ACTION_START)
+                                putExtra("config", config)
+                                if (pendingDisallowedPackages != null) {
+                                    putStringArrayListExtra("disallowedPackages", pendingDisallowedPackages)
+                                }
+                            }
+
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            startForegroundService(serviceIntent)
+                        } else {
+                            startService(serviceIntent)
+                        }
+                        pendingVpnResult?.success(null)
+                    }
+                }
+            } else {
+                val details = mapOf("permanentlyDenied" to false)
+                when (pendingAction) {
+                    "testConfig" -> pendingMeasurePingResult?.error("VPN_PERMISSION_DENIED", "VPN permission was denied by the user.", details)
+                    "startTestProxy" -> pendingTestProxyResult?.error("VPN_PERMISSION_DENIED", "VPN permission was denied by the user.", details)
+                    else -> pendingVpnResult?.error("VPN_PERMISSION_DENIED", "VPN permission was denied by the user.", details)
+                }
+                pendingMeasurePingResult = null
+                pendingTestProxyResult = null
+                pendingVpnResult = null
+            }
+            pendingConfig = null
+            pendingAction = null
+        }
+    }
+
+    private fun stopVpnService() {
+        android.util.Log.d("MainActivity", "stopVpnService invoked, triggering forceStopVpnNow")
+        try {
+            SingboxVpnService.forceStopVpnNow()
+        } catch (e: Throwable) {
+            android.util.Log.e("MainActivity", "Error in forceStopVpnNow: ${e.message}")
+        }
+        val serviceIntent =
+            Intent(this, SingboxVpnService::class.java).apply {
+                putExtra("action", SingboxVpnService.ACTION_STOP)
+            }
+        startService(serviceIntent)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        scope.cancel()
+    }
+}

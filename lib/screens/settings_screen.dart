@@ -1,275 +1,287 @@
-// lib/screens/settings_screen.dart
-
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../providers/theme_provider.dart';
-import '../services/config_manager.dart';
-import '../widgets/scale_on_tap.dart';
-
-class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
-
-  @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
-}
-
-class _SettingsScreenState extends State<SettingsScreen>
-    with WidgetsBindingObserver {
-  // State variables
-  bool _isBatteryOptimizationIgnored = false;
-  bool _autoTestOnStartup = true;
-  bool _autoRefreshOnStartup = true;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _checkBatteryOptimizationStatus();
-    _loadStartupPreferences();
-  }
-
-  Future<void> _loadStartupPreferences() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (mounted) {
-      setState(() {
-        _autoTestOnStartup = prefs.getBool('autoTestOnStartup') ?? true;
-        _autoRefreshOnStartup = prefs.getBool('autoRefreshOnStartup') ?? true;
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      _checkBatteryOptimizationStatus();
-    }
-  }
-
-  Future<void> _checkBatteryOptimizationStatus() async {
-    final status = await Permission.ignoreBatteryOptimizations.status;
-    if (mounted) {
-      setState(() {
-        _isBatteryOptimizationIgnored = status.isGranted;
-      });
-    }
-  }
-
-  Future<void> _requestBatteryOptimization() async {
-    if (_isBatteryOptimizationIgnored) return;
-
-    // Show explanation dialog first
-    final shouldOpenSettings = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Keep VPN Alive'),
-        content: const Text(
-          'To prevent Android from killing the VPN connection when your screen is off, please disable battery optimizations for this app.\n\n'
-          '1. Tap "Open Settings"\n'
-          '2. Select "All apps" (if needed)\n'
-          '3. Find "iVPN" and select "Don\'t optimize"',
-        ),
-        actions: [
-          ScaleOnTap(
-            onTap: () => Navigator.pop(context, false),
-            child: IgnorePointer(
-              child: TextButton(
-                onPressed: () {},
-                child: const Text('Cancel'),
-              ),
-            ),
-          ),
-          ScaleOnTap(
-            onTap: () => Navigator.pop(context, true),
-            child: IgnorePointer(
-              child: ElevatedButton(
-                onPressed: () {},
-                child: const Text('Open Settings'),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (shouldOpenSettings == true) {
-      await Permission.ignoreBatteryOptimizations.request();
-      // Status will be re-checked in didChangeAppLifecycleState when user returns
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final configManager = Provider.of<ConfigManager>(context);
-
-    return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
-      body: ListView(
-        children: [
-          // Connection Settings Section
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-            child: Text(
-              'Connection',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.green,
-              ),
-            ),
-          ),
-          ScaleOnTap(
-            onTap: _isBatteryOptimizationIgnored
-                ? null
-                : _requestBatteryOptimization,
-            child: IgnorePointer(
-              child: ListTile(
-                leading: Icon(
-                  _isBatteryOptimizationIgnored
-                      ? Icons.shield
-                      : Icons.battery_alert,
-                  color:
-                      _isBatteryOptimizationIgnored ? Colors.green : Colors.orange,
-                ),
-                title: const Text('Keep VPN Alive'),
-                subtitle: Text(
-                  _isBatteryOptimizationIgnored
-                      ? 'Optimizations disabled (Stable)'
-                      : 'Prevent background kills (Recommended)',
-                  style: TextStyle(
-                    color: _isBatteryOptimizationIgnored
-                        ? Colors.green
-                        : Colors.orange,
-                    fontSize: 12,
-                  ),
-                ),
-                trailing: _isBatteryOptimizationIgnored
-                    ? const Icon(Icons.check_circle, color: Colors.green)
-                    : const Icon(Icons.arrow_forward_ios, size: 16),
-              ),
-            ),
-          ),
-          SwitchListTile(
-            title: const Text('Kill Switch'),
-            subtitle: const Text('Block internet if VPN disconnects'),
-            value: configManager.isKillSwitchEnabled,
-            onChanged: (bool value) {
-              configManager.isKillSwitchEnabled = value;
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Please reconnect the VPN to apply changes.'),
-                ),
-              );
-            },
-            secondary: const Icon(Icons.gpp_good_outlined),
-          ),
-          ScaleOnTap(
-            onTap: () {
-              // TODO: Add navigation to a new screen for app selection
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Split Tunneling feature is coming soon!'),
-                ),
-              );
-            },
-            child: IgnorePointer(
-              child: ListTile(
-                leading: const Icon(Icons.splitscreen_outlined),
-                title: const Text('Split Tunneling'),
-                subtitle: const Text('Choose which apps use the VPN'),
-              ),
-            ),
-          ),
-          SwitchListTile(
-            title: const Text('Auto-Test on Startup'),
-            subtitle: const Text('Test configs automatically when app launches'),
-            value: _autoTestOnStartup,
-            onChanged: (bool value) async {
-              setState(() => _autoTestOnStartup = value);
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.setBool('autoTestOnStartup', value);
-            },
-            secondary: const Icon(Icons.speed_outlined),
-          ),
-          SwitchListTile(
-            title: const Text('Auto-Refresh on Startup'),
-            subtitle: const Text('Refresh server list from cloud on app startup'),
-            value: _autoRefreshOnStartup,
-            onChanged: (bool value) async {
-              setState(() => _autoRefreshOnStartup = value);
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.setBool('autoRefreshOnStartup', value);
-            },
-            secondary: const Icon(Icons.cloud_sync_outlined),
-          ),
-          const Divider(),
-
-          // Appearance Settings Section
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-            child: Text(
-              'Appearance',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.green,
-              ),
-            ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.palette_outlined),
-            title: const Text('Theme'),
-            trailing: DropdownButton<ThemeMode>(
-              value: themeProvider.themeMode,
-              items: const [
-                DropdownMenuItem(
-                  value: ThemeMode.system,
-                  child: Text('System Default'),
-                ),
-                DropdownMenuItem(value: ThemeMode.light, child: Text('Light')),
-                DropdownMenuItem(value: ThemeMode.dark, child: Text('Dark')),
-              ],
-              onChanged: (mode) {
-                if (mode != null) {
-                  // Update the theme provider
-                  if (mode == ThemeMode.dark) {
-                    themeProvider.toggleTheme(true);
-                  } else if (mode == ThemeMode.light) {
-                    themeProvider.toggleTheme(false);
-                  } else {
-                    // For system theme, we can default to light or dark
-                    themeProvider.toggleTheme(false);
-                  }
-                }
-              },
-            ),
-          ),
-          const Divider(),
-
-          // About Section
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-            child: Text(
-              'About',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.green,
-              ),
-            ),
-          ),
-          const ListTile(
-            leading: Icon(Icons.info_outline),
-            title: Text('Version'),
-            trailing: Text('1.0.0'),
-          ),
-        ],
-      ),
-    );
-  }
-}
+// lib/screens/settings_screen.dart
+
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../providers/theme_provider.dart';
+import '../services/config_manager.dart';
+import '../widgets/scale_on_tap.dart';
+import 'split_tunneling_screen.dart';
+
+class SettingsScreen extends StatefulWidget {
+  const SettingsScreen({super.key});
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen>
+    with WidgetsBindingObserver {
+  // State variables
+  bool _isBatteryOptimizationIgnored = false;
+  bool _autoTestOnStartup = true;
+  bool _autoRefreshOnStartup = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _checkBatteryOptimizationStatus();
+    _loadStartupPreferences();
+  }
+
+  Future<void> _loadStartupPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _autoTestOnStartup = prefs.getBool('autoTestOnStartup') ?? true;
+        _autoRefreshOnStartup = prefs.getBool('autoRefreshOnStartup') ?? true;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkBatteryOptimizationStatus();
+    }
+  }
+
+  Future<void> _checkBatteryOptimizationStatus() async {
+    final status = await Permission.ignoreBatteryOptimizations.status;
+    if (mounted) {
+      setState(() {
+        _isBatteryOptimizationIgnored = status.isGranted;
+      });
+    }
+  }
+
+  Future<void> _requestBatteryOptimization() async {
+    if (_isBatteryOptimizationIgnored) return;
+
+    // Show explanation dialog first
+    final shouldOpenSettings = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Keep VPN Alive'),
+        content: const Text(
+          'To prevent Android from killing the VPN connection when your screen is off, please disable battery optimizations for this app.\n\n'
+          '1. Tap "Open Settings"\n'
+          '2. Select "All apps" (if needed)\n'
+          '3. Find "iVPN" and select "Don\'t optimize"',
+        ),
+        actions: [
+          ScaleOnTap(
+            onTap: () => Navigator.pop(context, false),
+            child: IgnorePointer(
+              child: TextButton(
+                onPressed: () {},
+                child: const Text('Cancel'),
+              ),
+            ),
+          ),
+          ScaleOnTap(
+            onTap: () => Navigator.pop(context, true),
+            child: IgnorePointer(
+              child: ElevatedButton(
+                onPressed: () {},
+                child: const Text('Open Settings'),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldOpenSettings == true) {
+      await Permission.ignoreBatteryOptimizations.request();
+      // Status will be re-checked in didChangeAppLifecycleState when user returns
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final configManager = Provider.of<ConfigManager>(context);
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Settings')),
+      body: ListView(
+        children: [
+          // Connection Settings Section
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Text(
+              'Connection',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.green,
+              ),
+            ),
+          ),
+          ScaleOnTap(
+            onTap: _isBatteryOptimizationIgnored
+                ? null
+                : _requestBatteryOptimization,
+            child: IgnorePointer(
+              child: ListTile(
+                leading: Icon(
+                  _isBatteryOptimizationIgnored
+                      ? Icons.shield
+                      : Icons.battery_alert,
+                  color:
+                      _isBatteryOptimizationIgnored ? Colors.green : Colors.orange,
+                ),
+                title: const Text('Keep VPN Alive'),
+                subtitle: Text(
+                  _isBatteryOptimizationIgnored
+                      ? 'Optimizations disabled (Stable)'
+                      : 'Prevent background kills (Recommended)',
+                  style: TextStyle(
+                    color: _isBatteryOptimizationIgnored
+                        ? Colors.green
+                        : Colors.orange,
+                    fontSize: 12,
+                  ),
+                ),
+                trailing: _isBatteryOptimizationIgnored
+                    ? const Icon(Icons.check_circle, color: Colors.green)
+                    : const Icon(Icons.arrow_forward_ios, size: 16),
+              ),
+            ),
+          ),
+          SwitchListTile(
+            title: const Text('Kill Switch'),
+            subtitle: const Text('Block internet if VPN disconnects'),
+            value: configManager.isKillSwitchEnabled,
+            onChanged: (bool value) {
+              configManager.isKillSwitchEnabled = value;
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Please reconnect the VPN to apply changes.'),
+                ),
+              );
+            },
+            secondary: const Icon(Icons.gpp_good_outlined),
+          ),
+          ScaleOnTap(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const SplitTunnelingScreen(),
+                ),
+              );
+            },
+            child: IgnorePointer(
+              child: ListTile(
+                leading: const Icon(Icons.splitscreen_outlined),
+                title: const Text('Split Tunneling'),
+                subtitle: Text(
+                  configManager.splitTunnelingPackages.isEmpty
+                      ? 'Route Iranian apps & banks directly (Disabled)'
+                      : '${configManager.splitTunnelingPackages.length} apps routed directly (Bypassed)',
+                  style: TextStyle(
+                    color: configManager.splitTunnelingPackages.isNotEmpty
+                        ? Colors.greenAccent
+                        : null,
+                    fontSize: 12,
+                  ),
+                ),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              ),
+            ),
+          ),
+          SwitchListTile(
+            title: const Text('Auto-Test on Startup'),
+            subtitle: const Text('Test configs automatically when app launches'),
+            value: _autoTestOnStartup,
+            onChanged: (bool value) async {
+              setState(() => _autoTestOnStartup = value);
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setBool('autoTestOnStartup', value);
+            },
+            secondary: const Icon(Icons.speed_outlined),
+          ),
+          SwitchListTile(
+            title: const Text('Auto-Refresh on Startup'),
+            subtitle: const Text('Refresh server list from cloud on app startup'),
+            value: _autoRefreshOnStartup,
+            onChanged: (bool value) async {
+              setState(() => _autoRefreshOnStartup = value);
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setBool('autoRefreshOnStartup', value);
+            },
+            secondary: const Icon(Icons.cloud_sync_outlined),
+          ),
+          const Divider(),
+
+          // Appearance Settings Section
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Text(
+              'Appearance',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.green,
+              ),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.palette_outlined),
+            title: const Text('Theme'),
+            trailing: DropdownButton<ThemeMode>(
+              value: themeProvider.themeMode,
+              items: const [
+                DropdownMenuItem(
+                  value: ThemeMode.system,
+                  child: Text('System Default'),
+                ),
+                DropdownMenuItem(value: ThemeMode.light, child: Text('Light')),
+                DropdownMenuItem(value: ThemeMode.dark, child: Text('Dark')),
+              ],
+              onChanged: (mode) {
+                if (mode != null) {
+                  // Update the theme provider
+                  if (mode == ThemeMode.dark) {
+                    themeProvider.toggleTheme(true);
+                  } else if (mode == ThemeMode.light) {
+                    themeProvider.toggleTheme(false);
+                  } else {
+                    // For system theme, we can default to light or dark
+                    themeProvider.toggleTheme(false);
+                  }
+                }
+              },
+            ),
+          ),
+          const Divider(),
+
+          // About Section
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Text(
+              'About',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.green,
+              ),
+            ),
+          ),
+          const ListTile(
+            leading: Icon(Icons.info_outline),
+            title: Text('Version'),
+            trailing: Text('1.0.0'),
+          ),
+        ],
+      ),
+    );
+  }
+}
