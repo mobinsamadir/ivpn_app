@@ -254,7 +254,8 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
           if (wasConnected &&
               _configManager.isAutoSwitchEnabled &&
               !_configManager.userInitiatedDisconnect &&
-              !_configManager.isConnectionCancelled) {
+              !_configManager.isConnectionCancelled &&
+              _connectionFlowState != 'disconnecting') {
             final now = DateTime.now();
             if (_lastAutoSwitchAttempt != null &&
                 now.difference(_lastAutoSwitchAttempt!).inSeconds < 3) {
@@ -290,7 +291,7 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                 }
 
                 Future.delayed(const Duration(seconds: 1), () {
-                  if (mounted && !_configManager.userInitiatedDisconnect) {
+                  if (mounted && !_configManager.userInitiatedDisconnect && _connectionFlowState != 'disconnecting') {
                     _skipServer();
                   }
                 });
@@ -298,15 +299,14 @@ class _ConnectionHomeScreenState extends State<ConnectionHomeScreen>
                 _configManager.setConnected(false, status: 'Finding replacement server...');
                 _funnelService.startFunnel(retestDead: false, enableSpeedTest: false);
                 Future.delayed(const Duration(seconds: 3), () {
-                  if (mounted && !_configManager.userInitiatedDisconnect) {
+                  if (mounted && !_configManager.userInitiatedDisconnect && _connectionFlowState != 'disconnecting') {
                     _skipServer();
                   }
                 });
               }
             }
           }
-          _configManager.userInitiatedDisconnect = false;
-          _configManager.isConnectionCancelled = false;
+          _connectionFlowState = 'idle';
         }
 
         // NEW: Post-Connect Logic (Anti-Censorship)

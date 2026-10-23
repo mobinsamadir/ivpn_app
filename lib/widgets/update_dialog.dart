@@ -1,5 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:device_info_plus/device_info_plus.dart';
@@ -25,6 +27,9 @@ class UpdateDialog extends StatefulWidget {
 
 class _UpdateDialogState extends State<UpdateDialog> {
   String? _errorMessage;
+  bool _isDownloading = false;
+  double _downloadProgress = 0.0;
+  String _downloadStatus = '';
 
   Future<String> _determineDownloadUrl() async {
     const String baseUrl = 'https://github.com/mobinsamadir/ivpn_app/releases/latest/download';
@@ -59,8 +64,80 @@ class _UpdateDialogState extends State<UpdateDialog> {
     return widget.downloadUrl;
   }
 
-  Future<void> _startUpdate() async {
+  Future<void> _startInAppUpdate() async {
     widget.onUpdate?.call();
+    if (!Platform.isAndroid) {
+      _openExternalBrowser();
+      return;
+    }
+
+    setState(() {
+      _isDownloading = true;
+      _downloadProgress = 0.0;
+      _downloadStatus = 'Connecting...';
+      _errorMessage = null;
+    });
+
+    try {
+      final targetUrl = await _determineDownloadUrl();
+      final tempDir = await getTemporaryDirectory();
+      final saveFile = File('${tempDir.path}/ivpn_update.apk');
+      if (await saveFile.exists()) {
+        try {
+          await saveFile.delete();
+        } catch (_) {}
+      }
+
+      final client = HttpClient();
+      final request = await client.getUrl(Uri.parse(targetUrl));
+      final response = await request.close();
+
+      if (response.statusCode != 200) {
+        throw Exception('Server responded with HTTP ${response.statusCode}');
+      }
+
+      final contentLength = response.contentLength;
+      final sink = saveFile.openWrite();
+      int receivedBytes = 0;
+
+      await for (final chunk in response) {
+        sink.add(chunk);
+        receivedBytes += chunk.length;
+        if (contentLength > 0 && mounted) {
+          setState(() {
+            _downloadProgress = (receivedBytes / contentLength).clamp(0.0, 1.0);
+            final recMb = (receivedBytes / (1024 * 1024)).toStringAsFixed(1);
+            final totalMb = (contentLength / (1024 * 1024)).toStringAsFixed(1);
+            _downloadStatus = '$recMb MB / $totalMb MB (${(_downloadProgress * 100).toInt()}%)';
+          });
+        }
+      }
+
+      await sink.flush();
+      await sink.close();
+      client.close();
+
+      if (mounted) {
+        setState(() {
+          _downloadStatus = 'Opening Installer...';
+        });
+      }
+
+      const channel = MethodChannel('vpn_control');
+      await channel.invokeMethod('installApk', {'filePath': saveFile.path});
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      AdvancedLogger.error('[UpdateDialog] Direct download error: $e');
+      if (mounted) {
+        setState(() {
+          _isDownloading = false;
+          _errorMessage = 'In-app download failed: $e. You can use browser download instead.';
+        });
+      }
+    }
+  }
+
+  Future<void> _openExternalBrowser() async {
     final targetUrl = await _determineDownloadUrl();
     try {
       final uri = Uri.parse(targetUrl);
@@ -70,10 +147,9 @@ class _UpdateDialogState extends State<UpdateDialog> {
       }
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
-      AdvancedLogger.error('[UpdateDialog] Launch URL error: $e');
       if (mounted) {
         setState(() {
-          _errorMessage = 'Could not open download link: $e';
+          _errorMessage = 'Could not open browser: $e';
         });
       }
     }
@@ -218,34 +294,90 @@ class _UpdateDialogState extends State<UpdateDialog> {
               const SizedBox(height: 12),
             ],
 
+            // Progress Indicator
+            if (_isDownloading) ...[
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  LinearProgressIndicator(
+                    value: _downloadProgress > 0 ? _downloadProgress : null,
+                    backgroundColor: Colors.white12,
+                    valueColor: const AlwaysStoppedAnimation<Color>(Colors.blueAccent),
+                    minHeight: 6,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _downloadStatus,
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+            ],
+
             // Actions
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text(
-                    'Later',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton.icon(
-                  onPressed: _startUpdate,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blueAccent,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
+                if (!_isDownloading) ...[
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text(
+                      'Later',
+                      style: TextStyle(color: Colors.grey),
                     ),
                   ),
-                  icon: const Icon(Icons.download, size: 18),
-                  label: const Text('Download Update'),
-                ),
+                  const SizedBox(width: 4),
+                  TextButton.icon(
+                    onPressed: _openExternalBrowser,
+                    icon: const Icon(Icons.open_in_browser, size: 16, color: Colors.white70),
+                    label: const Text(
+                      'Browser',
+                      style: TextStyle(color: Colors.white70),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: _startInAppUpdate,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueAccent,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                    ),
+                    icon: const Icon(Icons.download, size: 18),
+                    label: const Text('Direct Install'),
+                  ),
+                ] else ...[
+                  ElevatedButton.icon(
+                    onPressed: null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueAccent.withValues(alpha: 0.5),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                    ),
+                    icon: const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white70),
+                      ),
+                    ),
+                    label: const Text('Downloading...', style: TextStyle(color: Colors.white70)),
+                  ),
+                ],
               ],
             ),
           ],

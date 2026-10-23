@@ -354,10 +354,11 @@ class ConfigManager extends ChangeNotifier {
         _consecutiveFailoverCount = 0; // Reset on success
         setConnected(true, status: status);
       } else if (status == 'DISCONNECTED' || status.startsWith('ERROR')) {
+        final wasActive = _isConnected;
         setConnected(false, status: status);
 
-        // Check if we should auto-heal
-        if (!userInitiatedDisconnect && isAutoSwitchEnabled) {
+        // Check if we should auto-heal (only if unexpectedly dropped from an active connection)
+        if (!userInitiatedDisconnect && isAutoSwitchEnabled && wasActive) {
           final timeWallet = TimeWalletService();
           if (!timeWallet.hasTime) {
             AdvancedLogger.info("[Auto-Heal] Skipped: Time Wallet expired.");

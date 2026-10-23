@@ -470,7 +470,23 @@ class SingboxVpnService :
 
     private suspend fun startVpn(rawInput: String) {
         nativeCallMutex.withLock {
-            if (isVpnRunning) return
+            // Seamless Server Switching: Stop previous core if switching servers while VPN is already active
+            if (isVpnRunning) {
+                android.util.Log.i("NativeVpnLifecycle", "VPN already running, reloading core with new server...")
+                val oldServer = mainServer
+                mainServer = null
+                if (oldServer != null) {
+                    try {
+                        try {
+                            oldServer.javaClass.getMethod("serviceStop").invoke(oldServer)
+                        } catch (_: Throwable) {
+                            oldServer.closeService()
+                        }
+                    } catch (_: Throwable) {}
+                    try { oldServer.close() } catch (_: Throwable) {}
+                }
+                isVpnRunning = false
+            }
 
             isVpnRunning = true
 
@@ -495,32 +511,34 @@ class SingboxVpnService :
                     return
                 }
 
-                val builder = Builder()
-                builder.setSession("iVPN Connection")
-                builder.addAddress("172.19.0.1", 28)
-                builder.addRoute("0.0.0.0", 0)
-                builder.setMtu(1500)
-                builder.addDnsServer("8.8.8.8")
-                builder.addDnsServer("1.1.1.1")
+                if (vpnInterface == null) {
+                    val builder = Builder()
+                    builder.setSession("iVPN Connection")
+                    builder.addAddress("172.19.0.1", 28)
+                    builder.addRoute("0.0.0.0", 0)
+                    builder.setMtu(1500)
+                    builder.addDnsServer("8.8.8.8")
+                    builder.addDnsServer("1.1.1.1")
 
-                // CRITICAL FIX: Exclude own package so sing-box outbound sockets and app traffic
-                // NEVER route into tun0 (stops infinite routing loop and runaway 433MB upload traffic)
-                try {
-                    builder.addDisallowedApplication(packageName)
-                    android.util.Log.i("NativeVpnLifecycle", "Successfully excluded $packageName from VPN tunnel")
-                } catch (e: Throwable) {
-                    android.util.Log.e("NativeVpnLifecycle", "Failed to exclude $packageName: ${e.message}")
+                    // CRITICAL FIX: Exclude own package so sing-box outbound sockets and app traffic
+                    // NEVER route into tun0 (stops infinite routing loop and runaway 433MB upload traffic)
+                    try {
+                        builder.addDisallowedApplication(packageName)
+                        android.util.Log.i("NativeVpnLifecycle", "Successfully excluded $packageName from VPN tunnel")
+                    } catch (e: Throwable) {
+                        android.util.Log.e("NativeVpnLifecycle", "Failed to exclude $packageName: ${e.message}")
+                    }
+
+                    // Add IPv6 route to prevent IPv6 traffic/DNS leaks from bypassing VPN
+                    try {
+                        builder.addAddress("fdfe:dcba:9876::1", 126)
+                        builder.addRoute("::", 0)
+                    } catch (e: Throwable) {
+                        android.util.Log.w("NativeVpnLifecycle", "IPv6 routing setup warning: ${e.message}")
+                    }
+
+                    vpnInterface = builder.establish()
                 }
-
-                // Add IPv6 route to prevent IPv6 traffic/DNS leaks from bypassing VPN
-                try {
-                    builder.addAddress("fdfe:dcba:9876::1", 126)
-                    builder.addRoute("::", 0)
-                } catch (e: Throwable) {
-                    android.util.Log.w("NativeVpnLifecycle", "IPv6 routing setup warning: ${e.message}")
-                }
-
-                vpnInterface = builder.establish()
 
                 if (vpnInterface == null) {
                     stopVpnInternal()
@@ -544,7 +562,6 @@ class SingboxVpnService :
                 MainActivity.sendVpnStatus("CONNECTED")
             } catch (e: Throwable) {
                 e.printStackTrace()
-                // CRITICAL FIX: Broadcast "ERROR" State to Dart
                 MainActivity.sendVpnStatus("ERROR")
                 stopVpnInternal()
             }
