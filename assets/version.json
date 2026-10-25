@@ -7,8 +7,10 @@
   "url": "https://github.com/mobinsamadir/ivpn_app/releases/latest/download/iVPN-release.apk",
   "network_tolerance_multiplier": 1.5,
   "server_urls": [
-    "https://raw.githubusercontent.com/mobinsamadir/ivpn-servers/main/real_delay_passed.txt",
-    "https://cdn.jsdelivr.net/gh/mobinsamadir/ivpn-servers@main/real_delay_passed.txt"
+    "https://raw.githubusercontent.com/mobinsamadir/ivpn-servers/main/tested_configs/iran_passed.txt",
+    "https://cdn.jsdelivr.net/gh/mobinsamadir/ivpn-servers@main/tested_configs/iran_passed.txt",
+    "https://fastly.jsdelivr.net/gh/mobinsamadir/ivpn-servers@main/tested_configs/iran_passed.txt",
+    "https://gcore.jsdelivr.net/gh/mobinsamadir/ivpn-servers@main/tested_configs/iran_passed.txt"
   ],
   "network_tuning": {}
 }
