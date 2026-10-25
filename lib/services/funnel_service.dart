@@ -65,12 +65,14 @@ class FunnelService {
 
   static int get _maxTcpWorkers =>
       Platform.isWindows ? 8 : _getDynamicWorkerCount(16);
-  static int get _maxHttpWorkers =>
-      Platform.isAndroid ? 1 : (Platform.isWindows ? 2 : _getDynamicWorkerCount(3));
+  static int get _maxHttpWorkers => Platform.isAndroid
+      ? 1
+      : (Platform.isWindows ? 2 : _getDynamicWorkerCount(3));
   static int get _maxSpeedWorkers => 1;
 
   // State
   bool _isRunning = false;
+  bool get isRunning => _isRunning;
   bool _stopRequested = false;
   bool _enableSpeedTest = false;
   Timer? _uiThrottleTimer; // Throttled UI updater
@@ -134,11 +136,11 @@ class FunnelService {
     // CRITICAL GUARD: Ensure we have permission before running any funnel tests
     final hasPerm = await NativeVpnService().hasVpnPermission();
     if (!hasPerm && Platform.isAndroid) {
-      AdvancedLogger.error("FunnelService: Aborting startFunnel due to missing VPN permission.");
+      AdvancedLogger.error(
+          "FunnelService: Aborting startFunnel due to missing VPN permission.");
       _isRunning = false;
       return;
     }
-
 
     // Start UI Throttle Timer (500ms)
     _startUiThrottle();
@@ -164,7 +166,9 @@ class FunnelService {
       } else if (c.wasEverValidated) {
         // Tier 3: Previously valid resurrection candidates
         resurrectionCandidates.add(c);
-      } else if (c.funnelStage == 0 && c.failureCount == 0 && c.lastTestedAt == null) {
+      } else if (c.funnelStage == 0 &&
+          c.failureCount == 0 &&
+          c.lastTestedAt == null) {
         // Tier 4: Fresh untested configs
         freshUntested.add(c);
       } else {
@@ -184,7 +188,8 @@ class FunnelService {
     favorites.sort(compareScore);
     currentlyValid.sort(compareScore);
     resurrectionCandidates.sort((a, b) {
-      final timeComp = b.lastSuccessfulConnectionTime.compareTo(a.lastSuccessfulConnectionTime);
+      final timeComp = b.lastSuccessfulConnectionTime
+          .compareTo(a.lastSuccessfulConnectionTime);
       if (timeComp != 0) return timeComp;
       return compareScore(a, b);
     });
@@ -318,6 +323,12 @@ class FunnelService {
 
   Future<void> _tcpWorker() async {
     while (_isRunning && !_stopRequested) {
+      // Smart Battery Freeze: Exit loop immediately if VPN is connected
+      if (_configManager.isConnected) {
+        AdvancedLogger.info(
+            "FunnelService: VPN connected, halting background TCP workers to save battery.");
+        break;
+      }
       // Yield to event loop to prevent ANR/OOM on Android
       await Future.delayed(const Duration(milliseconds: 50));
       VpnConfigWithMetrics? config;
@@ -351,7 +362,8 @@ class FunnelService {
             final socket = await Socket.connect(
               host,
               port,
-              timeout: Duration(milliseconds: NetworkTuningConfig.instance.tcpPingTimeoutMs),
+              timeout: Duration(
+                  milliseconds: NetworkTuningConfig.instance.tcpPingTimeoutMs),
             );
             socket.destroy();
             sw.stop();
@@ -387,7 +399,8 @@ class FunnelService {
         AdvancedLogger.debug(
           "[TELEMETRY] ${config.name} | LastPassedStage: 0 | PingDuration: N/A | ExactException: $e",
         );
-        AdvancedLogger.warn("TCP Worker Error for ${config.name}: $e\nStack trace:\n$stackTrace");
+        AdvancedLogger.warn(
+            "TCP Worker Error for ${config.name}: $e\nStack trace:\n$stackTrace");
       } finally {
         _activeTcpWorkers--;
       }
@@ -396,6 +409,12 @@ class FunnelService {
 
   Future<void> _httpWorker() async {
     while (_isRunning && !_stopRequested) {
+      // Smart Battery Freeze: Exit loop immediately if VPN is connected
+      if (_configManager.isConnected) {
+        AdvancedLogger.info(
+            "FunnelService: VPN connected, halting background HTTP workers to save battery.");
+        break;
+      }
       // Yield to event loop to prevent ANR/OOM on Android
       await Future.delayed(const Duration(milliseconds: 50));
       VpnConfigWithMetrics? config;
@@ -452,8 +471,10 @@ class FunnelService {
           await _configManager.markFailure(config.id);
         }
       } catch (e) {
-        if (e.toString().contains('PERMISSION_DENIED') || e.toString().contains('VPN Permission Required')) {
-          AdvancedLogger.error("FunnelService: Aborting completely due to missing VPN permission.");
+        if (e.toString().contains('PERMISSION_DENIED') ||
+            e.toString().contains('VPN Permission Required')) {
+          AdvancedLogger.error(
+              "FunnelService: Aborting completely due to missing VPN permission.");
           stop();
           break;
         }

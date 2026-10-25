@@ -109,8 +109,7 @@ class SingboxConfigGenerator {
     final String decoded = Base64Utils.safeDecode(link.substring(8));
     if (decoded.isEmpty) throw FormatException("Invalid VMess Base64");
 
-    final Map<String, dynamic> data =
-        jsonDecode(decoded);
+    final Map<String, dynamic> data = jsonDecode(decoded);
 
     final Map<String, dynamic> outbound = {
       "type": "vmess",
@@ -143,6 +142,10 @@ class SingboxConfigGenerator {
         "server_name": data['sni'] ?? data['host'] ?? data['add'],
         "alpn": ["h2", "http/1.1"],
         "insecure": isTest,
+        "utls": {
+          "enabled": true,
+          "fingerprint": fingerprints[_rng.nextInt(fingerprints.length)],
+        },
       };
     }
 
@@ -446,8 +449,7 @@ class SingboxConfigGenerator {
         if (decoded.isEmpty) return null;
 
         try {
-          final Map<String, dynamic> data =
-              jsonDecode(decoded);
+          final Map<String, dynamic> data = jsonDecode(decoded);
           return {
             'host': data['add'],
             'port': int.tryParse(data['port']?.toString() ?? '443') ?? 443,
